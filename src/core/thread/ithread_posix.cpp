@@ -1,0 +1,247 @@
+/////////////////////////////////////////////////////////////////
+/// Copyright 2012-2018
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    ithread_posix.cpp
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/// @date    2018-11-12
+/////////////////////////////////////////////////////////////////
+/// Edit History
+/// -----------------------------------------------------------
+/// DATE                     NAME          DESCRIPTION
+/// 2018-11-12          anfengce@        Create.
+/////////////////////////////////////////////////////////////////
+
+#include <pthread.h>
+#include <sys/time.h>
+
+#include "core/kernel/icoreapplication.h"
+#include "core/kernel/ieventdispatcher.h"
+#include "core/thread/ithread.h"
+#include "core/io/ilog.h"
+#include "private/ithread_p.h"
+
+#define ILOG_TAG "core"
+
+namespace ishell {
+
+// Does some magic and calculate the Unix scheduler priorities
+// sched_policy is IN/OUT: it must be set to a valid policy before calling this function
+// sched_priority is OUT only
+static bool calculateUnixPriority(int priority, int *sched_policy, int *sched_priority)
+{
+    if (priority == iThread::IdlePriority) {
+        *sched_policy = SCHED_IDLE;
+        *sched_priority = 0;
+        return true;
+    }
+    const int lowestPriority = iThread::LowestPriority;
+    const int highestPriority = iThread::TimeCriticalPriority;
+
+    int prio_min;
+    int prio_max;
+    prio_min = sched_get_priority_min(*sched_policy);
+    prio_max = sched_get_priority_max(*sched_policy);
+
+    if (prio_min == -1 || prio_max == -1)
+        return false;
+
+    int prio;
+    // crudely scale our priority enum values to the prio_min/prio_max
+    prio = ((priority - lowestPriority) * (prio_max - prio_min) / highestPriority) + prio_min;
+    prio = std::max(prio_min, std::min(prio_max, prio));
+
+    *sched_priority = prio;
+    return true;
+}
+
+iThreadImpl::~iThreadImpl()
+{
+}
+
+// Caller must lock the mutex
+void iThreadImpl::setPriority()
+{
+    int sched_policy;
+    sched_param param;
+
+    iThread::Priority priority = m_thread->m_priority;
+    if (pthread_getschedparam((pthread_t)m_thread->m_data->threadId.value(), &sched_policy, &param) != 0) {
+        // failed to get the scheduling policy, don't bother setting
+        // the priority
+        ilog_warn("iThread::setPriority: Cannot get scheduler parameters");
+        return;
+    }
+
+    int prio;
+    if (!calculateUnixPriority(priority, &sched_policy, &prio)) {
+        // failed to get the scheduling parameters, don't
+        // bother setting the priority
+        ilog_warn("iThread::setPriority: Cannot determine scheduler priority range");
+        return;
+    }
+
+    param.sched_priority = prio;
+    int status = pthread_setschedparam((pthread_t)m_thread->m_data->threadId.value(), sched_policy, &param);
+
+    // were we trying to set to idle priority and failed?
+    if (status == -1 && sched_policy == SCHED_IDLE && errno == EINVAL) {
+        // reset to lowest priority possible
+        pthread_getschedparam((pthread_t)m_thread->m_data->threadId.value(), &sched_policy, &param);
+        param.sched_priority = sched_get_priority_min(sched_policy);
+        pthread_setschedparam((pthread_t)m_thread->m_data->threadId.value(), sched_policy, &param);
+    }
+}
+
+void iThreadImpl::internalThreadFunc()
+{
+    iThread * thread = this->m_thread;
+    iThreadData *data = thread->m_data;
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, I_NULLPTR);
+
+    {
+        iMutex::ScopedLock locker(thread->m_mutex);
+        data->threadId = iThread::currentThreadId();
+        data->setCurrent();
+        data->ref();
+    }
+
+    if (I_NULLPTR == data->dispatcher.load())
+        data->dispatcher = iCoreApplication::createEventDispatcher();
+
+    if (data->dispatcher.load()) // custom event dispatcher set?
+        data->dispatcher.load()->startingUp();
+
+    if (!thread->objectName().empty()) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "%s", thread->objectName().c_str());
+        // buf[15] = '\0';
+
+        pthread_setname_np(pthread_self(), buf);
+    }
+
+    thread->run();
+
+    {
+        thread->m_mutex.lock();
+        thread->m_isInFinish = true;
+
+        iEventDispatcher *eventDispatcher = data->dispatcher.load();
+        if (eventDispatcher) {
+            data->dispatcher = 0;
+            thread->m_mutex.unlock();
+            eventDispatcher->closingDown();
+            delete eventDispatcher;
+            thread->m_mutex.lock();
+        }
+
+        thread->m_running = false;
+        thread->m_finished = true;
+        thread->m_isInFinish = false;
+        thread->m_doneCond.broadcast();
+        data->deref();
+        thread->m_mutex.unlock();
+    }
+}
+
+static void* __internal_thread_func(void *userdata)
+{
+    iThreadImpl* imp = static_cast<iThreadImpl*>(userdata);
+    imp->internalThreadFunc();
+    return I_NULLPTR;
+}
+
+bool iThreadImpl::start()
+{
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+    iThread::Priority priority = m_thread->m_priority;
+    switch (priority) {
+    case iThread::InheritPriority:
+        {
+            pthread_attr_setinheritsched(&attr, PTHREAD_INHERIT_SCHED);
+            break;
+        }
+
+    default:
+        {
+            int sched_policy;
+            if (pthread_attr_getschedpolicy(&attr, &sched_policy) != 0) {
+                // failed to get the scheduling policy, don't bother
+                // setting the priority
+                ilog_warn("iThread::start: Cannot determine default scheduler policy");
+                break;
+            }
+
+            int prio;
+            if (!calculateUnixPriority(priority, &sched_policy, &prio)) {
+                // failed to get the scheduling parameters, don't
+                // bother setting the priority
+                ilog_warn("iThread::start: Cannot determine scheduler priority range");
+                break;
+            }
+
+            sched_param sp;
+            sp.sched_priority = prio;
+
+            if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED) != 0
+                || pthread_attr_setschedpolicy(&attr, sched_policy) != 0
+                || pthread_attr_setschedparam(&attr, &sp) != 0) {
+                // could not set scheduling hints, fallback to inheriting them
+                // we'll try again from inside the thread
+                pthread_attr_setinheritsched(&attr, PTHREAD_INHERIT_SCHED);
+            }
+            break;
+        }
+    }
+
+    if (m_thread->m_stackSize > 0) {
+        int code = pthread_attr_setstacksize(&attr, m_thread->m_stackSize);
+        if (code) {
+            ilog_warn("iThread::start: Thread stack size error: ", code);
+            pthread_attr_destroy(&attr);
+            return false;
+        }
+    }
+
+    pthread_t threadId;
+    int code = pthread_create(&threadId, &attr, __internal_thread_func, this);
+    if (code == EPERM) {
+        // caller does not have permission to set the scheduling
+        // parameters/policy
+        pthread_attr_setinheritsched(&attr, PTHREAD_INHERIT_SCHED);
+        code = pthread_create(&threadId, &attr, __internal_thread_func, this);
+    }
+
+    m_thread->m_data->threadId = (intptr_t)threadId;
+    pthread_attr_destroy(&attr);
+
+    return ((0 == code) ? true : false);
+}
+
+void iThread::msleep(unsigned long t)
+{
+    struct timespec ts;
+
+    ts.tv_sec = (time_t) (t / 1000ULL);
+    ts.tv_nsec = (long) ((t % 1000ULL) * ((unsigned long long) 1000000ULL));
+
+    nanosleep(&ts, I_NULLPTR);
+}
+
+intptr_t iThread::currentThreadId()
+{
+    return (intptr_t)pthread_self();
+}
+
+void iThread::yieldCurrentThread()
+{
+    pthread_yield();
+}
+
+} // namespace ishell
