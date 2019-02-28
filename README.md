@@ -1,2 +1,2 @@
 # mediaplayer
-a C++ mediaplayer, like Qt multimedia, but dont depend Qt.
+a C++ mediaplayer, like Qt multimedia, but don't depend Qt.
