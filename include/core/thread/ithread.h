@@ -74,6 +74,8 @@ public:
     // default argument causes thread to block indefinetely
     bool wait(long time = -1);
 
+    intptr_t threadId() const;
+
     iEventDispatcher* eventDispatcher() const;
 
 protected:
