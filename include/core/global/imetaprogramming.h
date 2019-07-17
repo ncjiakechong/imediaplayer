@@ -11,6 +11,8 @@
 #ifndef IMETAPROGRAMMING_H
 #define IMETAPROGRAMMING_H
 
+#include <stddef.h>
+
 namespace ishell {
 
 template <typename T>
@@ -232,6 +234,33 @@ struct class_wrapper<T*>
 #define TYPEWRAPPER_DEFAULTVALUE(T) type_wrapper<T>::TYPE()
 #else
 #define TYPEWRAPPER_DEFAULTVALUE(T) typename type_wrapper<T>::TYPE()
+#endif
+
+template <class T>
+struct iAlignOfHelper
+{
+    char c;
+    T type;
+
+    iAlignOfHelper();
+    ~iAlignOfHelper();
+};
+
+template <class T>
+struct iAlignOf_Default
+{
+    enum { Value = sizeof(iAlignOfHelper<T>) - sizeof(T) };
+};
+
+template <class T> struct iAlignOf : iAlignOf_Default<T> { };
+template <class T> struct iAlignOf<T &> : iAlignOf<T> {};
+template <size_t N, class T> struct iAlignOf<T[N]> : iAlignOf<T> {};
+
+#define I_EMULATED_ALIGNOF(T) \
+    (size_t(iAlignOf<T>::Value))
+
+#ifndef I_ALIGNOF
+#define I_ALIGNOF(T) I_EMULATED_ALIGNOF(T)
 #endif
 
 } // namespace ishell
