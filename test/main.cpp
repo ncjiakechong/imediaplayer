@@ -23,12 +23,12 @@ extern int test_ivariant(void);
 extern int test_thread(void);
 extern int test_timer(void);
 
-using namespace ishell;
+using namespace iShell;
 
 class TestCase : public iObject
 {
 public:
-    TestCase(iObject* parent = I_NULLPTR) : iObject(parent) {}
+    TestCase(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 
     int start() {
         tstcase_sig.connect(this, &TestCase::doTestCase, QueuedConnection);
@@ -77,7 +77,7 @@ public:
 
 int main(void)
 {
-    iCoreApplication app(0, I_NULLPTR);
+    iCoreApplication app(0, IX_NULLPTR);
 
     iPollFD wakeupFd = {};
     iWakeup wakeup;

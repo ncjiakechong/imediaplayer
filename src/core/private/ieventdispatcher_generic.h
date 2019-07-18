@@ -17,7 +17,7 @@
 #include <core/kernel/ieventdispatcher.h>
 #include "private/itimerinfo.h"
 
-namespace ishell {
+namespace iShell {
 
 class iThreadData;
 class iWakeup;
@@ -27,7 +27,7 @@ class iTimerEventSource;
 class iEventDispatcher_generic : public iEventDispatcher
 {
 public:
-    iEventDispatcher_generic(iObject* parent = I_NULLPTR);
+    iEventDispatcher_generic(iObject* parent = IX_NULLPTR);
     ~iEventDispatcher_generic();
 
     virtual bool processEvents();
@@ -77,6 +77,6 @@ private:
     iTimerEventSource* m_timerSource;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IEVENTDISPATCHER_GENERIC_H

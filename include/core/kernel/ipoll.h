@@ -12,24 +12,25 @@
 #define IPOLL_H
 
 #include <stdint.h>
+#include <core/global/iglobal.h>
 
-namespace ishell {
+namespace iShell {
 
 typedef enum /*< flags >*/
 {
     /* Event types that can be polled for.  These bits may be set in `events'
        to indicate the interesting event types; they will appear in `revents'
        to indicate the status of the file descriptor.  */
-    I_IO_IN  = 1 << 0,      /* There is data to read.  */
-    I_IO_PRI = 1 << 1,      /* There is urgent data to read.  */
-    I_IO_OUT = 1 << 2,      /* Writing now will not block.  */
+    IX_IO_IN  = 1 << 0,      /* There is data to read.  */
+    IX_IO_PRI = 1 << 1,      /* There is urgent data to read.  */
+    IX_IO_OUT = 1 << 2,      /* Writing now will not block.  */
 
     /* Event types always implicitly polled for.  These bits need not be set in
        `events', but they will appear in `revents' to indicate the status of
        the file descriptor.  */
-    I_IO_ERR = 1 << 3,      /* Error condition.  */
-    I_IO_HUP = 1 << 4,      /* Hung up.  */
-    I_IO_NVAL = 1 << 5      /* Invalid polling request.  */
+    IX_IO_ERR = 1 << 3,      /* Error condition.  */
+    IX_IO_HUP = 1 << 4,      /* Hung up.  */
+    IX_IO_NVAL = 1 << 5      /* Invalid polling request.  */
 } iIOCondition;
 
 /* Any definitions using iPollFD are primarily
@@ -50,10 +51,10 @@ typedef enum /*< flags >*/
  * from CreateFile, SOCKETs, nor pipe handles. (But you can use
  * WSAEventSelect to signal events when a SOCKET is readable).
  *
- * On Win32, fd can also be the special value I_WIN32_MSG_HANDLE to
+ * On Win32, fd can also be the special value IX_WIN32_MSG_HANDLE to
  * indicate polling for messages.
  *
- * But note that I_WIN32_MSG_HANDLE iPollFDs should not be used by GDK
+ * But note that IX_WIN32_MSG_HANDLE iPollFDs should not be used by GDK
  * (GTK) programs, as GDK itself wants to read messages and convert them
  * to GDK events.
  *
@@ -68,8 +69,8 @@ typedef struct _iPollFD iPollFD;
  * @fd: the file descriptor to poll
  * @events: a bitwise combination from iIOCondition, specifying which
  *     events should be polled for. Typically for reading from a file
- *     descriptor you would use I_IO_IN | I_IO_HUP | I_IO_ERR, and
- *     for writing you would use I_IO_OUT | I_IO_ERR.
+ *     descriptor you would use IX_IO_IN | IX_IO_HUP | IX_IO_ERR, and
+ *     for writing you would use IX_IO_OUT | IX_IO_ERR.
  * @revents: a bitwise combination of flags from iIOCondition, returned
  *     from the poll() function to indicate which events occurred.
  *
@@ -78,9 +79,9 @@ typedef struct _iPollFD iPollFD;
  */
 struct _iPollFD
 {
-    intptr_t	fd;
-    uint16_t 	events;
-    uint16_t 	revents;
+    xintptr	    fd;
+    xuint16 	events;
+    xuint16 	revents;
 };
 
 /* Poll the file descriptors described by the NFDS structures starting at
@@ -88,8 +89,8 @@ struct _iPollFD
    an event to occur; if TIMEOUT is -1, block until an event occurs.
    Returns the number of file descriptors with events, zero if timed out,
    or -1 for errors.  */
-int32_t iPoll (iPollFD *fds, uint32_t nfds, int32_t timeout);
+xint32 iPoll (iPollFD *fds, xuint32 nfds, xint32 timeout);
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IPOLL_H

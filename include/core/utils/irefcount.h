@@ -1,0 +1,78 @@
+/////////////////////////////////////////////////////////////////
+/// Copyright 2018-2020
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    irefcount.h
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/////////////////////////////////////////////////////////////////
+#ifndef IREFCOUNT_H
+#define IREFCOUNT_H
+
+#include <core/thread/iatomiccounter.h>
+
+namespace iShell {
+
+class iRefCount
+{
+public:
+    inline bool ref() {
+        int count = atomic.value();
+        if (count == 0) // !isSharable
+            return false;
+
+        if (count != -1) // !isStatic
+            ++atomic;
+        return true;
+    }
+
+    inline bool deref() {
+        int count = atomic.value();
+
+        if (count == 0) // !isSharable
+            return false;
+
+        if (count == -1) // isStatic
+            return true;
+
+        return (--atomic != 0);
+    }
+
+    bool setSharable(bool sharable)
+    {
+        ix_assert(!isShared());
+        if (sharable)
+            return atomic.testAndSet(0, 1);
+        else
+            return atomic.testAndSet(1, 0);
+    }
+
+    bool isSharable() const
+    {
+        // Sharable === Shared ownership.
+        return atomic.value() != 0;
+    }
+
+    bool isStatic() const
+    {
+        // Persistent object, never deleted
+        return atomic.value() == -1;
+    }
+
+    bool isShared() const
+    {
+        int count = atomic.value();
+        return (count != 1) && (count != 0);
+    }
+
+    void initializeOwned() { atomic = 1; }
+    void initializeUnsharable() { atomic = 0; }
+
+    iAtomicCounter<int> atomic;
+};
+
+} // namespace iShell
+
+#endif // IREFCOUNT_H

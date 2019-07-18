@@ -30,7 +30,7 @@
 # define QT_GSTREAMER_VIDEOOVERLAY_INTERFACE_NAME "GstXOverlay"
 #endif
 
-namespace ishell {
+namespace iShell {
 
 class iSize;
 class iVariant;
@@ -51,11 +51,11 @@ namespace iGstUtils {
 #endif
     GstCaps *capsForAudioFormat(const QAudioFormat &format);
     void initializeGst();
-    QMultimedia::SupportEstimate hasSupport(const QString &mimeType,
+    QMultimedia::SupportEstimate hasSupport(const iString &mimeType,
                                              const QStringList &codecs,
-                                             const QSet<QString> &supportedMimeTypeSet);
+                                             const QSet<iString> &supportedMimeTypeSet);
 
-    QSet<QString> supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory));
+    QSet<iString> supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory));
 
 #if GST_CHECK_VERSION(1,0,0)
     QImage bufferToImage(GstBuffer *buffer, const GstVideoInfo &info);
@@ -74,34 +74,34 @@ namespace iGstUtils {
     GstCaps *capsForFormats(const QList<QVideoFrame::PixelFormat> &formats);
     void setFrameTimeStamps(QVideoFrame *frame, GstBuffer *buffer);
 
-    void setMetaData(GstElement *element, const QMap<QByteArray, iVariant> &data);
-    void setMetaData(GstBin *bin, const QMap<QByteArray, iVariant> &data);
+    void setMetaData(GstElement *element, const QMap<iByteArray, iVariant> &data);
+    void setMetaData(GstBin *bin, const QMap<iByteArray, iVariant> &data);
 
     GstCaps *videoFilterCaps();
 
     iSize structureResolution(const GstStructure *s);
     QVideoFrame::PixelFormat structurePixelFormat(const GstStructure *s, int *bpp = 0);
     iSize structurePixelAspectRatio(const GstStructure *s);
-    QPair<qreal, qreal> structureFrameRateRange(const GstStructure *s);
+    QPair<xreal, xreal> structureFrameRateRange(const GstStructure *s);
 
-    QString fileExtensionForMimeType(const QString &mimeType);
+    iString fileExtensionForMimeType(const iString &mimeType);
 
-    void qt_gst_object_ref_sink(gpointer object);
-    GstCaps *qt_gst_pad_get_current_caps(GstPad *pad);
-    GstCaps *qt_gst_pad_get_caps(GstPad *pad);
-    GstStructure *qt_gst_structure_new_empty(const char *name);
-    gboolean qt_gst_element_query_position(GstElement *element, GstFormat format, gint64 *cur);
-    gboolean qt_gst_element_query_duration(GstElement *element, GstFormat format, gint64 *cur);
-    GstCaps *qt_gst_caps_normalize(GstCaps *caps);
-    const gchar *qt_gst_element_get_factory_name(GstElement *element);
-    gboolean qt_gst_caps_can_intersect(const GstCaps * caps1, const GstCaps * caps2);
-    GList *qt_gst_video_sinks();
-    void qt_gst_util_double_to_fraction(gdouble src, gint *dest_n, gint *dest_d);
+    void ix_gst_object_ref_sink(gpointer object);
+    GstCaps *ix_gst_pad_get_current_caps(GstPad *pad);
+    GstCaps *ix_gst_pad_get_caps(GstPad *pad);
+    GstStructure *ix_gst_structure_new_empty(const char *name);
+    gboolean ix_gst_element_query_position(GstElement *element, GstFormat format, gint64 *cur);
+    gboolean ix_gst_element_query_duration(GstElement *element, GstFormat format, gint64 *cur);
+    GstCaps *ix_gst_caps_normalize(GstCaps *caps);
+    const gchar *ix_gst_element_get_factory_name(GstElement *element);
+    gboolean ix_gst_caps_can_intersect(const GstCaps * caps1, const GstCaps * caps2);
+    GList *ix_gst_video_sinks();
+    void ix_gst_util_double_to_fraction(gdouble src, gint *dest_n, gint *dest_d);
 
 #endif
 }
 
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IGSTUTILS_H

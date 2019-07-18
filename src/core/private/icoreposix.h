@@ -14,7 +14,9 @@
 #include <stdint.h>
 #include <sys/time.h> // struct timeval
 
-namespace ishell {
+#include <core/global/iglobal.h>
+
+namespace iShell {
 
 timespec igettime();
 
@@ -58,9 +60,9 @@ inline timespec operator-(const timespec &t1, const timespec &t2)
     return normalizedTimespec(tmp);
 }
 
-int i_open_pipe (intptr_t *fds, int flags);
-int i_set_fd_nonblocking (intptr_t fd, bool nonblock);
+int ix_open_pipe (xintptr *fds, int flags);
+int ix_set_fd_nonblocking (xintptr fd, bool nonblock);
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ICOREPOSIX_H

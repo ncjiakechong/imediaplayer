@@ -14,7 +14,7 @@
 #include <core/kernel/iobject.h>
 #include <core/thread/iatomiccounter.h>
 
-namespace ishell {
+namespace iShell {
 
 class iEventDispatcher;
 
@@ -62,6 +62,6 @@ private:
     friend class iEventLoop;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ICOREAPPLICATION_H

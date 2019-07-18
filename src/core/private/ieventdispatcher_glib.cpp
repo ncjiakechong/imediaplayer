@@ -22,7 +22,7 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 struct GTimerSource
 {
@@ -33,7 +33,7 @@ struct GTimerSource
 
 static gboolean timerSourcePrepareHelper(GTimerSource *src, gint *timeout)
 {
-    int64_t __dummy_timeout = -1;
+    xint64 __dummy_timeout = -1;
     if (src->timerList.timerWait(__dummy_timeout)) {
         *timeout = (int)__dummy_timeout;
     } else {
@@ -86,9 +86,9 @@ static GSourceFuncs timerSourceFuncs = {
     timerSourcePrepare,
     timerSourceCheck,
     timerSourceDispatch,
-    I_NULLPTR,
-    I_NULLPTR,
-    I_NULLPTR
+    IX_NULLPTR,
+    IX_NULLPTR,
+    IX_NULLPTR
 };
 
 struct GIdleTimerSource
@@ -125,7 +125,7 @@ static gboolean idleTimerSourceCheck(GSource *source)
 static gboolean idleTimerSourceDispatch(GSource *source, GSourceFunc, gpointer)
 {
     GTimerSource *timerSource = reinterpret_cast<GIdleTimerSource *>(source)->timerSource;
-    (void) timerSourceDispatch(&timerSource->source, I_NULLPTR, I_NULLPTR);
+    (void) timerSourceDispatch(&timerSource->source, IX_NULLPTR, IX_NULLPTR);
     return true;
 }
 
@@ -133,9 +133,9 @@ static GSourceFuncs idleTimerSourceFuncs = {
     idleTimerSourcePrepare,
     idleTimerSourceCheck,
     idleTimerSourceDispatch,
-    I_NULLPTR,
-    I_NULLPTR,
-    I_NULLPTR
+    IX_NULLPTR,
+    IX_NULLPTR,
+    IX_NULLPTR
 };
 
 struct GPostEventSource
@@ -159,14 +159,14 @@ static gboolean postEventSourcePrepare(GSource *s, gint *timeout)
 
 static gboolean postEventSourceCheck(GSource *source)
 {
-    return postEventSourcePrepare(source, I_NULLPTR);
+    return postEventSourcePrepare(source, IX_NULLPTR);
 }
 
 static gboolean postEventSourceDispatch(GSource *s, GSourceFunc, gpointer)
 {
     GPostEventSource *source = reinterpret_cast<GPostEventSource *>(s);
     source->lastSerialNumber = source->serialNumber.value();
-    iCoreApplication::sendPostedEvents(I_NULLPTR, 0);
+    iCoreApplication::sendPostedEvents(IX_NULLPTR, 0);
     source->dispatcher->runTimersOnceWithNormalPriority();
     return true; // i dunno, george...
 }
@@ -175,9 +175,9 @@ static GSourceFuncs postEventSourceFuncs = {
     postEventSourcePrepare,
     postEventSourceCheck,
     postEventSourceDispatch,
-    I_NULLPTR,
-    I_NULLPTR,
-    I_NULLPTR
+    IX_NULLPTR,
+    IX_NULLPTR,
+    IX_NULLPTR
 };
 
 struct iEventSourceWraper
@@ -211,17 +211,17 @@ static gboolean eventSourceWraperCheck(GSource *s)
 
         ifd->revents = 0;
         if (gfd->revents & G_IO_IN)
-            ifd->revents |= I_IO_IN;
+            ifd->revents |= IX_IO_IN;
         if (gfd->revents & G_IO_OUT)
-            ifd->revents |= I_IO_OUT;
+            ifd->revents |= IX_IO_OUT;
         if (gfd->revents & G_IO_PRI)
-            ifd->revents |= I_IO_PRI;
+            ifd->revents |= IX_IO_PRI;
         if (gfd->revents & G_IO_ERR)
-            ifd->revents |= I_IO_ERR;
+            ifd->revents |= IX_IO_ERR;
         if (gfd->revents & G_IO_HUP)
-            ifd->revents |= I_IO_HUP;
+            ifd->revents |= IX_IO_HUP;
         if (gfd->revents & G_IO_NVAL)
-            ifd->revents |= I_IO_NVAL;
+            ifd->revents |= IX_IO_NVAL;
     }
 
     return source->imp->check();
@@ -237,17 +237,17 @@ static GSourceFuncs eventSourceWraperFuncs = {
     eventSourceWraperPrepare,
     eventSourceWraperCheck,
     eventSourceWraperDispatch,
-    I_NULLPTR,
-    I_NULLPTR,
-    I_NULLPTR
+    IX_NULLPTR,
+    IX_NULLPTR,
+    IX_NULLPTR
 };
 
 iEventDispatcher_Glib::iEventDispatcher_Glib(iObject *parent)
     : iEventDispatcher(parent)
-    , m_mainContext(I_NULLPTR)
-    , m_postEventSource(I_NULLPTR)
-    , m_timerSource(I_NULLPTR)
-    , m_idleTimerSource(I_NULLPTR)
+    , m_mainContext(IX_NULLPTR)
+    , m_postEventSource(IX_NULLPTR)
+    , m_timerSource(IX_NULLPTR)
+    , m_idleTimerSource(IX_NULLPTR)
 {
     iCoreApplication *app = iCoreApplication::instance();
     if (app && iThread::currentThread() == app->thread()) {
@@ -292,23 +292,23 @@ iEventDispatcher_Glib::~iEventDispatcher_Glib()
     m_timerSource->timerList.~iTimerInfoList();
     g_source_destroy(&m_timerSource->source);
     g_source_unref(&m_timerSource->source);
-    m_timerSource = I_NULLPTR;
+    m_timerSource = IX_NULLPTR;
     g_source_destroy(&m_idleTimerSource->source);
     g_source_unref(&m_idleTimerSource->source);
-    m_idleTimerSource = I_NULLPTR;
+    m_idleTimerSource = IX_NULLPTR;
 
     // destroy post event source
     m_postEventSource->serialNumber.~iAtomicCounter<int>();
     g_source_destroy(&m_postEventSource->source);
     g_source_unref(&m_postEventSource->source);
-    m_postEventSource = I_NULLPTR;
+    m_postEventSource = IX_NULLPTR;
 
-    i_assert(m_mainContext != I_NULLPTR);
+    ix_assert(m_mainContext != IX_NULLPTR);
     #if GLIB_CHECK_VERSION (2, 22, 0)
     g_main_context_pop_thread_default (m_mainContext);
     #endif
     g_main_context_unref(m_mainContext);
-    m_mainContext = I_NULLPTR;
+    m_mainContext = IX_NULLPTR;
 }
 
 bool iEventDispatcher_Glib::processEvents()
@@ -445,7 +445,7 @@ int iEventDispatcher_Glib::addPoll(iPollFD* fd, iEventSource* source)
         return -1;
     }
 
-    iEventSourceWraper* sourceWraper = I_NULLPTR;
+    iEventSourceWraper* sourceWraper = IX_NULLPTR;
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
     if (it != m_wraperMap.cend()) {
@@ -459,17 +459,17 @@ int iEventDispatcher_Glib::addPoll(iPollFD* fd, iEventSource* source)
     // setup post event source
     GPollFD* wraper = g_new0 (GPollFD, 1);
     wraper->fd = fd->fd;
-    if (fd->events & I_IO_IN)
+    if (fd->events & IX_IO_IN)
         wraper->events |= G_IO_IN;
-    if (fd->events & I_IO_OUT)
+    if (fd->events & IX_IO_OUT)
         wraper->events |= G_IO_OUT;
-    if (fd->events & I_IO_PRI)
+    if (fd->events & IX_IO_PRI)
         wraper->events |= G_IO_PRI;
-    if (fd->events & I_IO_ERR)
+    if (fd->events & IX_IO_ERR)
         wraper->events |= G_IO_ERR;
-    if (fd->events & I_IO_HUP)
+    if (fd->events & IX_IO_HUP)
         wraper->events |= G_IO_HUP;
-    if (fd->events & I_IO_NVAL)
+    if (fd->events & IX_IO_NVAL)
         wraper->events |= G_IO_NVAL;
 
     g_main_context_add_poll(m_mainContext, wraper, priority);
@@ -489,7 +489,7 @@ int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource* source)
         return -1;
     }
 
-    iEventSourceWraper* sourceWraper = I_NULLPTR;
+    iEventSourceWraper* sourceWraper = IX_NULLPTR;
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
     if (it != m_wraperMap.cend()) {
@@ -508,5 +508,5 @@ int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource* source)
     return 0;
 }
 
-} // namespace ishell
+} // namespace iShell
 

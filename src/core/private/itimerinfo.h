@@ -14,7 +14,7 @@
 #include <core/global/inamespace.h>
 #include <core/kernel/ieventdispatcher.h>
 
-namespace ishell {
+namespace iShell {
 
 class iObject;
 
@@ -26,7 +26,7 @@ public:
         int id;           // - timer identifier
         int interval;     // - timer interval in milliseconds
         TimerType timerType; // - timer type
-        int64_t timeout;  // - when to actually fire
+        xint64 timeout;  // - when to actually fire
         iObject *obj;     // - object to receive event
         TimerInfo **activateRef; // - ref from activateTimers
     };
@@ -34,9 +34,9 @@ public:
     iTimerInfoList();
     ~iTimerInfoList();
 
-    int64_t updateCurrentTime();
+    xint64 updateCurrentTime();
 
-    bool timerWait(int64_t&);
+    bool timerWait(xint64&);
 
     int timerRemainingTime(int timerId);
 
@@ -52,13 +52,13 @@ public:
 private:
     void timerInsert(TimerInfo *);
 
-    int64_t currentTime; // millisecond
+    xint64 currentTime; // millisecond
 
     // state variables used by activateTimers()
     TimerInfo *firstTimerInfo;
     std::list<TimerInfo*> timers;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ITIMERINFO_H

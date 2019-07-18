@@ -14,9 +14,11 @@
 #include <limits>
 #include <stdint.h>
 #include <algorithm>
+
+#include <core/global/iglobal.h>
 #include <core/global/inamespace.h>
 
-namespace ishell {
+namespace iShell {
 
 /**
   * The iDeadlineTimer class is usually used to calculate future deadlines and
@@ -37,8 +39,8 @@ public:
     iDeadlineTimer(TimerType type_ = CoarseTimer)
         : t1(0), t2(0), type(type_) {}
     iDeadlineTimer(ForeverConstant, TimerType type_ = CoarseTimer)
-        : t1(std::numeric_limits<int64_t>::max()), t2(0), type(type_) {}
-    explicit iDeadlineTimer(int64_t msecs, TimerType type = CoarseTimer);
+        : t1(std::numeric_limits<xint64>::max()), t2(0), type(type_) {}
+    explicit iDeadlineTimer(xint64 msecs, TimerType type = CoarseTimer);
         /// Constructs a iDeadlineTimer object with an expiry time of \a msecs msecs
         /// from the moment of the creation of this object, if msecs is positive. If \a
         /// msecs is zero, this iDeadlineTimer will be marked as expired, causing
@@ -61,7 +63,7 @@ public:
         /// Swaps this deadline timer with the \a other deadline timer.
 
     bool isForever() const
-    { return t1 == (std::numeric_limits<int64_t>::max)(); }
+    { return t1 == (std::numeric_limits<xint64>::max)(); }
     bool hasExpired() const;
         /// Returns true if this iDeadlineTimer object has expired, false if there
         /// remains time left. For objects that have expired, remainingTime() will
@@ -75,20 +77,20 @@ public:
         /// Returns the timer type is active for this object.
     void setTimerType(TimerType type);
 
-    int64_t remainingTime() const;
+    xint64 remainingTime() const;
         /// Returns the remaining time in this iDeadlineTimer object in milliseconds.
         /// If the timer has already expired, this function will return zero and it is
         /// not possible to obtain the amount of time overdue with this function (to do
         /// that, see deadline()). If the timer was set to never expire, this function
         /// returns -1.
 
-    int64_t remainingTimeNSecs() const;
+    xint64 remainingTimeNSecs() const;
         /// Returns the remaining time in this iDeadlineTimer object in nanoseconds. If
         /// the timer has already expired, this function will return zero and it is not
         /// possible to obtain the amount of time overdue with this function. If the
         /// timer was set to never expire, this function returns -1.
 
-    void setRemainingTime(int64_t msecs, TimerType type = CoarseTimer);
+    void setRemainingTime(xint64 msecs, TimerType type = CoarseTimer);
         /// Sets the remaining time for this iDeadlineTimer object to \a msecs
         /// milliseconds from now, if \a msecs has a positive value. If \a msecs is
         /// zero, this iDeadlineTimer object will be marked as expired, whereas a value
@@ -96,7 +98,7 @@ public:
         ///
         /// The timer type for this iDeadlineTimer object will be set to the specified \a timerType.
 
-    void setPreciseRemainingTime(int64_t secs, int64_t nsecs = 0,
+    void setPreciseRemainingTime(xint64 secs, xint64 nsecs = 0,
                                  TimerType type = CoarseTimer);
         /// Sets the remaining time for this iDeadlineTimer object to \a secs seconds
         /// plus \a nsecs nanoseconds from now, if \a secs has a positive value. If \a
@@ -106,39 +108,39 @@ public:
         /// The timer type for this iDeadlineTimer object will be set to the specified
         /// \a timerType.
 
-    int64_t deadline() const;
+    xint64 deadline() const;
         /// Returns the absolute time point for the deadline stored in iDeadlineTimer
         /// object, calculated in milliseconds relative to the reference clock.
         /// The value will be in the past if this iDeadlineTimer has expired.
         ///
         /// If this iDeadlineTimer never expires, this function returns
-        /// \c{std::numeric_limits<qint64>::max()}.
+        /// \c{std::numeric_limits<xint64>::max()}.
 
-    int64_t deadlineNSecs() const;
+    xint64 deadlineNSecs() const;
         /// Returns the absolute time point for the deadline stored in iDeadlineTimer
         /// object, calculated in nanoseconds relative to the reference clock.
         /// The value will be in the past if this iDeadlineTimer has expired.
         ///
         /// If this iDeadlineTimer never expires, this function returns
-        /// \c{std::numeric_limits<qint64>::max()}.
+        /// \c{std::numeric_limits<xint64>::max()}.
 
-    void setDeadline(int64_t msecs, TimerType timerType = CoarseTimer);
+    void setDeadline(xint64 msecs, TimerType timerType = CoarseTimer);
         /// Sets the deadline for this iDeadlineTimer object to be the \a msecs
         /// absolute time point, counted in milliseconds since the reference clock,
         /// and the timer type to \a timerType. If the value is in the past,
         /// this iDeadlineTimer will be marked as expired.
 
-    void setPreciseDeadline(int64_t secs, int64_t nsecs = 0,
+    void setPreciseDeadline(xint64 secs, xint64 nsecs = 0,
                             TimerType type = CoarseTimer);
         /// Sets the deadline for this iDeadlineTimer object to be \a secs seconds and
         /// \a nsecs nanoseconds since the reference clock epoch, and the timer type to
         /// \a timerType. If the value is in the past, this iDeadlineTimer will be marked as expired.
 
-        /// If \a secs or \a nsecs is \c{std::numeric_limits<qint64>::max()}, this
+        /// If \a secs or \a nsecs is \c{std::numeric_limits<xint64>::max()}, this
         /// iDeadlineTimer will be set to never expire. If \a nsecs is more than 1
         /// billion nanoseconds (1 second), then \a secs will be adjusted accordingly.
 
-    static iDeadlineTimer addNSecs(iDeadlineTimer dt, int64_t nsecs);
+    static iDeadlineTimer addNSecs(iDeadlineTimer dt, xint64 nsecs);
     static iDeadlineTimer current(TimerType timerType = CoarseTimer);
         /// Returns a iDeadlineTimer that is expired but is guaranteed to contain the
         /// current time. Objects created by this function can participate in the
@@ -159,27 +161,27 @@ public:
     friend bool operator>=(iDeadlineTimer d1, iDeadlineTimer d2)
     { return !(d1 < d2); }
 
-    friend iDeadlineTimer operator+(iDeadlineTimer dt, int64_t msecs)
+    friend iDeadlineTimer operator+(iDeadlineTimer dt, xint64 msecs)
     { return iDeadlineTimer::addNSecs(dt, msecs * 1000 * 1000); }
-    friend iDeadlineTimer operator+(int64_t msecs, iDeadlineTimer dt)
+    friend iDeadlineTimer operator+(xint64 msecs, iDeadlineTimer dt)
     { return dt + msecs; }
-    friend iDeadlineTimer operator-(iDeadlineTimer dt, int64_t msecs)
+    friend iDeadlineTimer operator-(iDeadlineTimer dt, xint64 msecs)
     { return dt + (-msecs); }
-    friend int64_t operator-(iDeadlineTimer dt1, iDeadlineTimer dt2)
+    friend xint64 operator-(iDeadlineTimer dt1, iDeadlineTimer dt2)
     { return (dt1.deadlineNSecs() - dt2.deadlineNSecs()) / (1000 * 1000); }
-    iDeadlineTimer &operator+=(int64_t msecs)
+    iDeadlineTimer &operator+=(xint64 msecs)
     { *this = *this + msecs; return *this; }
-    iDeadlineTimer &operator-=(int64_t msecs)
+    iDeadlineTimer &operator-=(xint64 msecs)
     { *this = *this + (-msecs); return *this; }
 
 private:
-    int64_t t1;
-    int64_t t2;
+    xint64 t1;
+    xint64 t2;
     unsigned type;
 
-    int64_t rawRemainingTimeNSecs() const;
+    xint64 rawRemainingTimeNSecs() const;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IDEADLINETIMER_H

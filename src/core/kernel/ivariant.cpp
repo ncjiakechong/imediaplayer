@@ -14,7 +14,7 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 iVariant::convert_map_t iVariant::s_convertFuncs;
 
@@ -86,12 +86,12 @@ bool iVariant::canConvert(int targetTypeId) const
     if (targetTypeId == m_typeId)
         return true;
 
-    return convert(targetTypeId, I_NULLPTR);
+    return convert(targetTypeId, IX_NULLPTR);
 }
 
 bool iVariant::convert(int t, void *result) const
 {
-    i_assert(m_typeId != t);
+    ix_assert(m_typeId != t);
 
     const int charTypeId = iMetaTypeId<char>();
     const int ccharTypeId = iMetaTypeId<const char>();
@@ -185,7 +185,7 @@ bool iVariant::convert(int t, void *result) const
     if (it == s_convertFuncs.end() || !it->second)
         return false;
 
-    if (I_NULLPTR == result)
+    if (IX_NULLPTR == result)
         return true;
 
     return it->second->convert(it->second, m_dataImpl->data, result);
@@ -349,4 +349,4 @@ struct systemConvertHelper
 
 static systemConvertHelper s_convertHelp;
 
-} // namespace ishell
+} // namespace iShell

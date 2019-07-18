@@ -14,7 +14,7 @@
 #include <core/thread/iatomiccounter.h>
 #include <core/thread/iatomicpointer.h>
 
-namespace ishell {
+namespace iShell {
 
 
 /*! \internal
@@ -121,7 +121,7 @@ class iFreeList
                 return i;
             x -= size;
         }
-        i_assert(false);
+        ix_assert(false);
         return -1;
     }
 
@@ -209,7 +209,7 @@ inline int iFreeList<T, ConstantsType>::next()
                 // race with another thread lost
                 delete [] v;
                 v = _v[block].load();
-                i_assert(v != 0);
+                ix_assert(v != 0);
             }
         }
 
@@ -234,6 +234,6 @@ inline void iFreeList<T, ConstantsType>::release(int id)
     } while (!_next.testAndSet(x, newid));
 }
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IFREELIST_H

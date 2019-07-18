@@ -14,7 +14,7 @@
 #include <glib.h>
 #include <core/kernel/ieventdispatcher.h>
 
-namespace ishell {
+namespace iShell {
 
 struct GPostEventSource;
 struct GSocketNotifierSource;
@@ -64,6 +64,6 @@ protected:
     std::map<iPollFD*, GPollFD*> m_fd2gfdMap;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IEVENTDISPATCHER_GLIB_H

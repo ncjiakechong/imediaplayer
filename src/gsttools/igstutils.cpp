@@ -16,7 +16,7 @@
 #include "core/kernel/ivariant.h"
 #include "gsttools/igstutils.h"
 
-namespace ishell {
+namespace iShell {
 
 template<typename T, int N> static int lengthOf(const T (&)[N]) { return N; }
 
@@ -45,7 +45,7 @@ static void addTagToMap(const GstTagList *list,
             map->insert(std::pair<std::string, iVariant >(std::string(tag), g_value_get_uint(&val)));
             break;
         case G_TYPE_LONG:
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), int64_t(g_value_get_long(&val))));
+            map->insert(std::pair<std::string, iVariant >(std::string(tag), xint64(g_value_get_long(&val))));
             break;
         case G_TYPE_BOOLEAN:
             map->insert(std::pair<std::string, iVariant >(std::string(tag), g_value_get_boolean(&val)));
@@ -182,7 +182,7 @@ QAudioFormat iGstUtils::audioFormatForCaps(const GstCaps *caps)
 #else
     const GstStructure *structure = gst_caps_get_structure(caps, 0);
 
-    if (qstrcmp(gst_structure_get_name(structure), "audio/x-raw-int") == 0) {
+    if (istrcmp(gst_structure_get_name(structure), "audio/x-raw-int") == 0) {
 
         format.setCodec("audio/pcm");
 
@@ -222,7 +222,7 @@ QAudioFormat iGstUtils::audioFormatForCaps(const GstCaps *caps)
         gst_structure_get_int(structure, "channels", &channels);
         format.setChannelCount(channels);
 
-    } else if (qstrcmp(gst_structure_get_name(structure), "audio/x-raw-float") == 0) {
+    } else if (istrcmp(gst_structure_get_name(structure), "audio/x-raw-float") == 0) {
 
         format.setCodec("audio/pcm");
 
@@ -346,7 +346,7 @@ GstCaps *iGstUtils::capsForAudioFormat(const QAudioFormat &format)
             gst_structure_set(structure, "signed", G_TYPE_BOOLEAN, FALSE, NULL);
 
         caps = gst_caps_new_empty();
-        i_assert(caps);
+        ix_assert(caps);
         gst_caps_append_structure(caps, structure);
     }
 
@@ -381,7 +381,7 @@ namespace {
         return 0;
     }
 
-    const char* getMimeTypeAlias(const QString &mimeType)
+    const char* getMimeTypeAlias(const iString &mimeType)
     {
         if (mimeType == "video/mp4")
             return "video/mpeg4";
@@ -397,14 +397,14 @@ namespace {
     }
 }
 
-QMultimedia::SupportEstimate iGstUtils::hasSupport(const QString &mimeType,
+QMultimedia::SupportEstimate iGstUtils::hasSupport(const iString &mimeType,
                                                     const QStringList &codecs,
-                                                    const QSet<QString> &supportedMimeTypeSet)
+                                                    const QSet<iString> &supportedMimeTypeSet)
 {
     if (supportedMimeTypeSet.isEmpty())
         return QMultimedia::NotSupported;
 
-    QString mimeTypeLowcase = mimeType.toLower();
+    iString mimeTypeLowcase = mimeType.toLower();
     bool containsMimeType = supportedMimeTypeSet.contains(mimeTypeLowcase);
     if (!containsMimeType) {
         const char* mimeTypeAlias = getMimeTypeAlias(mimeTypeLowcase);
@@ -418,8 +418,8 @@ QMultimedia::SupportEstimate iGstUtils::hasSupport(const QString &mimeType,
     }
 
     int supportedCodecCount = 0;
-    for (const QString &codec : codecs) {
-        QString codecLowcase = codec.toLower();
+    for (const iString &codec : codecs) {
+        iString codecLowcase = codec.toLower();
         const char* codecAlias = getCodecAlias(codecLowcase);
         if (codecAlias) {
             if (supportedMimeTypeSet.contains(codecAlias))
@@ -441,9 +441,9 @@ QMultimedia::SupportEstimate iGstUtils::hasSupport(const QString &mimeType,
 }
 
 
-QSet<QString> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory))
+QSet<iString> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory))
 {
-    QSet<QString> supportedMimeTypes;
+    QSet<iString> supportedMimeTypes;
 
     //enumerate supported mime types
     gst_init(NULL, NULL);
@@ -475,7 +475,7 @@ QSet<QString> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFac
             GstElementFactory *factory;
 
             if (GST_IS_TYPE_FIND_FACTORY(feature)) {
-                QString name(gst_plugin_feature_get_name(feature));
+                iString name(gst_plugin_feature_get_name(feature));
                 if (name.contains('/')) //filter out any string without '/' which is obviously not a mime type
                     supportedMimeTypes.insert(name.toLower());
                 continue;
@@ -494,7 +494,7 @@ QSet<QString> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFac
                     if (gst_caps_is_any(caps) || gst_caps_is_empty(caps)) {
                     } else for (guint i = 0; i < gst_caps_get_size(caps); i++) {
                         GstStructure *structure = gst_caps_get_structure(caps, i);
-                        QString nameLowcase = QString(gst_structure_get_name(structure)).toLower();
+                        iString nameLowcase = iString(gst_structure_get_name(structure)).toLower();
 
                         supportedMimeTypes.insert(nameLowcase);
                         if (nameLowcase.contains("mpeg")) {
@@ -504,9 +504,9 @@ QSet<QString> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFac
                             const GValue *value = gst_structure_get_value(structure, "mpegversion");
                             if (value) {
                                 gchar *str = gst_value_serialize(value);
-                                QString versions(str);
-                                const QStringList elements = versions.split(QRegExp("\\D+"), QString::SkipEmptyParts);
-                                for (const QString &e : elements)
+                                iString versions(str);
+                                const QStringList elements = versions.split(QRegExp("\\D+"), iString::SkipEmptyParts);
+                                for (const iString &e : elements)
                                     supportedMimeTypes.insert(nameLowcase + e);
                                 g_free(str);
                             }
@@ -524,7 +524,7 @@ QSet<QString> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFac
     QStringList list = supportedMimeTypes.toList();
     list.sort();
     if (qgetenv("QT_DEBUG_PLUGINS").toInt() > 0) {
-        for (const QString &type : qAsConst(list))
+        for (const iString &type : qAsConst(list))
             qDebug() << type;
     }
 #endif
@@ -591,7 +591,7 @@ QImage iGstUtils::bufferToImage(GstBuffer *buffer)
             static_cast<const uchar *>(frame.data[2])
         };
 #else
-    if (qstrcmp(gst_structure_get_name(structure), "video/x-raw-yuv") == 0) {
+    if (istrcmp(gst_structure_get_name(structure), "video/x-raw-yuv") == 0) {
         const int stride[] = { width, width / 2, width / 2 };
         const uchar *data[] = {
             (const uchar *)buffer->data,
@@ -607,7 +607,7 @@ QImage iGstUtils::bufferToImage(GstBuffer *buffer)
             const uchar *vLine = data[2] + (y * stride[2] / 2);
 
             for (int x=0; x<width; x+=2) {
-                const qreal Y = 1.164*(yLine[x]-16);
+                const xreal Y = 1.164*(yLine[x]-16);
                 const int U = uLine[x/2]-128;
                 const int V = vLine[x/2]-128;
 
@@ -637,7 +637,7 @@ QImage iGstUtils::bufferToImage(GstBuffer *buffer)
 
     gst_video_frame_unmap(&frame);
 #else
-    } else if (qstrcmp(gst_structure_get_name(structure), "video/x-raw-rgb") == 0) {
+    } else if (istrcmp(gst_structure_get_name(structure), "video/x-raw-rgb") == 0) {
         QImage::Format format = QImage::Format_Invalid;
         int bpp = 0;
         gst_structure_get_int(structure, "bpp", &bpp);
@@ -820,7 +820,7 @@ QVideoSurfaceFormat iGstUtils::formatForCaps(
                         handleType);
 
             if (infoPtr->fps_d > 0)
-                format.setFrameRate(qreal(infoPtr->fps_n) / infoPtr->fps_d);
+                format.setFrameRate(xreal(infoPtr->fps_n) / infoPtr->fps_d);
 
             if (infoPtr->par_d > 0)
                 format.setPixelAspectRatio(infoPtr->par_n, infoPtr->par_d);
@@ -845,7 +845,7 @@ QVideoSurfaceFormat iGstUtils::formatForCaps(
     if (pixelFormat != QVideoFrame::Format_Invalid) {
         QVideoSurfaceFormat format(size, pixelFormat, handleType);
 
-        QPair<qreal, qreal> rate = structureFrameRateRange(structure);
+        QPair<xreal, xreal> rate = structureFrameRateRange(structure);
         if (rate.second)
             format.setFrameRate(rate.second);
 
@@ -925,27 +925,27 @@ GstCaps *iGstUtils::capsForFormats(const QList<QVideoFrame::PixelFormat> &format
 void iGstUtils::setFrameTimeStamps(QVideoFrame *frame, GstBuffer *buffer)
 {
     // GStreamer uses nanoseconds, Qt uses microseconds
-    qint64 startTime = GST_BUFFER_TIMESTAMP(buffer);
+    xint64 startTime = GST_BUFFER_TIMESTAMP(buffer);
     if (startTime >= 0) {
         frame->setStartTime(startTime/G_GINT64_CONSTANT (1000));
 
-        qint64 duration = GST_BUFFER_DURATION(buffer);
+        xint64 duration = GST_BUFFER_DURATION(buffer);
         if (duration >= 0)
             frame->setEndTime((startTime + duration)/G_GINT64_CONSTANT (1000));
     }
 }
 
-void iGstUtils::setMetaData(GstElement *element, const QMap<QByteArray, iVariant> &data)
+void iGstUtils::setMetaData(GstElement *element, const QMap<iByteArray, iVariant> &data)
 {
     if (!GST_IS_TAG_SETTER(element))
         return;
 
     gst_tag_setter_reset_tags(GST_TAG_SETTER(element));
 
-    QMapIterator<QByteArray, iVariant> it(data);
+    QMapIterator<iByteArray, iVariant> it(data);
     while (it.hasNext()) {
         it.next();
-        const QString tagName = it.key();
+        const iString tagName = it.key();
         const iVariant tagValue = it.value();
 
         switch (tagValue.type()) {
@@ -990,7 +990,7 @@ void iGstUtils::setMetaData(GstElement *element, const QMap<QByteArray, iVariant
     }
 }
 
-void iGstUtils::setMetaData(GstBin *bin, const QMap<QByteArray, iVariant> &data)
+void iGstUtils::setMetaData(GstBin *bin, const QMap<iByteArray, iVariant> &data)
 {
     GstIterator *elements = gst_bin_iterate_all_by_interface(bin, GST_TYPE_TAG_SETTER);
 #if GST_CHECK_VERSION(1,0,0)
@@ -1047,7 +1047,6 @@ QVideoFrame::PixelFormat iGstUtils::structurePixelFormat(const GstStructure *str
         return pixelFormat;
 
 #if GST_CHECK_VERSION(1,0,0)
-    Q_UNUSED(bpp);
 
     if (gst_structure_has_name(structure, "video/x-raw")) {
         const gchar *s = gst_structure_get_string(structure, "format");
@@ -1060,7 +1059,7 @@ QVideoFrame::PixelFormat iGstUtils::structurePixelFormat(const GstStructure *str
         }
     }
 #else
-    if (qstrcmp(gst_structure_get_name(structure), "video/x-raw-yuv") == 0) {
+    if (istrcmp(gst_structure_get_name(structure), "video/x-raw-yuv") == 0) {
         guint32 fourcc = 0;
         gst_structure_get_fourcc(structure, "format", &fourcc);
 
@@ -1070,7 +1069,7 @@ QVideoFrame::PixelFormat iGstUtils::structurePixelFormat(const GstStructure *str
             if (bpp)
                 *bpp = qt_yuvColorLookup[index].bitsPerPixel;
         }
-    } else if (qstrcmp(gst_structure_get_name(structure), "video/x-raw-rgb") == 0) {
+    } else if (istrcmp(gst_structure_get_name(structure), "video/x-raw-rgb") == 0) {
         int bitsPerPixel = 0;
         int depth = 0;
         int endianness = 0;
@@ -1116,32 +1115,32 @@ iSize iGstUtils::structurePixelAspectRatio(const GstStructure *s)
     return ratio;
 }
 
-QPair<qreal, qreal> iGstUtils::structureFrameRateRange(const GstStructure *s)
+QPair<xreal, xreal> iGstUtils::structureFrameRateRange(const GstStructure *s)
 {
-    QPair<qreal, qreal> rate;
+    QPair<xreal, xreal> rate;
 
     if (!s)
         return rate;
 
     int n, d;
     if (gst_structure_get_fraction(s, "framerate", &n, &d)) {
-        rate.second = qreal(n) / d;
+        rate.second = xreal(n) / d;
         rate.first = rate.second;
     } else if (gst_structure_get_fraction(s, "max-framerate", &n, &d)) {
-        rate.second = qreal(n) / d;
+        rate.second = xreal(n) / d;
         if (gst_structure_get_fraction(s, "min-framerate", &n, &d))
-            rate.first = qreal(n) / d;
+            rate.first = xreal(n) / d;
         else
-            rate.first = qreal(1);
+            rate.first = xreal(1);
     }
 
     return rate;
 }
 
-typedef QMap<QString, QString> FileExtensionMap;
+typedef QMap<iString, iString> FileExtensionMap;
 Q_GLOBAL_STATIC(FileExtensionMap, fileExtensionMap)
 
-QString iGstUtils::fileExtensionForMimeType(const QString &mimeType)
+iString iGstUtils::fileExtensionForMimeType(const iString &mimeType)
 {
     if (fileExtensionMap->isEmpty()) {
         //extension for containers hard to guess from mimetype
@@ -1158,8 +1157,8 @@ QString iGstUtils::fileExtensionForMimeType(const QString &mimeType)
     if (!mimeType.contains('/'))
         return mimeType;
 
-    QString format = mimeType.left(mimeType.indexOf(','));
-    QString extension = fileExtensionMap->value(format);
+    iString format = mimeType.left(mimeType.indexOf(','));
+    iString extension = fileExtensionMap->value(format);
 
     if (!extension.isEmpty() || format.isEmpty())
         return extension;
@@ -1333,4 +1332,4 @@ void qt_gst_util_double_to_fraction(gdouble src, gint *dest_n, gint *dest_d)
 }
 #endif
 
-} // namespace ishell
+} // namespace iShell

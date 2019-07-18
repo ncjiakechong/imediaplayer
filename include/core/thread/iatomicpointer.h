@@ -14,11 +14,11 @@
 #include <core/global/imacro.h>
 #include <core/thread/imutex.h>
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 #include <atomic>
 #endif
 
-namespace ishell {
+namespace iShell {
 
 template <typename X>
 class iAtomicPointer
@@ -45,7 +45,7 @@ public:
     Type operator=(Type newValue) { store(newValue); return newValue; }
 
 private:
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
     typedef std::atomic<Type> ImplType;
 #else // generic implementation based on iMutex
     struct ImplType
@@ -65,7 +65,7 @@ private:
 //
 // inlines
 //
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 //
 // C++11 atomics
 //
@@ -152,6 +152,6 @@ inline bool iAtomicPointer<X>::testAndSet(Type expectedValue, Type newValue)
 
 #endif
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IATOMICPOINTER_H

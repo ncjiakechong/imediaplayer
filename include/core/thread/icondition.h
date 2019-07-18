@@ -13,7 +13,7 @@
 
 #include <core/thread/imutex.h>
 
-namespace ishell {
+namespace iShell {
 
 class iConditionImpl;
 
@@ -60,6 +60,6 @@ private:
     iConditionImpl* m_cond;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ICONDITION_H

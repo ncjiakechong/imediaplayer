@@ -16,12 +16,12 @@
 #include <core/thread/iatomiccounter.h>
 #include <core/utils/isharedptr.h>
 
-namespace ishell {
+namespace iShell {
 
 struct iAbstractConverterFunction
 {
     typedef bool (*Converter)(const iAbstractConverterFunction *, const void *, void*);
-    explicit iAbstractConverterFunction(Converter c = I_NULLPTR)
+    explicit iAbstractConverterFunction(Converter c = IX_NULLPTR)
         : convert(c) {}
     Converter convert;
 
@@ -218,7 +218,7 @@ static bool iRegisterConverter(To(From::*function)() const)
     return iVariant::registerConverterFunction(&f, fromTypeId, toTypeId);
 }
 
-// member function as "int XXX::toInt(bool *ok = I_NULLPTR) const"
+// member function as "int XXX::toInt(bool *ok = IX_NULLPTR) const"
 template<typename From, typename To>
 static bool iRegisterConverter(To(From::*function)(bool*) const)
 {
@@ -251,6 +251,6 @@ static bool iRegisterConverter()
     return iRegisterConverter<From, To>(iConvertImplicit<From, To>);
 }
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IVARIANT_H

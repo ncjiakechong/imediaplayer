@@ -18,10 +18,10 @@
 #include "core/kernel/ipoll.h"
 #include "core/io/ilog.h"
 
-#ifdef I_OS_WIN
+#ifdef IX_OS_WIN
 #include <windows.h>
 
-#define I_WIN32_MSG_HANDLE 19981206
+#define IX_WIN32_MSG_HANDLE 19981206
 #else
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -31,9 +31,9 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
-#ifdef I_OS_WIN
+#ifdef IX_OS_WIN
 
 static int poll_rest (iPollFD *msg_fd,
            HANDLE  *handles,
@@ -45,7 +45,7 @@ static int poll_rest (iPollFD *msg_fd,
     iPollFD *f;
     int recursed_result;
 
-    if (msg_fd != I_NULLPTR) {
+    if (msg_fd != IX_NULLPTR) {
         ready = MsgWaitForMultipleObjectsEx (nhandles, handles, timeout,
                    QS_ALLINPUT, MWMO_ALERTABLE);
 
@@ -72,8 +72,8 @@ static int poll_rest (iPollFD *msg_fd,
         return -1;
     else if (ready == WAIT_TIMEOUT || ready == WAIT_IO_COMPLETION)
         return 0;
-    else if (msg_fd != I_NULLPTR && ready == WAIT_OBJECT_0 + nhandles) {
-        msg_fd->revents |= I_IO_IN;
+    else if (msg_fd != IX_NULLPTR && ready == WAIT_OBJECT_0 + nhandles) {
+        msg_fd->revents |= IX_IO_IN;
 
         /* If we have a timeout, or no handles to poll, be satisfied
         * with just noticing we have messages waiting.
@@ -84,7 +84,7 @@ static int poll_rest (iPollFD *msg_fd,
         /* If no timeout and handles to poll, recurse to poll them,
         * too.
         */
-        recursed_result = poll_rest (I_NULLPTR, handles, handle_to_fd, nhandles, 0);
+        recursed_result = poll_rest (IX_NULLPTR, handles, handle_to_fd, nhandles, 0);
         return (recursed_result == -1) ? -1 : 1 + recursed_result;
     } else if (ready >= WAIT_OBJECT_0 && ready < WAIT_OBJECT_0 + nhandles) {
         f = handle_to_fd[ready - WAIT_OBJECT_0];
@@ -103,7 +103,7 @@ static int poll_rest (iPollFD *msg_fd,
               shorter_handle_to_fd = &handle_to_fd[ready - WAIT_OBJECT_0 + 1];
               shorter_nhandles = nhandles - (ready - WAIT_OBJECT_0 + 1);
 
-            recursed_result = poll_rest (I_NULLPTR, shorter_handles, shorter_handle_to_fd, shorter_nhandles, 0);
+            recursed_result = poll_rest (IX_NULLPTR, shorter_handles, shorter_handle_to_fd, shorter_nhandles, 0);
             return (recursed_result == -1) ? -1 : 1 + recursed_result;
         }
 
@@ -113,17 +113,17 @@ static int poll_rest (iPollFD *msg_fd,
     return 0;
 }
 
-int32_t iPoll (iPollFD *fds, uint32_t nfds, int32_t timeout)
+xint32 iPoll (iPollFD *fds, xuint32 nfds, xint32 timeout)
 {
     HANDLE handles[MAXIMUM_WAIT_OBJECTS];
     iPollFD *handle_to_fd[MAXIMUM_WAIT_OBJECTS];
-    iPollFD *msg_fd = I_NULLPTR;
+    iPollFD *msg_fd = IX_NULLPTR;
     int nhandles = 0;
     int retval;
 
-    for (uint32_t idx = 0; idx < nfds; ++idx) {
+    for (xuint32 idx = 0; idx < nfds; ++idx) {
         iPollFD* f = &fds[idx];
-        if (f->fd == I_WIN32_MSG_HANDLE && (f->events & I_IO_IN)) {
+        if (f->fd == IX_WIN32_MSG_HANDLE && (f->events & IX_IO_IN)) {
             msg_fd = f;
         } else if (f->fd > 0) {
             if (nhandles == MAXIMUM_WAIT_OBJECTS) {
@@ -141,7 +141,7 @@ int32_t iPoll (iPollFD *fds, uint32_t nfds, int32_t timeout)
         timeout = INFINITE;
 
     /* Polling for several things? */
-    if (nhandles > 1 || (nhandles > 0 && msg_fd != I_NULLPTR)) {
+    if (nhandles > 1 || (nhandles > 0 && msg_fd != IX_NULLPTR)) {
         /* First check if one or several of them are immediately
         * available
         */
@@ -161,7 +161,7 @@ int32_t iPoll (iPollFD *fds, uint32_t nfds, int32_t timeout)
     }
 
     if (retval == -1) {
-        for (uint32_t idx = 0; idx < nfds; ++idx) {
+        for (xuint32 idx = 0; idx < nfds; ++idx) {
             iPollFD* f = &fds[idx];
             f->revents = 0;
         }
@@ -170,7 +170,7 @@ int32_t iPoll (iPollFD *fds, uint32_t nfds, int32_t timeout)
     return retval;
 }
 
-#else  /* !I_OS_WIN */
+#else  /* !IX_OS_WIN */
 
 /* The following implementation of poll() comes from the GNU C Library.
  * Copyright (C) 1994, 1996, 1997 Free Software Foundation, Inc.
@@ -184,7 +184,7 @@ int32_t iPoll (iPollFD *fds, uint32_t nfds, int32_t timeout)
         var = cmd;                              \
     } while (var == -1 && errno == EINTR)
 
-static inline int ipoll_prepare(iPollFD *fds, uint32_t nfds,
+static inline int ipoll_prepare(iPollFD *fds, xuint32 nfds,
                                   fd_set *read_fds, fd_set *write_fds, fd_set *except_fds)
 {
     int max_fd = -1;
@@ -193,25 +193,25 @@ static inline int ipoll_prepare(iPollFD *fds, uint32_t nfds,
     FD_ZERO(write_fds);
     FD_ZERO(except_fds);
 
-    for (uint32_t i = 0; i < nfds; ++i) {
+    for (xuint32 i = 0; i < nfds; ++i) {
         if (fds[i].fd >= FD_SETSIZE) {
             errno = EINVAL;
             return -1;
         }
 
-        if ((fds[i].fd < 0) || (fds[i].revents & (I_IO_ERR | I_IO_NVAL)))
+        if ((fds[i].fd < 0) || (fds[i].revents & (IX_IO_ERR | IX_IO_NVAL)))
             continue;
 
-        if (fds[i].events & I_IO_IN)
+        if (fds[i].events & IX_IO_IN)
             FD_SET(fds[i].fd, read_fds);
 
-        if (fds[i].events & I_IO_OUT)
+        if (fds[i].events & IX_IO_OUT)
             FD_SET(fds[i].fd, write_fds);
 
-        if (fds[i].events & I_IO_PRI)
+        if (fds[i].events & IX_IO_PRI)
             FD_SET(fds[i].fd, except_fds);
 
-        if (fds[i].events & (I_IO_IN|I_IO_OUT|I_IO_PRI))
+        if (fds[i].events & (IX_IO_IN|IX_IO_OUT|IX_IO_PRI))
             max_fd = std::max(max_fd, (int)fds[i].fd);
     }
 
@@ -233,30 +233,30 @@ static inline void ipoll_examine_ready_read(iPollFD& pfd)
     const int error = (res < 0) ? errno : 0;
 
     if (res == 0) {
-        pfd.revents |= I_IO_HUP;
+        pfd.revents |= IX_IO_HUP;
     } else if (res > 0 || error == ENOTSOCK || error == ENOTCONN) {
-        pfd.revents |= I_IO_IN & pfd.events;
+        pfd.revents |= IX_IO_IN & pfd.events;
     } else {
         switch (error) {
         case ESHUTDOWN:
         case ECONNRESET:
         case ECONNABORTED:
         case ENETRESET:
-            pfd.revents |= I_IO_HUP;
+            pfd.revents |= IX_IO_HUP;
             break;
         default:
-            pfd.revents |= I_IO_ERR;
+            pfd.revents |= IX_IO_ERR;
             break;
         }
     }
 }
 
-static inline int ipoll_sweep(iPollFD *fds, uint32_t nfds,
+static inline int ipoll_sweep(iPollFD *fds, xuint32 nfds,
                                 fd_set *read_fds, fd_set *write_fds, fd_set *except_fds)
 {
     int result = 0;
 
-    for (uint32_t i = 0; i < nfds; ++i) {
+    for (xuint32 i = 0; i < nfds; ++i) {
         if (fds[i].fd < 0)
             continue;
 
@@ -264,10 +264,10 @@ static inline int ipoll_sweep(iPollFD *fds, uint32_t nfds,
             ipoll_examine_ready_read(fds[i]);
 
         if (FD_ISSET(fds[i].fd, write_fds))
-            fds[i].revents |= I_IO_OUT & fds[i].events;
+            fds[i].revents |= IX_IO_OUT & fds[i].events;
 
         if (FD_ISSET(fds[i].fd, except_fds))
-            fds[i].revents |= I_IO_PRI & fds[i].events;
+            fds[i].revents |= IX_IO_PRI & fds[i].events;
 
         if (fds[i].revents != 0)
             result++;
@@ -283,20 +283,20 @@ static inline bool ipoll_is_bad_fd(int fd)
     return (ret == -1 && errno == EBADF);
 }
 
-static inline int ipoll_mark_bad_fds(iPollFD *fds, uint32_t nfds)
+static inline int ipoll_mark_bad_fds(iPollFD *fds, xuint32 nfds)
 {
     int n_marked = 0;
 
-    for (uint32_t i = 0; i < nfds; i++) {
+    for (xuint32 i = 0; i < nfds; i++) {
         if (fds[i].fd < 0)
             continue;
 
-        if (fds[i].revents & (I_IO_ERR | I_IO_NVAL))
+        if (fds[i].revents & (IX_IO_ERR | IX_IO_NVAL))
             continue;
 
         if (ipoll_is_bad_fd(fds[i].fd)) {
             ilog_warn("ipoll fd(", fds[i].fd, ") is bad");
-            fds[i].revents |= I_IO_NVAL;
+            fds[i].revents |= IX_IO_NVAL;
             n_marked++;
         }
    }
@@ -304,7 +304,7 @@ static inline int ipoll_mark_bad_fds(iPollFD *fds, uint32_t nfds)
    return n_marked;
 }
 
-int iPoll(iPollFD *fds, uint32_t nfds, int32_t timeout)
+int iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
 {
     if (!fds && nfds) {
         ilog_warn("iPoll invalid argument");
@@ -312,7 +312,7 @@ int iPoll(iPollFD *fds, uint32_t nfds, int32_t timeout)
     }
 
     fd_set read_fds, write_fds, except_fds;
-    struct timeval tv, *ptv = I_NULLPTR;
+    struct timeval tv, *ptv = IX_NULLPTR;
 
     int n_bad_fds = 0;
 
@@ -322,13 +322,13 @@ int iPoll(iPollFD *fds, uint32_t nfds, int32_t timeout)
         ptv = &tv;
     }
 
-    for (uint32_t i = 0; i < nfds; i++) {
+    for (xuint32 i = 0; i < nfds; i++) {
         fds[i].revents = 0;
 
         if (fds[i].fd < 0)
             continue;
 
-        if (fds[i].events & (I_IO_IN|I_IO_OUT|I_IO_PRI))
+        if (fds[i].events & (IX_IO_IN|IX_IO_OUT|IX_IO_PRI))
             continue;
 
         if (ipoll_is_bad_fd(fds[i].fd)) {
@@ -336,7 +336,7 @@ int iPoll(iPollFD *fds, uint32_t nfds, int32_t timeout)
             // here, as we won't be passing them to select below and therefore
             // need to do the check ourselves
             ilog_warn("ipoll fd(", fds[i].fd, ") is bad");
-            fds[i].revents = I_IO_NVAL;
+            fds[i].revents = IX_IO_NVAL;
             n_bad_fds++;
         }
     }
@@ -369,6 +369,6 @@ int iPoll(iPollFD *fds, uint32_t nfds, int32_t timeout)
     } while (true);
 }
 
-#endif /* !I_OS_WIN */
+#endif /* !IX_OS_WIN */
 
-} // namespace ishell
+} // namespace iShell

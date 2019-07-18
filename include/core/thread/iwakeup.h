@@ -13,7 +13,7 @@
 
 #include <core/kernel/ipoll.h>
 
-namespace ishell {
+namespace iShell {
 
 class iWakeup
 {
@@ -27,9 +27,9 @@ public:
     void acknowledge();
 
 private:
-    intptr_t m_fds[2];
+    xintptr m_fds[2];
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IWAKEUP_H

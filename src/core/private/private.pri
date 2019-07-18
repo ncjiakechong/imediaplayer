@@ -5,10 +5,15 @@
 #-------------------------------------------------
 
 SOURCES += \
+    $$PWD/ilocale_tools_p.cpp \
     private/ieventdispatcher_generic.cpp \
     private/itimerinfo.cpp
 
 HEADERS += \
+    $$PWD/ilocale_tools_p.h \
+    $$PWD/inumeric_p.h \
+    $$PWD/istringalgorithms_p.h \
+    $$PWD/itools_p.h \
     private/ithread_p.h \
     private/ieventdispatcher_generic.h \
     private/itimerinfo.h

@@ -11,7 +11,7 @@
 
 #include "core/utils/isize.h"
 
-namespace ishell {
+namespace iShell {
 
 void iSize::transpose()
 {
@@ -24,7 +24,7 @@ iSize iSize::scaled(const iSize &s, AspectRatioMode mode) const
         return s;
     } else {
         bool useHeight;
-        int64_t rw = int64_t(s.ht) * int64_t(wd) / int64_t(ht);
+        xint64 rw = xint64(s.ht) * xint64(wd) / xint64(ht);
 
         if (mode == KeepAspectRatio) {
             useHeight = (rw <= s.wd);
@@ -36,7 +36,7 @@ iSize iSize::scaled(const iSize &s, AspectRatioMode mode) const
             return iSize(rw, s.ht);
         } else {
             return iSize(s.wd,
-                         int32_t(int64_t(s.wd) * int64_t(ht) / int64_t(wd)));
+                         xint32(xint64(s.wd) * xint64(ht) / xint64(wd)));
         }
     }
 }
@@ -67,4 +67,4 @@ iSizeF iSizeF::scaled(const iSizeF &s, AspectRatioMode mode) const
         }
     }
 }
-} // namespace ishell
+} // namespace iShell

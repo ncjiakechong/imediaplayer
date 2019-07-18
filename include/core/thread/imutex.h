@@ -13,7 +13,7 @@
 
 #include <core/thread/iscopedlock.h>
 
-namespace ishell {
+namespace iShell {
 
 class iMutexImpl
 {
@@ -136,6 +136,6 @@ inline int iMutex::unlock()
     return m_mutex->unlockImpl();
 }
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IMUTEX_H

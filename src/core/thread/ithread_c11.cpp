@@ -16,19 +16,19 @@
 #include "core/io/ilog.h"
 #include "private/ithread_p.h"
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 #include "private/ieventdispatcher_generic.h"
 #endif
 
-#ifdef I_OS_WIN
+#ifdef IX_OS_WIN
 #include <windows.h>
 #endif
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
-#ifdef I_OS_WIN
+#ifdef IX_OS_WIN
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #pragma pack(push,8)
 typedef struct tagTHREADNAME_INFO
@@ -79,7 +79,7 @@ void iThreadImpl::internalThreadFunc()
         snprintf(buf, sizeof(buf), "%s", thread->objectName().c_str());
         // buf[15] = '\0';
 
-        #ifdef I_OS_WIN
+        #ifdef IX_OS_WIN
         SetThreadName(GetCurrentThreadId(), buf);
         #else
         pthread_setname_np(pthread_self(), buf);
@@ -93,7 +93,7 @@ void iThreadImpl::internalThreadFunc()
         data->ref();
     }
 
-    if (I_NULLPTR == data->dispatcher.load())
+    if (IX_NULLPTR == data->dispatcher.load())
         data->dispatcher = iCoreApplication::createEventDispatcher();
 
     if (data->dispatcher.load()) // custom event dispatcher set?
@@ -128,7 +128,7 @@ static void* __internal_thread_func(void *userdata)
     iThreadImpl* imp = static_cast<iThreadImpl*>(userdata);
     imp->internalThreadFunc();
 
-    return I_NULLPTR;
+    return IX_NULLPTR;
 }
 
 bool iThreadImpl::start()
@@ -140,7 +140,7 @@ bool iThreadImpl::start()
     }
 
     thread = new std::thread(__internal_thread_func, this);
-    m_thread->m_data->threadId = (intptr_t)thread->native_handle();
+    m_thread->m_data->threadId = (xintptr)thread->native_handle();
     m_platform = thread;
 
     return true;
@@ -151,12 +151,12 @@ void iThread::msleep(unsigned long t)
     std::this_thread::sleep_for(std::chrono::milliseconds(t));
 }
 
-intptr_t iThread::currentThreadId()
+xintptr iThread::currentThreadId()
 {
-#ifdef I_OS_WIN
-    return (intptr_t)GetCurrentThreadId();
+#ifdef IX_OS_WIN
+    return (xintptr)GetCurrentThreadId();
 #else
-    return (intptr_t)pthread_self();
+    return (xintptr)pthread_self();
 #endif
 }
 
@@ -165,4 +165,4 @@ void iThread::yieldCurrentThread()
     std::this_thread::yield();
 }
 
-} // namespace ishell
+} // namespace iShell

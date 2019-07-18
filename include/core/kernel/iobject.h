@@ -23,13 +23,13 @@
 #include <core/thread/iatomicpointer.h>
 #include <core/global/inamespace.h>
 
-namespace ishell {
+namespace iShell {
 
 #define IPROPERTY_BEGIN(PARENT) \
     virtual const std::map<std::string, iSharedPtr<_iproperty_base>>& getOrInitProperty() { \
         static std::map<std::string, iSharedPtr<_iproperty_base>> s_propertys; \
-        std::map<std::string, isignal<iVariant>*>* propertyNofity = I_NULLPTR; \
-        std::map<std::string, iSharedPtr<_iproperty_base>>* propertyIns = I_NULLPTR; \
+        std::map<std::string, isignal<iVariant>*>* propertyNofity = IX_NULLPTR; \
+        std::map<std::string, iSharedPtr<_iproperty_base>>* propertyIns = IX_NULLPTR; \
         if (s_propertys.size() <= 0) { \
             propertyIns = &s_propertys; \
         } \
@@ -54,8 +54,8 @@ namespace ishell {
         if (propIns) { \
             propIns->insert(std::pair<std::string, iSharedPtr<_iproperty_base> >( \
                         NAME, \
-                        newProperty(&class_wrapper<I_TYPEOF(this)>::CLASSTYPE::GETFUNC, \
-                                    &class_wrapper<I_TYPEOF(this)>::CLASSTYPE::SETFUNC))); \
+                        newProperty(&class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::GETFUNC, \
+                                    &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SETFUNC))); \
         } \
         \
         if (propNotify) { \
@@ -190,7 +190,7 @@ public:
     template<class desttype, class slot1_type, class ret_type>
     void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type), ConnectionType type = AutoConnection)
     {
-        I_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
 
         typedef void (desttype::*pmemadaptor_t)();
         typedef ret_type (desttype::*pmemfunc_t)(slot1_type);
@@ -221,8 +221,8 @@ public:
     template<class desttype, class slot1_type, class slot2_type, class ret_type>
     void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type, slot2_type), ConnectionType type = AutoConnection)
     {
-        I_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
 
         typedef void (desttype::*pmemadaptor_t)();
         typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type);
@@ -255,9 +255,9 @@ public:
     void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
         slot2_type, slot3_type), ConnectionType type = AutoConnection)
     {
-        I_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
 
         typedef void (desttype::*pmemadaptor_t)();
         typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type);
@@ -292,10 +292,10 @@ public:
     void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
         slot2_type, slot3_type, slot4_type), ConnectionType type = AutoConnection)
     {
-        I_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
 
         typedef void (desttype::*pmemadaptor_t)();
         typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type);
@@ -331,11 +331,11 @@ public:
     void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
         slot2_type, slot3_type, slot4_type, slot5_type), ConnectionType type = AutoConnection)
     {
-        I_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
 
         typedef void (desttype::*pmemadaptor_t)();
         typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type,
@@ -373,12 +373,12 @@ public:
     void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
         slot2_type, slot3_type, slot4_type, slot5_type, slot6_type), ConnectionType type = AutoConnection)
     {
-        I_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
 
         typedef void (desttype::*pmemadaptor_t)();
         typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type,
@@ -418,13 +418,13 @@ public:
         slot2_type, slot3_type, slot4_type, slot5_type, slot6_type, slot7_type)
                  , ConnectionType type = AutoConnection)
     {
-        I_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg7_type, slot7_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg7_type, slot7_type>::value));
 
         typedef void (desttype::*pmemadaptor_t)();
         typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type,
@@ -465,14 +465,14 @@ public:
         slot2_type, slot3_type, slot4_type, slot5_type, slot6_type,
         slot7_type, slot8_type), ConnectionType type = AutoConnection)
     {
-        I_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg7_type, slot7_type>::value));
-        I_COMPILER_VERIFY((is_convertible<arg8_type, slot8_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg7_type, slot7_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<arg8_type, slot8_type>::value));
 
         typedef void (desttype::*pmemadaptor_t)();
         typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type,
@@ -565,7 +565,7 @@ struct _iproperty_base
     typedef iVariant (*get_t)(const _iproperty_base*, const iObject*);
     typedef void (*set_t)(const _iproperty_base*, iObject*, const iVariant&);
 
-    _iproperty_base(get_t g = I_NULLPTR, set_t s = I_NULLPTR)
+    _iproperty_base(get_t g = IX_NULLPTR, set_t s = IX_NULLPTR)
         : get(g), set(s) {}
     // virtual ~_iproperty_base(); // ignore destructor
 
@@ -579,29 +579,29 @@ struct iProperty : public _iproperty_base
     typedef ret (desttype::*pgetfunc_t)() const;
     typedef void (desttype::*psetfunc_t)(param);
 
-    iProperty(pgetfunc_t _getfunc = I_NULLPTR, psetfunc_t _setfunc = I_NULLPTR)
+    iProperty(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR)
         : _iproperty_base(getFunc, setFunc)
         , m_getFunc(_getfunc), m_setFunc(_setfunc) {}
 
     static iVariant getFunc(const _iproperty_base* _this, const iObject* obj) {
         const desttype* _classThis = static_cast<const desttype*>(obj);
         const iProperty* _typedThis = static_cast<const iProperty *>(_this);
-        i_check_ptr(_typedThis);
+        ix_check_ptr(_typedThis);
         if (!_typedThis->m_getFunc)
             return iVariant();
 
-        i_check_ptr(_classThis);
+        ix_check_ptr(_classThis);
         return (_classThis->*(_typedThis->m_getFunc))();
     }
 
     static void setFunc(const _iproperty_base* _this, iObject* obj, const iVariant& value) {
         desttype* _classThis = static_cast<desttype*>(obj);
         const iProperty *_typedThis = static_cast<const iProperty *>(_this);
-        i_check_ptr(_typedThis);
+        ix_check_ptr(_typedThis);
         if (!_typedThis->m_setFunc)
             return;
 
-        i_check_ptr(_classThis);
+        ix_check_ptr(_classThis);
         (_classThis->*(_typedThis->m_setFunc))(value.value<typename type_wrapper<param>::TYPE>());
     }
 
@@ -609,10 +609,10 @@ struct iProperty : public _iproperty_base
     psetfunc_t m_setFunc;
 };
 template<class desttype, typename ret, typename param>
-static _iproperty_base* newProperty(ret (desttype::*get)() const = I_NULLPTR,
-                        void (desttype::*set)(param) = I_NULLPTR)
+static _iproperty_base* newProperty(ret (desttype::*get)() const = IX_NULLPTR,
+                        void (desttype::*set)(param) = IX_NULLPTR)
 {
-    I_COMPILER_VERIFY((is_same<typename type_wrapper<ret>::TYPE, typename type_wrapper<param>::TYPE>::VALUE));
+    IX_COMPILER_VERIFY((is_same<typename type_wrapper<ret>::TYPE, typename type_wrapper<param>::TYPE>::VALUE));
     return new iProperty<desttype, ret, param>(get, set);
 }
 
@@ -625,8 +625,8 @@ class iObject
     // IPROPERTY_ITEM("objectName", objectName, setObjectName)
     // IPROPERTY_END
 public:
-    iObject(iObject* parent = I_NULLPTR);
-    iObject(const std::string& name, iObject* parent = I_NULLPTR);
+    iObject(iObject* parent = IX_NULLPTR);
+    iObject(const std::string& name, iObject* parent = IX_NULLPTR);
     iObject(const iObject& other);
 
     virtual ~iObject();
@@ -685,7 +685,7 @@ public:
             }
 
             static void* cloneArgs(void*) {
-                return I_NULLPTR;
+                return IX_NULLPTR;
             }
 
             static void freeArgs(void*) {
@@ -696,7 +696,7 @@ public:
         _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
         _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
 
-        return invokeMethodImpl(conn, I_NULLPTR, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        return invokeMethodImpl(conn, IX_NULLPTR, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
     template<class desttype, class arg1_type, class ret_type>
@@ -1209,6 +1209,6 @@ private:
     friend struct isharedpointer::ExternalRefCountData;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IOBJECT_H

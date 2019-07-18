@@ -15,7 +15,55 @@
 #include <stdint.h>
 #include <algorithm>
 
-namespace ishell {
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned int uint;
+typedef unsigned long ulong;
+
+/*
+   Size-dependent types (architechture-dependent byte order)
+
+   Make sure to update QMetaType when changing these typedefs
+*/
+
+typedef int8_t xint8;         /* 8 bit signed */
+typedef uint8_t xuint8;      /* 8 bit unsigned */
+typedef int16_t xint16;              /* 16 bit signed */
+typedef uint16_t xuint16;    /* 16 bit unsigned */
+typedef int32_t xint32;                /* 32 bit signed */
+typedef uint32_t xuint32;      /* 32 bit unsigned */
+typedef int64_t xint64;           /* 64 bit signed */
+typedef uint64_t xuint64; /* 64 bit unsigned */
+
+typedef double xreal;
+typedef xint64 xlonglong;
+typedef xuint64 xulonglong;
+
+/*
+  xuintptr and xptrdiff is guaranteed to be the same size as a pointer, i.e.
+
+      sizeof(void *) == sizeof(xuintptr)
+      && sizeof(void *) == sizeof(xptrdiff)
+
+  size_t and xsizetype are not guaranteed to be the same size as a pointer, but
+  they usually are.
+*/
+template <int> struct iIntegerForSize;
+template <>    struct iIntegerForSize<1> { typedef xuint8  Unsigned; typedef xint8  Signed; };
+template <>    struct iIntegerForSize<2> { typedef xuint16 Unsigned; typedef xint16 Signed; };
+template <>    struct iIntegerForSize<4> { typedef xuint32 Unsigned; typedef xint32 Signed; };
+template <>    struct iIntegerForSize<8> { typedef xuint64 Unsigned; typedef xint64 Signed; };
+template <class T> struct iIntegerForSizeof: iIntegerForSize<sizeof(T)> { };
+
+typedef iIntegerForSizeof<void*>::Unsigned xuintptr;
+typedef iIntegerForSizeof<void*>::Signed xptrdiff;
+typedef xptrdiff xintptr;
+typedef xptrdiff xsizetype;
+
+#define IX_INT64_C(c) static_cast<xint64>(c ## LL)     /* signed 64 bit constant */
+#define IX_UINT64_C(c) static_cast<xuint64>(c ## ULL) /* unsigned 64 bit constant */
+
+namespace iShell {
 
 static inline bool iFuzzyCompare(double p1, double p2)
 {
@@ -47,11 +95,11 @@ static inline bool iIsNull(double d)
 {
     union U {
         double d;
-        uint64_t u;
+        xuint64 u;
     };
     U val;
     val.d = d;
-    return (val.u & uint64_t(0x7fffffffffffffff)) == 0;
+    return (val.u & xuint64(0x7fffffffffffffff)) == 0;
 }
 
 /*
@@ -63,13 +111,15 @@ static inline bool iIsNull(float f)
 {
     union U {
         float f;
-        uint32_t u;
+        xuint32 u;
     };
     U val;
     val.f = f;
     return (val.u & 0x7fffffff) == 0;
 }
 
-} // namespace ishell
+#define IX_CHECK_PTR(p) {}
+
+} // namespace iShell
 
 #endif // IGLOBAL_H

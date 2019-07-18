@@ -11,7 +11,7 @@
 
 #include "core/utils/irect.h"
 
-namespace ishell {
+namespace iShell {
 
 iRect iRect::normalized() const
 {
@@ -490,4 +490,4 @@ iRect iRectF::toAlignedRect() const
     return iRect(xmin, ymin, xmax - xmin, ymax - ymin);
 }
 
-} // namespace ishell
+} // namespace iShell

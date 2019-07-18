@@ -11,7 +11,7 @@
 
 #include "core/global/imacro.h"
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -25,9 +25,9 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 
 class MutexImpl_BaseMutex
     // Helper class to make std::recursive_timed_mutex and std::timed_mutex generic
@@ -153,7 +153,7 @@ public:
         struct timespec abstime;
         struct timeval tv;
 
-        gettimeofday(&tv, I_NULLPTR);
+        gettimeofday(&tv, IX_NULLPTR);
         abstime.tv_sec  = tv.tv_sec + milliseconds / 1000;
         abstime.tv_nsec = tv.tv_usec*1000 + (milliseconds % 1000)*1000000;
         if (abstime.tv_nsec >= 1000000000)
@@ -200,4 +200,4 @@ iMutex::~iMutex()
     delete m_mutex;
 }
 
-} // namespace ishell
+} // namespace iShell

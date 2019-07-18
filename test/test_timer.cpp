@@ -24,19 +24,19 @@
 
 #define ILOG_TAG "test"
 
-using namespace ishell;
+using namespace iShell;
 
 class TestTimer : public iObject
 {
 public:
-    TestTimer(iObject* parent = I_NULLPTR)
+    TestTimer(iObject* parent = IX_NULLPTR)
         : iObject(parent), m_quit(this)
     {
         m_quit.timeout.connect(this, &TestTimer::quit);
     }
 
     void start() {
-        int64_t cur = iDeadlineTimer::current().deadline();
+        xint64 cur = iDeadlineTimer::current().deadline();
         double disCur = cur / 1000.0;
         ilog_debug("TestTimer: [", iThread::currentThreadId(), "]start now:", disCur);
         m_t500 = startTimer(500);
@@ -52,7 +52,7 @@ public:
         }
 
         iTimerEvent* event = static_cast<iTimerEvent*>(e);
-        int64_t cur = iDeadlineTimer::current().deadline();
+        xint64 cur = iDeadlineTimer::current().deadline();
         double disCur = cur / 1000.0;
         ilog_debug("TestTimer[", event->timerId(), "], now: ", disCur);
 
@@ -70,7 +70,7 @@ public:
     }
 
     void quit() {
-        int64_t cur = iDeadlineTimer::current().deadline();
+        xint64 cur = iDeadlineTimer::current().deadline();
         double disCur = cur / 1000.0;
         ilog_debug("TestTimer: [", iThread::currentThreadId(), "]quit now:", disCur);
         iCoreApplication::postEvent(iThread::currentThread(), new iEvent(iEvent::Quit));
@@ -102,7 +102,7 @@ int test_timer(void)
     thread->start();
 
     timer->tst_sig.emits();
-    i_assert(0 == timer->startTimer(500));
+    ix_assert(0 == timer->startTimer(500));
 
     thread->wait();
     delete timer;

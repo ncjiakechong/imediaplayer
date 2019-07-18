@@ -15,7 +15,7 @@
 #include "core/thread/icondition.h"
 #include "core/thread/isemaphore.h"
 
-namespace ishell {
+namespace iShell {
 
 class iSemaphoreImp {
 public:
@@ -30,7 +30,7 @@ public:
 iSemaphore::iSemaphore(int n)
     : m_semph(new iSemaphoreImp(n))
 {
-    i_assert(n >= 0);
+    ix_assert(n >= 0);
 }
 
 iSemaphore::~iSemaphore()
@@ -40,7 +40,7 @@ iSemaphore::~iSemaphore()
 
 void iSemaphore::acquire(int n)
 {
-    i_assert(n >= 0);
+    ix_assert(n >= 0);
     iMutex::ScopedLock locker(m_semph->mutex);
     while (n > m_semph->avail)
         m_semph->cond.wait(*locker.mutex(), -1);
@@ -50,7 +50,7 @@ void iSemaphore::acquire(int n)
 
 void iSemaphore::release(int n)
 {
-    i_assert(n >= 0);
+    ix_assert(n >= 0);
     iMutex::ScopedLock locker(m_semph->mutex);
     m_semph->avail += n;
     m_semph->cond.broadcast();
@@ -65,7 +65,7 @@ int iSemaphore::available() const
 
 bool iSemaphore::tryAcquire(int n)
 {
-    i_assert(n >= 0);
+    ix_assert(n >= 0);
     iMutex::ScopedLock locker(m_semph->mutex);
     if (n > m_semph->avail)
         return false;
@@ -76,7 +76,7 @@ bool iSemaphore::tryAcquire(int n)
 
 bool iSemaphore::tryAcquire(int n, int timeout)
 {
-    i_assert(n >= 0);
+    ix_assert(n >= 0);
 
     // We're documented to accept any negative value as "forever"
     // but iDeadlineTimer only accepts -1.
@@ -84,7 +84,7 @@ bool iSemaphore::tryAcquire(int n, int timeout)
 
     iDeadlineTimer timer(timeout);
     iMutex::ScopedLock locker(m_semph->mutex);
-    int64_t remainingTime = timer.remainingTime();
+    xint64 remainingTime = timer.remainingTime();
     while ((n > m_semph->avail) && remainingTime != 0) {
         if (!m_semph->cond.wait(*locker.mutex(), (long)remainingTime))
             return false;
@@ -99,4 +99,4 @@ bool iSemaphore::tryAcquire(int n, int timeout)
     return true;
 }
 
-} // namespace ishell
+} // namespace iShell

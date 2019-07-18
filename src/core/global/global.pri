@@ -5,9 +5,11 @@
 #-------------------------------------------------
 
 SOURCES += \
+    $$PWD/inumeric.cpp
 
 HEADERS += \
     ../../include/core/global/iglobal.h \
     ../../include/core/global/imacro.h \
     ../../include/core/global/imetaprogramming.h \
     ../../include/core/global/inamespace.h \
+    ../../include/core/global/inumeric.h

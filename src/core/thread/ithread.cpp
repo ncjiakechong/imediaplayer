@@ -17,9 +17,9 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
-static thread_local iThreadData *currentThreadData = I_NULLPTR;
+static thread_local iThreadData *currentThreadData = IX_NULLPTR;
 
 // thread wrapper for the main() thread
 class iAdoptedThread : public iThread
@@ -54,7 +54,7 @@ static void set_thread_data(iThreadData *data)
 
 static void clear_thread_data()
 {
-    currentThreadData = I_NULLPTR;
+    currentThreadData = IX_NULLPTR;
 }
 
 iThreadData::iThreadData(int initialRefCount)
@@ -67,7 +67,7 @@ iThreadData::iThreadData(int initialRefCount)
 iThreadData::~iThreadData()
 {
     iThread *t = thread;
-    thread = I_NULLPTR;
+    thread = IX_NULLPTR;
     delete t;
 
     for (std::list<iPostEvent>::iterator it = postEventList.begin();
@@ -75,7 +75,7 @@ iThreadData::~iThreadData()
          ++it) {
         iPostEvent& pe = *it;
         iEvent* event = pe.event;
-        pe.event = I_NULLPTR;
+        pe.event = IX_NULLPTR;
         delete event;
 
     }
@@ -119,7 +119,7 @@ void iThreadData::setCurrent()
 iThread* iThread::currentThread()
 {
     iThreadData *data = iThreadData::current();
-    i_assert(data != I_NULLPTR);
+    ix_assert(data != IX_NULLPTR);
     return data->thread;
 }
 
@@ -192,13 +192,13 @@ iThread::~iThread()
     if (m_running && !m_finished)
         ilog_error("iThread: Destroyed while thread is still running");
 
-    m_data->thread = I_NULLPTR;
+    m_data->thread = IX_NULLPTR;
     delete m_impl;
 
     m_data->deref();
 }
 
-intptr_t iThread::threadId() const
+xintptr iThread::threadId() const
 {
     return m_data->threadId;
 }
@@ -236,7 +236,7 @@ bool iThread::isRunning() const
 void iThread::setStackSize(uint stackSize)
 {
     iMutex::ScopedLock lock(m_mutex);
-    i_assert(!m_running);
+    ix_assert(!m_running);
     m_stackSize = stackSize;
 }
 
@@ -252,7 +252,7 @@ void iThread::exit(int retCode)
     m_exited = true;
     m_returnCode = retCode;
 
-    iEventLoop* eventLoop = I_NULLPTR;
+    iEventLoop* eventLoop = IX_NULLPTR;
     {
         iMutex::ScopedLock _lockData(m_data->eventMutex);
         m_data->quitNow = true;
@@ -293,7 +293,7 @@ void iThread::start(Priority pri)
         ilog_warn("iThread::start: Thread creation error");
         m_running = false;
         m_finished = false;
-        m_data->threadId = (intptr_t)I_NULLPTR;
+        m_data->threadId = (xintptr)IX_NULLPTR;
     }
 }
 
@@ -325,4 +325,4 @@ void iThread::run()
     exec();
 }
 
-} // namespace ishell
+} // namespace iShell

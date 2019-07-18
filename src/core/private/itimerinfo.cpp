@@ -20,10 +20,10 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 iTimerInfoList::iTimerInfoList()
-    : firstTimerInfo(I_NULLPTR)
+    : firstTimerInfo(IX_NULLPTR)
 {
 }
 
@@ -37,7 +37,7 @@ iTimerInfoList::~iTimerInfoList()
     }
 }
 
-int64_t iTimerInfoList::updateCurrentTime()
+xint64 iTimerInfoList::updateCurrentTime()
 {
     currentTime = iDeadlineTimer::current(PreciseTimer).deadline();
     return currentTime;
@@ -63,7 +63,7 @@ void iTimerInfoList::timerInsert(TimerInfo *ti)
 }
 
 
-static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, int64_t currentTime)
+static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 currentTime)
 {
     // The coarse timer works like this:
     //  - interval under 40 ms: round to even
@@ -84,7 +84,7 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, int64_t cu
     uint interval = uint(t->interval);
     uint msec = uint(t->timeout % 1000);
     uint msec_bak = msec;
-    i_assert(interval >= 20);
+    ix_assert(interval >= 20);
 
     // Calculate how much we can round and still keep within 5% error
     uint absMaxRounding = interval / 20;
@@ -175,7 +175,7 @@ recalculate:
         t->timeout += interval;
 }
 
-static void calculateNextTimeout(iTimerInfoList::TimerInfo *t, int64_t currentTime)
+static void calculateNextTimeout(iTimerInfoList::TimerInfo *t, xint64 currentTime)
 {
     switch (t->timerType) {
     case PreciseTimer:
@@ -204,12 +204,12 @@ static void calculateNextTimeout(iTimerInfoList::TimerInfo *t, int64_t currentTi
   Returns the time to wait for the next timer, or null if no timers
   are waiting.
 */
-bool iTimerInfoList::timerWait(int64_t &tm)
+bool iTimerInfoList::timerWait(xint64 &tm)
 {
-    int64_t currentTime = updateCurrentTime();
+    xint64 currentTime = updateCurrentTime();
 
     // Find first waiting timer not already active
-    TimerInfo *t = I_NULLPTR;
+    TimerInfo *t = IX_NULLPTR;
     for (std::list<TimerInfo*>::const_iterator it = timers.cbegin(); it != timers.cend(); ++it) {
         if (!(*it)->activateRef) {
             t = *it;
@@ -238,7 +238,7 @@ bool iTimerInfoList::timerWait(int64_t &tm)
 */
 int iTimerInfoList::timerRemainingTime(int timerId)
 {
-    int64_t currentTime = updateCurrentTime();
+    xint64 currentTime = updateCurrentTime();
     for (std::list<TimerInfo*>::const_iterator it = timers.cbegin(); it != timers.cend(); ++it) {
         TimerInfo *t = *it;
         if (t->id == timerId) {
@@ -262,9 +262,9 @@ void iTimerInfoList::registerTimer(int timerId, int interval, TimerType timerTyp
     t->interval = interval;
     t->timerType = timerType;
     t->obj = object;
-    t->activateRef = I_NULLPTR;
+    t->activateRef = IX_NULLPTR;
 
-    int64_t expected = updateCurrentTime() + interval;
+    xint64 expected = updateCurrentTime() + interval;
 
     switch (timerType) {
     case PreciseTimer:
@@ -290,7 +290,7 @@ void iTimerInfoList::registerTimer(int timerId, int interval, TimerType timerTyp
             }
             break;
         }
-        I_FALLTHROUGH();
+        IX_FALLTHROUGH();
     case VeryCoarseTimer:
         // the very coarse timer is based on full second precision,
         // so we keep the interval in seconds (round to closest second)
@@ -313,9 +313,9 @@ bool iTimerInfoList::unregisterTimer(int timerId)
             // found it
             it = timers.erase(it);
             if (t == firstTimerInfo)
-                firstTimerInfo = I_NULLPTR;
+                firstTimerInfo = IX_NULLPTR;
             if (t->activateRef)
-                *(t->activateRef) = I_NULLPTR;
+                *(t->activateRef) = IX_NULLPTR;
             delete t;
 
             return true;
@@ -342,9 +342,9 @@ bool iTimerInfoList::unregisterTimers(iObject *object, bool releaseId)
             if (releaseId)
                 iEventDispatcher::releaseTimerId(t->id);
             if (t == firstTimerInfo)
-                firstTimerInfo = I_NULLPTR;
+                firstTimerInfo = IX_NULLPTR;
             if (t->activateRef)
-                *(t->activateRef) = I_NULLPTR;
+                *(t->activateRef) = IX_NULLPTR;
             delete t;
 
             continue;
@@ -381,9 +381,9 @@ int iTimerInfoList::activateTimers()
         return 0; // nothing to do
 
     int n_act = 0, maxCount = 0;
-    firstTimerInfo = I_NULLPTR;
+    firstTimerInfo = IX_NULLPTR;
 
-    int64_t currentTime = updateCurrentTime();
+    xint64 currentTime = updateCurrentTime();
 
     // Find out how many timer have expired
     for (std::list<TimerInfo*>::const_iterator it = timers.cbegin(); it != timers.cend(); ++it) {
@@ -430,11 +430,11 @@ int iTimerInfoList::activateTimers()
             iCoreApplication::sendEvent(currentTimerInfo->obj, &e);
 
             if (currentTimerInfo)
-                currentTimerInfo->activateRef = I_NULLPTR;
+                currentTimerInfo->activateRef = IX_NULLPTR;
         }
     }
 
-    firstTimerInfo = I_NULLPTR;
+    firstTimerInfo = IX_NULLPTR;
     return n_act;
 }
 
@@ -448,4 +448,4 @@ bool iTimerInfoList::existTimeout()
     return true;
 }
 
-} // namespace ishell
+} // namespace iShell

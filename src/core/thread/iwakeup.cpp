@@ -12,7 +12,7 @@
 #include "core/global/imacro.h"
 #include "core/thread/iwakeup.h"
 
-#ifdef I_OS_WIN
+#ifdef IX_OS_WIN
 #include <windows.h>
 #else
 #include <unistd.h>
@@ -24,17 +24,17 @@
 #include "private/icoreposix.h"
 #endif
 
-namespace ishell {
+namespace iShell {
 
-#ifdef I_OS_WIN
+#ifdef IX_OS_WIN
 iWakeup::iWakeup()
 {
     m_fds[0] = -1;
     m_fds[1] = -1;
 
     HANDLE wakeup;
-    wakeup = CreateEvent (I_NULLPTR, TRUE, FALSE, I_NULLPTR);
-    m_fds[0] = (intptr_t)wakeup;
+    wakeup = CreateEvent (IX_NULLPTR, TRUE, FALSE, IX_NULLPTR);
+    m_fds[0] = (xintptr)wakeup;
 }
 
 
@@ -46,7 +46,7 @@ iWakeup::~iWakeup()
 void iWakeup::getPollfd(iPollFD* fd) const
 {
     fd->fd = m_fds[0];
-    fd->events = I_IO_IN;
+    fd->events = IX_IO_IN;
 }
 
 void iWakeup::signal()
@@ -59,16 +59,16 @@ void iWakeup::acknowledge()
     ResetEvent ((HANDLE)m_fds[0]);
 }
 
-#else  /* !I_OS_WIN */
+#else  /* !IX_OS_WIN */
 
 iWakeup::iWakeup()
 {
     m_fds[0] = -1;
     m_fds[1] = -1;
 
-    i_open_pipe(m_fds, FD_CLOEXEC);
-    i_set_fd_nonblocking(m_fds[0], true);
-    i_set_fd_nonblocking(m_fds[1], true);
+    ix_open_pipe(m_fds, FD_CLOEXEC);
+    ix_set_fd_nonblocking(m_fds[0], true);
+    ix_set_fd_nonblocking(m_fds[1], true);
 }
 
 iWakeup::~iWakeup()
@@ -82,7 +82,7 @@ iWakeup::~iWakeup()
 void iWakeup::getPollfd(iPollFD* fd) const
 {
     fd->fd = m_fds[0];
-    fd->events = I_IO_IN;
+    fd->events = IX_IO_IN;
 }
 
 void iWakeup::signal()
@@ -90,7 +90,7 @@ void iWakeup::signal()
     int res;
 
     if (m_fds[1] == -1) {
-        uint64_t one = 1;
+        xuint64 one = 1;
 
         /* eventfd() case. It requires a 64-bit counter increment value to be
          * written. */
@@ -98,7 +98,7 @@ void iWakeup::signal()
             res = write (m_fds[0], &one, sizeof(one));
         }while ((res == -1) && (errno == EINTR));
     } else {
-        uint8_t one = 1;
+        xuint8 one = 1;
 
         /* Non-eventfd() case. Only a single byte needs to be written, and it can
          * have an arbitrary value. */
@@ -115,6 +115,6 @@ void iWakeup::acknowledge()
     /* read until it is empty */
     while (read (m_fds[0], buffer, sizeof(buffer)) == sizeof(buffer));
 }
-#endif /* !I_OS_WIN */
+#endif /* !IX_OS_WIN */
 
-} // namespace ishell
+} // namespace iShell

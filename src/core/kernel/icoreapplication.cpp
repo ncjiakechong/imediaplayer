@@ -17,7 +17,7 @@
 #include "core/io/ilog.h"
 #include "private/ithread_p.h"
 
-#ifdef I_OS_WIN
+#ifdef IX_OS_WIN
 #include "private/ieventdispatcher_generic.h"
 #else
 #include "private/ieventdispatcher_generic.h"
@@ -26,9 +26,9 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
-iCoreApplication* iCoreApplication::self = I_NULLPTR;
+iCoreApplication* iCoreApplication::self = IX_NULLPTR;
 
 iCoreApplicationPrivate::~iCoreApplicationPrivate()
 {
@@ -36,9 +36,9 @@ iCoreApplicationPrivate::~iCoreApplicationPrivate()
 
 iEventDispatcher* iCoreApplicationPrivate::createEventDispatcher() const
 {
-    iEventDispatcher* dispatcher = I_NULLPTR;
+    iEventDispatcher* dispatcher = IX_NULLPTR;
 
-    #ifdef I_OS_WIN
+    #ifdef IX_OS_WIN
     dispatcher = new iEventDispatcher_generic();
     #else
     dispatcher = new iEventDispatcher_Glib();
@@ -69,7 +69,7 @@ iCoreApplication::~iCoreApplication()
 
     delete m_private;
 
-    self = I_NULLPTR;
+    self = IX_NULLPTR;
 }
 
 void iCoreApplication::init()
@@ -77,7 +77,7 @@ void iCoreApplication::init()
     iEventDispatcher* dispatcher;
     dispatcher = m_threadData->dispatcher.load();
     bool needStarting = false;
-    if (I_NULLPTR == dispatcher) {
+    if (IX_NULLPTR == dispatcher) {
         dispatcher = m_private->createEventDispatcher();
         needStarting = true;
     }
@@ -85,7 +85,7 @@ void iCoreApplication::init()
     m_threadData->dispatcher = dispatcher;
 
     if (needStarting
-        && I_NULLPTR != dispatcher
+        && IX_NULLPTR != dispatcher
         && m_threadData->dispatcher.load() != dispatcher)
         dispatcher->startingUp();
 
@@ -116,7 +116,7 @@ iEventDispatcher* iCoreApplication::createEventDispatcher()
     iCoreApplication* app = instance();
     if (!app) {
         ilog_warn("iCoreApplication::createEventDispatcher no application");
-        return I_NULLPTR;
+        return IX_NULLPTR;
     }
 
     return app->m_private->createEventDispatcher();
@@ -165,7 +165,7 @@ bool iCoreApplication::threadRequiresCoreApplication()
 
 bool iCoreApplication::doNotify(iObject *receiver, iEvent *event)
 {
-    if (I_NULLPTR == receiver) {                        // serious error
+    if (IX_NULLPTR == receiver) {                        // serious error
         ilog_warn("iCoreApplication::notify: Unexpected null receiver");
         return true;
     }
@@ -188,7 +188,7 @@ bool iCoreApplication::sendEvent(iObject *receiver, iEvent *event)
 
 void iCoreApplication::postEvent(iObject *receiver, iEvent *event)
 {
-    if (I_NULLPTR == receiver) {
+    if (IX_NULLPTR == receiver) {
         ilog_warn("iCoreApplication::postEvent: Unexpected null receiver");
         delete event;
         return;
@@ -276,4 +276,4 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int)
 }
 
 
-} // namespace ishell
+} // namespace iShell

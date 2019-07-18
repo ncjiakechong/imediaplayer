@@ -16,7 +16,7 @@
 
 #define ILOG_TAG "test"
 
-using namespace ishell;
+using namespace iShell;
 
 struct tst_Variant
 {
@@ -47,7 +47,7 @@ int test_ivariant(void)
     var_shared.reset(new iVariant(var_obj));
     ilog_debug("var_shared name ", var_shared.data()->value<iObject*>()->objectName());
     delete obj;
-    obj = I_NULLPTR;
+    obj = IX_NULLPTR;
 
     iVariant var_tst1 = iVariant(new tst_Variant);
     ilog_debug("var_tst1 ", var_tst1.value<tst_Variant*>());

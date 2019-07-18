@@ -15,7 +15,7 @@
 #include <core/global/iglobal.h>
 #include <core/global/inamespace.h>
 
-namespace ishell {
+namespace iShell {
 
 class iSize
 {
@@ -139,14 +139,14 @@ inline const iSize operator*(double c, const iSize &s)
 
 inline iSize &iSize::operator/=(double c)
 {
-    i_assert(!iFuzzyIsNull(c));
+    ix_assert(!iFuzzyIsNull(c));
     wd = std::round(wd/c); ht = std::round(ht/c);
     return *this;
 }
 
 inline const iSize operator/(const iSize &s, double c)
 {
-    i_assert(!iFuzzyIsNull(c));
+    ix_assert(!iFuzzyIsNull(c));
     return iSize(std::round(s.wd/c), std::round(s.ht/c));
 }
 
@@ -287,14 +287,14 @@ inline const iSizeF operator*(double c, const iSizeF &s)
 
 inline iSizeF &iSizeF::operator/=(double c)
 {
-    i_assert(!iFuzzyIsNull(c));
+    ix_assert(!iFuzzyIsNull(c));
     wd = wd/c; ht = ht/c;
     return *this;
 }
 
 inline const iSizeF operator/(const iSizeF &s, double c)
 {
-    i_assert(!iFuzzyIsNull(c));
+    ix_assert(!iFuzzyIsNull(c));
     return iSizeF(s.wd/c, s.ht/c);
 }
 
@@ -313,6 +313,6 @@ inline iSize iSizeF::toSize() const
     return iSize(std::round(wd), std::round(ht));
 }
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ISIZE_H

@@ -13,7 +13,7 @@
 
 #include "core/io/ilog.h"
 
-namespace ishell {
+namespace iShell {
 
 static bool ilog_default_filter(void*, const char*, ilog_level_t)
 {
@@ -35,12 +35,12 @@ static void ilog_default_callback(void*, const char* tag, ilog_level_t level, co
     fflush(stdout);
 }
 
-static iLogTarget s_ilog_target = {I_NULLPTR, &ilog_default_filter, &ilog_default_callback};
+static iLogTarget s_ilog_target = {IX_NULLPTR, &ilog_default_filter, &ilog_default_callback};
 
 void iLogger::setTarget(const iLogTarget& target)
 {
     if (!target.filter || !target.callback) {
-        s_ilog_target.user_data = I_NULLPTR;
+        s_ilog_target.user_data = IX_NULLPTR;
         s_ilog_target.filter = &ilog_default_filter;
         s_ilog_target.callback = &ilog_default_callback;
         return;
@@ -53,7 +53,7 @@ void iLogger::setTarget(const iLogTarget& target)
 }
 
 iLogger::iLogger()
-    : m_tags(I_NULLPTR)
+    : m_tags(IX_NULLPTR)
     , m_index(0)
     , m_level(ILOG_VERBOSE)
 {
@@ -89,7 +89,7 @@ void iLogger::append(bool value)
     m_index += curSize;
 }
 
-void iLogger::append(int8_t value)
+void iLogger::append(xint8 value)
 {
     int curSize = 0;
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
@@ -97,7 +97,7 @@ void iLogger::append(int8_t value)
     m_index += curSize;
 }
 
-void iLogger::append(uint8_t value)
+void iLogger::append(xuint8 value)
 {
     int curSize = 0;
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
@@ -105,7 +105,7 @@ void iLogger::append(uint8_t value)
     m_index += curSize;
 }
 
-void iLogger::append(int16_t value)
+void iLogger::append(xint16 value)
 {
     int curSize = 0;
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
@@ -113,7 +113,7 @@ void iLogger::append(int16_t value)
     m_index += curSize;
 }
 
-void iLogger::append(uint16_t value)
+void iLogger::append(xuint16 value)
 {
     int curSize = 0;
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
@@ -121,7 +121,7 @@ void iLogger::append(uint16_t value)
     m_index += curSize;
 }
 
-void iLogger::append(int32_t value)
+void iLogger::append(xint32 value)
 {
     int curSize = 0;
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
@@ -129,7 +129,7 @@ void iLogger::append(int32_t value)
     m_index += curSize;
 }
 
-void iLogger::append(uint32_t value)
+void iLogger::append(xuint32 value)
 {
     int curSize = 0;
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
@@ -137,10 +137,10 @@ void iLogger::append(uint32_t value)
     m_index += curSize;
 }
 
-void iLogger::append(int64_t value)
+void iLogger::append(xint64 value)
 {
     int curSize = 0;
-    #ifdef I_OS_WIN
+    #ifdef IX_OS_WIN
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
              "%lld", value);
     #else
@@ -150,10 +150,10 @@ void iLogger::append(int64_t value)
     m_index += curSize;
 }
 
-void iLogger::append(uint64_t value)
+void iLogger::append(xuint64 value)
 {
     int curSize = 0;
-    #ifdef I_OS_WIN
+    #ifdef IX_OS_WIN
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
              "%llu", value);
     #else
@@ -190,7 +190,7 @@ void iLogger::append(iHexUInt32 value)
 void iLogger::append(iHexUInt64 value)
 {
     int curSize = 0;
-    #ifdef I_OS_WIN
+    #ifdef IX_OS_WIN
     curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
              "0x%llx", value.value);
     #else
@@ -237,4 +237,4 @@ void iLogger::append(const void* value)
     m_index += curSize;
 }
 
-} // namespace ishell
+} // namespace iShell

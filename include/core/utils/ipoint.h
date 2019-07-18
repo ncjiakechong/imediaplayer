@@ -13,7 +13,7 @@
 
 #include <core/global/iglobal.h>
 
-namespace ishell {
+namespace iShell {
 
 class iPoint
 {
@@ -327,6 +327,6 @@ inline iPoint iPointF::toPoint() const
     return iPoint(std::round(xp), std::round(yp));
 }
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IPOINT_H

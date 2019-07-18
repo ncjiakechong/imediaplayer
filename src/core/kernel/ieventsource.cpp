@@ -17,13 +17,13 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 iEventSource::iEventSource(int priority)
     : m_priority(priority)
     , m_refCount(1)
     , m_flags(0)
-    , m_dispatcher(I_NULLPTR)
+    , m_dispatcher(IX_NULLPTR)
 {
 }
 
@@ -59,7 +59,7 @@ void iEventSource::unref()
 
 int iEventSource::attach(iEventDispatcher* dispatcher)
 {
-    if (I_NULLPTR == dispatcher) {
+    if (IX_NULLPTR == dispatcher) {
         ilog_warn("iEventSource::attach to invalid dispatcher");
         return -1;
     }
@@ -69,7 +69,7 @@ int iEventSource::attach(iEventDispatcher* dispatcher)
         return -1;
     }
 
-    if (I_NULLPTR != m_dispatcher) {
+    if (IX_NULLPTR != m_dispatcher) {
         ilog_warn("iEventSource::attach has attached to ", m_dispatcher->objectName());
         return -1;
     }
@@ -88,7 +88,7 @@ int iEventSource::attach(iEventDispatcher* dispatcher)
 
 int iEventSource::detach()
 {
-    if (I_NULLPTR == m_dispatcher) {
+    if (IX_NULLPTR == m_dispatcher) {
         ilog_warn("iEventSource::detach invalid");
         return -1;
     }
@@ -106,7 +106,7 @@ int iEventSource::detach()
     m_dispatcher->removeEventSource(this);
 
     // unref();
-    m_dispatcher = I_NULLPTR;
+    m_dispatcher = IX_NULLPTR;
     return 0;
 }
 
@@ -160,4 +160,4 @@ bool iEventSource::dispatch()
     return true;
 }
 
-} // namespace ishell
+} // namespace iShell

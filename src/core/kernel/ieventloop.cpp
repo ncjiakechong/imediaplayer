@@ -19,7 +19,7 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 iEventLoop::iEventLoop(iObject* parent)
     : iObject(parent)
@@ -50,7 +50,7 @@ int iEventLoop::exec()
         if (threadData->quitNow)
             return -1;
 
-        if (!threadData->eventLoop.testAndSet(I_NULLPTR, this)) {
+        if (!threadData->eventLoop.testAndSet(IX_NULLPTR, this)) {
             ilog_warn("iEventLoop::exec: The event loop is already running");
             return -1;
         }
@@ -63,7 +63,7 @@ int iEventLoop::exec()
 
     threadData->deref();
 
-    if (!threadData->eventLoop.testAndSet(this, I_NULLPTR)) {
+    if (!threadData->eventLoop.testAndSet(this, IX_NULLPTR)) {
         ilog_error("iEventLoop::exec: exit inner error");
         return -1;
     }
@@ -91,4 +91,4 @@ bool iEventLoop::event(iEvent *e)
     return iObject::event(e);
 }
 
-} // namespace ishell
+} // namespace iShell

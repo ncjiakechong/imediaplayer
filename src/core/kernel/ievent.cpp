@@ -15,7 +15,7 @@
 #include "core/thread/iatomiccounter.h"
 #include "core/kernel/ievent.h"
 
-namespace ishell {
+namespace iShell {
 
 template <size_t N>
 struct iBasicAtomicBitField {
@@ -131,4 +131,4 @@ iChildEvent::~iChildEvent()
 {
 }
 
-} // namespace ishell
+} // namespace iShell

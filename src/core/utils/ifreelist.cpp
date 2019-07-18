@@ -11,7 +11,7 @@
 
 #include "core/utils/ifreelist.h"
 
-namespace ishell {
+namespace iShell {
 
 // default sizes and offsets (no need to define these when customizing)
 enum {
@@ -33,4 +33,4 @@ const int iFreeListDefaultConstants::Sizes[iFreeListDefaultConstants::BlockCount
     Size3
 };
 
-} // namespace ishell
+} // namespace iShell

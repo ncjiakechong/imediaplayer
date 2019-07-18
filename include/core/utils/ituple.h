@@ -13,7 +13,7 @@
 
 #include <core/utils/itypelist.h>
 
-namespace ishell {
+namespace iShell {
 
 template <class T0,
     class T1 = iNullTypeList,
@@ -805,7 +805,7 @@ private:
     Type _data;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 
 #endif // ITUPLE_H
