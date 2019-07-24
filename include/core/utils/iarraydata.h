@@ -30,14 +30,14 @@ struct iArrayData
 
     void *data()
     {
-        ix_assert(size == 0
+        IX_ASSERT(size == 0
                 || offset < 0 || size_t(offset) >= sizeof(iArrayData));
         return reinterpret_cast<char *>(this) + offset;
     }
 
     const void *data() const
     {
-        ix_assert(size == 0
+        IX_ASSERT(size == 0
                 || offset < 0 || size_t(offset) >= sizeof(iArrayData));
         return reinterpret_cast<const char *>(this) + offset;
     }
@@ -209,7 +209,7 @@ struct iTypedArrayData
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
         iTypedArrayData *result = allocate(0, options | RawData);
         if (result) {
-            ix_assert(!result->ref.isShared()); // No shared empty, please!
+            IX_ASSERT(!result->ref.isShared()); // No shared empty, please!
 
             result->offset = reinterpret_cast<const char *>(data)
                 - reinterpret_cast<const char *>(result);

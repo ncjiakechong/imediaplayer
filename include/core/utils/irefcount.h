@@ -42,7 +42,7 @@ public:
 
     bool setSharable(bool sharable)
     {
-        ix_assert(!isShared());
+        IX_ASSERT(!isShared());
         if (sharable)
             return atomic.testAndSet(0, 1);
         else

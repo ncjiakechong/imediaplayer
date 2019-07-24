@@ -30,7 +30,7 @@ public:
 iSemaphore::iSemaphore(int n)
     : m_semph(new iSemaphoreImp(n))
 {
-    ix_assert(n >= 0);
+    IX_ASSERT(n >= 0);
 }
 
 iSemaphore::~iSemaphore()
@@ -40,7 +40,7 @@ iSemaphore::~iSemaphore()
 
 void iSemaphore::acquire(int n)
 {
-    ix_assert(n >= 0);
+    IX_ASSERT(n >= 0);
     iMutex::ScopedLock locker(m_semph->mutex);
     while (n > m_semph->avail)
         m_semph->cond.wait(*locker.mutex(), -1);
@@ -50,7 +50,7 @@ void iSemaphore::acquire(int n)
 
 void iSemaphore::release(int n)
 {
-    ix_assert(n >= 0);
+    IX_ASSERT(n >= 0);
     iMutex::ScopedLock locker(m_semph->mutex);
     m_semph->avail += n;
     m_semph->cond.broadcast();
@@ -65,7 +65,7 @@ int iSemaphore::available() const
 
 bool iSemaphore::tryAcquire(int n)
 {
-    ix_assert(n >= 0);
+    IX_ASSERT(n >= 0);
     iMutex::ScopedLock locker(m_semph->mutex);
     if (n > m_semph->avail)
         return false;
@@ -76,7 +76,7 @@ bool iSemaphore::tryAcquire(int n)
 
 bool iSemaphore::tryAcquire(int n, int timeout)
 {
-    ix_assert(n >= 0);
+    IX_ASSERT(n >= 0);
 
     // We're documented to accept any negative value as "forever"
     // but iDeadlineTimer only accepts -1.

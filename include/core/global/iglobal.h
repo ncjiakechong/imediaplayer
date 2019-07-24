@@ -118,7 +118,11 @@ static inline bool iIsNull(float f)
     return (val.u & 0x7fffffff) == 0;
 }
 
-#define IX_CHECK_PTR(p) {}
+inline bool is_little_endian()
+{
+    union {uint16_t u16; uint8_t c;} __byte_order{1};
+    return (__byte_order.c > 0);
+}
 
 } // namespace iShell
 

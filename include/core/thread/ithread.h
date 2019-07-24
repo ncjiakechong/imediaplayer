@@ -30,7 +30,7 @@ public:
     static iThread* currentThread();
     static void yieldCurrentThread();
     static iThreadData* get2(iThread *thread)
-        { ix_check_ptr(thread); return thread->m_data;}
+        { IX_CHECK_PTR(thread); return thread->m_data;}
     static void msleep(unsigned long);
 
     explicit iThread(iObject *parent = IX_NULLPTR);

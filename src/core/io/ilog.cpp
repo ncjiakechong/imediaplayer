@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "core/io/ilog.h"
+#include "core/utils/istring.h"
 
 namespace iShell {
 
@@ -223,10 +224,12 @@ void iLogger::append(const char* value)
 
 void iLogger::append(const wchar_t* value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%ls", value);
-    m_index += curSize;
+    append(iString::fromWCharArray(value));
+}
+
+void iLogger::append(const iString& value)
+{
+    append(value.toUtf8().data());
 }
 
 void iLogger::append(const void* value)

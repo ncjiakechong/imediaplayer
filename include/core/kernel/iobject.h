@@ -18,6 +18,7 @@
 #include <stdarg.h>
 
 #include <core/utils/ituple.h>
+#include <core/utils/istring.h>
 #include <core/thread/imutex.h>
 #include <core/kernel/ivariant.h>
 #include <core/thread/iatomicpointer.h>
@@ -26,10 +27,10 @@
 namespace iShell {
 
 #define IPROPERTY_BEGIN(PARENT) \
-    virtual const std::map<std::string, iSharedPtr<_iproperty_base>>& getOrInitProperty() { \
-        static std::map<std::string, iSharedPtr<_iproperty_base>> s_propertys; \
-        std::map<std::string, isignal<iVariant>*>* propertyNofity = IX_NULLPTR; \
-        std::map<std::string, iSharedPtr<_iproperty_base>>* propertyIns = IX_NULLPTR; \
+    virtual const std::map<iString, iSharedPtr<_iproperty_base>>& getOrInitProperty() { \
+        static std::map<iString, iSharedPtr<_iproperty_base>> s_propertys; \
+        std::map<iString, isignal<iVariant>*>* propertyNofity = IX_NULLPTR; \
+        std::map<iString, iSharedPtr<_iproperty_base>>* propertyIns = IX_NULLPTR; \
         if (s_propertys.size() <= 0) { \
             propertyIns = &s_propertys; \
         } \
@@ -45,21 +46,21 @@ namespace iShell {
         return s_propertys; \
     } \
     \
-    void doInitProperty(std::map<std::string, iSharedPtr<_iproperty_base>>* propIns, \
-                      std::map<std::string, isignal<iVariant>*>* propNotify) { \
+    void doInitProperty(std::map<iString, iSharedPtr<_iproperty_base>>* propIns, \
+                      std::map<iString, isignal<iVariant>*>* propNotify) { \
         typedef PARENT PARENT_CLASS; \
         PARENT_CLASS::doInitProperty(propIns, propNotify);
 
 #define IPROPERTY_ITEM(NAME, GETFUNC, SETFUNC, SIGNAL) \
         if (propIns) { \
-            propIns->insert(std::pair<std::string, iSharedPtr<_iproperty_base> >( \
+            propIns->insert(std::pair<iString, iSharedPtr<_iproperty_base> >( \
                         NAME, \
                         newProperty(&class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::GETFUNC, \
                                     &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SETFUNC))); \
         } \
         \
         if (propNotify) { \
-            propNotify->insert(std::pair<std::string, isignal<iVariant>*>(NAME, &SIGNAL)); \
+            propNotify->insert(std::pair<iString, isignal<iVariant>*>(NAME, &SIGNAL)); \
         }
 
 #define IPROPERTY_END \
@@ -586,22 +587,22 @@ struct iProperty : public _iproperty_base
     static iVariant getFunc(const _iproperty_base* _this, const iObject* obj) {
         const desttype* _classThis = static_cast<const desttype*>(obj);
         const iProperty* _typedThis = static_cast<const iProperty *>(_this);
-        ix_check_ptr(_typedThis);
+        IX_CHECK_PTR(_typedThis);
         if (!_typedThis->m_getFunc)
             return iVariant();
 
-        ix_check_ptr(_classThis);
+        IX_CHECK_PTR(_classThis);
         return (_classThis->*(_typedThis->m_getFunc))();
     }
 
     static void setFunc(const _iproperty_base* _this, iObject* obj, const iVariant& value) {
         desttype* _classThis = static_cast<desttype*>(obj);
         const iProperty *_typedThis = static_cast<const iProperty *>(_this);
-        ix_check_ptr(_typedThis);
+        IX_CHECK_PTR(_typedThis);
         if (!_typedThis->m_setFunc)
             return;
 
-        ix_check_ptr(_classThis);
+        IX_CHECK_PTR(_classThis);
         (_classThis->*(_typedThis->m_setFunc))(value.value<typename type_wrapper<param>::TYPE>());
     }
 
@@ -626,13 +627,13 @@ class iObject
     // IPROPERTY_END
 public:
     iObject(iObject* parent = IX_NULLPTR);
-    iObject(const std::string& name, iObject* parent = IX_NULLPTR);
+    iObject(const iString& name, iObject* parent = IX_NULLPTR);
     iObject(const iObject& other);
 
     virtual ~iObject();
 
-    void setObjectName(const std::string& name);
-    const std::string& objectName() const { return m_objName; }
+    void setObjectName(const iString& name);
+    const iString& objectName() const { return m_objName; }
 
     isignal<iVariant> objectNameChanged;
 
@@ -651,8 +652,8 @@ public:
     void observeProperty(const char *name, desttype* pclass, void (desttype::*pmemfun)(param)) {
         getOrInitProperty();
 
-        std::map<std::string, isignal<iVariant>*>::const_iterator it;
-        it = m_propertyNofity.find(std::string(name));
+        std::map<iString, isignal<iVariant>*>::const_iterator it;
+        it = m_propertyNofity.find(iString(name));
         if (it == m_propertyNofity.cend() || !it->second)
             return;
 
@@ -1161,14 +1162,14 @@ public:
     }
 
 protected:
-    virtual const std::map<std::string, iSharedPtr<_iproperty_base>>& getOrInitProperty();
-    void doInitProperty(std::map<std::string, iSharedPtr<_iproperty_base>>* propIns,
-                      std::map<std::string, isignal<iVariant>*>* propNotify);
+    virtual const std::map<iString, iSharedPtr<_iproperty_base>>& getOrInitProperty();
+    void doInitProperty(std::map<iString, iSharedPtr<_iproperty_base>>* propIns,
+                      std::map<iString, isignal<iVariant>*>* propNotify);
 
 
     virtual bool event(iEvent *e);
 
-    std::map<std::string, isignal<iVariant>*> m_propertyNofity;
+    std::map<iString, isignal<iVariant>*> m_propertyNofity;
 
 private:
     typedef std::set<_isignalBase*> sender_set;
@@ -1186,7 +1187,7 @@ private:
     static bool invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::clone_args_t clone, _isignalBase::free_args_t free);
 
     iMutex      m_objLock;
-    std::string m_objName;
+    iString m_objName;
     sender_set  m_senders;
 
     iAtomicPointer< typename isharedpointer::ExternalRefCountData > m_refCount;

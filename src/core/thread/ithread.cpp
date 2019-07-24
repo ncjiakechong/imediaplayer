@@ -119,7 +119,7 @@ void iThreadData::setCurrent()
 iThread* iThread::currentThread()
 {
     iThreadData *data = iThreadData::current();
-    ix_assert(data != IX_NULLPTR);
+    IX_ASSERT(data != IX_NULLPTR);
     return data->thread;
 }
 
@@ -236,7 +236,7 @@ bool iThread::isRunning() const
 void iThread::setStackSize(uint stackSize)
 {
     iMutex::ScopedLock lock(m_mutex);
-    ix_assert(!m_running);
+    IX_ASSERT(!m_running);
     m_stackSize = stackSize;
 }
 

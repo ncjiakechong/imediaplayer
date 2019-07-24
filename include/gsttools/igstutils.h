@@ -15,6 +15,7 @@
 
 #include <gst/gst.h>
 #include <gst/video/video.h>
+#include <core/utils/istring.h>
 
 #if GST_CHECK_VERSION(1,0,0)
 # define QT_GSTREAMER_PLAYBIN_ELEMENT_NAME "playbin"
@@ -38,7 +39,7 @@ class QVideoSurfaceFormat;
 
 namespace iGstUtils {
 
-    std::map<std::string, iVariant> gstTagListToMap(const GstTagList *list);
+    std::map<iString, iVariant> gstTagListToMap(const GstTagList *list);
 
 #if 0
     iSize capsResolution(const GstCaps *caps);
@@ -52,7 +53,7 @@ namespace iGstUtils {
     GstCaps *capsForAudioFormat(const QAudioFormat &format);
     void initializeGst();
     QMultimedia::SupportEstimate hasSupport(const iString &mimeType,
-                                             const QStringList &codecs,
+                                             const std::list<iString> &codecs,
                                              const QSet<iString> &supportedMimeTypeSet);
 
     QSet<iString> supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory));

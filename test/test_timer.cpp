@@ -102,7 +102,7 @@ int test_timer(void)
     thread->start();
 
     timer->tst_sig.emits();
-    ix_assert(0 == timer->startTimer(500));
+    IX_ASSERT(0 == timer->startTimer(500));
 
     thread->wait();
     delete timer;

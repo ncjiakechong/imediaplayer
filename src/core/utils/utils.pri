@@ -8,10 +8,16 @@ SOURCES += \
     $$PWD/iarraydata.cpp \
     $$PWD/ibytearray.cpp \
     $$PWD/ibytearraymatcher.cpp \
+    $$PWD/ichar.cpp \
+    $$PWD/iendian.cpp \
     $$PWD/ifreelist.cpp \
+    $$PWD/ilocale.cpp \
     $$PWD/irect.cpp \
     $$PWD/isharedptr.cpp \
     $$PWD/isize.cpp \
+    $$PWD/istring.cpp \
+    $$PWD/istringmatcher.cpp \
+    $$PWD/istringview.cpp
 
 HEADERS += \
     ../../include/core/utils/ifreelist.h \
@@ -25,4 +31,13 @@ HEADERS += \
     ../../include/core/utils/ibytearray.h \
     ../../include/core/utils/ialgorithms.h \
     ../../include/core/utils/irefcount.h \
-    ../../include/core/utils/ibytearraymatcher.h
+    ../../include/core/utils/ibytearraymatcher.h \
+    ../../include/core/utils/ichar.h \
+    ../../include/core/utils/iendian.h \
+    ../../include/core/utils/istringalgorithms.h \
+    ../../include/core/utils/istringliteral.h \
+    ../../include/core/utils/istringmatcher.h \
+    ../../include/core/utils/ivarlengtharray.h \
+    ../../include/core/utils/istring.h \
+    ../../include/core/utils/istringview.h \
+    ../../include/core/utils/ilocale.h

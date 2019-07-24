@@ -128,9 +128,9 @@ size_t iCalculateBlockSize(size_t elementCount, size_t elementSize, size_t heade
     unsigned count = unsigned(elementCount);
     unsigned size = unsigned(elementSize);
     unsigned header = unsigned(headerSize);
-    ix_assert(elementSize);
-    ix_assert(size == elementSize);
-    ix_assert(header == headerSize);
+    IX_ASSERT(elementSize);
+    IX_ASSERT(size == elementSize);
+    IX_ASSERT(header == headerSize);
 
     if (count != elementCount)
         return std::numeric_limits<size_t>::max();
@@ -421,9 +421,9 @@ int istrnicmp(const char *str1, const char *str2, uint len)
  */
 int istrnicmp(const char *str1, xsizetype len1, const char *str2, xsizetype len2)
 {
-    ix_assert(str1);
-    ix_assert(len1 >= 0);
-    ix_assert(len2 >= -1);
+    IX_ASSERT(str1);
+    IX_ASSERT(len1 >= 0);
+    IX_ASSERT(len2 >= -1);
     const uchar *s1 = reinterpret_cast<const uchar *>(str1);
     const uchar *s2 = reinterpret_cast<const uchar *>(str2);
     if (!s2)
@@ -1832,7 +1832,7 @@ iByteArray& iByteArray::append(char ch)
 static inline iByteArray &iByteArray_insert(iByteArray *ba,
                                             int pos, const char *arr, int len)
 {
-    ix_assert(pos >= 0);
+    IX_ASSERT(pos >= 0);
 
     if (pos < 0 || len <= 0 || arr == 0)
         return *ba;
@@ -3502,12 +3502,10 @@ T toIntegral_helper(const char *data, bool *ok, int base)
 {
     using Int64 = typename std::conditional<std::is_unsigned<T>::value, xuint64, xint64>::type;
 
-#if defined(QT_CHECK_RANGE)
     if (base != 0 && (base < 2 || base > 36)) {
-        qWarning("iByteArray::toIntegral: Invalid base %d", base);
+        ilog_warn("iByteArray::toIntegral: Invalid base ", base);
         base = 10;
     }
-#endif
 
     // we select the right overload by the last, unused parameter
     Int64 val = toIntegral_helper(data, ok, base, Int64());
@@ -3866,7 +3864,7 @@ iByteArray iByteArray::toBase64(Base64Options options) const
             *out++ = alphabet[m];
         }
     }
-    ix_assert((options & OmitTrailingEquals) || (out == tmp.size() + tmp.data()));
+    IX_ASSERT((options & OmitTrailingEquals) || (out == tmp.size() + tmp.data()));
     if (options & OmitTrailingEquals)
         tmp.truncate(out - tmp.data());
     return tmp;
@@ -3910,14 +3908,13 @@ iByteArray iByteArray::toBase64(Base64Options options) const
     \sa toUShort()
 */
 
-static char *qulltoa2(char *p, xuint64 n, int base)
+static char *xulltoa2(char *p, xuint64 n, int base)
 {
-#if defined(QT_CHECK_RANGE)
     if (base < 2 || base > 36) {
-        qWarning("iByteArray::setNum: Invalid base %d", base);
+        ilog_warn("iByteArray::setNum: Invalid base ", base);
         base = 10;
     }
-#endif
+
     const char b = 'a' - 10;
     do {
         const int c = n % base;
@@ -3940,10 +3937,10 @@ iByteArray &iByteArray::setNum(xint64 n, int base)
     char *p;
 
     if (n < 0 && base == 10) {
-        p = qulltoa2(buff + buffsize, xuint64(-(1 + n)) + 1, base);
+        p = xulltoa2(buff + buffsize, xuint64(-(1 + n)) + 1, base);
         *--p = '-';
     } else {
-        p = qulltoa2(buff + buffsize, xuint64(n), base);
+        p = xulltoa2(buff + buffsize, xuint64(n), base);
     }
 
     clear();
@@ -3961,7 +3958,7 @@ iByteArray &iByteArray::setNum(xuint64 n, int base)
 {
     const int buffsize = 66; // big enough for MAX_ULLONG in base 2
     char buff[buffsize];
-    char *p = qulltoa2(buff + buffsize, n, base);
+    char *p = xulltoa2(buff + buffsize, n, base);
 
     clear();
     append(p, buffsize - (p - buff));
@@ -4017,13 +4014,11 @@ iByteArray &iByteArray::setNum(double n, char f, int prec)
             form = iLocaleData::DFSignificantDigits;
             break;
         default:
-#if defined(QT_CHECK_RANGE)
-            qWarning("iByteArray::setNum: Invalid format char '%c'", f);
-#endif
+            ilog_warn("iByteArray::setNum: Invalid format char ", f);
             break;
     }
 
-    ix_assert(0);
+    IX_ASSERT(0);
     // *this = iLocaleData::doubleToString(n, prec, form, -1, flags).toLatin1();
     return *this;
 }
@@ -4670,7 +4665,7 @@ iByteArray iByteArray::toPercentEncoding(const iByteArray &exclude, const iByteA
     can significantly speed up creation of iByteArray instances from data known
     at compile time.
 
-    \sa QStringLiteral
+    \sa iStringLiteral
 */
 
 } // namespace iShell

@@ -57,7 +57,7 @@ iObject::iObject(iObject *parent)
     setParent(parent);
 }
 
-iObject::iObject(const std::string& name, iObject* parent)
+iObject::iObject(const iString& name, iObject* parent)
     : m_objName(name)
     , m_threadData(iThreadData::current())
     , m_parent(IX_NULLPTR)
@@ -333,7 +333,7 @@ void iObject::setParent(iObject *o)
     }
 }
 
-void iObject::setObjectName(const std::string &name)
+void iObject::setObjectName(const iString &name)
 {
     if (name == m_objName)
         return;
@@ -370,10 +370,10 @@ void iObject::disconnectAll()
 
 iVariant iObject::property(const char *name) const
 {
-    std::map<std::string, iSharedPtr<_iproperty_base>>::const_iterator it;
-    const std::map<std::string, iSharedPtr<_iproperty_base>>& propertys = const_cast<iObject*>(this)->getOrInitProperty();
+    std::map<iString, iSharedPtr<_iproperty_base>>::const_iterator it;
+    const std::map<iString, iSharedPtr<_iproperty_base>>& propertys = const_cast<iObject*>(this)->getOrInitProperty();
 
-    it = propertys.find(std::string(name));
+    it = propertys.find(iString(name));
     if (it == propertys.cend())
         return iVariant();
 
@@ -382,10 +382,10 @@ iVariant iObject::property(const char *name) const
 
 bool iObject::setProperty(const char *name, const iVariant& value)
 {
-    std::map<std::string, iSharedPtr<_iproperty_base>>::const_iterator it;
-    const std::map<std::string, iSharedPtr<_iproperty_base>>& propertys = getOrInitProperty();
+    std::map<iString, iSharedPtr<_iproperty_base>>::const_iterator it;
+    const std::map<iString, iSharedPtr<_iproperty_base>>& propertys = getOrInitProperty();
 
-    it = propertys.find(std::string(name));
+    it = propertys.find(iString(name));
     if (it == propertys.cend())
         return false;
 
@@ -393,12 +393,12 @@ bool iObject::setProperty(const char *name, const iVariant& value)
     return true;
 }
 
-const std::map<std::string, iSharedPtr<_iproperty_base>>& iObject::getOrInitProperty()
+const std::map<iString, iSharedPtr<_iproperty_base>>& iObject::getOrInitProperty()
 {
-    static std::map<std::string, iSharedPtr<_iproperty_base>> s_propertys;
+    static std::map<iString, iSharedPtr<_iproperty_base>> s_propertys;
 
-    std::map<std::string, isignal<iVariant>*>* propertyNofity = IX_NULLPTR;
-    std::map<std::string, iSharedPtr<_iproperty_base>>* propertyIns = IX_NULLPTR;
+    std::map<iString, isignal<iVariant>*>* propertyNofity = IX_NULLPTR;
+    std::map<iString, iSharedPtr<_iproperty_base>>* propertyIns = IX_NULLPTR;
     if (s_propertys.size() <= 0) {
         propertyIns = &s_propertys;
     }
@@ -414,23 +414,23 @@ const std::map<std::string, iSharedPtr<_iproperty_base>>& iObject::getOrInitProp
     return s_propertys;
 }
 
-void iObject::doInitProperty(std::map<std::string, iSharedPtr<_iproperty_base>>* propIns,
-                           std::map<std::string, isignal<iVariant>*>* propNotify) {
+void iObject::doInitProperty(std::map<iString, iSharedPtr<_iproperty_base>>* propIns,
+                           std::map<iString, isignal<iVariant>*>* propNotify) {
     if (propIns) {
-        propIns->insert(std::pair<std::string, iSharedPtr<_iproperty_base>>(
+        propIns->insert(std::pair<iString, iSharedPtr<_iproperty_base>>(
                             "objectName",
                             newProperty(&iObject::objectName, &iObject::setObjectName)));
     }
 
     if (propNotify) {
-        propNotify->insert(std::pair<std::string, isignal<iVariant>*>(
+        propNotify->insert(std::pair<iString, isignal<iVariant>*>(
                                "objectName", &objectNameChanged));
     }
 }
 
 bool iObject::event(iEvent *e)
 {
-    ix_assert(e);
+    IX_ASSERT(e);
     switch (e->type()) {
     case iEvent::MetaCall: {
         iMetaCallEvent* event = static_cast<iMetaCallEvent*>(e);
@@ -617,7 +617,7 @@ void _isignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
 
 void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
 {
-    ix_assert(clone);
+    IX_ASSERT(clone);
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
 
     iThreadData* currentThreadData = iThreadData::current();

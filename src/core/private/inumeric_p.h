@@ -105,7 +105,7 @@ static inline bool ix_is_finite(float f)
 */
 template <typename T> static inline bool iConvertDoubleTo(double v, T *value)
 {
-    Q_STATIC_ASSERT(std::numeric_limits<T>::is_integer);
+    IX_COMPILER_VERIFY(std::numeric_limits<T>::is_integer);
 
     // The [conv.fpint] (7.10 Floating-integral conversions) section of the C++
     // standard says only exact conversions are guaranteed. Converting
@@ -140,7 +140,7 @@ template <typename T> static inline bool iConvertDoubleTo(double v, T *value)
 }
 
 // Overflow math.
-// This provides efficient implementations for int, unsigned, qsizetype and
+// This provides efficient implementations for int, unsigned, xsizetype and
 // size_t. Implementations for 8- and 16-bit types will work but may not be as
 // efficient. Implementations for 64-bit may be missing on 32-bit platforms.
 // Generic implementations

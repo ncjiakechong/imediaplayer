@@ -25,7 +25,7 @@ static void addTagToMap(const GstTagList *list,
                         const gchar *tag,
                         gpointer user_data)
 {
-    std::map<std::string, iVariant> *map = reinterpret_cast<std::map<std::string, iVariant>* >(user_data);
+    std::map<iString, iVariant> *map = reinterpret_cast<std::map<iString, iVariant>* >(user_data);
 
     GValue val;
     val.g_type = 0;
@@ -35,30 +35,30 @@ static void addTagToMap(const GstTagList *list,
         case G_TYPE_STRING:
         {
             const gchar *str_value = g_value_get_string(&val);
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), std::string(str_value)));
+            map->insert(std::pair<iString, iVariant >(iString(tag), iString(str_value)));
             break;
         }
         case G_TYPE_INT:
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), g_value_get_int(&val)));
+            map->insert(std::pair<iString, iVariant >(iString(tag), g_value_get_int(&val)));
             break;
         case G_TYPE_UINT:
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), g_value_get_uint(&val)));
+            map->insert(std::pair<iString, iVariant >(iString(tag), g_value_get_uint(&val)));
             break;
         case G_TYPE_LONG:
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), xint64(g_value_get_long(&val))));
+            map->insert(std::pair<iString, iVariant >(iString(tag), xint64(g_value_get_long(&val))));
             break;
         case G_TYPE_BOOLEAN:
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), g_value_get_boolean(&val)));
+            map->insert(std::pair<iString, iVariant >(iString(tag), g_value_get_boolean(&val)));
             break;
         case G_TYPE_CHAR:
 #if GLIB_CHECK_VERSION(2,32,0)
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), g_value_get_schar(&val)));
+            map->insert(std::pair<iString, iVariant >(iString(tag), g_value_get_schar(&val)));
 #else
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), g_value_get_char(&val)));
+            map->insert(std::pair<iString, iVariant >(iString(tag), g_value_get_char(&val)));
 #endif
             break;
         case G_TYPE_DOUBLE:
-            map->insert(std::pair<std::string, iVariant >(std::string(tag), g_value_get_double(&val)));
+            map->insert(std::pair<iString, iVariant >(iString(tag), g_value_get_double(&val)));
             break;
         default:
             // GST_TYPE_DATE is a function, not a constant, so pull it out of the switch
@@ -69,14 +69,14 @@ static void addTagToMap(const GstTagList *list,
 }
 
 /*!
-  Convert GstTagList structure to std::map<std::string, iVariant>.
+  Convert GstTagList structure to std::map<iString, iVariant>.
 
   Mapping to int, bool, char, string, fractions and date are supported.
   Fraction values are converted to doubles.
 */
-std::map<std::string, iVariant> iGstUtils::gstTagListToMap(const GstTagList *tags)
+std::map<iString, iVariant> iGstUtils::gstTagListToMap(const GstTagList *tags)
 {
-    std::map<std::string, iVariant> res;
+    std::map<iString, iVariant> res;
     gst_tag_list_foreach(tags, addTagToMap, &res);
 
     return res;
@@ -174,7 +174,7 @@ QAudioFormat iGstUtils::audioFormatForCaps(const GstCaps *caps)
             format.setSampleSize(qt_audioLookup[i].sampleSize);
             format.setSampleRate(info.rate);
             format.setChannelCount(info.channels);
-            format.setCodec(QStringLiteral("audio/pcm"));
+            format.setCodec(iStringLiteral("audio/pcm"));
 
             return format;
         }
@@ -346,7 +346,7 @@ GstCaps *iGstUtils::capsForAudioFormat(const QAudioFormat &format)
             gst_structure_set(structure, "signed", G_TYPE_BOOLEAN, FALSE, NULL);
 
         caps = gst_caps_new_empty();
-        ix_assert(caps);
+        IX_ASSERT(caps);
         gst_caps_append_structure(caps, structure);
     }
 
@@ -364,7 +364,7 @@ void iGstUtils::initializeGst()
 }
 
 namespace {
-    const char* getCodecAlias(const std::string &codec)
+    const char* getCodecAlias(const iString &codec)
     {
         if (codec.startsWith("avc1."))
             return "video/x-h264";
@@ -398,7 +398,7 @@ namespace {
 }
 
 QMultimedia::SupportEstimate iGstUtils::hasSupport(const iString &mimeType,
-                                                    const QStringList &codecs,
+                                                    const std::list<iString> &codecs,
                                                     const QSet<iString> &supportedMimeTypeSet)
 {
     if (supportedMimeTypeSet.isEmpty())
@@ -505,7 +505,7 @@ QSet<iString> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFac
                             if (value) {
                                 gchar *str = gst_value_serialize(value);
                                 iString versions(str);
-                                const QStringList elements = versions.split(QRegExp("\\D+"), iString::SkipEmptyParts);
+                                const std::list<iString> elements = versions.split(iRegExp("\\D+"), iString::SkipEmptyParts);
                                 for (const iString &e : elements)
                                     supportedMimeTypes.insert(nameLowcase + e);
                                 g_free(str);
@@ -521,7 +521,7 @@ QSet<iString> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFac
     gst_plugin_list_free (orig_plugins);
 
 #if defined QT_SUPPORTEDMIMETYPES_DEBUG
-    QStringList list = supportedMimeTypes.toList();
+    std::list<iString> list = supportedMimeTypes.toList();
     list.sort();
     if (qgetenv("QT_DEBUG_PLUGINS").toInt() > 0) {
         for (const iString &type : qAsConst(list))
@@ -1138,7 +1138,7 @@ QPair<xreal, xreal> iGstUtils::structureFrameRateRange(const GstStructure *s)
 }
 
 typedef QMap<iString, iString> FileExtensionMap;
-Q_GLOBAL_STATIC(FileExtensionMap, fileExtensionMap)
+IX_GLOBAL_STATIC(FileExtensionMap, fileExtensionMap)
 
 iString iGstUtils::fileExtensionForMimeType(const iString &mimeType)
 {
@@ -1163,7 +1163,7 @@ iString iGstUtils::fileExtensionForMimeType(const iString &mimeType)
     if (!extension.isEmpty() || format.isEmpty())
         return extension;
 
-    QRegExp rx("[-/]([\\w]+)$");
+    iRegExp rx("[-/]([\\w]+)$");
 
     if (rx.indexIn(format) != -1)
         extension = rx.cap(1);

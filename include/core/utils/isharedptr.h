@@ -121,7 +121,7 @@ namespace isharedpointer {
 
         static inline void objDeleter(ExternalRefCountData *self)
         {
-            ix_check_ptr(self);
+            IX_CHECK_PTR(self);
             Self *realself = static_cast<Self *>(self);
             realself->extra.execute();
 

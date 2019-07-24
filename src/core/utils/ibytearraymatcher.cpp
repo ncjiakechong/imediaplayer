@@ -80,7 +80,7 @@ static inline int bm_find(const uchar *cc, int l, int index, const uchar *puc, u
     search for. Then call indexIn() on the iByteArray that you want to
     search.
 
-    \sa iByteArray, QStringMatcher
+    \sa iByteArray, iStringMatcher
 */
 
 /*!
@@ -266,7 +266,7 @@ int iFindByteArray(
     /*
       We use some hashing for efficiency's sake. Instead of
       comparing strings, we compare the hash value of str with that
-      of a part of this QString. Only if that matches, we call memcmp().
+      of a part of this iString. Only if that matches, we call memcmp().
     */
     const char *haystack = haystack0 + from;
     const char *end = haystack0 + (l - sl);
@@ -337,7 +337,7 @@ int iFindByteArray(
     \l{https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations}
     {C++ Committee's Standing Document 6}.
 
-    \sa iByteArrayMatcher, QStringMatcher
+    \sa iByteArrayMatcher, iStringMatcher
 */
 
 /*!

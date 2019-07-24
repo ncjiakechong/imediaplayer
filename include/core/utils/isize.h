@@ -139,14 +139,14 @@ inline const iSize operator*(double c, const iSize &s)
 
 inline iSize &iSize::operator/=(double c)
 {
-    ix_assert(!iFuzzyIsNull(c));
+    IX_ASSERT(!iFuzzyIsNull(c));
     wd = std::round(wd/c); ht = std::round(ht/c);
     return *this;
 }
 
 inline const iSize operator/(const iSize &s, double c)
 {
-    ix_assert(!iFuzzyIsNull(c));
+    IX_ASSERT(!iFuzzyIsNull(c));
     return iSize(std::round(s.wd/c), std::round(s.ht/c));
 }
 
@@ -287,14 +287,14 @@ inline const iSizeF operator*(double c, const iSizeF &s)
 
 inline iSizeF &iSizeF::operator/=(double c)
 {
-    ix_assert(!iFuzzyIsNull(c));
+    IX_ASSERT(!iFuzzyIsNull(c));
     wd = wd/c; ht = ht/c;
     return *this;
 }
 
 inline const iSizeF operator/(const iSizeF &s, double c)
 {
-    ix_assert(!iFuzzyIsNull(c));
+    IX_ASSERT(!iFuzzyIsNull(c));
     return iSizeF(s.wd/c, s.ht/c);
 }
 

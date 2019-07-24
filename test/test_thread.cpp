@@ -60,8 +60,8 @@ int test_thread(void)
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 start");
     signal1->tst_sig_int1.emits(1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 end");
-    ix_assert(1 == signal1->slot);
-    ix_assert(1 == thread1->slot);
+    IX_ASSERT(1 == signal1->slot);
+    IX_ASSERT(1 == thread1->slot);
 
     signal1->tst_sig_int1.disconnect(thread1);
     signal1->tst_sig_int1.connect(thread1, &TestThread::tst_slot_int1);
@@ -72,7 +72,7 @@ int test_thread(void)
     iThread::yieldCurrentThread();
     iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));
     thread->wait();
-    ix_assert(2 == thread1->slot);
+    IX_ASSERT(2 == thread1->slot);
     delete thread1;
 
     thread1 = new TestThread;
@@ -84,7 +84,7 @@ int test_thread(void)
 
     ilog_debug("test_thread: [", iThread::currentThreadId(),"]tst_sig_int1");
     signal1->tst_sig_int1.emits(2);
-    ix_assert(2 == thread1->slot);
+    IX_ASSERT(2 == thread1->slot);
 
     iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));
     thread->wait();

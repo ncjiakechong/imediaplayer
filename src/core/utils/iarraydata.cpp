@@ -60,7 +60,7 @@ iArrayData *iArrayData::allocate(size_t objectSize, size_t alignment,
         size_t capacity, AllocationOptions options)
 {
     // Alignment is a power of two
-    ix_assert(alignment >= IX_ALIGNOF(iArrayData)
+    IX_ASSERT(alignment >= IX_ALIGNOF(iArrayData)
             && !(alignment & (alignment - 1)));
 
     // Don't allocate empty headers
@@ -102,8 +102,8 @@ iArrayData *iArrayData::allocate(size_t objectSize, size_t alignment,
 iArrayData *iArrayData::reallocateUnaligned(iArrayData *data, size_t objectSize, size_t capacity,
                                             AllocationOptions options)
 {
-    ix_assert(data);
-    ix_assert(data->isMutable());
+    IX_ASSERT(data);
+    IX_ASSERT(data->isMutable());
 
     size_t headerSize = sizeof(iArrayData);
     size_t allocSize = calculateBlockSize(capacity, objectSize, headerSize, options);
@@ -113,11 +113,11 @@ iArrayData *iArrayData::reallocateUnaligned(iArrayData *data, size_t objectSize,
     return header;
 }
 
-void iArrayData::deallocate(iArrayData *data, size_t objectSize,
+void iArrayData::deallocate(iArrayData *data, size_t,
         size_t alignment)
 {
     // Alignment is a power of two
-    ix_assert(alignment >= IX_ALIGNOF(iArrayData)
+    IX_ASSERT(alignment >= IX_ALIGNOF(iArrayData)
             && !(alignment & (alignment - 1)));
 
     if (data == &ix_array_unsharable_empty)
@@ -125,7 +125,7 @@ void iArrayData::deallocate(iArrayData *data, size_t objectSize,
 
     if ((IX_NULLPTR != data) && data->ref.isStatic()) {
         ilog_warn("iArrayData::deallocate Static data cannot be deleted");
-        ix_assert(0);
+        IX_ASSERT(0);
     }
 
     ::free(data);

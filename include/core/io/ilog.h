@@ -26,6 +26,8 @@ namespace iShell {
 
 // #define ILOG_TAG "iShell"
 
+class iString;
+
 typedef enum ilog_level {
     ILOG_ERROR  = 0,    /* Error messages */
     ILOG_WARN   = 1,    /* Warning messages */
@@ -134,6 +136,9 @@ class iLogger{
 
     // for wstring
     inline void append(const std::wstring& value)  { append(value.c_str()); }
+
+    // for iString
+    void append(const iString& value);
 
     // for pointer types
     void append(const void* value);
