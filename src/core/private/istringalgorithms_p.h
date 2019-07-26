@@ -105,11 +105,12 @@ struct iStringAlgorithms
                 *ptr++ = *src++;
             if (src == end)
                 break;
-            if (*src != 0x0020)
+            if (*src != iChar::Space)
                 unmodified = false;
-            *ptr++ = 0x0020;
+            *ptr++ = iChar::Space;
         } while (true);
-        if (ptr != dst && ptr[-1] == 0x0020)
+
+        if (ptr != dst && ptr[-1] == iChar::Space)
             --ptr;
 
         int newlen = ptr - dst;

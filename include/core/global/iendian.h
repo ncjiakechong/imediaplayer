@@ -149,7 +149,7 @@ template<> void *ibswap<8>(const void *source, xsizetype count, void *dest) noex
 
 template <typename T> inline T iToBigEndian(T source)
 {
-    if (is_little_endian()) {
+    if (!is_little_endian()) {
         return source;
     }
 
@@ -157,7 +157,7 @@ template <typename T> inline T iToBigEndian(T source)
 }
 template <typename T> inline T iFromBigEndian(T source)
 {
-    if (is_little_endian()) {
+    if (!is_little_endian()) {
         return source;
     }
 
@@ -165,7 +165,7 @@ template <typename T> inline T iFromBigEndian(T source)
 }
 template <typename T> inline T iToLittleEndian(T source)
 {
-    if (is_little_endian()) {
+    if (!is_little_endian()) {
         return ibswap(source);
     }
 
@@ -174,7 +174,7 @@ template <typename T> inline T iToLittleEndian(T source)
 
 template <typename T> inline T iFromLittleEndian(T source)
 {
-    if (is_little_endian()) {
+    if (!is_little_endian()) {
         return ibswap(source);
     }
 
@@ -183,7 +183,7 @@ template <typename T> inline T iFromLittleEndian(T source)
 
 template <typename T> inline void iToBigEndian(T src, void *dest)
 {
-    if (is_little_endian()) {
+    if (!is_little_endian()) {
         iToUnaligned<T>(src, dest);
         return;
     }
@@ -192,7 +192,7 @@ template <typename T> inline void iToBigEndian(T src, void *dest)
 }
 template <typename T> inline void iToLittleEndian(T src, void *dest)
 {
-    if (is_little_endian()) {
+    if (!is_little_endian()) {
         ibswap<T>(src, dest);
         return;
     }
@@ -202,7 +202,7 @@ template <typename T> inline void iToLittleEndian(T src, void *dest)
 
 template <typename T> inline void iToBigEndian(const void *source, xsizetype count, void *dest)
 {
-    if (!is_little_endian()) {
+    if (is_little_endian()) {
         ibswap<sizeof(T)>(source, count, dest);
         return;
     }
@@ -213,7 +213,7 @@ template <typename T> inline void iToBigEndian(const void *source, xsizetype cou
 
 template <typename T> inline void iToLittleEndian(const void *source, xsizetype count, void *dest)
 {
-    if (is_little_endian()) {
+    if (!is_little_endian()) {
         ibswap<sizeof(T)>(source, count, dest);
         return;
     }
@@ -224,7 +224,7 @@ template <typename T> inline void iToLittleEndian(const void *source, xsizetype 
 
 template <typename T> inline void iFromBigEndian(const void *source, xsizetype count, void *dest)
 {
-    if (!is_little_endian()) {
+    if (is_little_endian()) {
         ibswap<sizeof(T)>(source, count, dest);
         return;
     }
@@ -235,7 +235,7 @@ template <typename T> inline void iFromBigEndian(const void *source, xsizetype c
 
 template <typename T> inline void iFromLittleEndian(const void *source, xsizetype count, void *dest)
 {
-    if (is_little_endian()) {
+    if (!is_little_endian()) {
         ibswap<sizeof(T)>(source, count, dest);
         return;
     }

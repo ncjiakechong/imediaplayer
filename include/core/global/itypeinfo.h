@@ -160,7 +160,7 @@ enum { /* TYPEINFO flags */
     IX_COMPLEX_TYPE = 0,
     IX_PRIMITIVE_TYPE = 0x1,
     IX_STATIC_TYPE = 0,
-    IX_MOVABLE_TYPE = 0x2,               // ### Qt6: merge movable and relocatable once QList no longer depends on it
+    IX_MOVABLE_TYPE = 0x2,               // ### Qt6: merge movable and relocatable once std::list no longer depends on it
     IX_DUMMY_TYPE = 0x4,
     IX_RELOCATABLE_TYPE = 0x8
 };

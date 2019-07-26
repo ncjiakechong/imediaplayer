@@ -11,7 +11,7 @@
 
 #include <limits.h>
 
-#include "core/utils/ibytearraymatcher.h"
+#include "private/ibytearraymatcher.h"
 
 namespace iShell {
 

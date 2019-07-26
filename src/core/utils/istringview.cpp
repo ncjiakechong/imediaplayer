@@ -33,7 +33,7 @@ namespace iShell {
     where it is a 16-bit type) \c wchar_t.
 
     iStringView is designed as an interface type; its main use-case is
-    as a function parameter type. When QStringViews are used as automatic
+    as a function parameter type. When iStringViews are used as automatic
     variables or data members, care must be taken to ensure that the referenced
     string data (for example, owned by a iString) outlives the iStringView on all code paths,
     lest the string view ends up referencing deleted data.
@@ -45,7 +45,7 @@ namespace iShell {
     sources to be passed to the function, such as \c{u"Hello World"}, a \c char16_t
     string literal.
 
-    QStringViews should be passed by value, not by reference-to-const:
+    iStringViews should be passed by value, not by reference-to-const:
     \snippet code/src_corelib_tools_qstringview.cpp 0
 
     If you want to give your users maximum freedom in what strings they can pass
@@ -76,9 +76,9 @@ namespace iShell {
     allowed in \c constexpr functions). You can use an indexed loop and/or utf16() in
     \c constexpr contexts instead.
 
-    \note We strongly discourage the use of QList<iStringView>,
-    because QList is a very inefficient container for QStringViews (it would heap-allocate
-    every element). Use std::vector (or std::vector) to hold QStringViews instead.
+    \note We strongly discourage the use of std::list<iStringView>,
+    because std::list is a very inefficient container for iStringViews (it would heap-allocate
+    every element). Use std::vector (or std::vector) to hold iStringViews instead.
 
     \sa iString, iStringRef
 */
@@ -752,7 +752,7 @@ namespace iShell {
     Returns a string-view that references \a{s}' data, but is never null.
 
     This is a faster way to convert a iString or iStringRef to a iStringView,
-    if null QStrings can legitimately be treated as empty ones.
+    if null iStrings can legitimately be treated as empty ones.
 
     \sa iString::isNull(), iStringRef::isNull(), iStringView
 */

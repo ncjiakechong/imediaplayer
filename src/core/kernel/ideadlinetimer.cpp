@@ -27,7 +27,7 @@ static inline std::pair<xint64, xint64> toSecsAndNSecs(xint64 nsecs)
     if (nsecs < 0)
         --secs;
     nsecs -= secs * 1000*1000*1000;
-    return std::make_pair(secs, nsecs);
+    return std::pair<xint64, xint64>(secs, nsecs);
 }
 
 #ifdef IX_HAVE_CXX11

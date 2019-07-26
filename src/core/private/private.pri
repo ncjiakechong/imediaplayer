@@ -5,13 +5,16 @@
 #-------------------------------------------------
 
 SOURCES += \
+    $$PWD/ibytearraymatcher.cpp \
     $$PWD/ilocale_tools_p.cpp \
+    $$PWD/istringmatcher.cpp \
     $$PWD/iunicodetables_data.cpp \
     $$PWD/iutfcodec.cpp \
     private/ieventdispatcher_generic.cpp \
     private/itimerinfo.cpp
 
 HEADERS += \
+    $$PWD/ibytearraymatcher.h \
     $$PWD/iendian_p.h \
     $$PWD/ilocale_data_p.h \
     $$PWD/ilocale_p.h \
@@ -19,6 +22,7 @@ HEADERS += \
     $$PWD/inumeric_p.h \
     $$PWD/istringalgorithms_p.h \
     $$PWD/istringiterator_p.h \
+    $$PWD/istringmatcher.h \
     $$PWD/itextcodec_p.h \
     $$PWD/itools_p.h \
     $$PWD/iunicodetables_data.h \

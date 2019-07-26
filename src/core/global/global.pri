@@ -5,10 +5,12 @@
 #-------------------------------------------------
 
 SOURCES += \
+    $$PWD/iendian.cpp \
     $$PWD/imacro.cpp \
     $$PWD/inumeric.cpp
 
 HEADERS += \
+    $$PWD/../../../include/core/global/iendian.h \
     ../../include/core/global/iglobal.h \
     ../../include/core/global/imacro.h \
     ../../include/core/global/imetaprogramming.h \

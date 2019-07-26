@@ -17,3 +17,5 @@ src_icorelibtest.depends = src_icorelib src_gsttools
 
 SUBDIRS += src_icorelibtest
 
+HEADERS +=
+

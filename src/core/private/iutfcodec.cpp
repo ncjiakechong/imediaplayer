@@ -10,7 +10,7 @@
 /////////////////////////////////////////////////////////////////
 
 #include "core/utils/ichar.h"
-#include "core/utils/iendian.h"
+#include "core/global/iendian.h"
 #include "private/iutfcodec_p.h"
 #include "private/istringalgorithms_p.h"
 #include "private/istringiterator_p.h"

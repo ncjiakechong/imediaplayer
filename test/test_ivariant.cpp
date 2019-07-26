@@ -13,6 +13,7 @@
 #include "core/kernel/ivariant.h"
 #include "core/kernel/iobject.h"
 #include "core/utils/isharedptr.h"
+#include "core/utils/iregexp.h"
 
 #define ILOG_TAG "test"
 
@@ -79,6 +80,25 @@ int test_ivariant(void)
 //    iVariant var_tst2 = iVariant(tst_Variant());
 //    var_tst2.setValue<tst_Variant>(tst_Variant());
 //    ilog_debug("var_tst1 ", var_tst1.value<tst_Variant*>());
+
+
+    iString str1("We are all happy monkeys");
+
+    int roff;
+    iRegExp rx("happy");
+    rx.setPatternSyntax(iRegExp::RegExp);
+    roff = rx.indexIn(str1);
+    IX_ASSERT_X(roff == 11, "iRegExp indexIn error");
+
+    iString r;
+    rx =iRegExp("[a-f]");
+    r = iString(str1).replace(rx, "-");
+    IX_ASSERT_X(r == iString("W- -r- -ll h-ppy monk-ys"), "iString replace1 error");
+
+    rx = iRegExp("[^a-f]*([a-f]+)[^a-f]*");
+    rx.setPatternSyntax(iRegExp::RegExp);
+    r = iString(str1).replace(rx, "\\1");
+    IX_ASSERT_X(r == iString("eaeaae"), "iString replace2 error");
 
     return 0;
 }

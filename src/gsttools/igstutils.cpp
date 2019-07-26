@@ -861,7 +861,7 @@ QVideoSurfaceFormat iGstUtils::formatForCaps(
 
 #endif
 
-GstCaps *iGstUtils::capsForFormats(const QList<QVideoFrame::PixelFormat> &formats)
+GstCaps *iGstUtils::capsForFormats(const std::list<QVideoFrame::PixelFormat> &formats)
 {
     GstCaps *caps = gst_caps_new_empty();
 
@@ -935,14 +935,14 @@ void iGstUtils::setFrameTimeStamps(QVideoFrame *frame, GstBuffer *buffer)
     }
 }
 
-void iGstUtils::setMetaData(GstElement *element, const QMap<iByteArray, iVariant> &data)
+void iGstUtils::setMetaData(GstElement *element, const std::map<iByteArray, iVariant> &data)
 {
     if (!GST_IS_TAG_SETTER(element))
         return;
 
     gst_tag_setter_reset_tags(GST_TAG_SETTER(element));
 
-    QMapIterator<iByteArray, iVariant> it(data);
+    std::mapIterator<iByteArray, iVariant> it(data);
     while (it.hasNext()) {
         it.next();
         const iString tagName = it.key();
@@ -990,7 +990,7 @@ void iGstUtils::setMetaData(GstElement *element, const QMap<iByteArray, iVariant
     }
 }
 
-void iGstUtils::setMetaData(GstBin *bin, const QMap<iByteArray, iVariant> &data)
+void iGstUtils::setMetaData(GstBin *bin, const std::map<iByteArray, iVariant> &data)
 {
     GstIterator *elements = gst_bin_iterate_all_by_interface(bin, GST_TYPE_TAG_SETTER);
 #if GST_CHECK_VERSION(1,0,0)
@@ -1137,7 +1137,7 @@ QPair<xreal, xreal> iGstUtils::structureFrameRateRange(const GstStructure *s)
     return rate;
 }
 
-typedef QMap<iString, iString> FileExtensionMap;
+typedef std::map<iString, iString> FileExtensionMap;
 IX_GLOBAL_STATIC(FileExtensionMap, fileExtensionMap)
 
 iString iGstUtils::fileExtensionForMimeType(const iString &mimeType)

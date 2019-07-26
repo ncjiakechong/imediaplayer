@@ -17,11 +17,12 @@
 #include <wchar.h>
 
 #include "core/utils/istring.h"
+#include "core/utils/iregexp.h"
 #include "core/global/inumeric.h"
-#include "core/utils/iendian.h"
+#include "core/global/iendian.h"
 #include "core/utils/ialgorithms.h"
-#include "core/utils/istringmatcher.h"
 #include "core/utils/ivarlengtharray.h"
+#include "private/istringmatcher.h"
 #include "private/itools_p.h"
 #include "private/iutfcodec_p.h"
 #include "private/istringiterator_p.h"
@@ -77,9 +78,9 @@ namespace iShell {
  */
 
 // internal
-int xFindString(const iChar *haystack, int haystackLen, int from,
+int iFindString(const iChar *haystack, int haystackLen, int from,
     const iChar *needle, int needleLen, iShell::CaseSensitivity cs);
-int xFindStringBoyerMoore(const iChar *haystack, int haystackLen, int from,
+int iFindStringBoyerMoore(const iChar *haystack, int haystackLen, int from,
     const iChar *needle, int needleLen, iShell::CaseSensitivity cs);
 static inline int ix_last_index_of(const iChar *haystack, int haystackLen, iChar needle,
                                    int from, iShell::CaseSensitivity cs);
@@ -538,7 +539,7 @@ inline char qToLower(char ch)
   \relates iString
 
   Defining this macro disables most automatic conversions from source
-  literals and 8-bit data to unicode QStrings, but allows the use of
+  literals and 8-bit data to unicode iStrings, but allows the use of
   the \c{iChar(char)} and \c{iString(const char (&ch)[N]} constructors,
   and the \c{iString::operator=(const char (&ch)[N])} assignment operator
   giving most of the type-safety benefits of \c QT_NO_CAST_FROM_ASCII
@@ -555,7 +556,7 @@ inline char qToLower(char ch)
   \macro QT_NO_CAST_FROM_ASCII
   \relates iString
 
-  Disables automatic conversions from 8-bit strings (char *) to unicode QStrings
+  Disables automatic conversions from 8-bit strings (char *) to unicode iStrings
 
   \sa QT_NO_CAST_TO_ASCII, QT_RESTRICTED_CAST_FROM_ASCII, QT_NO_CAST_FROM_BYTEARRAY
 */
@@ -702,7 +703,7 @@ inline char qToLower(char ch)
 
     \snippet qstring/main.cpp 4
 
-    You can also pass string literals to functions that take QStrings
+    You can also pass string literals to functions that take iStrings
     as arguments, invoking the iString(const char *)
     constructor. Similarly, you can pass a iString to a function that
     takes a \c{const char *} argument using the \l qPrintable() macro
@@ -771,7 +772,7 @@ inline char qToLower(char ch)
     how many times a particular character or substring occurs in the
     string, use count().
 
-    QStrings can be compared using overloaded operators such as \l
+    iStrings can be compared using overloaded operators such as \l
     operator<(), \l operator<=(), \l operator==(), \l operator>=(),
     and so on.  Note that the comparison is based exclusively on the
     numeric Unicode values of the characters. It is very fast, but is
@@ -845,7 +846,7 @@ inline char qToLower(char ch)
     \row
     \li
     Due to C++'s type system and the fact that iString is
-    \l{implicitly shared}, QStrings may be treated like \c{int}s or
+    \l{implicitly shared}, iStrings may be treated like \c{int}s or
     other basic types. For example:
 
     \snippet qstring/main.cpp 7
@@ -907,8 +908,8 @@ inline char qToLower(char ch)
 
     A slightly less efficient way is to use iLatin1String. This class wraps
     a C string literal, precalculates it length at compile time and can
-    then be used for faster comparison with QStrings and conversion to
-    QStrings than a regular C string literal.
+    then be used for faster comparison with iStrings and conversion to
+    iStrings than a regular C string literal.
 
     Using the iString \c{'+'} operator, it is easy to construct a
     complex string from multiple substrings. You will often write code
@@ -2912,7 +2913,7 @@ bool iString::operator>(iLatin1String other) const
 */
 int iString::indexOf(const iString &str, int from, iShell::CaseSensitivity cs) const
 {
-    return xFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
+    return iFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
 }
 
 /*!
@@ -2939,7 +2940,7 @@ int iString::indexOf(iLatin1String str, int from, iShell::CaseSensitivity cs) co
     return ix_find_latin1_string(unicode(), size(), str, from, cs);
 }
 
-int xFindString(
+int iFindString(
     const iChar *haystack0, int haystackLen, int from,
     const iChar *needle0, int needleLen, iShell::CaseSensitivity cs)
 {
@@ -2963,7 +2964,7 @@ int xFindString(
         hash function.
     */
     if (l > 500 && sl > 5)
-        return xFindStringBoyerMoore(haystack0, haystackLen, from,
+        return iFindStringBoyerMoore(haystack0, haystackLen, from,
             needle0, needleLen, cs);
 
     auto sv = [sl](const ushort *v) { return iStringView(v, sl); };
@@ -3043,7 +3044,7 @@ int iString::indexOf(iChar ch, int from, iShell::CaseSensitivity cs) const
 */
 int iString::indexOf(const iStringRef &str, int from, iShell::CaseSensitivity cs) const
 {
-    return xFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
+    return iFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
 }
 
 static int lastIndexOfHelper(const ushort *haystack, int from, const ushort *needle, int sl, iShell::CaseSensitivity cs)
@@ -3189,7 +3190,167 @@ int iString::lastIndexOf(const iStringRef &str, int from, iShell::CaseSensitivit
     return iStringRef(this).lastIndexOf(str, from, cs);
 }
 
+struct iStringCapture
+{
+    int pos;
+    int len;
+    int no;
+};
+IX_DECLARE_TYPEINFO(iStringCapture, IX_PRIMITIVE_TYPE);
 
+/*!
+  \overload replace()
+
+  Replaces every occurrence of the regular expression \a rx in the
+  string with \a after. Returns a reference to the string. For
+  example:
+
+  \snippet qstring/main.cpp 42
+
+  For regular expressions containing \l{capturing parentheses},
+  occurrences of \b{\\1}, \b{\\2}, ..., in \a after are replaced
+  with \a{rx}.cap(1), cap(2), ...
+
+  \snippet qstring/main.cpp 43
+
+  \sa indexOf(), lastIndexOf(), remove(), iRegExp::cap()
+*/
+iString& iString::replace(const iRegExp &rx, const iString &after)
+{
+    iRegExp rx2(rx);
+
+    if (isEmpty() && rx2.indexIn(*this) == -1)
+        return *this;
+
+    reallocData(uint(d->size) + 1u);
+
+    int index = 0;
+    int numCaptures = rx2.captureCount();
+    int al = after.length();
+    iRegExp::CaretMode caretMode = iRegExp::CaretAtZero;
+
+    if (numCaptures > 0) {
+        const iChar *uc = after.unicode();
+        int numBackRefs = 0;
+
+        for (int i = 0; i < al - 1; i++) {
+            if (uc[i] == iLatin1Char('\\')) {
+                int no = uc[i + 1].digitValue();
+                if (no > 0 && no <= numCaptures)
+                    numBackRefs++;
+            }
+        }
+
+        /*
+            This is the harder case where we have back-references.
+        */
+        if (numBackRefs > 0) {
+            iVarLengthArray<iStringCapture, 16> captures(numBackRefs);
+            int j = 0;
+
+            for (int i = 0; i < al - 1; i++) {
+                if (uc[i] == iLatin1Char('\\')) {
+                    int no = uc[i + 1].digitValue();
+                    if (no > 0 && no <= numCaptures) {
+                        iStringCapture capture;
+                        capture.pos = i;
+                        capture.len = 2;
+
+                        if (i < al - 2) {
+                            int secondDigit = uc[i + 2].digitValue();
+                            if (secondDigit != -1 && ((no * 10) + secondDigit) <= numCaptures) {
+                                no = (no * 10) + secondDigit;
+                                ++capture.len;
+                            }
+                        }
+
+                        capture.no = no;
+                        captures[j++] = capture;
+                    }
+                }
+            }
+
+            while (index <= length()) {
+                index = rx2.indexIn(*this, index, caretMode);
+                if (index == -1)
+                    break;
+
+                iString after2(after);
+                for (j = numBackRefs - 1; j >= 0; j--) {
+                    const iStringCapture &capture = captures[j];
+                    after2.replace(capture.pos, capture.len, rx2.cap(capture.no));
+                }
+
+                replace(index, rx2.matchedLength(), after2);
+                index += after2.length();
+
+                // avoid infinite loop on 0-length matches (e.g., iRegExp("[a-z]*"))
+                if (rx2.matchedLength() == 0)
+                    ++index;
+
+                caretMode = iRegExp::CaretWontMatch;
+            }
+            return *this;
+        }
+    }
+
+    /*
+        This is the simple and optimized case where we don't have
+        back-references.
+    */
+    while (index != -1) {
+        struct {
+            int pos;
+            int length;
+        } replacements[2048];
+
+        int pos = 0;
+        int adjust = 0;
+        while (pos < 2047) {
+            index = rx2.indexIn(*this, index, caretMode);
+            if (index == -1)
+                break;
+            int ml = rx2.matchedLength();
+            replacements[pos].pos = index;
+            replacements[pos++].length = ml;
+            index += ml;
+            adjust += al - ml;
+            // avoid infinite loop
+            if (!ml)
+                index++;
+        }
+        if (!pos)
+            break;
+        replacements[pos].pos = d->size;
+        int newlen = d->size + adjust;
+
+        // to continue searching at the right position after we did
+        // the first round of replacements
+        if (index != -1)
+            index += adjust;
+        iString newstring;
+        newstring.reserve(newlen + 1);
+        iChar *newuc = newstring.data();
+        iChar *uc = newuc;
+        int copystart = 0;
+        int i = 0;
+        while (i < pos) {
+            int copyend = replacements[i].pos;
+            int size = copyend - copystart;
+            memcpy(static_cast<void*>(uc), static_cast<const void *>(d->data() + copystart), size * sizeof(iChar));
+            uc += size;
+            memcpy(static_cast<void *>(uc), static_cast<const void *>(after.d->data()), al * sizeof(iChar));
+            uc += al;
+            copystart = copyend + replacements[i].length;
+            i++;
+        }
+        memcpy(static_cast<void *>(uc), static_cast<const void *>(d->data() + copystart), (d->size - copystart) * sizeof(iChar));
+        newstring.resize(newlen);
+        *this = newstring;
+        caretMode = iRegExp::CaretWontMatch;
+    }
+    return *this;
+}
 /*!
     Returns the number of (potentially overlapping) occurrences of
     the string \a str in this string.
@@ -3300,6 +3461,106 @@ int iString::count(const iStringRef &str, iShell::CaseSensitivity cs) const
     matched captures (see iRegExp::matchedLength, iRegExp::cap).
 */
 
+/*!
+    \overload indexOf()
+
+    Returns the index position of the first match of the regular
+    expression \a rx in the string, searching forward from index
+    position \a from. Returns -1 if \a rx didn't match anywhere.
+
+    Example:
+
+    \snippet qstring/main.cpp 25
+*/
+int iString::indexOf(const iRegExp& rx, int from) const
+{
+    iRegExp rx2(rx);
+    return rx2.indexIn(*this, from);
+}
+
+/*!
+    \overload indexOf()
+    \since 4.5
+
+    Returns the index position of the first match of the regular
+    expression \a rx in the string, searching forward from index
+    position \a from. Returns -1 if \a rx didn't match anywhere.
+
+    If there is a match, the \a rx regular expression will contain the
+    matched captures (see iRegExp::matchedLength, iRegExp::cap).
+
+    Example:
+
+    \snippet qstring/main.cpp 25
+*/
+int iString::indexOf(iRegExp& rx, int from) const
+{
+    return rx.indexIn(*this, from);
+}
+
+/*!
+    \overload lastIndexOf()
+
+    Returns the index position of the last match of the regular
+    expression \a rx in the string, searching backward from index
+    position \a from. Returns -1 if \a rx didn't match anywhere.
+
+    Example:
+
+    \snippet qstring/main.cpp 30
+*/
+int iString::lastIndexOf(const iRegExp& rx, int from) const
+{
+    iRegExp rx2(rx);
+    return rx2.lastIndexIn(*this, from);
+}
+
+/*!
+    \overload lastIndexOf()
+    \since 4.5
+
+    Returns the index position of the last match of the regular
+    expression \a rx in the string, searching backward from index
+    position \a from. Returns -1 if \a rx didn't match anywhere.
+
+    If there is a match, the \a rx regular expression will contain the
+    matched captures (see iRegExp::matchedLength, iRegExp::cap).
+
+    Example:
+
+    \snippet qstring/main.cpp 30
+*/
+int iString::lastIndexOf(iRegExp& rx, int from) const
+{
+    return rx.lastIndexIn(*this, from);
+}
+
+/*!
+    \overload count()
+
+    Returns the number of times the regular expression \a rx matches
+    in the string.
+
+    This function counts overlapping matches, so in the example
+    below, there are four instances of "ana" or "ama":
+
+    \snippet qstring/main.cpp 18
+
+*/
+int iString::count(const iRegExp& rx) const
+{
+    iRegExp rx2(rx);
+    int count = 0;
+    int index = -1;
+    int len = length();
+    while (index < len - 1) {                 // count overlapping matches
+        index = rx2.indexIn(*this, index + 1);
+        if (index == -1)
+            break;
+        count++;
+    }
+    return count;
+}
 
 /*! \fn int iString::count() const
 
@@ -3421,7 +3682,111 @@ iString iString::section(const iString &sep, int start, int end, SectionFlags fl
     return ret;
 }
 
+class ix_section_chunk {
+public:
+    ix_section_chunk() {}
+    ix_section_chunk(int l, iStringRef s) : length(l), string(std::move(s)) {}
+    int length;
+    iStringRef string;
+};
+IX_DECLARE_TYPEINFO(ix_section_chunk, IX_MOVABLE_TYPE);
 
+static iString extractSections(const std::vector<ix_section_chunk> &sections,
+                               int start,
+                               int end,
+                               iString::SectionFlags flags)
+{
+    const int sectionsSize = sections.size();
+
+    if (!(flags & iString::SectionSkipEmpty)) {
+        if (start < 0)
+            start += sectionsSize;
+        if (end < 0)
+            end += sectionsSize;
+    } else {
+        int skip = 0;
+        for (int k = 0; k < sectionsSize; ++k) {
+            const ix_section_chunk &section = sections.at(k);
+            if (section.length == section.string.length())
+                skip++;
+        }
+        if (start < 0)
+            start += sectionsSize - skip;
+        if (end < 0)
+            end += sectionsSize - skip;
+    }
+    if (start >= sectionsSize || end < 0 || start > end)
+        return iString();
+
+    iString ret;
+    int x = 0;
+    int first_i = start, last_i = end;
+    for (int i = 0; x <= end && i < sectionsSize; ++i) {
+        const ix_section_chunk &section = sections.at(i);
+        const bool empty = (section.length == section.string.length());
+        if (x >= start) {
+            if (x == start)
+                first_i = i;
+            if (x == end)
+                last_i = i;
+            if (x != start)
+                ret += section.string;
+            else
+                ret += section.string.mid(section.length);
+        }
+        if (!empty || !(flags & iString::SectionSkipEmpty))
+            x++;
+    }
+
+    if ((flags & iString::SectionIncludeLeadingSep) && first_i >= 0) {
+        const ix_section_chunk &section = sections.at(first_i);
+        ret.prepend(section.string.left(section.length));
+    }
+
+    if ((flags & iString::SectionIncludeTrailingSep)
+        && last_i < sectionsSize - 1) {
+        const ix_section_chunk &section = sections.at(last_i+1);
+        ret += section.string.left(section.length);
+    }
+
+    return ret;
+}
+
+/*!
+    \overload section()
+
+    This string is treated as a sequence of fields separated by the
+    regular expression, \a reg.
+
+    \snippet qstring/main.cpp 55
+
+    \warning Using this iRegExp version is much more expensive than
+    the overloaded string and character versions.
+
+    \sa split(), simplified()
+*/
+iString iString::section(const iRegExp &reg, int start, int end, SectionFlags flags) const
+{
+    const iChar *uc = unicode();
+    if(!uc)
+        return iString();
+
+    iRegExp sep(reg);
+    sep.setCaseSensitivity((flags & SectionCaseInsensitiveSeps) ? iShell::CaseInsensitive
+                                                                : iShell::CaseSensitive);
+
+    std::vector<ix_section_chunk> sections;
+    int n = length(), m = 0, last_m = 0, last_len = 0;
+    while ((m = sep.indexIn(*this, m)) != -1) {
+        sections.push_back(ix_section_chunk(last_len, iStringRef(this, last_m, m - last_m)));
+        last_m = m;
+        last_len = sep.matchedLength();
+        m += std::max(sep.matchedLength(), 1);
+    }
+    sections.push_back(ix_section_chunk(last_len, iStringRef(this, last_m, n - last_m)));
+
+    return extractSections(sections, start, end, flags);
+}
 /*!
     Returns a substring that contains the \a n leftmost characters
     of the string.
@@ -5308,7 +5673,7 @@ static int parse_field_width(const char * &c)
     // contains at least one digit
     const char *endp;
     bool ok;
-    const xulonglong result = xstrtoull(c, &endp, 10, &ok);
+    const xulonglong result = istrtoull(c, &endp, 10, &ok);
     c = endp;
     while (qIsDigit(*c)) // preserve Qt 5.5 behavior of consuming all digits, no matter how many
         ++c;
@@ -6111,7 +6476,7 @@ static ResultList splitString(const StringSource &source, const iChar *sep,
     int start = 0;
     int end;
     int extra = 0;
-    while ((end = xFindString(source.constData(), source.size(), start + extra, sep, separatorSize, cs)) != -1) {
+    while ((end = iFindString(source.constData(), source.size(), start + extra, sep, separatorSize, cs)) != -1) {
         if (start != end || behavior == iString::KeepEmptyParts)
             list.push_back(source.mid(start, end - start));
         start = end + separatorSize;
@@ -6217,6 +6582,77 @@ std::vector<iStringRef> iStringRef::split(iChar sep, iString::SplitBehavior beha
     return splitString<std::vector<iStringRef> >(*this, &sep, behavior, cs, 1);
 }
 
+namespace {
+template<class ResultList, typename MidMethod>
+static ResultList splitString(const iString &source, MidMethod mid, const iRegExp &rx, iString::SplitBehavior behavior)
+{
+    iRegExp rx2(rx);
+    ResultList list;
+    int start = 0;
+    int extra = 0;
+    int end;
+    while ((end = rx2.indexIn(source, start + extra)) != -1) {
+        int matchedLen = rx2.matchedLength();
+        if (start != end || behavior == iString::KeepEmptyParts)
+            list.push_back((source.*mid)(start, end - start));
+        start = end + matchedLen;
+        extra = (matchedLen == 0) ? 1 : 0;
+    }
+    if (start != source.size() || behavior == iString::KeepEmptyParts)
+        list.push_back((source.*mid)(start, -1));
+    return list;
+}
+} // namespace
+
+/*!
+    \overload
+
+    Splits the string into substrings wherever the regular expression
+    \a rx matches, and returns the list of those strings. If \a rx
+    does not match anywhere in the string, split() returns a
+    single-element list containing this string.
+
+    Here is an example where we extract the words in a sentence
+    using one or more whitespace characters as the separator:
+
+    \snippet qstring/main.cpp 59
+
+    Here is a similar example, but this time we use any sequence of
+    non-word characters as the separator:
+
+    \snippet qstring/main.cpp 60
+
+    Here is a third example where we use a zero-length assertion,
+    \b{\\b} (word boundary), to split the string into an
+    alternating sequence of non-word and word tokens:
+
+    \snippet qstring/main.cpp 61
+
+    \sa std::list<iString>::join(), section()
+*/
+std::list<iString> iString::split(const iRegExp &rx, SplitBehavior behavior) const
+{
+    return splitString<std::list<iString>>(*this, &iString::mid, rx, behavior);
+}
+
+/*!
+    \overload
+    \since 5.4
+
+    Splits the string into substring references wherever the regular expression
+    \a rx matches, and returns the list of those strings. If \a rx
+    does not match anywhere in the string, splitRef() returns a
+    single-element vector containing this string reference.
+
+    \note All references are valid as long this string is alive. Destroying this
+    string will cause all references to be dangling pointers.
+
+    \sa iStringRef split()
+*/
+std::vector<iStringRef> iString::splitRef(const iRegExp &rx, SplitBehavior behavior) const
+{
+    return splitString<std::vector<iStringRef> >(*this, &iString::midRef, rx, behavior);
+}
 
 /*!
     \enum iString::NormalizationForm
@@ -9237,7 +9673,7 @@ iStringRef iString::midRef(int position, int n) const
 */
 int iStringRef::indexOf(const iString &str, int from, iShell::CaseSensitivity cs) const
 {
-    return xFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
+    return iFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
 }
 
 /*!
@@ -9291,7 +9727,7 @@ int iStringRef::indexOf(iLatin1String str, int from, iShell::CaseSensitivity cs)
 */
 int iStringRef::indexOf(const iStringRef &str, int from, iShell::CaseSensitivity cs) const
 {
-    return xFindString(unicode(), size(), from, str.unicode(), str.size(), cs);
+    return iFindString(unicode(), size(), from, str.unicode(), str.size(), cs);
 }
 
 /*!
@@ -9709,7 +10145,7 @@ static inline int ix_string_count(const iChar *haystack, int haystackLen,
         while ((i = matcher.indexIn(haystack, haystackLen, i + 1)) != -1)
             ++num;
     } else {
-        while ((i = xFindString(haystack, haystackLen, i + 1, needle, needleLen, cs)) != -1)
+        while ((i = iFindString(haystack, haystackLen, i + 1, needle, needleLen, cs)) != -1)
             ++num;
     }
     return num;
@@ -9747,7 +10183,7 @@ static inline int ix_find_latin1_string(const iChar *haystack, int size,
     iVarLengthArray<ushort> s(len);
     ix_from_latin1(s.data(), latin1, len);
 
-    return xFindString(haystack, size, from,
+    return iFindString(haystack, size, from,
                        reinterpret_cast<const iChar*>(s.constData()), len, cs);
 }
 
