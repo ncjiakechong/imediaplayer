@@ -544,13 +544,6 @@ inline bool operator>=(std::nullptr_t, iChar rhs) { return !operator< (nullptr, 
 inline bool operator> (std::nullptr_t, iChar rhs) { return  operator< (rhs, nullptr); }
 inline bool operator<=(std::nullptr_t, iChar rhs) { return !operator< (rhs, nullptr); }
 
-namespace iPrivate {
-uint foldCase(const ushort *ch, const ushort *start);
-uint foldCase(uint ch, uint &last);
-ushort foldCase(ushort ch);
-iChar foldCase(iChar ch);
-}
-
 } // namespace iShell
 
 #endif // ICHAR_H

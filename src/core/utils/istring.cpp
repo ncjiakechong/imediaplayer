@@ -239,7 +239,7 @@ static int ucstricmp(const iChar *a, const iChar *ae, const iChar *b, const iCha
     uint alast = 0;
     uint blast = 0;
     while (a < e) {
-        int diff = iPrivate::foldCase(a->unicode(), alast) - iPrivate::foldCase(b->unicode(), blast);
+        int diff = foldCase(a->unicode(), alast) - foldCase(b->unicode(), blast);
         if ((diff))
             return diff;
         ++a;
@@ -261,7 +261,7 @@ static int ucstricmp(const iChar *a, const iChar *ae, const char *b, const char 
         e = a + (be - b);
 
     while (a < e) {
-        int diff = iPrivate::foldCase(a->unicode()) - iPrivate::foldCase(uchar(*b));
+        int diff = foldCase(a->unicode()) - foldCase(uchar(*b));
         if ((diff))
             return diff;
         ++a;
@@ -501,10 +501,10 @@ static int findChar(const iChar *str, int len, iChar ch, int from,
             if (n != e)
                 return n - s;
         } else {
-            c = iPrivate::foldCase(c);
+            c = foldCase(c);
             --n;
             while (++n != e)
-                if (iPrivate::foldCase(*n) == c)
+                if (foldCase(*n) == c)
                     return  n - s;
         }
     }
@@ -2466,9 +2466,9 @@ iString& iString::replace(iChar before, iChar after, iShell::CaseSensitivity cs)
                         *i = a;
                 }
             } else {
-                const ushort b = iPrivate::foldCase(before.unicode());
+                const ushort b = foldCase(before.unicode());
                 while (++i != e) {
-                    if (iPrivate::foldCase(*i) == b)
+                    if (foldCase(*i) == b)
                         *i = a;
                 }
             }
@@ -3000,18 +3000,18 @@ int iFindString(
     } else {
         const ushort *haystack_start = (const ushort *)haystack0;
         for (idx = 0; idx < sl; ++idx) {
-            hashNeedle = (hashNeedle<<1) + iPrivate::foldCase(needle + idx, needle);
-            hashHaystack = (hashHaystack<<1) + iPrivate::foldCase(haystack + idx, haystack_start);
+            hashNeedle = (hashNeedle<<1) + foldCase(needle + idx, needle);
+            hashHaystack = (hashHaystack<<1) + foldCase(haystack + idx, haystack_start);
         }
-        hashHaystack -= iPrivate::foldCase(haystack + sl_minus_1, haystack_start);
+        hashHaystack -= foldCase(haystack + sl_minus_1, haystack_start);
 
         while (haystack <= end) {
-            hashHaystack += iPrivate::foldCase(haystack + sl_minus_1, haystack_start);
+            hashHaystack += foldCase(haystack + sl_minus_1, haystack_start);
             if (hashHaystack == hashNeedle
                  && ix_compare_strings(sv(needle), sv(haystack), iShell::CaseInsensitive) == 0)
                 return haystack - (const ushort *)haystack0;
 
-            REHASH(iPrivate::foldCase(haystack, haystack_start));
+            REHASH(foldCase(haystack, haystack_start));
             ++haystack;
         }
     }
@@ -3080,18 +3080,18 @@ static int lastIndexOfHelper(const ushort *haystack, int from, const ushort *nee
         }
     } else {
         for (idx = 0; idx < sl; ++idx) {
-            hashNeedle = ((hashNeedle<<1) + iPrivate::foldCase(n-idx, needle));
-            hashHaystack = ((hashHaystack<<1) + iPrivate::foldCase(h-idx, end));
+            hashNeedle = ((hashNeedle<<1) + foldCase(n-idx, needle));
+            hashHaystack = ((hashHaystack<<1) + foldCase(h-idx, end));
         }
-        hashHaystack -= iPrivate::foldCase(haystack, end);
+        hashHaystack -= foldCase(haystack, end);
 
         while (haystack >= end) {
-            hashHaystack += iPrivate::foldCase(haystack, end);
+            hashHaystack += foldCase(haystack, end);
             if (hashHaystack == hashNeedle
                  && ix_compare_strings(sv(haystack), sv(needle), iShell::CaseInsensitive) == 0)
                 return haystack - end;
             --haystack;
-            REHASH(iPrivate::foldCase(haystack + sl, end));
+            REHASH(foldCase(haystack + sl, end));
         }
     }
     return -1;
@@ -4455,7 +4455,7 @@ iString iString::fromUtf16(const ushort *unicode, int size)
         while (unicode[size] != 0)
             ++size;
     }
-    return iUtf16::convertToUnicode((const char *)unicode, size*2, 0);
+    return iUtf16::convertToUnicode((const char *)unicode, size*2, IX_NULLPTR);
 }
 
 /*!
@@ -6761,17 +6761,17 @@ void qt_string_normalize(iString *data, iString::NormalizationForm mode, iChar::
         }
     }
 
-    if (iPrivate::normalizationQuickCheckHelper(data, mode, from, &from))
+    if (normalizationQuickCheckHelper(data, mode, from, &from))
         return;
 
-    iPrivate::decomposeHelper(data, mode < iString::NormalizationForm_KD, version, from);
+    decomposeHelper(data, mode < iString::NormalizationForm_KD, version, from);
 
-    iPrivate::canonicalOrderHelper(data, version, from);
+    canonicalOrderHelper(data, version, from);
 
     if (mode == iString::NormalizationForm_D || mode == iString::NormalizationForm_KD)
         return;
 
-    iPrivate::composeHelper(data, version, from);
+    composeHelper(data, version, from);
 }
 
 /*!
@@ -10123,9 +10123,9 @@ static inline int ix_last_index_of(const iChar *haystack, int haystackLen, iChar
                 if (*n == c)
                     return n - b;
         } else {
-            c = iPrivate::foldCase(c);
+            c = foldCase(c);
             for (; n >= b; --n)
-                if (iPrivate::foldCase(*n) == c)
+                if (foldCase(*n) == c)
                     return n - b;
         }
     }
@@ -10163,9 +10163,9 @@ static inline int ix_string_count(const iChar *unicode, int size, iChar ch,
             if (*--i == c)
                 ++num;
     } else {
-        c = iPrivate::foldCase(c);
+        c = foldCase(c);
         while (i != b)
-            if (iPrivate::foldCase(*(--i)) == c)
+            if (foldCase(*(--i)) == c)
                 ++num;
     }
     return num;
@@ -10216,7 +10216,7 @@ static inline bool ix_starts_with(iStringView haystack, iChar needle, iShell::Ca
 {
     return haystack.size()
            && (cs == iShell::CaseSensitive ? haystack.front() == needle
-                                       : iPrivate::foldCase(haystack.front()) == iPrivate::foldCase(needle));
+                                       : foldCase(haystack.front()) == foldCase(needle));
 }
 
 /*!
@@ -10289,7 +10289,7 @@ static inline bool ix_ends_with(iStringView haystack, iChar needle, iShell::Case
 {
     return haystack.size()
            && (cs == iShell::CaseSensitive ? haystack.back() == needle
-                                       : iPrivate::foldCase(haystack.back()) == iPrivate::foldCase(needle));
+                                       : foldCase(haystack.back()) == foldCase(needle));
 }
 
 /*!
