@@ -12,7 +12,7 @@
 #include "core/global/imacro.h"
 #include "core/io/ilog.h"
 
-#define ILOG_TAG "iShell"
+#define ILOG_TAG "ix:core"
 
 using namespace iShell;
 

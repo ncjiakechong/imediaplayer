@@ -81,7 +81,6 @@ int test_ivariant(void)
 //    var_tst2.setValue<tst_Variant>(tst_Variant());
 //    ilog_debug("var_tst1 ", var_tst1.value<tst_Variant*>());
 
-
     iString str1("We are all happy monkeys");
 
     int roff;
@@ -99,6 +98,8 @@ int test_ivariant(void)
     rx.setPatternSyntax(iRegExp::RegExp);
     r = iString(str1).replace(rx, "\\1");
     IX_ASSERT_X(r == iString("eaeaae"), "iString replace2 error");
+
+    ilog_debug("Chinese output: ", iString::fromUtf8("中文输出验证"));
 
     return 0;
 }

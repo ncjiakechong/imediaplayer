@@ -459,6 +459,7 @@ int test_object(void)
 
     tst_sharedObj_5->setProperty("objectName", iVariant("tst_sharedObj_5"));
     ilog_debug("tst_sharedObj_5 name ", tst_sharedObj_5->property("objectName").value<const char*>());
+    IX_ASSERT(tst_sharedObj_5->property("objectName").value<iString>() == iString("tst_sharedObj_5"));
 
     tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_prop);
     tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_int1);

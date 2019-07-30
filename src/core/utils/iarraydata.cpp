@@ -16,7 +16,7 @@
 #include "core/utils/iarraydata.h"
 #include "private/itools_p.h"
 
-#define ILOG_TAG "core"
+#define ILOG_TAG "ix:core"
 
 namespace iShell {
 

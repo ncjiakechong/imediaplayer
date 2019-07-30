@@ -20,7 +20,7 @@
 #include "private/itimerinfo.h"
 #include "private/ieventdispatcher_glib.h"
 
-#define ILOG_TAG "core"
+#define ILOG_TAG "ix:core"
 
 namespace iShell {
 

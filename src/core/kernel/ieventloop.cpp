@@ -17,7 +17,7 @@
 #include "core/io/ilog.h"
 #include "private/ithread_p.h"
 
-#define ILOG_TAG "core"
+#define ILOG_TAG "ix:core"
 
 namespace iShell {
 
