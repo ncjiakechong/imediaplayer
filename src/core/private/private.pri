@@ -14,6 +14,7 @@ SOURCES += \
     private/itimerinfo.cpp
 
 HEADERS += \
+    $$PWD/ibasicatomicbitfield.h \
     $$PWD/ibytearraymatcher.h \
     $$PWD/iendian_p.h \
     $$PWD/ilocale_data_p.h \
