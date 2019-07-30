@@ -16,6 +16,7 @@
 #include <core/utils/icache.h>
 #include <core/utils/ibitarray.h>
 #include <core/utils/iregexp.h>
+#include <core/utils/ihashfunctions.h>
 #include <core/global/iglobalstatic.h>
 #include <core/thread/iatomiccounter.h>
 #include <core/thread/imutex.h>
@@ -857,9 +858,9 @@ static bool operator==(const iRegExpEngineKey &key1, const iRegExpEngineKey &key
 
 struct iRegExpEngineKeyHash
 {
-    std::size_t operator()(const iRegExpEngineKey& key) const
+    size_t operator()(const iRegExpEngineKey& key) const
     {
-        return ((std::hash<std::string>()(key.pattern.toStdString())
+        return ((iHashFunc()(key.pattern)
                  ^ (std::hash<int>()(key.patternSyntax) << 1) >> 1)
                  ^ (std::hash<int>()(key.cs) << 1));
     }

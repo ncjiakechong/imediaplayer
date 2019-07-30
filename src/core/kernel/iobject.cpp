@@ -370,8 +370,8 @@ void iObject::disconnectAll()
 
 iVariant iObject::property(const char *name) const
 {
-    std::map<iString, iSharedPtr<_iproperty_base>>::const_iterator it;
-    const std::map<iString, iSharedPtr<_iproperty_base>>& propertys = const_cast<iObject*>(this)->getOrInitProperty();
+    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>::const_iterator it;
+    const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>& propertys = const_cast<iObject*>(this)->getOrInitProperty();
 
     it = propertys.find(iString(name));
     if (it == propertys.cend())
@@ -382,8 +382,8 @@ iVariant iObject::property(const char *name) const
 
 bool iObject::setProperty(const char *name, const iVariant& value)
 {
-    std::map<iString, iSharedPtr<_iproperty_base>>::const_iterator it;
-    const std::map<iString, iSharedPtr<_iproperty_base>>& propertys = getOrInitProperty();
+    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>::const_iterator it;
+    const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>& propertys = getOrInitProperty();
 
     it = propertys.find(iString(name));
     if (it == propertys.cend())
@@ -393,12 +393,12 @@ bool iObject::setProperty(const char *name, const iVariant& value)
     return true;
 }
 
-const std::map<iString, iSharedPtr<_iproperty_base>>& iObject::getOrInitProperty()
+const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>& iObject::getOrInitProperty()
 {
-    static std::map<iString, iSharedPtr<_iproperty_base>> s_propertys;
+    static std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc> s_propertys;
 
-    std::map<iString, isignal<iVariant>*>* propertyNofity = IX_NULLPTR;
-    std::map<iString, iSharedPtr<_iproperty_base>>* propertyIns = IX_NULLPTR;
+    std::unordered_map<iString, isignal<iVariant>*, iHashFunc>* propertyNofity = IX_NULLPTR;
+    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>* propertyIns = IX_NULLPTR;
     if (s_propertys.size() <= 0) {
         propertyIns = &s_propertys;
     }
@@ -414,8 +414,8 @@ const std::map<iString, iSharedPtr<_iproperty_base>>& iObject::getOrInitProperty
     return s_propertys;
 }
 
-void iObject::doInitProperty(std::map<iString, iSharedPtr<_iproperty_base>>* propIns,
-                           std::map<iString, isignal<iVariant>*>* propNotify) {
+void iObject::doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>* propIns,
+                           std::unordered_map<iString, isignal<iVariant>*, iHashFunc>* propNotify) {
     if (propIns) {
         propIns->insert(std::pair<iString, iSharedPtr<_iproperty_base>>(
                             "objectName",
