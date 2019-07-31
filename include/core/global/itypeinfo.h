@@ -90,7 +90,7 @@ public:
     \brief iTypeInfoQuery is used to query the values of a given iTypeInfo<T>
 
     We use it because there may be some iTypeInfo<T> specializations in user
-    code that don't provide certain flags that we added after Qt 5.0. They are:
+    code that don't provide certain flags that we added. They are:
     \list
       \li isRelocatable: defaults to !isStatic
     \endlist

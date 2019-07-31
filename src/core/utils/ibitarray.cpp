@@ -19,7 +19,6 @@ namespace iShell {
 
 /*!
     \class iBitArray
-    \inmodule QtCore
     \brief The iBitArray class provides an array of bits.
 
     \ingroup tools
@@ -76,8 +75,6 @@ namespace iShell {
     empty bit arrays; for example, iBitArray() compares equal to
     iBitArray(0). We recommend that you always use isEmpty() and
     avoid isNull().
-
-    \sa iByteArray, QVector
 */
 
 /*!
@@ -86,7 +83,7 @@ namespace iShell {
     Move-constructs a iBitArray instance, making it point at the same
     object that \a other was pointing to.
 
-    \since 5.2
+
 */
 
 /*! \fn iBitArray::iBitArray()
@@ -218,7 +215,7 @@ void iBitArray::resize(int size)
     Example:
     \snippet code/src_corelib_tools_qbitarray.cpp 5
 
-    Qt makes a distinction between null bit arrays and empty bit
+    iShell makes a distinction between null bit arrays and empty bit
     arrays for historical reasons. For most applications, what
     matters is whether or not a bit array contains any data,
     and this can be determined using isEmpty().
@@ -272,7 +269,7 @@ void iBitArray::fill(bool value, int begin, int end)
 
 /*!
     \fn const char *iBitArray::bits() const
-    \since 5.11
+
 
     Returns a pointer to a dense bit array for this iBitArray. Bits are counted
     upwards from the least significant bit in each byte. The the number of bits
@@ -282,7 +279,7 @@ void iBitArray::fill(bool value, int begin, int end)
  */
 
 /*!
-    \since 5.11
+
 
     Creates a iBitArray with the dense bit array located at \a data, with \a
     size bits. The byte array at \a data must be at least \a size / 8 (rounded up)
@@ -454,14 +451,14 @@ iBitArray iBitArray::fromBits(const char *data, xsizetype size)
 */
 
 /*! \fn iBitArray &iBitArray::operator=(iBitArray &&other)
-    \since 5.2
+
 
     Moves \a other to this bit array and returns a reference to
     this bit array.
 */
 
 /*! \fn void iBitArray::swap(iBitArray &other)
-    \since 4.8
+
 
     Swaps bit array \a other with this bit array. This operation is very
     fast and never fails.
@@ -661,7 +658,6 @@ iBitArray operator^(const iBitArray &a1, const iBitArray &a2)
 
 /*!
     \class iBitRef
-    \inmodule QtCore
     \reentrant
     \brief The iBitRef class is an internal class, used with iBitArray.
 

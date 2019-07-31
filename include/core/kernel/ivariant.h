@@ -126,7 +126,7 @@ private:
     int m_typeId;
     iSharedPtr< iAbstractVariantImpl > m_dataImpl;
 
-    typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iHashFunc> convert_map_t;
+    typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc, iKeyEqualFunc> convert_map_t;
     static convert_map_t s_convertFuncs;
 };
 

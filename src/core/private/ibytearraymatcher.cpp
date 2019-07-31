@@ -60,7 +60,6 @@ static inline int bm_find(const uchar *cc, int l, int index, const uchar *puc, u
 }
 
 /*! \class iByteArrayMatcher
-    \inmodule QtCore
     \brief The iByteArrayMatcher class holds a sequence of bytes that
     can be quickly matched in a byte array.
 
@@ -91,7 +90,7 @@ iByteArrayMatcher::iByteArrayMatcher()
 {
     p.p = IX_NULLPTR;
     p.l = 0;
-    memset(p.q_skiptable, 0, sizeof(p.q_skiptable));
+    memset(p.ix_skiptable, 0, sizeof(p.ix_skiptable));
 }
 
 /*!
@@ -103,7 +102,7 @@ iByteArrayMatcher::iByteArrayMatcher(const char *pattern, int length)
 {
     p.p = reinterpret_cast<const uchar *>(pattern);
     p.l = length;
-    bm_init_skiptable(p.p, p.l, p.q_skiptable);
+    bm_init_skiptable(p.p, p.l, p.ix_skiptable);
 }
 
 /*!
@@ -111,11 +110,11 @@ iByteArrayMatcher::iByteArrayMatcher(const char *pattern, int length)
     Call indexIn() to perform a search.
 */
 iByteArrayMatcher::iByteArrayMatcher(const iByteArray &pattern)
-    : q_pattern(pattern)
+    : ix_pattern(pattern)
 {
     p.p = reinterpret_cast<const uchar *>(pattern.constData());
     p.l = pattern.size();
-    bm_init_skiptable(p.p, p.l, p.q_skiptable);
+    bm_init_skiptable(p.p, p.l, p.ix_skiptable);
 }
 
 /*!
@@ -138,7 +137,7 @@ iByteArrayMatcher::~iByteArrayMatcher()
 */
 iByteArrayMatcher &iByteArrayMatcher::operator=(const iByteArrayMatcher &other)
 {
-    q_pattern = other.q_pattern;
+    ix_pattern = other.ix_pattern;
     memcpy(&p, &other.p, sizeof(p));
     return *this;
 }
@@ -151,10 +150,10 @@ iByteArrayMatcher &iByteArrayMatcher::operator=(const iByteArrayMatcher &other)
 */
 void iByteArrayMatcher::setPattern(const iByteArray &pattern)
 {
-    q_pattern = pattern;
+    ix_pattern = pattern;
     p.p = reinterpret_cast<const uchar *>(pattern.constData());
     p.l = pattern.size();
-    bm_init_skiptable(p.p, p.l, p.q_skiptable);
+    bm_init_skiptable(p.p, p.l, p.ix_skiptable);
 }
 
 /*!
@@ -169,7 +168,7 @@ int iByteArrayMatcher::indexIn(const iByteArray &ba, int from) const
     if (from < 0)
         from = 0;
     return bm_find(reinterpret_cast<const uchar *>(ba.constData()), ba.size(), from,
-                   p.p, p.l, p.q_skiptable);
+                   p.p, p.l, p.ix_skiptable);
 }
 
 /*!
@@ -184,7 +183,7 @@ int iByteArrayMatcher::indexIn(const char *str, int len, int from) const
     if (from < 0)
         from = 0;
     return bm_find(reinterpret_cast<const uchar *>(str), len, from,
-                   p.p, p.l, p.q_skiptable);
+                   p.p, p.l, p.ix_skiptable);
 }
 
 /*!
@@ -293,15 +292,14 @@ int iFindByteArray(
 
 /*!
     \class iStaticByteArrayMatcherBase
-    \since 5.9
+
     \internal
     \brief Non-template base class of iStaticByteArrayMatcher.
 */
 
 /*!
     \class iStaticByteArrayMatcher
-    \since 5.9
-    \inmodule QtCore
+
     \brief The iStaticByteArrayMatcher class is a compile-time version of iByteArrayMatcher.
 
     \ingroup tools
@@ -332,7 +330,7 @@ int iFindByteArray(
     Since this class is designed to do all the up-front calculations at compile-time,
     it does not offer a setPattern() method.
 
-    \note Qt detects the necessary C++14 compiler support by way of the feature
+    \note iShell detects the necessary C++14 compiler support by way of the feature
     test recommendations from
     \l{https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations}
     {C++ Committee's Standing Document 6}.
@@ -387,7 +385,7 @@ int iStaticByteArrayMatcherBase::indexOfIn(const char *needle, uint nlen, const 
 
 /*!
     \fn template <uint N> iStaticByteArrayMatcher iMakeStaticByteArrayMatcher(const char (&pattern)[N])
-    \since 5.9
+
     \relates iStaticByteArrayMatcher
 
     Return a iStaticByteArrayMatcher with the correct \c{N} determined

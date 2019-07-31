@@ -54,7 +54,7 @@ bool isRightToLeft(iStringView string);
 
 bool isAscii(iLatin1String s);
 bool isAscii(iStringView   s);
-              bool isLatin1(iLatin1String s); // in qstring.h
+bool isLatin1(iLatin1String s);
 bool isLatin1(iStringView   s);
 
 } // namespace iPrivate

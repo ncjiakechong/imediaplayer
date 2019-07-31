@@ -28,7 +28,7 @@ class iLocale
 
 public:
 // GENERATED PART STARTS HERE
-// see qlocale_data_p.h for more info on generated data
+// see ilocale_data_p.h for more info on generated data
     enum Language {
         AnyLanguage = 0,
         C = 1,
@@ -844,7 +844,7 @@ public:
         MetricSystem,
         ImperialUSSystem,
         ImperialUKSystem,
-        ImperialSystem = ImperialUSSystem // Qt 4 compatibility
+        ImperialSystem = ImperialUSSystem // compatibility
     };
 
     enum FormatType { LongFormat, ShortFormat, NarrowFormat };
@@ -946,8 +946,8 @@ public:
     iString timeFormat(FormatType format = LongFormat) const;
     iString dateTimeFormat(FormatType format = LongFormat) const;
 
-    // ### Qt 5: We need to return iString from these function since
-    //           unicode data contains several characters for these fields.
+    // ### We need to return iString from these function since
+    //     unicode data contains several characters for these fields.
     iChar decimalPoint() const;
     iChar groupSeparator() const;
     iChar percent() const;
@@ -1004,7 +1004,6 @@ public:
 private:
     iLocale(iLocalePrivate &dd);
     friend class iLocalePrivate;
-    friend class QSystemLocale;
 
     iSharedDataPointer<iLocalePrivate> d;
 };

@@ -154,7 +154,7 @@ public:
     iStringView(const StdBasicString &str)
         : iStringView(str.data(), xsizetype(str.size())) {}
 
-    inline iString toString() const; // defined in qstring.h
+    inline iString toString() const;
 
     xsizetype size() const { return m_size; }
     const_pointer data() const { return reinterpret_cast<const_pointer>(m_data); }
@@ -170,7 +170,7 @@ public:
     iByteArray toLatin1() const { return iPrivate::convertToLatin1(*this); }
     iByteArray toUtf8() const { return iPrivate::convertToUtf8(*this); }
     iByteArray toLocal8Bit() const { return iPrivate::convertToLocal8Bit(*this); }
-    inline std::vector<uint> toUcs4() const; // defined in qvector.h
+    inline std::vector<uint> toUcs4() const;
 
     iChar at(xsizetype n) const { return (*this)[n]; }
 
@@ -231,7 +231,7 @@ public:
     iChar back()  const { IX_ASSERT(!empty()); return iChar(m_data[m_size - 1]); }
 
     //
-    // Qt compatibility API:
+    // iShell compatibility API:
     //
     bool isNull() const { return !m_data; }
     bool isEmpty() const { return empty(); }
@@ -248,7 +248,7 @@ IX_DECLARE_TYPEINFO(iStringView, IX_PRIMITIVE_TYPE);
 template <typename iStringLike, typename std::enable_if<
     std::is_same<iStringLike, iString>::value || std::is_same<iStringLike, iStringRef>::value,
     bool>::type = true>
-inline iStringView qToStringViewIgnoringNull(const iStringLike &s)
+inline iStringView iToStringViewIgnoringNull(const iStringLike &s)
 { return iStringView(s.data(), s.size()); }
 
 } // namespace iShell

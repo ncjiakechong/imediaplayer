@@ -156,13 +156,13 @@ iString iUtf8::convertToUnicode(const char *chars, int len)
 }
 
 /*!
-    \since 5.7
+
     \overload
 
     Converts the UTF-8 sequence of \a len octets beginning at \a chars to
     a sequence of iChar starting at \a buffer. The buffer is expected to be
     large enough to hold the result. An upper bound for the size of the
-    buffer is \a len QChars.
+    buffer is \a len iChars.
 
     If, during decoding, an error occurs, a iChar::ReplacementCharacter is
     written.
@@ -324,7 +324,7 @@ iString iUtf8::convertToUnicode(const char *chars, int len, iTextCodec::Converte
     return result;
 }
 
-struct QUtf8NoOutputTraits : public iUtf8BaseTraitsNoAscii
+struct iUtf8NoOutputTraits : public iUtf8BaseTraitsNoAscii
 {
     struct NoOutput {};
     static void appendUtf16(const NoOutput &, ushort) {}
@@ -350,8 +350,8 @@ iUtf8::ValidUtf8Result iUtf8::isValidUtf8(const char *chars, xsizetype len)
                 continue;
 
             isValidAscii = false;
-            QUtf8NoOutputTraits::NoOutput output;
-            int res = iUtf8Functions::fromUtf8<QUtf8NoOutputTraits>(b, output, src, end);
+            iUtf8NoOutputTraits::NoOutput output;
+            int res = iUtf8Functions::fromUtf8<iUtf8NoOutputTraits>(b, output, src, end);
             if (res < 0) {
                 // decoding error
                 return { false, false };

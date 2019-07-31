@@ -362,19 +362,19 @@ template <typename T>
 class iTypeInfo<iBEInteger<T> >
     : public iTypeInfoMerger<iBEInteger<T>, T> {};
 
-typedef iLEInteger<xint16> qint16_le;
-typedef iLEInteger<xint32> qint32_le;
-typedef iLEInteger<xint64> qint64_le;
-typedef iLEInteger<xuint16> quint16_le;
-typedef iLEInteger<xuint32> quint32_le;
-typedef iLEInteger<xuint64> quint64_le;
+typedef iLEInteger<xint16> xint16_le;
+typedef iLEInteger<xint32> xint32_le;
+typedef iLEInteger<xint64> xint64_le;
+typedef iLEInteger<xuint16> xuint16_le;
+typedef iLEInteger<xuint32> xuint32_le;
+typedef iLEInteger<xuint64> xuint64_le;
 
-typedef iBEInteger<xint16> qint16_be;
-typedef iBEInteger<xint32> qint32_be;
-typedef iBEInteger<xint64> qint64_be;
-typedef iBEInteger<xuint16> quint16_be;
-typedef iBEInteger<xuint32> quint32_be;
-typedef iBEInteger<xuint64> quint64_be;
+typedef iBEInteger<xint16> xint16_be;
+typedef iBEInteger<xint32> xint32_be;
+typedef iBEInteger<xint64> xint64_be;
+typedef iBEInteger<xuint16> xuint16_be;
+typedef iBEInteger<xuint32> xuint32_be;
+typedef iBEInteger<xuint64> xuint64_be;
 
 } // namespace iShell
 

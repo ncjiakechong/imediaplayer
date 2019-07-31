@@ -15,9 +15,8 @@
 //  W A R N I N G
 //  -------------
 //
-// This file is not part of the Qt API.  It exists for the convenience
-// of qapplication_*.cpp, qwidget*.cpp and qfiledialog.cpp.  This header
-// file may change from version to version without notice, or even be removed.
+// This file is not part of the iShell API.
+//  This header file may change from version to version without notice, or even be removed.
 //
 // We mean it.
 //
@@ -54,10 +53,6 @@ static const int ImperialMeasurementSystemsCount =
     Common Locale Data Repository v34
 
     http://www.unicode.org/cldr/
-
-    Do not edit this section: instead regenerate it using
-    cldr2qlocalexml.py and qlocalexml2cpp.py on updated (or
-    edited) CLDR data; see qtbase/util/local_database/.
 */
 
 static const iLocaleId likely_subtags[] = {

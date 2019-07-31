@@ -36,19 +36,19 @@ public:
     int indexIn(const iString &str, int from = 0) const;
     int indexIn(const iChar *str, int length, int from = 0) const;
     iString pattern() const;
-    inline iShell::CaseSensitivity caseSensitivity() const { return q_cs; }
+    inline iShell::CaseSensitivity caseSensitivity() const { return ix_cs; }
 
 private:
     iStringMatcherPrivate *d_ptr;
-    iString q_pattern;
-    iShell::CaseSensitivity q_cs;
+    iString ix_pattern;
+    iShell::CaseSensitivity ix_cs;
     struct Data {
-        uchar q_skiptable[256];
+        uchar ix_skiptable[256];
         const iChar *uc;
         int len;
     };
     union {
-        uint q_data[256];
+        uint ix_data[256];
         Data p;
     };
 };

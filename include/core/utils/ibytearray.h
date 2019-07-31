@@ -67,8 +67,8 @@ int istrnicmp(const char *, xsizetype, const char *, xsizetype = -1);
 int ivsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 int isnprintf(char *str, size_t n, const char *fmt, ...);
 
-// qChecksum: Internet checksum
-xuint16 qChecksum(const char *s, uint len, iShell::ChecksumType standard); // ### Qt 6: Use iShell::ChecksumType standard = iShell::ChecksumIso3309
+// iChecksum: Internet checksum
+xuint16 iChecksum(const char *s, uint len, iShell::ChecksumType standard); // ### Use iShell::ChecksumType standard = iShell::ChecksumIso3309
 
 class iByteRef;
 class iString;
@@ -275,9 +275,7 @@ public:
     float toFloat(bool *ok = IX_NULLPTR) const;
     double toDouble(bool *ok = IX_NULLPTR) const;
     iByteArray toBase64(Base64Options options) const;
-    iByteArray toBase64() const; // ### Qt6 merge with previous
-    iByteArray toHex() const;
-    iByteArray toHex(char separator) const; // ### Qt6 merge with previous
+    iByteArray toHex(char separator) const; // ### merge with previous
     iByteArray toPercentEncoding(const iByteArray &exclude = iByteArray(),
                                  const iByteArray &include = iByteArray(),
                                  char percent = '%') const;
@@ -290,7 +288,7 @@ public:
     iByteArray &setNum(xuint64, int base = 10);
     inline iByteArray &setNum(float, char f = 'g', int prec = 6);
     iByteArray &setNum(double, char f = 'g', int prec = 6);
-    iByteArray &setRawData(const char *a, uint n); // ### Qt 6: use an int
+    iByteArray &setRawData(const char *a, uint n);
 
     static iByteArray number(int, int base = 10);
     static iByteArray number(uint, int base = 10);
@@ -299,7 +297,6 @@ public:
     static iByteArray number(double, char f = 'g', int prec = 6);
     static iByteArray fromRawData(const char *, int size);
     static iByteArray fromBase64(const iByteArray &base64, Base64Options options);
-    static iByteArray fromBase64(const iByteArray &base64); // ### Qt6 merge with previous
     static iByteArray fromHex(const iByteArray &hexEncoded);
     static iByteArray fromPercentEncoding(const iByteArray &pctEncoded, char percent = '%');
 
@@ -369,7 +366,6 @@ private:
 
     friend class iByteRef;
     friend class iString;
-    friend iByteArray qUncompress(const uchar *data, int nbytes);
 public:
     typedef Data * DataPtr;
     inline DataPtr &data_ptr() { return d; }

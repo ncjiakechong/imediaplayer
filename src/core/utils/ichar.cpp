@@ -26,7 +26,6 @@ using namespace iUnicodeTables;
 
 /*!
     \class iLatin1Char
-    \inmodule QtCore
     \brief The iLatin1Char class provides an 8-bit ASCII/Latin-1 character.
 
     \ingroup string-processing
@@ -58,13 +57,12 @@ using namespace iUnicodeTables;
 
 /*!
     \class iChar
-    \inmodule QtCore
     \brief The iChar class provides a 16-bit Unicode character.
 
     \ingroup string-processing
     \reentrant
 
-    In Qt, Unicode characters are 16-bit entities without any markup
+    In iShell, Unicode characters are 16-bit entities without any markup
     or structure. This class represents such an entity. It is
     lightweight, so it can be used everywhere. Most compilers treat
     it like an \c{unsigned short}.
@@ -117,7 +115,7 @@ using namespace iUnicodeTables;
 
     iChar provides constructors and cast operators that make it easy
     to convert to and from traditional 8-bit \c{char}s. If you
-    defined \c QT_NO_CAST_FROM_ASCII and \c QT_NO_CAST_TO_ASCII, as
+    defined \c IX_NO_CAST_FROM_ASCII and \c IX_NO_CAST_TO_ASCII, as
     explained in the iString documentation, you will need to
     explicitly call fromLatin1(), or use iLatin1Char,
     to construct a iChar from an 8-bit \c char, and you will need to
@@ -149,11 +147,11 @@ using namespace iUnicodeTables;
     \value Unicode_6_0  Version 6.0
     \value Unicode_6_1  Version 6.1
     \value Unicode_6_2  Version 6.2
-    \value Unicode_6_3  Version 6.3  Since Qt 5.3
-    \value Unicode_7_0  Version 7.0  Since Qt 5.5
-    \value Unicode_8_0  Version 8.0  Since Qt 5.6
-    \value Unicode_9_0  Version 9.0  Since Qt 5.11
-    \value Unicode_10_0 Version 10.0 Since Qt 5.11
+    \value Unicode_6_3  Version 6.3
+    \value Unicode_7_0  Version 7.0
+    \value Unicode_8_0  Version 8.0
+    \value Unicode_9_0  Version 9.0
+    \value Unicode_10_0 Version 10.0
     \value Unicode_Unassigned  The value is not assigned to any character
                                in version 8.0 of Unicode.
 
@@ -235,7 +233,7 @@ using namespace iUnicodeTables;
 
 /*!
     \enum iChar::Script
-    \since 5.1
+
 
     This enum type defines the Unicode script property values.
 
@@ -408,30 +406,6 @@ using namespace iUnicodeTables;
     In order to conform to C/C++ naming conventions "Dir" is prepended
     to the codes used in the Unicode Standard.
 
-    \value DirAL
-    \value DirAN
-    \value DirB
-    \value DirBN
-    \value DirCS
-    \value DirEN
-    \value DirES
-    \value DirET
-    \value DirFSI Since Qt 5.3
-    \value DirL
-    \value DirLRE
-    \value DirLRI Since Qt 5.3
-    \value DirLRO
-    \value DirNSM
-    \value DirON
-    \value DirPDF
-    \value DirPDI Since Qt 5.3
-    \value DirR
-    \value DirRLE
-    \value DirRLI Since Qt 5.3
-    \value DirRLO
-    \value DirS
-    \value DirWS
-
     \sa direction()
 */
 
@@ -569,14 +543,14 @@ using namespace iUnicodeTables;
 
 /*!
     \fn iChar::iChar(char16_t ch)
-    \since 5.10
+
 
     Constructs a iChar corresponding to the UTF-16 character \a ch.
 */
 
 /*!
     \fn iChar::iChar(wchar_t ch)
-    \since 5.10
+
 
     Constructs a iChar corresponding to the wide character \a ch.
 
@@ -588,10 +562,10 @@ using namespace iUnicodeTables;
 
     Constructs a iChar corresponding to ASCII/Latin-1 character \a ch.
 
-    \note This constructor is not available when \c QT_NO_CAST_FROM_ASCII
+    \note This constructor is not available when \c IX_NO_CAST_FROM_ASCII
     is defined.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -655,7 +629,7 @@ using namespace iUnicodeTables;
 
 /*!
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a printable character; otherwise returns \c false.
@@ -687,7 +661,7 @@ bool iChar::isPrint(uint ucs4)
 /*!
     \fn bool iChar::isSpace(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a separator character (Separator_* categories or certain code points
@@ -718,7 +692,7 @@ bool iChar::isSpace_helper(uint ucs4)
 
 /*!
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a mark (Mark_* categories); otherwise returns \c false.
@@ -742,7 +716,7 @@ bool iChar::isMark(uint ucs4)
 
 /*!
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a punctuation mark (Punctuation_* categories); otherwise returns \c false.
@@ -770,7 +744,7 @@ bool iChar::isPunct(uint ucs4)
 
 /*!
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a symbol (Symbol_* categories); otherwise returns \c false.
@@ -796,7 +770,7 @@ bool iChar::isSymbol(uint ucs4)
 /*!
     \fn bool iChar::isLetter(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a letter (Letter_* categories); otherwise returns \c false.
@@ -829,7 +803,7 @@ bool iChar::isLetter_helper(uint ucs4)
 /*!
     \fn bool iChar::isNumber(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a number (Number_* categories, not just 0-9); otherwise returns \c false.
@@ -860,7 +834,7 @@ bool iChar::isNumber_helper(uint ucs4)
 /*!
     \fn bool iChar::isLetterOrNumber(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a letter or number (Letter_* or Number_* categories); otherwise returns \c false.
@@ -896,7 +870,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 /*!
     \fn bool iChar::isDigit(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a decimal digit (Number_DecimalDigit); otherwise returns \c false.
@@ -906,7 +880,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 
 /*!
     \fn bool iChar::isNonCharacter() const
-    \since 5.0
+
 
     Returns \c true if the iChar is a non-character; false otherwise.
 
@@ -933,7 +907,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 
 /*!
     \fn bool iChar::isSurrogate() const
-    \since 5.0
+
 
     Returns \c true if the iChar contains a code point that is in either
     the high or the low part of the UTF-16 surrogate range
@@ -943,7 +917,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 /*!
     \fn static bool iChar::isNonCharacter(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a non-character; false otherwise.
@@ -976,7 +950,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 /*!
     \fn static bool iChar::isSurrogate(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     contains a code point that is in either the high or the low part of the
@@ -1075,7 +1049,7 @@ iChar::Direction iChar::direction(uint ucs4)
 
 /*!
     \fn iChar::JoiningType iChar::joiningType() const
-    \since 5.3
+
 
     Returns information about the joining type attributes of the character
     (needed for certain languages such as Arabic or Syriac).
@@ -1083,7 +1057,7 @@ iChar::Direction iChar::direction(uint ucs4)
 
 /*!
     \overload
-    \since 5.3
+
 
     Returns information about the joining type attributes of the UCS-4-encoded
     character specified by \a ucs4
@@ -1109,7 +1083,7 @@ iChar::JoiningType iChar::joiningType(uint ucs4)
 
 /*!
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     should be reversed if the text direction is reversed; otherwise returns \c false.
@@ -1137,7 +1111,7 @@ bool iChar::hasMirrored(uint ucs4)
 /*!
     \fn static bool iChar::isLower(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a lowercase letter, for example category() is Letter_Lowercase.
@@ -1157,7 +1131,7 @@ bool iChar::hasMirrored(uint ucs4)
 /*!
     \fn static bool iChar::isUpper(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is an uppercase letter, for example category() is Letter_Uppercase.
@@ -1177,7 +1151,7 @@ bool iChar::hasMirrored(uint ucs4)
 /*!
     \fn static bool iChar::isTitleCase(uint ucs4)
     \overload
-    \since 5.0
+
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a titlecase letter, for example category() is Letter_Titlecase.
@@ -1301,7 +1275,7 @@ iChar::Decomposition iChar::decompositionTag(uint ucs4)
     Unicode standard. This is mainly useful as a positioning hint for
     marks attached to a base character.
 
-    The Qt text rendering engine uses this information to correctly
+    The iShell text rendering engine uses this information to correctly
     position non-spacing marks around a base character.
 */
 
@@ -1319,14 +1293,14 @@ unsigned char iChar::combiningClass(uint ucs4)
 
 /*!
     \fn iChar::Script iChar::script() const
-    \since 5.1
+
 
     Returns the Unicode script property value for this character.
 */
 
 /*!
     \overload
-    \since 5.1
+
 
     Returns the Unicode script property value for the character specified in
     its UCS-4-encoded form as \a ucs4.

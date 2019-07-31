@@ -74,8 +74,6 @@ public:
 
     static iString escape(const iString &str);
 
-    friend uint qHash(const iRegExp &key, uint seed);
-
 private:
     iRegExpPrivate *priv;
 };

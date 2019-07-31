@@ -96,7 +96,6 @@ static inline int bm_find(const ushort *uc, uint l, int index, const ushort *puc
 
 /*!
     \class iStringMatcher
-    \inmodule QtCore
     \brief The iStringMatcher class holds a sequence of characters that
     can be quickly matched in a Unicode string.
 
@@ -122,9 +121,9 @@ static inline int bm_find(const ushort *uc, uint l, int index, const ushort *puc
     Call setPattern() to give it a pattern to match.
 */
 iStringMatcher::iStringMatcher()
-    : d_ptr(0), q_cs(iShell::CaseSensitive)
+    : d_ptr(0), ix_cs(iShell::CaseSensitive)
 {
-    memset(q_data, 0, sizeof(q_data));
+    memset(ix_data, 0, sizeof(ix_data));
 }
 
 /*!
@@ -134,26 +133,26 @@ iStringMatcher::iStringMatcher()
     Call indexIn() to perform a search.
 */
 iStringMatcher::iStringMatcher(const iString &pattern, iShell::CaseSensitivity cs)
-    : d_ptr(0), q_pattern(pattern), q_cs(cs)
+    : d_ptr(0), ix_pattern(pattern), ix_cs(cs)
 {
     p.uc = pattern.unicode();
     p.len = pattern.size();
-    bm_init_skiptable((const ushort *)p.uc, p.len, p.q_skiptable, cs);
+    bm_init_skiptable((const ushort *)p.uc, p.len, p.ix_skiptable, cs);
 }
 
 /*!
     \fn iStringMatcher::iStringMatcher(const iChar *uc, int length, iShell::CaseSensitivity cs)
-    \since 4.5
+
 
     Constructs a string matcher that will search for the pattern referred to
     by \a uc with the given \a length and case sensitivity specified by \a cs.
 */
 iStringMatcher::iStringMatcher(const iChar *uc, int len, iShell::CaseSensitivity cs)
-    : d_ptr(0), q_cs(cs)
+    : d_ptr(0), ix_cs(cs)
 {
     p.uc = uc;
     p.len = len;
-    bm_init_skiptable((const ushort *)p.uc, len, p.q_skiptable, cs);
+    bm_init_skiptable((const ushort *)p.uc, len, p.ix_skiptable, cs);
 }
 
 /*!
@@ -178,9 +177,9 @@ iStringMatcher::~iStringMatcher()
 iStringMatcher &iStringMatcher::operator=(const iStringMatcher &other)
 {
     if (this != &other) {
-        q_pattern = other.q_pattern;
-        q_cs = other.q_cs;
-        memcpy(q_data, other.q_data, sizeof(q_data));
+        ix_pattern = other.ix_pattern;
+        ix_cs = other.ix_cs;
+        memcpy(ix_data, other.ix_data, sizeof(ix_data));
     }
     return *this;
 }
@@ -193,10 +192,10 @@ iStringMatcher &iStringMatcher::operator=(const iStringMatcher &other)
 */
 void iStringMatcher::setPattern(const iString &pattern)
 {
-    q_pattern = pattern;
+    ix_pattern = pattern;
     p.uc = pattern.unicode();
     p.len = pattern.size();
-    bm_init_skiptable((const ushort *)pattern.unicode(), pattern.size(), p.q_skiptable, q_cs);
+    bm_init_skiptable((const ushort *)pattern.unicode(), pattern.size(), p.ix_skiptable, ix_cs);
 }
 
 /*!
@@ -210,8 +209,8 @@ void iStringMatcher::setPattern(const iString &pattern)
 
 iString iStringMatcher::pattern() const
 {
-    if (!q_pattern.isEmpty())
-        return q_pattern;
+    if (!ix_pattern.isEmpty())
+        return ix_pattern;
     return iString(p.uc, p.len);
 }
 
@@ -223,10 +222,10 @@ iString iStringMatcher::pattern() const
 */
 void iStringMatcher::setCaseSensitivity(iShell::CaseSensitivity cs)
 {
-    if (cs == q_cs)
+    if (cs == ix_cs)
         return;
-    bm_init_skiptable((const ushort *)p.uc, p.len, p.q_skiptable, cs);
-    q_cs = cs;
+    bm_init_skiptable((const ushort *)p.uc, p.len, p.ix_skiptable, cs);
+    ix_cs = cs;
 }
 
 /*!
@@ -244,11 +243,11 @@ int iStringMatcher::indexIn(const iString &str, int from) const
         from = 0;
     return bm_find((const ushort *)str.unicode(), str.size(), from,
                    (const ushort *)p.uc, p.len,
-                   p.q_skiptable, q_cs);
+                   p.ix_skiptable, ix_cs);
 }
 
 /*!
-    \since 4.5
+
 
     Searches the string starting at \a str (of length \a length) from
     character position \a from (default 0, i.e. from the first
@@ -265,7 +264,7 @@ int iStringMatcher::indexIn(const iChar *str, int length, int from) const
         from = 0;
     return bm_find((const ushort *)str, length, from,
                    (const ushort *)p.uc, p.len,
-                   p.q_skiptable, q_cs);
+                   p.ix_skiptable, ix_cs);
 }
 
 /*!

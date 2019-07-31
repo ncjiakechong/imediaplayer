@@ -86,7 +86,7 @@ static inline xuint32 f2i(float f)
     Returns the number of representable floating-point numbers between \a a and \a b.
 
     This function provides an alternative way of doing approximated comparisons of floating-point
-    numbers similar to qFuzzyCompare(). However, it returns the distance between two numbers, which
+    numbers similar to iFuzzyCompare(). However, it returns the distance between two numbers, which
     gives the caller a possibility to choose the accepted error. Errors are relative, so for
     instance the distance between 1.0E-5 and 1.00001E-5 will give 110, while the distance between
     1.0E36 and 1.00001E36 will give 127.
@@ -105,8 +105,8 @@ static inline xuint32 f2i(float f)
 
     \snippet code/src_corelib_global_qnumeric.cpp 0
 
-    \sa qFuzzyCompare()
-    \since 5.2
+    \sa iFuzzyCompare()
+
     \relates <QtGlobal>
 */
 xuint32 iFloatDistance(float a, float b)
@@ -163,8 +163,8 @@ static inline xuint64 d2i(double d)
     than for two \c float numbers (\c{[-DBL_MAX,DBL_MAX]}), the return type is xuint64.
 
 
-    \sa qFuzzyCompare()
-    \since 5.2
+    \sa iFuzzyCompare()
+
     \relates <QtGlobal>
 */
 xuint64 iFloatDistance(double a, double b)

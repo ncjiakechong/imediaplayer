@@ -15,8 +15,6 @@ namespace iShell {
 
 /*!
     \class iStringView
-    \inmodule QtCore
-    \since 5.10
     \brief The iStringView class provides a unified view on UTF-16 strings with a read-only subset of the iString API.
     \reentrant
     \ingroup tools
@@ -86,7 +84,7 @@ namespace iShell {
 /*!
     \typedef iStringView::storage_type
 
-    Alias for \c{char16_t} for non-Windows or if Q_COMPILER_UNICODE_STRINGS
+    Alias for \c{char16_t} for non-Windows or if IX_COMPILER_UNICODE_STRINGS
     is defined. Otherwise, alias for \c{wchar_t}.
 */
 
@@ -107,8 +105,8 @@ namespace iShell {
 
     Alias for xsizetype. Provided for compatibility with the STL.
 
-    Unlike other Qt classes, iStringView uses xsizetype as its \c size_type, to allow
-    accepting data from \c{std::basic_string} without truncation. The Qt API functions,
+    Unlike other iShell classes, iStringView uses xsizetype as its \c size_type, to allow
+    accepting data from \c{std::basic_string} without truncation. The iShell API functions,
     for example length(), return \c int, while the STL-compatible functions, for example
     size(), return \c size_type.
 */
@@ -441,7 +439,7 @@ namespace iShell {
 
     Returns whether this string view is empty - that is, whether \c{size() == 0}.
 
-    This function is provided for compatibility with other Qt containers.
+    This function is provided for compatibility with other iShell containers.
 
     \sa empty(), isNull(), size(), length()
 */
@@ -451,7 +449,7 @@ namespace iShell {
 
     Returns whether this string view is null - that is, whether \c{data() == nullptr}.
 
-    This functions is provided for compatibility with other Qt containers.
+    This functions is provided for compatibility with other iShell containers.
 
     \sa empty(), isEmpty(), size(), length()
 */
@@ -471,7 +469,7 @@ namespace iShell {
 
     Same as size(), except returns the result as an \c int.
 
-    This function is provided for compatibility with other Qt containers.
+    This function is provided for compatibility with other iShell containers.
 
     \warning iStringView can represent strings with more than 2\sup{31} characters.
     Calling this function on a string view for which size() returns a value greater
@@ -531,7 +529,7 @@ namespace iShell {
 
     Returns the first character in the string. Same as front().
 
-    This function is provided for compatibility with other Qt containers.
+    This function is provided for compatibility with other iShell containers.
 
     \warning Calling this function on an empty string view constitutes
     undefined behavior.
@@ -544,7 +542,7 @@ namespace iShell {
 
     Returns the last character in the string. Same as back().
 
-    This function is provided for compatibility with other Qt containers.
+    This function is provided for compatibility with other iShell containers.
 
     \warning Calling this function on an empty string view constitutes
     undefined behavior.
@@ -647,7 +645,6 @@ namespace iShell {
 
 /*!
     \fn int iStringView::compare(iStringView other, iShell::CaseSensitivity cs) const
-    \since 5.12
 
     Compares this string-view with the \a other string-view and returns an
     integer less than, equal to, or greater than zero if this string-view
@@ -698,7 +695,7 @@ namespace iShell {
 
     The behavior is undefined if the string contains non-Latin1 characters.
 
-    \sa toUtf8(), toLocal8Bit(), QTextCodec
+    \sa toUtf8(), toLocal8Bit(), iTextCodec
 */
 
 /*!
@@ -706,14 +703,14 @@ namespace iShell {
 
     Returns a local 8-bit representation of the string as a iByteArray.
 
-    QTextCodec::codecForLocale() is used to perform the conversion from
+    iTextCodec::codecForLocale() is used to perform the conversion from
     Unicode. If the locale's encoding could not be determined, this function
     does the same as toLatin1().
 
     The behavior is undefined if the string contains characters not
     supported by the locale's 8-bit encoding.
 
-    \sa toLatin1(), toUtf8(), QTextCodec
+    \sa toLatin1(), toUtf8(), iTextCodec
 */
 
 /*!
@@ -724,7 +721,7 @@ namespace iShell {
     UTF-8 is a Unicode codec and can represent all characters in a Unicode
     string like iString.
 
-    \sa toLatin1(), toLocal8Bit(), QTextCodec
+    \sa toLatin1(), toLocal8Bit(), iTextCodec
 */
 
 /*!
@@ -739,12 +736,11 @@ namespace iShell {
 
     The returned vector is not 0-terminated.
 
-    \sa toUtf8(), toLatin1(), toLocal8Bit(), QTextCodec
+    \sa toUtf8(), toLatin1(), toLocal8Bit(), iTextCodec
 */
 
 /*!
-    \fn template <typename iStringLike> qToStringViewIgnoringNull(const iStringLike &s);
-    \since 5.10
+    \fn template <typename iStringLike> iToStringViewIgnoringNull(const iStringLike &s);
     \internal
 
     Convert \a s to a iStringView ignoring \c{s.isNull()}.
@@ -759,7 +755,6 @@ namespace iShell {
 
 /*!
     \fn bool iStringView::isRightToLeft() const
-    \since 5.11
 
     Returns \c true if the string is read right to left.
 

@@ -15,7 +15,7 @@
 //  W A R N I N G
 //  -------------
 //
-// This file is not part of the Qt API.  It exists for the convenience
+// This file is not part of the iShell API.  It exists for the convenience
 // of internal files.  This header file may change from version to version
 // without notice, or even be removed.
 //
@@ -174,7 +174,7 @@ public:
 public:
     xuint16 m_language_id, m_script_id, m_country_id;
 
-    // FIXME QTBUG-69324: not all unicode code-points map to single-token UTF-16 :-(
+    // FIXME : not all unicode code-points map to single-token UTF-16 :-(
     xuint16 m_decimal, m_group, m_list, m_percent, m_zero, m_minus, m_plus, m_exponential;
     xuint16 m_quotation_start, m_quotation_end;
     xuint16 m_alternate_quotation_start, m_alternate_quotation_end;

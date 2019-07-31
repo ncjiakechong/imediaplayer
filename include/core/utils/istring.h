@@ -473,7 +473,7 @@ public:
     int localeAwareCompare(const iStringRef &s) const;
     static int localeAwareCompare(const iString& s1, const iStringRef& s2);
 
-    // ### Qt6: make inline except for the long long versions
+    // ### make inline except for the long long versions
     short  toShort(bool *ok=nullptr, int base=10) const;
     ushort toUShort(bool *ok=nullptr, int base=10) const;
     int toInt(bool *ok=nullptr, int base=10) const;
@@ -684,7 +684,6 @@ private:
     friend class iStringRef;
     friend class iStringView;
     friend class iByteArray;
-    friend class QCollator;
     friend struct iAbstractConcatenable;
 
     template <typename T> static
@@ -1112,11 +1111,8 @@ inline std::wstring iString::toStdWString() const
     std::wstring str;
     str.resize(length());
 
-#ifdef Q_CC_MSVC
-    // VS2005 crashes if the string is empty
     if (!length())
         return str;
-#endif
 
     str.resize(toWCharArray(&(*str.begin())));
     return str;
@@ -1156,7 +1152,7 @@ public:
     typedef iString::const_pointer const_pointer;
     typedef iString::const_reference const_reference;
 
-    // ### Qt 6: make this constructor constexpr, after the destructor is made trivial
+    // ### make this constructor constexpr, after the destructor is made trivial
     inline iStringRef() : m_string(nullptr), m_position(0), m_size(0) {}
     inline iStringRef(const iString *string, int position, int size);
     inline iStringRef(const iString *string);
