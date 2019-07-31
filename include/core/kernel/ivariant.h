@@ -11,9 +11,10 @@
 #ifndef IVARIANT_H
 #define IVARIANT_H
 
-#include <map>
+#include <unordered_map>
 #include <core/global/imetaprogramming.h>
 #include <core/thread/iatomiccounter.h>
+#include <core/utils/ihashfunctions.h>
 #include <core/utils/isharedptr.h>
 
 namespace iShell {
@@ -125,7 +126,7 @@ private:
     int m_typeId;
     iSharedPtr< iAbstractVariantImpl > m_dataImpl;
 
-    typedef std::map< std::pair<int, int>, const iAbstractConverterFunction*> convert_map_t;
+    typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iHashFunc> convert_map_t;
     static convert_map_t s_convertFuncs;
 };
 

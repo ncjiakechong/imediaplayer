@@ -12,6 +12,7 @@
 #define IHASHFUNCTIONS_H
 
 #include <cstddef>
+#include <utility>
 
 namespace iShell {
 
@@ -31,6 +32,7 @@ struct iHashFunc
     size_t operator()(const iStringRef& key) const;
     size_t operator()(const iStringView& key) const;
     size_t operator()(const iLatin1String& key) const;
+    size_t operator()(const std::pair<int, int>& key) const;
 
     bool operator()(const iChar& key1, const iChar& key2) const;
     bool operator()(const iByteArray& key1, const iByteArray& key2) const;
@@ -38,6 +40,7 @@ struct iHashFunc
     bool operator()(const iStringRef& key1, const iStringRef& key2) const;
     bool operator()(const iStringView& key1, const iStringView& key2) const;
     bool operator()(const iLatin1String& key1, const iLatin1String& key2) const;
+    bool operator()(const std::pair<int, int>& key1, const std::pair<int, int>& key2) const;
 };
 
 } // namespace iShell

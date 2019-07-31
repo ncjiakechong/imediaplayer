@@ -9,6 +9,7 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
+#include <map>
 #include <unordered_map>
 #include <limits.h>
 #include <memory>
