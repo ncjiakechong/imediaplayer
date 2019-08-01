@@ -24,15 +24,14 @@ static bool ilog_default_filter(void*, const char*, ilog_level_t)
 static void ilog_default_callback(void*, const char* tag, ilog_level_t level, const char *msg)
 {
     static char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
-    char log_buf[1024] = {0};
     char cur_level = '-';
 
     if ((0 <= level) && (level < ILOG_LEVEL_MAX)) {
         cur_level = log_level_arr[level];
     }
 
-    snprintf(log_buf, sizeof(log_buf), "%s:%c %s", tag, cur_level, msg);
-    fprintf(stdout, "%s\n", log_buf);
+    iString log_buf = iString::asprintf("%s:%c %s", tag, cur_level, msg);
+    fprintf(stdout, "%s\n", log_buf.toUtf8().data());
     fflush(stdout);
 }
 
@@ -55,10 +54,8 @@ void iLogger::setTarget(const iLogTarget& target)
 
 iLogger::iLogger()
     : m_tags(IX_NULLPTR)
-    , m_index(0)
     , m_level(ILOG_VERBOSE)
 {
-    memset(m_buff, 0, sizeof(m_buff));
 }
 
 iLogger::~iLogger()
@@ -72,154 +69,93 @@ bool iLogger::start(const char *tag, ilog_level_t level)
 
     m_tags = tag;
     m_level = level;
-    m_index = 0;
-    memset(m_buff, 0, sizeof(m_buff));
+    m_buff.clear();
     return true;
 }
 
 void iLogger::end()
 {
-    s_ilog_target.callback(s_ilog_target.user_data, m_tags, m_level, m_buff);
+    s_ilog_target.callback(s_ilog_target.user_data, m_tags, m_level, m_buff.toUtf8().data());
 }
 
 void iLogger::append(bool value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%d", (int)value);
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(xint8 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%hhd", value);
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(xuint8 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%hhu", value);
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(xint16 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%hd", value);
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(xuint16 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%hu", value);
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(xint32 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%d", value);
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(xuint32 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%u", value);
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(xint64 value)
 {
-    int curSize = 0;
-    #ifdef IX_OS_WIN
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%lld", value);
-    #else
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%ld", value);
-    #endif
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(xuint64 value)
 {
-    int curSize = 0;
-    #ifdef IX_OS_WIN
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%llu", value);
-    #else
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%lu", value);
-    #endif
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(iHexUInt8 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "0x%hhx", value.value);
-    m_index += curSize;
+    m_buff += iString("0x%1").arg(value.value, 0, 16);
 }
 
 void iLogger::append(iHexUInt16 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "0x%hx", value.value);
-    m_index += curSize;
+    m_buff += iString("0x%1").arg(value.value, 0, 16);
 }
 
 void iLogger::append(iHexUInt32 value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "0x%x", value.value);
-    m_index += curSize;
+    m_buff += iString("0x%1").arg(value.value, 0, 16);
 }
 
 void iLogger::append(iHexUInt64 value)
 {
-    int curSize = 0;
-    #ifdef IX_OS_WIN
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "0x%llx", value.value);
-    #else
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "0x%lx", value.value);
-    #endif
-    m_index += curSize;
+    m_buff += iString("0x%1").arg(value.value, 0, 16);
 }
 
 void iLogger::append(float value)
 {
-    append((double)value);
+    append(double(value));
 }
 
 void iLogger::append(double value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%f", value);
-    m_index += curSize;
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(const char* value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%s", value);
-    m_index += curSize;
+    append(iString::fromUtf8(value));
 }
 
 void iLogger::append(const wchar_t* value)
@@ -227,17 +163,44 @@ void iLogger::append(const wchar_t* value)
     append(iString::fromWCharArray(value));
 }
 
+void iLogger::append(const char16_t* value)
+{
+    append(iString::fromUtf16(value));
+}
+
+void iLogger::append(const char32_t* value)
+{
+    append(iString::fromUcs4(value));
+}
+
+void iLogger::append(const std::string& value)
+{
+    append(iString::fromStdString(value));
+}
+
+void iLogger::append(const std::wstring& value)
+{
+    append(iString::fromStdWString(value));
+}
+
+void iLogger::append(const std::u16string& value)
+{
+    append(iString::fromStdU16String(value));
+}
+
+void iLogger::append(const std::u32string& value)
+{
+    append(iString::fromStdU32String(value));
+}
+
 void iLogger::append(const iString& value)
 {
-    append(value.toUtf8().data());
+    m_buff += iString("%1").arg(value);
 }
 
 void iLogger::append(const void* value)
 {
-    int curSize = 0;
-    curSize = snprintf(m_buff + m_index, sizeof(m_buff) - m_index,
-             "%p", value);
-    m_index += curSize;
+    m_buff += iString::asprintf("%p", value);
 }
 
 } // namespace iShell

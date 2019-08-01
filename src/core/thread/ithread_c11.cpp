@@ -74,15 +74,11 @@ void iThreadImpl::internalThreadFunc()
     iThread* thread = this->m_thread;
     iThreadData *data = thread->m_data;
 
-    if (!thread->objectName().empty()) {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%s", thread->objectName().c_str());
-        // buf[15] = '\0';
-
+    if (!thread->objectName().isEmpty()) {
         #ifdef IX_OS_WIN
-        SetThreadName(GetCurrentThreadId(), buf);
+        SetThreadName(GetCurrentThreadId(), thread->objectName().toUtf8().data());
         #else
-        pthread_setname_np(pthread_self(), buf);
+        pthread_setname_np(pthread_self(), thread->objectName().toUtf8().data());
         #endif
     }
 

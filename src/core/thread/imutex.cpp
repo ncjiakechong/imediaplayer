@@ -198,6 +198,7 @@ iMutex::iMutex(RecursionMode mode)
 iMutex::~iMutex()
 {
     delete m_mutex;
+    m_mutex = IX_NULLPTR;
 }
 
 } // namespace iShell

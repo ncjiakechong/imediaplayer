@@ -65,22 +65,22 @@ typedef xptrdiff xsizetype;
 
 namespace iShell {
 
-static inline bool iFuzzyCompare(double p1, double p2)
+inline bool iFuzzyCompare(double p1, double p2)
 {
     return (std::abs(p1 - p2) * 1000000000000. <= std::min(std::abs(p1), std::abs(p2)));
 }
 
-static inline bool iFuzzyCompare(float p1, float p2)
+inline bool iFuzzyCompare(float p1, float p2)
 {
     return (std::abs(p1 - p2) * 100000.f <= std::min(std::abs(p1), std::abs(p2)));
 }
 
-static inline bool iFuzzyIsNull(double d)
+inline bool iFuzzyIsNull(double d)
 {
     return std::abs(d) <= 0.000000000001;
 }
 
-static inline bool iFuzzyIsNull(float f)
+inline bool iFuzzyIsNull(float f)
 {
     return std::abs(f) <= 0.00001f;
 }
@@ -91,7 +91,7 @@ static inline bool iFuzzyIsNull(float f)
    check whether the actual value is 0 or close to 0, but whether
    it is binary 0, disregarding sign.
 */
-static inline bool iIsNull(double d)
+inline bool iIsNull(double d)
 {
     union U {
         double d;
@@ -107,7 +107,7 @@ static inline bool iIsNull(double d)
    check whether the actual value is 0 or close to 0, but whether
    it is binary 0, disregarding sign.
 */
-static inline bool iIsNull(float f)
+inline bool iIsNull(float f)
 {
     union U {
         float f;

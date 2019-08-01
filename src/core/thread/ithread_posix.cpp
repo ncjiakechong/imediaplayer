@@ -110,11 +110,7 @@ void iThreadImpl::internalThreadFunc()
         data->dispatcher.load()->startingUp();
 
     if (!thread->objectName().isEmpty()) {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "%s", thread->objectName().toUtf8().data());
-        // buf[15] = '\0';
-
-        pthread_setname_np(pthread_self(), buf);
+        pthread_setname_np(pthread_self(), thread->objectName().toUtf8().data());
     }
 
     thread->run();

@@ -89,6 +89,7 @@ iArrayData *iArrayData::allocate(size_t objectSize, size_t alignment,
         xuintptr data = (xuintptr(header) + sizeof(iArrayData) + alignment - 1)
                 & ~(alignment - 1);
 
+        (void) new (&header->ref) iRefCount();
         header->ref.atomic = bool(!(options & Unsharable));
         header->size = 0;
         header->alloc = capacity;

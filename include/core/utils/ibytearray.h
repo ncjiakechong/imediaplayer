@@ -63,10 +63,6 @@ int istricmp(const char *, const char *);
 int istrnicmp(const char *, const char *, uint len);
 int istrnicmp(const char *, xsizetype, const char *, xsizetype = -1);
 
-// implemented in ivsnprintf.cpp
-int ivsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-int isnprintf(char *str, size_t n, const char *fmt, ...);
-
 // iChecksum: Internet checksum
 xuint16 iChecksum(const char *s, uint len, iShell::ChecksumType standard); // ### Use iShell::ChecksumType standard = iShell::ChecksumIso3309
 

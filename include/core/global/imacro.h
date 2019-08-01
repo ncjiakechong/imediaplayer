@@ -189,14 +189,6 @@ void ix_assert_x(const char *what, const char *file, int line);
 #  endif
 #endif
 
-// enable gcc warnings for printf-style functions
-#if defined(__GNUC__) && !defined(__INSURE__)
-#  define IX_ATTRIBUTE_FORMAT_PRINTF(A, B) \
-         __attribute__((format(printf, (A), (B))))
-#else
-#  define IX_ATTRIBUTE_FORMAT_PRINTF(A, B)
-#endif
-
 /*
    Some classes do not permit copies to be made of an object. These
    classes contains a private copy constructor and assignment

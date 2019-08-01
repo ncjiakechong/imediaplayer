@@ -22,8 +22,13 @@ namespace iShell {
 struct iAbstractConverterFunction
 {
     typedef bool (*Converter)(const iAbstractConverterFunction *, const void *, void*);
-    explicit iAbstractConverterFunction(Converter c = IX_NULLPTR)
-        : convert(c) {}
+    explicit iAbstractConverterFunction(int from, int to, Converter c = IX_NULLPTR)
+        : fromTypeId(from), toTypeId(to), convert(c) {}
+
+    virtual ~iAbstractConverterFunction();
+
+    int fromTypeId;
+    int toTypeId;
     Converter convert;
 
     iAbstractConverterFunction(const iAbstractConverterFunction&);
@@ -92,7 +97,7 @@ public:
     template <typename T>
     static int iMetaTypeId(int hint)
     {
-        static iAtomicCounter<int> typeId = iAtomicCounter<int>(0);
+        static iAtomicCounter<int> typeId = {iAtomicCounter<int>(0)};
         if (0 != typeId.value())
             return typeId.value();
 
@@ -125,18 +130,15 @@ private:
 
     int m_typeId;
     iSharedPtr< iAbstractVariantImpl > m_dataImpl;
-
-    typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc, iKeyEqualFunc> convert_map_t;
-    static convert_map_t s_convertFuncs;
 };
 
 template<typename From, typename To>
 struct iConverterMemberFunction : public iAbstractConverterFunction
 {
     explicit iConverterMemberFunction(To(From::*function)() const)
-        : iAbstractConverterFunction(convert),
+        : iAbstractConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0), convert),
           m_function(function) {}
-    ~iConverterMemberFunction();
+
     static bool convert(const iAbstractConverterFunction *_this, const void *in, void *out)
     {
         const From *f = static_cast<const From *>(in);
@@ -154,9 +156,9 @@ template<typename From, typename To>
 struct iConverterMemberFunctionOk : public iAbstractConverterFunction
 {
     explicit iConverterMemberFunctionOk(To(From::*function)(bool *) const)
-        : iAbstractConverterFunction(convert),
+        : iAbstractConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0), convert),
           m_function(function) {}
-    ~iConverterMemberFunctionOk();
+
     static bool convert(const iAbstractConverterFunction *_this, const void *in, void *out)
     {
         const From *f = static_cast<const From *>(in);
@@ -177,9 +179,9 @@ template<typename From, typename To, typename UnaryFunction>
 struct iConverterFunctor : public iAbstractConverterFunction
 {
     explicit iConverterFunctor(UnaryFunction function)
-        : iAbstractConverterFunction(convert),
+        : iAbstractConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0), convert),
           m_function(function) {}
-    ~iConverterFunctor();
+
     static bool convert(const iAbstractConverterFunction *_this, const void *in, void *out)
     {
         const From *f = static_cast<const From *>(in);
@@ -193,50 +195,28 @@ struct iConverterFunctor : public iAbstractConverterFunction
     UnaryFunction m_function;
 };
 
-template<typename From, typename To>
-iConverterMemberFunction<From, To>::~iConverterMemberFunction()
-{
-    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0));
-}
-template<typename From, typename To>
-iConverterMemberFunctionOk<From, To>::~iConverterMemberFunctionOk()
-{
-    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0));
-}
-template<typename From, typename To, typename UnaryFunction>
-iConverterFunctor<From, To, UnaryFunction>::~iConverterFunctor()
-{
-    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0));
-}
-
 // member function as "int XXX::toInt() const"
 template<typename From, typename To>
-static bool iRegisterConverter(To(From::*function)() const)
+bool iRegisterConverter(To(From::*function)() const)
 {
-    const int fromTypeId = iVariant::iMetaTypeId<From>(0);
-    const int toTypeId = iVariant::iMetaTypeId<To>(0);
     static const iConverterMemberFunction<From, To> f(function);
-    return iVariant::registerConverterFunction(&f, fromTypeId, toTypeId);
+    return iVariant::registerConverterFunction(&f, f.fromTypeId, f.toTypeId);
 }
 
 // member function as "int XXX::toInt(bool *ok = IX_NULLPTR) const"
 template<typename From, typename To>
-static bool iRegisterConverter(To(From::*function)(bool*) const)
+bool iRegisterConverter(To(From::*function)(bool*) const)
 {
-    const int fromTypeId = iVariant::iMetaTypeId<From>(0);
-    const int toTypeId = iVariant::iMetaTypeId<To>(0);
     static const iConverterMemberFunctionOk<From, To> f(function);
-    return iVariant::registerConverterFunction(&f, fromTypeId, toTypeId);
+    return iVariant::registerConverterFunction(&f, f.fromTypeId, f.toTypeId);
 }
 
 // functor or function pointer
 template<typename From, typename To, typename UnaryFunction>
-static bool iRegisterConverter(UnaryFunction function)
+bool iRegisterConverter(UnaryFunction function)
 {
-    const int fromTypeId = iVariant::iMetaTypeId<From>(0);
-    const int toTypeId = iVariant::iMetaTypeId<To>(0);
     static const iConverterFunctor<From, To, UnaryFunction> f(function);
-    return iVariant::registerConverterFunction(&f, fromTypeId, toTypeId);
+    return iVariant::registerConverterFunction(&f, f.fromTypeId, f.toTypeId);
 }
 
 template<typename From, typename To>
@@ -247,7 +227,7 @@ To iConvertImplicit(const From& from)
 
 // implicit conversion supported like double -> float
 template<typename From, typename To>
-static bool iRegisterConverter()
+bool iRegisterConverter()
 {
     return iRegisterConverter<From, To>(iConvertImplicit<From, To>);
 }
