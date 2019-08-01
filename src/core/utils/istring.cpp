@@ -9,11 +9,11 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <limits.h>
-#include <string.h>
-#include <stdlib.h>
+#include <climits>
+#include <cstring>
+#include <cstdlib>
 #include <stdio.h>
-#include <stdarg.h>
+#include <cstdarg>
 #include <wchar.h>
 
 #include "core/utils/istring.h"

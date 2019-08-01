@@ -12,8 +12,8 @@
 #define IVARLENGTHARRAY_H
 
 #include <new>
-#include <string.h>
-#include <stdlib.h>
+#include <cstring>
+#include <cstdlib>
 #include <algorithm>
 #include <iterator>
 

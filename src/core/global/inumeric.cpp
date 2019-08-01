@@ -9,7 +9,7 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <string.h>
+#include <cstring>
 
 #include "core/global/inumeric.h"
 #include "private/inumeric_p.h"

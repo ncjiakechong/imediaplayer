@@ -9,8 +9,8 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <stdlib.h>
-#include <limits.h>
+#include <cstdlib>
+#include <climits>
 
 #include "core/io/ilog.h"
 #include "core/utils/iarraydata.h"

@@ -11,9 +11,9 @@
 #ifndef ILOG_H
 #define ILOG_H
 
-#include <stdarg.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include <cstdarg>
+#include <cstdlib>
+#include <cstdint>
 #include <iostream>
 
 #include <core/global/iglobal.h>

@@ -14,7 +14,7 @@
 #include <set>
 #include <list>
 #include <string>
-#include <stdarg.h>
+#include <cstdarg>
 #include <unordered_map>
 
 #include <core/utils/ituple.h>

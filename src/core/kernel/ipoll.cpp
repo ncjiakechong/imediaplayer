@@ -13,7 +13,7 @@
 
 #include <sys/types.h>
 #include <time.h>
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "core/kernel/ipoll.h"
 #include "core/io/ilog.h"
@@ -176,7 +176,7 @@ xint32 iPoll (iPollFD *fds, xuint32 nfds, xint32 timeout)
  * Copyright (C) 1994, 1996, 1997 Free Software Foundation, Inc.
  */
 
-#include <string.h> /* for bzero on BSD systems */
+#include <cstring> /* for bzero on BSD systems */
 #include <sys/select.h>
 
 #define EINTR_LOOP(var, cmd)                    \

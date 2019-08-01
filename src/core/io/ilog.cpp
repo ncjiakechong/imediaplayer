@@ -8,8 +8,8 @@
 /// @version 1.0
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
 #include "core/io/ilog.h"
 #include "core/utils/istring.h"

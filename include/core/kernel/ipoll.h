@@ -11,7 +11,7 @@
 #ifndef IPOLL_H
 #define IPOLL_H
 
-#include <stdint.h>
+#include <cstdint>
 #include <core/global/iglobal.h>
 
 namespace iShell {

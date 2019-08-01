@@ -104,6 +104,10 @@ inline xreal iPow(xreal x, xreal y)
     return pow(x, y);
 }
 
+#ifndef M_PI
+#define M_PI (3.14159265358979323846)
+#endif
+
 inline xreal iFastSin(xreal x)
 {
     int si = int(x * (0.5 * IX_SINE_TABLE_SIZE / M_PI)); // Would be more accurate with iRound, but slower.

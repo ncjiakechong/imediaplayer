@@ -11,9 +11,9 @@
 #ifndef IBYTEARRAY_H
 #define IBYTEARRAY_H
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
+#include <cstdlib>
+#include <cstring>
+#include <cstdarg>
 
 #include <string>
 #include <iterator>
@@ -27,7 +27,7 @@ namespace iShell {
 class iByteArray;
 
 /*****************************************************************************
-  Safe and portable C string functions; extensions to standard string.h
+  Safe and portable C string functions; extensions to standard cstring
  *****************************************************************************/
 
 char *istrdup(const char *);

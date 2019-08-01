@@ -12,9 +12,9 @@
 #include <ctype.h>
 #include <errno.h>
 #include <float.h>
-#include <limits.h>
-#include <math.h>
-#include <stdlib.h>
+#include <climits>
+#include <cmath>
+#include <cstdlib>
 #include <time.h>
 
 #include "private/ilocale_tools_p.h"

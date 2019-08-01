@@ -11,9 +11,9 @@
 #ifndef IENDIAN_H
 #define IENDIAN_H
 
-// include stdlib.h and hope that it defines __GLIBC__ for glibc-based systems
-#include <stdlib.h>
-#include <string.h>
+// include cstdlib and hope that it defines __GLIBC__ for glibc-based systems
+#include <cstdlib>
+#include <cstring>
 
 #include <core/global/iglobal.h>
 #include <core/global/itypeinfo.h>

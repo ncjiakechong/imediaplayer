@@ -12,7 +12,7 @@
 #define IDEADLINETIMER_H
 
 #include <limits>
-#include <stdint.h>
+#include <cstdint>
 #include <algorithm>
 
 #include <core/global/iglobal.h>

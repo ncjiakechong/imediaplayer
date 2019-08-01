@@ -13,7 +13,7 @@
 
 #include <string>
 #include <iterator>
-#include <stdarg.h>
+#include <cstdarg>
 #include <vector>
 
 #include <core/global/imacro.h>

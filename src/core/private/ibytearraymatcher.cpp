@@ -9,7 +9,7 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <limits.h>
+#include <climits>
 
 #include "private/ibytearraymatcher.h"
 
