@@ -137,7 +137,7 @@ noconv:
         errno = EINVAL;
     } else if (neg)
         acc = (unsigned long long) -(long long)acc;
-    if (endptr != NULL)
+    if (endptr != IX_NULLPTR)
                 *endptr = const_cast<char *>(any ? s - 1 : nptr);
     return (acc);
 }
@@ -485,7 +485,7 @@ noconv:
         errno = EINVAL;
     } else if (neg)
         acc = (unsigned long long) -(long long)acc;
-    if (endptr != NULL)
+    if (endptr != IX_NULLPTR)
                 *endptr = const_cast<char *>(any ? s - 1 : nptr);
     return (acc);
 }

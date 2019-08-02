@@ -53,7 +53,7 @@ public:
      * which should be passed to the poll() call. The actual timeout used will
      * be -1 if all sources returned -1, or it will be the minimum of all
      * the @timeout_ values returned which were >= 0.  Since this may
-     * be %NULL, in which case the effect is as if the function always returns
+     * be %IX_NULLPTR, in which case the effect is as if the function always returns
      * %FALSE with a timeout of -1.
      */
     virtual bool prepare(int *timeout_);

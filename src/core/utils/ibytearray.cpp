@@ -104,7 +104,7 @@ int iFindByteArray(
  * very fast on most platforms as the code only needs to check the sign bit.
  *
  * These functions return SIZE_MAX on overflow, which can be passed to malloc()
- * and will surely cause a NULL return (there's no way you can allocate a
+ * and will surely cause a IX_NULLPTR return (there's no way you can allocate a
  * memory block the size of your entire VM space).
  */
 
