@@ -9,7 +9,7 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include "private/iunicodetables_data.h"
+#include "codecs/iunicodetables_data.h"
 
 namespace iShell {
 

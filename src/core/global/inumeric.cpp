@@ -12,7 +12,7 @@
 #include <cstring>
 
 #include "core/global/inumeric.h"
-#include "private/inumeric_p.h"
+#include "global/inumeric_p.h"
 
 namespace iShell {
 

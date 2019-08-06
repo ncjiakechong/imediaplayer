@@ -15,11 +15,11 @@
 #include <cstdlib>
 
 #include "core/utils/ibytearray.h"
-#include "private/ibytearraymatcher.h"
-#include "private/istringalgorithms_p.h"
+#include "utils/ibytearraymatcher.h"
+#include "utils/istringalgorithms_p.h"
 #include "core/kernel/imath.h"
-#include "private/inumeric_p.h"
-#include "private/itools_p.h"
+#include "global/inumeric_p.h"
+#include "utils/itools_p.h"
 #include "core/io/ilog.h"
 
 #define IS_RAW_DATA(d) ((d)->offset != sizeof(iByteArrayData))

@@ -14,7 +14,7 @@
 
 #include "core/thread/iatomiccounter.h"
 #include "core/kernel/ievent.h"
-#include "private/ibasicatomicbitfield.h"
+#include "utils/ibasicatomicbitfield.h"
 
 namespace iShell {
 

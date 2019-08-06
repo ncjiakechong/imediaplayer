@@ -13,9 +13,9 @@
 
 #include "core/utils/ichar.h"
 #include "core/utils/istring.h"
-#include "private/iunicodetables_p.h"
-#include "private/iunicodetables_data.h"
-#include "private/itools_p.h"
+#include "codecs/iunicodetables_p.h"
+#include "codecs/iunicodetables_data.h"
+#include "utils/itools_p.h"
 
 
 namespace iShell {

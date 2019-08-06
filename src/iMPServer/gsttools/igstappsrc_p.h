@@ -70,8 +70,8 @@ public:
 
     bool setup(GstElement *);
 
-    void setStream(QIODevice *);
-    QIODevice *stream() const;
+    void setStream(iIODevice *);
+    iIODevice *stream() const;
 
     GstAppSrc *element();
 
@@ -101,7 +101,7 @@ private:
 
     void sendEOS();
 
-    QIODevice *m_stream;
+    iIODevice *m_stream;
     GstAppSrc *m_appSrc;
     bool m_sequential;
     GstAppStreamType m_streamType;

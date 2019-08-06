@@ -15,7 +15,7 @@
 #include <core/thread/iatomiccounter.h>
 #include <core/thread/icondition.h>
 #include <core/kernel/ieventdispatcher.h>
-#include "private/itimerinfo.h"
+#include "kernel/itimerinfo.h"
 
 namespace iShell {
 

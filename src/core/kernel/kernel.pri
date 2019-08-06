@@ -22,6 +22,7 @@ LIBS += \
 
 SOURCES += \
     $$PWD/imath.cpp \
+    $$PWD/itimerinfo.cpp \
     kernel/icoreapplication.cpp \
     kernel/itimer.cpp \
     kernel/ideadlinetimer.cpp \
@@ -34,6 +35,7 @@ SOURCES += \
     kernel/ipoll.cpp
 
 HEADERS += \
+    $$PWD/itimerinfo.h \
     ../../include/core/kernel/icoreapplication.h \
     ../../include/core/kernel/ieventdispatcher.h \
     ../../include/core/kernel/ieventloop.h \
@@ -45,3 +47,11 @@ HEADERS += \
     ../../include/core/kernel/ipoll.h \
     ../../include/core/kernel/ivariant.h \
     ../../include/core/kernel/imath.h
+
+unix {
+    HEADERS += \
+        $$PWD/icoreposix.h
+
+    SOURCES += \
+        $$PWD/icoreposix.cpp
+}

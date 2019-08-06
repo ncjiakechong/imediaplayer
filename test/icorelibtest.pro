@@ -20,7 +20,7 @@ INCLUDEPATH += \
     ../include
 
 LIBS += \
-    -L$${BUILD_TOPDIR} -licore -ligsttools
+    -L$${BUILD_TOPDIR} -licore -limpserver
 
 QMAKE_LFLAGS += -Wl,-rpath,"'\$$ORIGIN'"
 

@@ -22,7 +22,7 @@
 // We mean it.
 //
 
-#include "private/ilocale_p.h"
+#include "utils/ilocale_p.h"
 #include "core/utils/istring.h"
 #include "core/global/iendian.h"
 

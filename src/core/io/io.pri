@@ -5,8 +5,11 @@
 #-------------------------------------------------
 
 SOURCES += \
+    $$PWD/iiodevice.cpp \
     io/ilog.cpp
 
 HEADERS += \
-    ../../include/core/io/ilog.h
+    $$PWD/iiodevice_p.h \
+    ../../include/core/io/ilog.h \
+    ../../include/core/io/iiodevice.h
 

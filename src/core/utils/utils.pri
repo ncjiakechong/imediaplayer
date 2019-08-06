@@ -8,19 +8,33 @@ SOURCES += \
     $$PWD/iarraydata.cpp \
     $$PWD/ibitarray.cpp \
     $$PWD/ibytearray.cpp \
+    $$PWD/ibytearraymatcher.cpp \
     $$PWD/ichar.cpp \
     $$PWD/ifreelist.cpp \
     $$PWD/ihashfunctions.cpp \
     $$PWD/ilocale.cpp \
+    $$PWD/ilocale_tools_p.cpp \
     $$PWD/irect.cpp \
     $$PWD/iregexp.cpp \
+    $$PWD/iringbuffer.cpp \
     $$PWD/isharedptr.cpp \
     $$PWD/isize.cpp \
     $$PWD/istring.cpp \
+    $$PWD/istringmatcher.cpp \
     $$PWD/istringview.cpp
 
 HEADERS += \
     $$PWD/../../../include/core/utils/iregexp.h \
+    $$PWD/ibasicatomicbitfield.h \
+    $$PWD/ibytearraymatcher.h \
+    $$PWD/ilocale_data_p.h \
+    $$PWD/ilocale_p.h \
+    $$PWD/ilocale_tools_p.h \
+    $$PWD/iringbuffer.h \
+    $$PWD/istringalgorithms_p.h \
+    $$PWD/istringiterator_p.h \
+    $$PWD/istringmatcher.h \
+    $$PWD/itools_p.h \
     ../../include/core/utils/ifreelist.h \
     ../../include/core/utils/ipoint.h \
     ../../include/core/utils/irect.h \

@@ -19,9 +19,9 @@ INCLUDEPATH += \
     ../../include
 
 include(global/global.pri)
-include(io/io.pri)
 include(kernel/kernel.pri)
 include(thread/thread.pri)
+include(codecs/codecs.pri)
 include(utils/utils.pri)
-include(private/private.pri)
+include(io/io.pri)
 

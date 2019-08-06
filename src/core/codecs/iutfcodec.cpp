@@ -11,9 +11,9 @@
 
 #include "core/utils/ichar.h"
 #include "core/global/iendian.h"
-#include "private/iutfcodec_p.h"
-#include "private/istringalgorithms_p.h"
-#include "private/istringiterator_p.h"
+#include "codecs/iutfcodec_p.h"
+#include "utils/istringalgorithms_p.h"
+#include "utils/istringiterator_p.h"
 
 
 namespace iShell {

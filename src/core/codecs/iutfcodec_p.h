@@ -23,7 +23,7 @@
 //
 
 #include <core/utils/istring.h>
-#include "private/itextcodec_p.h"
+#include "codecs/itextcodec_p.h"
 
 namespace iShell {
 

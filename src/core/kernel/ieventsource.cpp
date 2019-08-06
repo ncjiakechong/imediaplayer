@@ -13,7 +13,7 @@
 #include "core/kernel/ieventsource.h"
 #include "core/thread/ithread.h"
 #include "core/io/ilog.h"
-#include "private/ithread_p.h"
+#include "thread/ithread_p.h"
 
 #define ILOG_TAG "ix:core"
 

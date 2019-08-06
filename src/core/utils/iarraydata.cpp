@@ -14,7 +14,7 @@
 
 #include "core/io/ilog.h"
 #include "core/utils/iarraydata.h"
-#include "private/itools_p.h"
+#include "utils/itools_p.h"
 
 #define ILOG_TAG "ix:core"
 

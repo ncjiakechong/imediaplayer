@@ -21,7 +21,7 @@
 #include <cstdlib>
 #include <fcntl.h>
 
-#include "private/icoreposix.h"
+#include "kernel/icoreposix.h"
 #endif
 
 namespace iShell {

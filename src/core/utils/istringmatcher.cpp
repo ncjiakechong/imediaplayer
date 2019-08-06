@@ -10,8 +10,8 @@
 /////////////////////////////////////////////////////////////////
 
 #include "core/utils/ichar.h"
-#include "private/istringmatcher.h"
-#include "private/itools_p.h"
+#include "utils/istringmatcher.h"
+#include "utils/itools_p.h"
 
 namespace iShell {
 
