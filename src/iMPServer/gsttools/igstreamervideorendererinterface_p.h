@@ -62,7 +62,7 @@ class iGstreamerVideoRendererInterface
 public:
     virtual ~iGstreamerVideoRendererInterface();
     virtual GstElement *videoSink() = 0;
-    virtual void setVideoSink(GstElement *) {};
+    virtual void setVideoSink(GstElement *) {}
 
     //stopRenderer() is called when the renderer element is stopped.
     //it can be reimplemented when video renderer can't detect

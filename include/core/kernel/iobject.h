@@ -113,6 +113,7 @@ class _isignalBase
 public:
     virtual ~_isignalBase();
 
+    bool isConnected();
     void disconnectAll();
     void disconnect(iObject* pclass);
 
@@ -637,6 +638,7 @@ public:
     const iString& objectName() const { return m_objName; }
 
     isignal<iVariant> objectNameChanged;
+    isignal<iObject*> destroyed;
 
     void setParent(iObject *parent);
 

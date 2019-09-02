@@ -108,6 +108,9 @@ iObject::~iObject()
         refcount->weakUnref();
     }
 
+    if (destroyed.isConnected())
+        destroyed.emits(this);
+
     disconnectAll();
 
     m_isDeletingChildren = true;
@@ -538,6 +541,12 @@ _isignalBase::_isignalBase(const _isignalBase& s)
 _isignalBase::~_isignalBase()
 {
     disconnectAll();
+}
+
+bool _isignalBase::isConnected()
+{
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
+    return !m_connected_slots.empty();
 }
 
 void _isignalBase::disconnectAll()
