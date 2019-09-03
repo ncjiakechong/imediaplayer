@@ -311,7 +311,7 @@ iAudioFormat iGstUtils::audioFormatForBuffer(GstBuffer *buffer)
 /*!
   Builds GstCaps for an audio format.
   Returns 0 if the audio format is not valid.
-  Caller must unref GstCaps.
+  Caller must deref GstCaps.
 */
 
 GstCaps *iGstUtils::capsForAudioFormat(const iAudioFormat &format)

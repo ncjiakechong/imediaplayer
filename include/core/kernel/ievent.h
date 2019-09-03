@@ -21,11 +21,12 @@ public:
     enum Type {
         None = 0,                               // invalid event
         Timer,
+        Quit,
         MetaCall,
         ThreadChange,
         ChildAdded,                             // new child widget
         ChildRemoved,
-        Quit,
+        DeferredDelete,
 
         /// user
         User = 1000,                            // first user event id
@@ -75,6 +76,15 @@ public:
 
 protected:
     iObject *c;
+};
+
+class iDeferredDeleteEvent : public iEvent
+{
+public:
+    explicit iDeferredDeleteEvent();
+    ~iDeferredDeleteEvent();
+private:
+    friend class iCoreApplication;
 };
 
 } // namespace iShell

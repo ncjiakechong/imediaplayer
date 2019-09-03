@@ -65,7 +65,7 @@ iCoreApplication::~iCoreApplication()
 {
     m_threadData->dispatcher.load()->closingDown();
     delete m_threadData->dispatcher.load();
-    m_threadData->dispatcher = 0;
+    m_threadData->dispatcher = IX_NULLPTR;
 
     delete m_private;
 
@@ -219,9 +219,20 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event)
         data->eventMutex.lock();
     }
 
+    // if this is one of the compressible events, do compression
+    if (receiver->m_postedEvents
+        && self && self->compressEvent(event, receiver, &data->postEventList)) {
+        data->eventMutex.unlock();
+        return;
+    }
+
+    if (event->type() == iEvent::DeferredDelete)
+        receiver->m_deleteLaterCalled = true;
+
     iPostEvent pe(receiver, event);
     bool needWake = data->postEventList.empty();
     data->postEventList.push_back(pe);
+    ++receiver->m_postedEvents;
     data->eventMutex.unlock();
 
     if (needWake && data->dispatcher.load())
@@ -240,6 +251,7 @@ void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
         const iPostEvent &pe = *it;
         if ((!receiver || pe.receiver == receiver)
             && (pe.event && (iEvent::None == eventType || pe.event->type() == eventType))) {
+            --pe.receiver->m_postedEvents;
             events.push_back(*it);
             it = data->postEventList.erase(it);
             continue;
@@ -270,10 +282,41 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int)
         threadData->postEventList.erase(threadData->postEventList.begin());
         threadData->eventMutex.unlock();
 
+        --event.receiver->m_postedEvents;
         sendEvent(event.receiver, event.event);
         delete event.event;
     } while (true);
 }
 
+bool iCoreApplication::compressEvent(iEvent * event, iObject *receiver, std::list<iPostEvent>* postedEvents)
+{
+    if (event->type() == iEvent::DeferredDelete) {
+        if (receiver->m_deleteLaterCalled) {
+            // there was a previous DeferredDelete event, so we can drop the new one
+            delete event;
+            return true;
+        }
+        // deleteLaterCalled is set to true in postedEvents when queueing the very first
+        // deferred deletion event.
+        return false;
+    }
+
+    if (event->type() == iEvent::Quit && receiver->m_postedEvents > 0) {
+        for (std::list<iPostEvent>::const_iterator it = postedEvents->cbegin();
+             it != postedEvents->cend(); ++it) {
+             const iPostEvent &cur = *it;
+             if (cur.receiver != receiver
+                     || cur.event == IX_NULLPTR
+                     || cur.event->type() != event->type())
+                 continue;
+
+             // found an event for this receiver
+             delete event;
+             return true;
+         }
+    }
+
+    return false;
+}
 
 } // namespace iShell

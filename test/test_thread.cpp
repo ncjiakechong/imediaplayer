@@ -87,6 +87,8 @@ int test_thread(void)
     IX_ASSERT(2 == thread1->slot);
 
     iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));
+    // mutity test
+    iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));
     thread->wait();
 
     delete thread1;

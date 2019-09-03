@@ -76,6 +76,7 @@ iThreadData::~iThreadData()
         iPostEvent& pe = *it;
         iEvent* event = pe.event;
         pe.event = IX_NULLPTR;
+        --pe.receiver->m_postedEvents;
         delete event;
 
     }

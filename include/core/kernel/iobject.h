@@ -84,7 +84,9 @@ public:
     typedef void (*callback_t)(iObject* obj, pobjfunc_t func, void* args);
 
     _iconnection(iObject* obj, pobjfunc_t func, callback_t cb, ConnectionType type);
-    virtual ~_iconnection();
+
+    void ref();
+    void deref();
 
     iObject* getdest() const { return m_pobject; }
 
@@ -93,13 +95,22 @@ public:
 
     void emits(void* args) const;
 
+protected:
+    _iconnection();
+    _iconnection(const _iconnection&);
+    ~_iconnection();
+
+    _iconnection& operator=(const _iconnection&);
+
+    void setOrphaned();
+
 private:
+    bool m_orphaned;
+    int  m_ref;
     ConnectionType m_type;
     iObject* m_pobject;
     void (iObject::*m_pfunc)();
     callback_t m_emitcb;
-
-    _iconnection();
 
     friend class iObject;
     friend class _isignalBase;
@@ -113,7 +124,6 @@ class _isignalBase
 public:
     virtual ~_isignalBase();
 
-    bool isConnected();
     void disconnectAll();
     void disconnect(iObject* pclass);
 
@@ -633,6 +643,8 @@ public:
     iObject(const iObject& other);
 
     virtual ~iObject();
+
+    void deleteLater();
 
     void setObjectName(const iString& name);
     const iString& objectName() const { return m_objName; }
@@ -1190,7 +1202,7 @@ private:
     static bool invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::clone_args_t clone, _isignalBase::free_args_t free);
 
     iMutex      m_objLock;
-    iString m_objName;
+    iString     m_objName;
     sender_set  m_senders;
 
     iAtomicPointer< typename isharedpointer::ExternalRefCountData > m_refCount;
@@ -1205,9 +1217,13 @@ private:
 
     uint m_wasDeleted : 1;
     uint m_isDeletingChildren : 1;
+    uint m_deleteLaterCalled : 1;
+    uint m_unused : 29;
+    int  m_postedEvents;
 
     iObject& operator=(const iObject&);
 
+    friend class iThreadData;
     friend class _isignalBase;
     friend class iCoreApplication;
     friend struct isharedpointer::ExternalRefCountData;
