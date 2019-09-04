@@ -656,7 +656,7 @@ inline char iToLower(char ch)
     In all of the iString functions that take \c{const char *}
     parameters, the \c{const char *} is interpreted as a classic
     C-style '\\0'-terminated string encoded in UTF-8. It is legal for
-    the \c{const char *} parameter to be \nullptr.
+    the \c{const char *} parameter to be \IX_NULLPTR.
 
     You can also provide string data as an array of \l{iChar}s:
 
@@ -5961,7 +5961,7 @@ iString iString::vasprintf(const char *cformat, va_list ap)
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -6001,7 +6001,7 @@ xlonglong iString::toIntegral_helper(const iChar *data, int len, bool *ok, int b
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -6043,7 +6043,7 @@ xulonglong iString::toIntegral_helper(const iChar *data, uint len, bool *ok, int
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -6074,7 +6074,7 @@ long iString::toLong(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -6104,7 +6104,7 @@ ulong iString::toULong(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -6133,7 +6133,7 @@ int iString::toInt(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -6162,7 +6162,7 @@ uint iString::toUInt(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -6191,7 +6191,7 @@ short iString::toShort(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -6222,7 +6222,7 @@ ushort iString::toUShort(bool *ok, int base) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for other reasons (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     \snippet istring/main.cpp 66
@@ -6261,7 +6261,7 @@ double iString::toDouble(bool *ok) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for other reasons (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     \warning The iString content may only contain valid numerical characters
@@ -7528,7 +7528,7 @@ struct Part
 } // unnamed namespace
 
 template <>
-class iTypeInfo<Part> : public iTypeInfoMerger<Part, iStringRef, int> {}; // Q_DECLARE_METATYPE
+class iTypeInfo<Part> : public iTypeInfoMerger<Part, iStringRef, int> {}; // IX_DECLARE_METATYPE
 
 
 namespace {
@@ -8005,7 +8005,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 /*! \fn iLatin1String::iLatin1String()
 
 
-    Constructs a iLatin1String object that stores a nullptr.
+    Constructs a iLatin1String object that stores a IX_NULLPTR.
 */
 
 /*! \fn iLatin1String::iLatin1String(const char *str)
@@ -8040,11 +8040,11 @@ iString &iString::setRawData(const iChar *unicode, int size)
     The range \c{[first,last)} must remain valid for the lifetime of
     this Latin-1 string object.
 
-    Passing \nullptr as \a first is safe if \a last is \nullptr,
+    Passing \IX_NULLPTR as \a first is safe if \a last is \IX_NULLPTR,
     too, and results in a null Latin-1 string.
 
     The behavior is undefined if \a last precedes \a first, \a first
-    is \nullptr and \a last is not, or if \c{last - first >
+    is \IX_NULLPTR and \a last is not, or if \c{last - first >
     INT_MAX}.
 */
 
@@ -8078,7 +8078,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 
     Returns whether the Latin-1 string stored in this object is null
-    (\c{data() == nullptr}) or not.
+    (\c{data() == IX_NULLPTR}) or not.
 
     \sa isEmpty(), data()
 */
@@ -10392,7 +10392,7 @@ iStringRef iStringRef::trimmed() const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -10415,7 +10415,7 @@ xint64 iStringRef::toLongLong(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -10440,7 +10440,7 @@ xuint64 iStringRef::toULongLong(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -10465,7 +10465,7 @@ long iStringRef::toLong(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -10489,7 +10489,7 @@ ulong iStringRef::toULong(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -10512,7 +10512,7 @@ int iStringRef::toInt(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -10535,7 +10535,7 @@ uint iStringRef::toUInt(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -10558,7 +10558,7 @@ short iStringRef::toShort(bool *ok, int base) const
     base, which is 10 by default and must be between 2 and 36, or 0.
     Returns 0 if the conversion fails.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     If \a base is 0, the C language convention is used: If the string
@@ -10583,7 +10583,7 @@ ushort iStringRef::toUShort(bool *ok, int base) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for other reasons (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     The string conversion will always happen in the 'C' locale. For locale
@@ -10607,7 +10607,7 @@ double iStringRef::toDouble(bool *ok) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for other reasons (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     The string conversion will always happen in the 'C' locale. For locale
@@ -10734,7 +10734,7 @@ iByteArray iString::toLatin1() const
 
 iByteArray iString::toLocal8Bit() const
 {
-    return toLocal8Bit_helper(isNull() ? nullptr : constData(), size());
+    return toLocal8Bit_helper(isNull() ? IX_NULLPTR : constData(), size());
 }
 
 iByteArray iString::toUtf8() const

@@ -43,6 +43,8 @@ class TestObject : public iObject
 public:
     TestObject(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 
+    ~TestObject() {}
+
     int testProperty() const
     {
         return m_testProp;
@@ -459,7 +461,7 @@ int test_object(void)
     ilog_debug("weakprt_3_3 ", *weakprt_3.data());
 
     TestObject* tst_sharedObj_5 = new TestObject(&tst_obj);
-    iSharedPtr<TestObject> shared_5(tst_sharedObj_5, &TestObject::destory);
+    iSharedPtr<TestObject> shared_5(tst_sharedObj_5, &TestObject::deleteLater);
     IX_ASSERT(tst_sharedObj_5 == shared_5.data());
     iWeakPtr<TestObject> share_weakprt_5(shared_5);
     IX_ASSERT(tst_sharedObj_5 == share_weakprt_5.data());

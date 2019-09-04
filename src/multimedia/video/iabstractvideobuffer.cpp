@@ -88,7 +88,7 @@ int iAbstractVideoBufferPrivate::map(
     Constructs an abstract video buffer of the given \a type.
 */
 iAbstractVideoBuffer::iAbstractVideoBuffer(HandleType type)
-    : d_ptr(nullptr)
+    : d_ptr(IX_NULLPTR)
     , m_type(type)
 {
 }
@@ -290,7 +290,7 @@ uchar *iAbstractPlanarVideoBuffer::map(MapMode mode, int *numBytes, int *bytesPe
             *bytesPerLine = strides[0];
         return data[0];
     } else {
-        return nullptr;
+        return IX_NULLPTR;
     }
 }
 

@@ -28,7 +28,7 @@ public:
         , planeCount(0)
         , pixelFormat(iVideoFrame::Format_Invalid)
         , fieldType(iVideoFrame::ProgressiveFrame)
-        , buffer(nullptr)
+        , buffer(IX_NULLPTR)
         , mappedCount(0)
     {
         memset(data, 0, sizeof(data));
@@ -43,7 +43,7 @@ public:
         , planeCount(0)
         , pixelFormat(format)
         , fieldType(iVideoFrame::ProgressiveFrame)
-        , buffer(nullptr)
+        , buffer(IX_NULLPTR)
         , mappedCount(0)
     {
         memset(data, 0, sizeof(data));
@@ -358,7 +358,7 @@ iAbstractVideoBuffer *iVideoFrame::buffer() const
 */
 bool iVideoFrame::isValid() const
 {
-    return d->buffer != nullptr;
+    return d->buffer != IX_NULLPTR;
 }
 
 /*!
@@ -434,7 +434,7 @@ void iVideoFrame::setFieldType(iVideoFrame::FieldType field)
 
 bool iVideoFrame::isMapped() const
 {
-    return d->buffer != nullptr && d->buffer->mapMode() != iAbstractVideoBuffer::NotMapped;
+    return d->buffer != IX_NULLPTR && d->buffer->mapMode() != iAbstractVideoBuffer::NotMapped;
 }
 
 /*!
@@ -453,7 +453,7 @@ bool iVideoFrame::isMapped() const
 */
 bool iVideoFrame::isWritable() const
 {
-    return d->buffer != nullptr && (d->buffer->mapMode() & iAbstractVideoBuffer::WriteOnly);
+    return d->buffer != IX_NULLPTR && (d->buffer->mapMode() & iAbstractVideoBuffer::WriteOnly);
 }
 
 /*!
@@ -469,7 +469,7 @@ bool iVideoFrame::isWritable() const
 */
 bool iVideoFrame::isReadable() const
 {
-    return d->buffer != nullptr && (d->buffer->mapMode() & iAbstractVideoBuffer::ReadOnly);
+    return d->buffer != IX_NULLPTR && (d->buffer->mapMode() & iAbstractVideoBuffer::ReadOnly);
 }
 
 /*!
@@ -479,7 +479,7 @@ bool iVideoFrame::isReadable() const
 */
 iAbstractVideoBuffer::MapMode iVideoFrame::mapMode() const
 {
-    return d->buffer != nullptr ? d->buffer->mapMode() : iAbstractVideoBuffer::NotMapped;
+    return d->buffer != IX_NULLPTR ? d->buffer->mapMode() : iAbstractVideoBuffer::NotMapped;
 }
 
 /*!
@@ -533,7 +533,7 @@ bool iVideoFrame::map(iAbstractVideoBuffer::MapMode mode)
         }
     }
 
-    IX_ASSERT(d->data[0] == nullptr);
+    IX_ASSERT(d->data[0] == IX_NULLPTR);
     IX_ASSERT(d->bytesPerLine[0] == 0);
     IX_ASSERT(d->planeCount == 0);
     IX_ASSERT(d->mappedBytes == 0);
@@ -713,7 +713,7 @@ uchar *iVideoFrame::bits()
 */
 uchar *iVideoFrame::bits(int plane)
 {
-    return plane >= 0 && plane < d->planeCount ? d->data[plane] : nullptr;
+    return plane >= 0 && plane < d->planeCount ? d->data[plane] : IX_NULLPTR;
 }
 
 /*!
@@ -744,7 +744,7 @@ const uchar *iVideoFrame::bits() const
 */
 const uchar *iVideoFrame::bits(int plane) const
 {
-    return plane >= 0 && plane < d->planeCount ?  d->data[plane] : nullptr;
+    return plane >= 0 && plane < d->planeCount ?  d->data[plane] : IX_NULLPTR;
 }
 
 /*!
@@ -782,7 +782,7 @@ int iVideoFrame::planeCount() const
 */
 iVariant iVideoFrame::handle() const
 {
-    return d->buffer != nullptr ? d->buffer->handle() : iVariant();
+    return d->buffer != IX_NULLPTR ? d->buffer->handle() : iVariant();
 }
 
 /*!

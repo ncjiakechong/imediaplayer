@@ -87,7 +87,7 @@ public:
     inline xint64 write(const iByteArray &data)
     { return write(data.constData(), data.size()); }
 
-    xint64 peek(char *data, xint64 maxlen);
+    virtual xint64 peek(char *data, xint64 maxlen);
     iByteArray peek(xint64 maxlen);
     xint64 skip(xint64 maxSize);
 
@@ -112,6 +112,7 @@ protected:
     virtual xint64 readData(char *data, xint64 maxlen) = 0;
     virtual xint64 readLineData(char *data, xint64 maxlen);
     virtual xint64 writeData(const char *data, xint64 len) = 0;
+    virtual xint64 skipData(xint64 maxSize);
 
     void setOpenMode(OpenMode openMode);
 

@@ -11,11 +11,11 @@
 #ifndef ICHAR_H
 #define ICHAR_H
 
+#include <core/global/imacro.h>
 #include <core/global/iglobal.h>
 #include <core/global/itypeinfo.h>
 
 namespace iShell {
-
 
 class iString;
 
@@ -534,15 +534,15 @@ inline bool operator< (iChar,     std::nullptr_t) { return false; }
 inline bool operator==(std::nullptr_t, iChar rhs) { return rhs.isNull(); }
 inline bool operator< (std::nullptr_t, iChar rhs) { return !rhs.isNull(); }
 
-inline bool operator!=(iChar lhs, std::nullptr_t) { return !operator==(lhs, nullptr); }
-inline bool operator>=(iChar lhs, std::nullptr_t) { return !operator< (lhs, nullptr); }
-inline bool operator> (iChar lhs, std::nullptr_t) { return  operator< (nullptr, lhs); }
-inline bool operator<=(iChar lhs, std::nullptr_t) { return !operator< (nullptr, lhs); }
+inline bool operator!=(iChar lhs, std::nullptr_t) { return !operator==(lhs, IX_NULLPTR); }
+inline bool operator>=(iChar lhs, std::nullptr_t) { return !operator< (lhs, IX_NULLPTR); }
+inline bool operator> (iChar lhs, std::nullptr_t) { return  operator< (IX_NULLPTR, lhs); }
+inline bool operator<=(iChar lhs, std::nullptr_t) { return !operator< (IX_NULLPTR, lhs); }
 
-inline bool operator!=(std::nullptr_t, iChar rhs) { return !operator==(nullptr, rhs); }
-inline bool operator>=(std::nullptr_t, iChar rhs) { return !operator< (nullptr, rhs); }
-inline bool operator> (std::nullptr_t, iChar rhs) { return  operator< (rhs, nullptr); }
-inline bool operator<=(std::nullptr_t, iChar rhs) { return !operator< (rhs, nullptr); }
+inline bool operator!=(std::nullptr_t, iChar rhs) { return !operator==(IX_NULLPTR, rhs); }
+inline bool operator>=(std::nullptr_t, iChar rhs) { return !operator< (IX_NULLPTR, rhs); }
+inline bool operator> (std::nullptr_t, iChar rhs) { return  operator< (rhs, IX_NULLPTR); }
+inline bool operator<=(std::nullptr_t, iChar rhs) { return !operator< (rhs, IX_NULLPTR); }
 
 } // namespace iShell
 

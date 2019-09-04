@@ -52,7 +52,7 @@ protected:
 
     unsigned short m_posted : 1;
     unsigned short m_accept : 1;
-    unsigned short m_reserved : 13;
+    unsigned short m_reserved : 14;
 };
 
 class iTimerEvent : public iEvent

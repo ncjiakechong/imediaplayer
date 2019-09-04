@@ -125,7 +125,7 @@ private:
 
 public:
     iStringView()
-        : m_size(0), m_data(nullptr) {}
+        : m_size(0), m_data(IX_NULLPTR) {}
     iStringView(std::nullptr_t)
         : iStringView() {}
 
@@ -148,7 +148,7 @@ public:
 
     template <typename String, if_compatible_qstring_like<String> = true>
     iStringView(const String &str)
-        : iStringView(str.isNull() ? nullptr : str.data(), xsizetype(str.size())) {}
+        : iStringView(str.isNull() ? IX_NULLPTR : str.data(), xsizetype(str.size())) {}
 
     template <typename StdBasicString, if_compatible_string<StdBasicString> = true>
     iStringView(const StdBasicString &str)

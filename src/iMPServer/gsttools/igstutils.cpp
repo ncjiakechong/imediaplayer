@@ -15,6 +15,7 @@
 #include "core/utils/isize.h"
 #include "core/utils/iregexp.h"
 #include "core/global/iglobalstatic.h"
+#include "core/global/iprocessordetection.h"
 #include "multimedia/video/ivideosurfaceformat.h"
 
 #include "igstutils_p.h"
@@ -565,7 +566,7 @@ static const VideoFormat ix_videoFormatLookup[] =
     { iVideoFrame::Format_NV12   , GST_VIDEO_FORMAT_NV12 },
     { iVideoFrame::Format_NV21   , GST_VIDEO_FORMAT_NV21 },
     { iVideoFrame::Format_AYUV444, GST_VIDEO_FORMAT_AYUV },
-    #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+    #if IX_BYTE_ORDER == IX_LITTLE_ENDIAN
     { iVideoFrame::Format_RGB32 ,  GST_VIDEO_FORMAT_BGRx },
     { iVideoFrame::Format_BGR32 ,  GST_VIDEO_FORMAT_RGBx },
     { iVideoFrame::Format_ARGB32,  GST_VIDEO_FORMAT_BGRA },
@@ -906,7 +907,7 @@ iSize iGstUtils::structureResolution(const GstStructure *s)
     return size;
 }
 
-iVideoFrame::PixelFormat iGstUtils::structurePixelFormat(const GstStructure *structure, int *bpp)
+iVideoFrame::PixelFormat iGstUtils::structurePixelFormat(const GstStructure *structure, int *)
 {
     iVideoFrame::PixelFormat pixelFormat = iVideoFrame::Format_Invalid;
 

@@ -85,7 +85,6 @@ public:
 
 /*!
     \class iTypeInfoQuery
-    \inmodule QtCore
     \internal
     \brief iTypeInfoQuery is used to query the values of a given iTypeInfo<T>
 
@@ -111,7 +110,6 @@ struct iTypeInfoQuery<T, typename std::enable_if<iTypeInfo<T>::isRelocatable || 
 
 /*!
     \class iTypeInfoMerger
-    \inmodule QtCore
     \internal
 
     \brief iTypeInfoMerger merges the iTypeInfo flags of T1, T2... and presents them
@@ -160,7 +158,7 @@ enum { /* TYPEINFO flags */
     IX_COMPLEX_TYPE = 0,
     IX_PRIMITIVE_TYPE = 0x1,
     IX_STATIC_TYPE = 0,
-    IX_MOVABLE_TYPE = 0x2,               // ### Qt6: merge movable and relocatable once std::list no longer depends on it
+    IX_MOVABLE_TYPE = 0x2,               // merge movable and relocatable once std::list no longer depends on it
     IX_DUMMY_TYPE = 0x4,
     IX_RELOCATABLE_TYPE = 0x8
 };

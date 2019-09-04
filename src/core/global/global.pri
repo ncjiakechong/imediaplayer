@@ -19,5 +19,6 @@ HEADERS += \
     ../../include/core/global/inamespace.h \
     ../../include/core/global/inumeric.h \
     ../../include/core/global/itypeinfo.h \
-    ../../include/core/global/iglobalstatic.h
+    ../../include/core/global/iglobalstatic.h \
+    ../../include/core/global/iprocessordetection.h
 

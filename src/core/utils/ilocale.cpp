@@ -946,7 +946,7 @@ T toIntegral_helper(const iLocalePrivate *d, iStringView str, bool *ok)
     // we select the right overload by the last, unused parameter
     Int64 val = toIntegral_helper(d->m_data, str, ok, d->m_numberOptions, Int64());
     if (T(val) != val) {
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         val = 0;
     }
@@ -1018,7 +1018,7 @@ iString iLocale::scriptToString(iLocale::Script script)
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1036,7 +1036,7 @@ short iLocale::toShort(const iString &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1054,7 +1054,7 @@ ushort iLocale::toUShort(const iString &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1072,7 +1072,7 @@ int iLocale::toInt(const iString &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1090,7 +1090,7 @@ uint iLocale::toUInt(const iString &s, bool *ok) const
 
  If the conversion fails the function returns 0.
 
- If \a ok is not \c nullptr, failure is reported by setting *\a{ok}
+ If \a ok is not \c IX_NULLPTR, failure is reported by setting *\a{ok}
  to \c false, and success by setting *\a{ok} to \c true.
 
  This function ignores leading and trailing whitespace.
@@ -1112,7 +1112,7 @@ long iLocale::toLong(const iString &s, bool *ok) const
 
  If the conversion fails the function returns 0.
 
- If \a ok is not \c nullptr, failure is reported by setting *\a{ok}
+ If \a ok is not \c IX_NULLPTR, failure is reported by setting *\a{ok}
  to \c false, and success by setting *\a{ok} to \c true.
 
  This function ignores leading and trailing whitespace.
@@ -1132,7 +1132,7 @@ ulong iLocale::toULong(const iString &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1152,7 +1152,7 @@ xlonglong iLocale::toLongLong(const iString &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1171,7 +1171,7 @@ xulonglong iLocale::toULongLong(const iString &s, bool *ok) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for any other reason (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function does not fall back to the 'C' locale if the string
@@ -1193,7 +1193,7 @@ float iLocale::toFloat(const iString &s, bool *ok) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for any other reason (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function does not fall back to the 'C' locale if the string
@@ -1219,7 +1219,7 @@ double iLocale::toDouble(const iString &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1239,7 +1239,7 @@ short iLocale::toShort(const iStringRef &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1259,7 +1259,7 @@ ushort iLocale::toUShort(const iStringRef &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1279,7 +1279,7 @@ int iLocale::toInt(const iStringRef &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1299,7 +1299,7 @@ uint iLocale::toUInt(const iStringRef &s, bool *ok) const
 
  If the conversion fails the function returns 0.
 
- If \a ok is not \c nullptr, failure is reported by setting *\a{ok}
+ If \a ok is not \c IX_NULLPTR, failure is reported by setting *\a{ok}
  to \c false, and success by setting *\a{ok} to \c true.
 
  This function ignores leading and trailing whitespace.
@@ -1321,7 +1321,7 @@ long iLocale::toLong(const iStringRef &s, bool *ok) const
 
  If the conversion fails the function returns 0.
 
- If \a ok is not \c nullptr, failure is reported by setting *\a{ok}
+ If \a ok is not \c IX_NULLPTR, failure is reported by setting *\a{ok}
  to \c false, and success by setting *\a{ok} to \c true.
 
  This function ignores leading and trailing whitespace.
@@ -1341,7 +1341,7 @@ ulong iLocale::toULong(const iStringRef &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1363,7 +1363,7 @@ xlonglong iLocale::toLongLong(const iStringRef &s, bool *ok) const
 
     If the conversion fails the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1384,7 +1384,7 @@ xulonglong iLocale::toULongLong(const iStringRef &s, bool *ok) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for any other reason (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function does not fall back to the 'C' locale if the string
@@ -1408,7 +1408,7 @@ float iLocale::toFloat(const iStringRef &s, bool *ok) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for any other reason (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function does not fall back to the 'C' locale if the string
@@ -1436,7 +1436,7 @@ double iLocale::toDouble(const iStringRef &s, bool *ok) const
 
     If the conversion fails, the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1456,7 +1456,7 @@ short iLocale::toShort(iStringView s, bool *ok) const
 
     If the conversion fails, the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1476,7 +1476,7 @@ ushort iLocale::toUShort(iStringView s, bool *ok) const
 
     If the conversion fails, the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1496,7 +1496,7 @@ int iLocale::toInt(iStringView s, bool *ok) const
 
     If the conversion fails, the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1516,7 +1516,7 @@ uint iLocale::toUInt(iStringView s, bool *ok) const
 
  If the conversion fails the function returns 0.
 
- If \a ok is not \c nullptr, failure is reported by setting *\a{ok}
+ If \a ok is not \c IX_NULLPTR, failure is reported by setting *\a{ok}
  to \c false, and success by setting *\a{ok} to \c true.
 
  This function ignores leading and trailing whitespace.
@@ -1538,7 +1538,7 @@ long iLocale::toLong(iStringView s, bool *ok) const
 
  If the conversion fails the function returns 0.
 
- If \a ok is not \c nullptr, failure is reported by setting *\a{ok}
+ If \a ok is not \c IX_NULLPTR, failure is reported by setting *\a{ok}
  to \c false, and success by setting *\a{ok} to \c true.
 
  This function ignores leading and trailing whitespace.
@@ -1558,7 +1558,7 @@ ulong iLocale::toULong(iStringView s, bool *ok) const
 
     If the conversion fails, the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1580,7 +1580,7 @@ xlonglong iLocale::toLongLong(iStringView s, bool *ok) const
 
     If the conversion fails, the function returns 0.
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1601,7 +1601,7 @@ xulonglong iLocale::toULongLong(iStringView s, bool *ok) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for any other reason (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     This function ignores leading and trailing whitespace.
@@ -1622,7 +1622,7 @@ float iLocale::toFloat(iStringView s, bool *ok) const
     Returns an infinity if the conversion overflows or 0.0 if the
     conversion fails for any other reason (e.g. underflow).
 
-    If \a ok is not \nullptr, failure is reported by setting *\a{ok}
+    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
     Unlike iString::toDouble(), this function does not fall back to
@@ -2708,14 +2708,14 @@ double iLocaleData::stringToDouble(iStringView str, bool *ok,
 {
     CharBuff buff;
     if (!numberToCLocale(str, number_options, &buff)) {
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         return 0.0;
     }
     int processed = 0;
     bool nonNullOk = false;
     double d = ix_asciiToDouble(buff.constData(), buff.length() - 1, nonNullOk, processed);
-    if (ok != nullptr)
+    if (ok != IX_NULLPTR)
         *ok = nonNullOk;
     return d;
 }
@@ -2725,7 +2725,7 @@ xlonglong iLocaleData::stringToLongLong(iStringView str, int base, bool *ok,
 {
     CharBuff buff;
     if (!numberToCLocale(str, number_options, &buff)) {
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         return 0;
     }
@@ -2738,7 +2738,7 @@ xulonglong iLocaleData::stringToUnsLongLong(iStringView str, int base, bool *ok,
 {
     CharBuff buff;
     if (!numberToCLocale(str, number_options, &buff)) {
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         return 0;
     }
@@ -2753,7 +2753,7 @@ double iLocaleData::bytearrayToDouble(const char *num, bool *ok)
     IX_ASSERT(len >= 0);
     int processed = 0;
     double d = ix_asciiToDouble(num, len, nonNullOk, processed);
-    if (ok != nullptr)
+    if (ok != IX_NULLPTR)
         *ok = nonNullOk;
     return d;
 }
@@ -2764,7 +2764,7 @@ xlonglong iLocaleData::bytearrayToLongLong(const char *num, int base, bool *ok)
     const char *endptr;
 
     if (*num == '\0') {
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         return 0;
     }
@@ -2772,7 +2772,7 @@ xlonglong iLocaleData::bytearrayToLongLong(const char *num, int base, bool *ok)
     xlonglong l = istrtoll(num, &endptr, base, &_ok);
 
     if (!_ok) {
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         return 0;
     }
@@ -2784,12 +2784,12 @@ xlonglong iLocaleData::bytearrayToLongLong(const char *num, int base, bool *ok)
 
     if (*endptr != '\0') {
         // we stopped at a non-digit character after converting some digits
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         return 0;
     }
 
-    if (ok != nullptr)
+    if (ok != IX_NULLPTR)
         *ok = true;
     return l;
 }
@@ -2801,7 +2801,7 @@ xulonglong iLocaleData::bytearrayToUnsLongLong(const char *num, int base, bool *
     xulonglong l = istrtoull(num, &endptr, base, &_ok);
 
     if (!_ok) {
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         return 0;
     }
@@ -2812,12 +2812,12 @@ xulonglong iLocaleData::bytearrayToUnsLongLong(const char *num, int base, bool *
     }
 
     if (*endptr != '\0') {
-        if (ok != nullptr)
+        if (ok != IX_NULLPTR)
             *ok = false;
         return 0;
     }
 
-    if (ok != nullptr)
+    if (ok != IX_NULLPTR)
         *ok = true;
     return l;
 }

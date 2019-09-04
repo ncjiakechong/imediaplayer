@@ -15,10 +15,8 @@
 namespace iShell {
 
 /*!
-    \headerfile <QtEndian>
     \title Endian Conversion Functions
     \ingroup funclists
-    \brief The <QtEndian> header provides functions to convert between
     little and big endian representations of numbers.
 */
 
@@ -48,8 +46,6 @@ namespace iShell {
 /*!
     \fn template <typename T> T iFromBigEndian(const void *src)
 
-    \relates <QtEndian>
-
     Reads a big-endian number from memory location \a src and returns the number in the
     host byte order representation.
     On CPU architectures where the host byte order is little-endian (such as x86) this
@@ -70,7 +66,6 @@ namespace iShell {
 /*!
     \fn template <typename T> T iFromBigEndian(T src)
 
-    \relates <QtEndian>
     \overload
 
     Converts \a src from big-endian byte order and returns the number in host byte order
@@ -82,7 +77,6 @@ namespace iShell {
 /*!
     \fn template <typename T> T iFromBigEndian(const void *src, xsizetype count, void *dest)
 
-    \relates <QtEndian>
 
     Reads \a count big-endian numbers from memory location \a src and stores
     them in the host byte order representation at \a dest. On CPU architectures
@@ -108,8 +102,6 @@ namespace iShell {
 /*!
     \fn template <typename T> T iFromLittleEndian(const void *src)
 
-    \relates <QtEndian>
-
     Reads a little-endian number from memory location \a src and returns the number in
     the host byte order representation.
     On CPU architectures where the host byte order is big-endian (such as PowerPC) this
@@ -130,7 +122,6 @@ namespace iShell {
 /*!
     \fn template <typename T> T iFromLittleEndian(T src)
 
-    \relates <QtEndian>
     \overload
 
     Converts \a src from little-endian byte order and returns the number in host byte
@@ -141,8 +132,6 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iFromLittleEndian(const void *src, xsizetype count, void *dest)
-
-    \relates <QtEndian>
 
     Reads \a count little-endian numbers from memory location \a src and stores
     them in the host byte order representation at \a dest. On CPU architectures
@@ -168,7 +157,6 @@ namespace iShell {
 /*!
     \fn template <typename T> void iToBigEndian(T src, void *dest)
 
-    \relates <QtEndian>
 
     Writes the number \a src with template type \c{T} to the memory location at \a dest
     in big-endian byte order.
@@ -188,7 +176,6 @@ namespace iShell {
 /*!
     \fn template <typename T> T iToBigEndian(T src)
 
-    \relates <QtEndian>
     \overload
 
     Converts \a src from host byte order and returns the number in big-endian byte order
@@ -199,8 +186,6 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iToBigEndian(const void *src, xsizetype count, void *dest)
-
-    \relates <QtEndian>
 
     Reads \a count numbers from memory location \a src in the host byte order
     and stores them in big-endian representation at \a dest. On CPU
@@ -226,8 +211,6 @@ namespace iShell {
 /*!
     \fn template <typename T> void iToLittleEndian(T src, void *dest)
 
-    \relates <QtEndian>
-
     Writes the number \a src with template type \c{T} to the memory location at \a dest
     in little-endian byte order.
 
@@ -246,7 +229,6 @@ namespace iShell {
 /*!
     \fn template <typename T> T iToLittleEndian(T src)
 
-    \relates <QtEndian>
     \overload
 
     Converts \a src from host byte order and returns the number in little-endian byte
@@ -257,8 +239,6 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iToLittleEndian(const void *src, xsizetype count, void *dest)
-
-    \relates <QtEndian>
 
     Reads \a count numbers from memory location \a src in the host byte order
     and stores them in little-endian representation at \a dest. On CPU
@@ -600,7 +580,6 @@ namespace iShell {
 
 /*!
     \typedef xuint16_le
-    \relates <QtEndian>
 
 
     Typedef for iLEInteger<xuint16>. This type is guaranteed to be stored in memory as
@@ -611,7 +590,6 @@ namespace iShell {
 
 /*!
     \typedef xuint32_le
-    \relates <QtEndian>
 
 
     Typedef for iLEInteger<xuint32>. This type is guaranteed to be stored in memory as
@@ -622,7 +600,6 @@ namespace iShell {
 
 /*!
     \typedef xuint64_le
-    \relates <QtEndian>
 
 
     Typedef for iLEInteger<xuint64>. This type is guaranteed to be stored in memory as
@@ -633,7 +610,6 @@ namespace iShell {
 
 /*!
     \typedef xuint16_be
-    \relates <QtEndian>
 
 
     Typedef for iBEInteger<xuint16>. This type is guaranteed to be stored in memory as
@@ -644,7 +620,6 @@ namespace iShell {
 
 /*!
     \typedef xuint32_be
-    \relates <QtEndian>
 
 
     Typedef for iBEInteger<xuint32>. This type is guaranteed to be stored in memory as
@@ -655,7 +630,6 @@ namespace iShell {
 
 /*!
     \typedef xuint64_be
-    \relates <QtEndian>
 
 
     Typedef for iBEInteger<xuint64>. This type is guaranteed to be stored in memory as
@@ -666,7 +640,6 @@ namespace iShell {
 
 /*!
     \typedef xint16_le
-    \relates <QtEndian>
 
 
     Typedef for iLEInteger<xint16>. This type is guaranteed to be stored in memory as
@@ -677,7 +650,6 @@ namespace iShell {
 
 /*!
     \typedef xint32_le
-    \relates <QtEndian>
 
 
     Typedef for iLEInteger<xint32>. This type is guaranteed to be stored in memory as
@@ -688,7 +660,6 @@ namespace iShell {
 
 /*!
     \typedef xint64_le
-    \relates <QtEndian>
 
 
     Typedef for iLEInteger<xint64>. This type is guaranteed to be stored in memory as
@@ -699,7 +670,6 @@ namespace iShell {
 
 /*!
     \typedef xint16_be
-    \relates <QtEndian>
 
 
     Typedef for iBEInteger<xint16>. This type is guaranteed to be stored in memory as
@@ -710,7 +680,6 @@ namespace iShell {
 
 /*!
     \typedef xint32_be
-    \relates <QtEndian>
 
 
     Typedef for iBEInteger<xint32>. This type is guaranteed to be stored in memory as
@@ -721,7 +690,6 @@ namespace iShell {
 
 /*!
     \typedef xint64_be
-    \relates <QtEndian>
 
 
     Typedef for iBEInteger<xint64>. This type is guaranteed to be stored in memory as

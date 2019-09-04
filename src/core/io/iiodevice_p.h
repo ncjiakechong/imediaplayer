@@ -15,7 +15,7 @@
 //  W A R N I N G
 //  -------------
 //
-// This file is not part of the Qt API.  It exists for the convenience
+// This file is not part of the API.  It exists for the convenience
 // of iIODevice. This header file may change from version to
 // version without notice, or even be removed.
 //
@@ -40,7 +40,7 @@ class iIODevicePrivate
     friend class iIODevice;
 public:
     iIODevicePrivate();
-    virtual ~iIODevicePrivate();
+    ~iIODevicePrivate();
 
     iIODevice::OpenMode openMode;
     iString errorString;
@@ -48,16 +48,16 @@ public:
     std::vector<IRingBuffer> readBuffers;
     std::vector<IRingBuffer> writeBuffers;
 
-    class QRingBufferRef {
+    class iRingBufferRef {
         IRingBuffer *m_buf;
-        inline QRingBufferRef() : m_buf(nullptr) { }
+        inline iRingBufferRef() : m_buf(IX_NULLPTR) { }
         friend class iIODevicePrivate;
     public:
         // wrap functions from IRingBuffer
         inline void setChunkSize(int size) { IX_ASSERT(m_buf); m_buf->setChunkSize(size); }
         inline int chunkSize() const { IX_ASSERT(m_buf); return m_buf->chunkSize(); }
         inline xint64 nextDataBlockSize() const { return (m_buf ? m_buf->nextDataBlockSize() : IX_INT64_C(0)); }
-        inline const char *readPointer() const { return (m_buf ? m_buf->readPointer() : nullptr); }
+        inline const char *readPointer() const { return (m_buf ? m_buf->readPointer() : IX_NULLPTR); }
         inline const char *readPointerAtPosition(xint64 pos, xint64 &length) const { IX_ASSERT(m_buf); return m_buf->readPointerAtPosition(pos, length); }
         inline void free(xint64 bytes) { IX_ASSERT(m_buf); m_buf->free(bytes); }
         inline char *reserve(xint64 bytes) { IX_ASSERT(m_buf); return m_buf->reserve(bytes); }
@@ -82,8 +82,8 @@ public:
         inline bool canReadLine() const { return m_buf && m_buf->canReadLine(); }
     };
 
-    QRingBufferRef buffer;
-    QRingBufferRef writeBuffer;
+    iRingBufferRef buffer;
+    iRingBufferRef writeBuffer;
     xint64 pos;
     xint64 devicePos;
     int readChannelCount;
@@ -95,8 +95,6 @@ public:
     xint64 transactionPos;
     bool transactionStarted;
     bool baseReadLineDataCalled;
-
-    virtual bool putCharHelper(char c);
 
     enum AccessMode {
         Unset,
@@ -122,23 +120,19 @@ public:
 
     inline void setCurrentReadChannel(int channel)
     {
-        buffer.m_buf = (channel < readBuffers.size() ? &readBuffers[channel] : nullptr);
+        buffer.m_buf = (channel < readBuffers.size() ? &readBuffers[channel] : IX_NULLPTR);
         currentReadChannel = channel;
     }
     inline void setCurrentWriteChannel(int channel)
     {
-        writeBuffer.m_buf = (channel < writeBuffers.size() ? &writeBuffers[channel] : nullptr);
+        writeBuffer.m_buf = (channel < writeBuffers.size() ? &writeBuffers[channel] : IX_NULLPTR);
         currentWriteChannel = channel;
     }
     void setReadChannelCount(int count);
     void setWriteChannelCount(int count);
 
     xint64 read(char *data, xint64 maxSize, bool peeking = false);
-    virtual xint64 peek(char *data, xint64 maxSize);
-    virtual iByteArray peek(xint64 maxSize);
     xint64 skipByReading(xint64 maxSize);
-    // ### Qt6: consider replacing with a protected virtual iIODevice::skipData().
-    virtual xint64 skip(xint64 maxSize);
 
     iIODevice *q_ptr;
 };
