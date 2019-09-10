@@ -41,7 +41,7 @@ public:
 
     struct ConverterState {
         ConverterState(ConversionFlags f = DefaultConversion)
-            : flags(f), remainingChars(0), invalidChars(0), d(0) { state_data[0] = state_data[1] = state_data[2] = 0; }
+            : flags(f), remainingChars(0), invalidChars(0), d(IX_NULLPTR) { state_data[0] = state_data[1] = state_data[2] = 0; }
         ~ConverterState() { }
         ConversionFlags flags;
         int remainingChars;

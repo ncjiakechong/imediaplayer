@@ -120,12 +120,12 @@ public:
 
     inline void setCurrentReadChannel(int channel)
     {
-        buffer.m_buf = (channel < readBuffers.size() ? &readBuffers[channel] : IX_NULLPTR);
+        buffer.m_buf = (channel < int(readBuffers.size()) ? &readBuffers[size_t(channel)] : IX_NULLPTR);
         currentReadChannel = channel;
     }
     inline void setCurrentWriteChannel(int channel)
     {
-        writeBuffer.m_buf = (channel < writeBuffers.size() ? &writeBuffers[channel] : IX_NULLPTR);
+        writeBuffer.m_buf = (channel < int(writeBuffers.size()) ? &writeBuffers[size_t(channel)] : IX_NULLPTR);
         currentWriteChannel = channel;
     }
     void setReadChannelCount(int count);

@@ -117,7 +117,7 @@ inline iSize &iSize::operator-=(const iSize &s)
 { wd-=s.wd; ht-=s.ht; return *this; }
 
 inline iSize &iSize::operator*=(double c)
-{ wd = std::round(wd*c); ht = std::round(ht*c); return *this; }
+{ wd = int(std::round(wd*c)); ht = int(std::round(ht*c)); return *this; }
 
 inline bool operator==(const iSize &s1, const iSize &s2)
 { return s1.wd == s2.wd && s1.ht == s2.ht; }
@@ -132,22 +132,22 @@ inline const iSize operator-(const iSize &s1, const iSize &s2)
 { return iSize(s1.wd-s2.wd, s1.ht-s2.ht); }
 
 inline const iSize operator*(const iSize &s, double c)
-{ return iSize(std::round(s.wd*c), std::round(s.ht*c)); }
+{ return iSize(int(std::round(s.wd*c)), int(std::round(s.ht*c))); }
 
 inline const iSize operator*(double c, const iSize &s)
-{ return iSize(std::round(s.wd*c), std::round(s.ht*c)); }
+{ return iSize(int(std::round(s.wd*c)), int(std::round(s.ht*c))); }
 
 inline iSize &iSize::operator/=(double c)
 {
     IX_ASSERT(!iFuzzyIsNull(c));
-    wd = std::round(wd/c); ht = std::round(ht/c);
+    wd = int(std::round(wd/c)); ht = int(std::round(ht/c));
     return *this;
 }
 
 inline const iSize operator/(const iSize &s, double c)
 {
     IX_ASSERT(!iFuzzyIsNull(c));
-    return iSize(std::round(s.wd/c), std::round(s.ht/c));
+    return iSize(int(std::round(s.wd/c)), int(std::round(s.ht/c)));
 }
 
 inline iSize iSize::expandedTo(const iSize & otherSize) const
@@ -310,7 +310,7 @@ inline iSizeF iSizeF::boundedTo(const iSizeF & otherSize) const
 
 inline iSize iSizeF::toSize() const
 {
-    return iSize(std::round(wd), std::round(ht));
+    return iSize(int(std::round(wd)), int(std::round(ht)));
 }
 
 } // namespace iShell

@@ -736,7 +736,7 @@ inline bool operator!=(const iRectF &r1, const iRectF &r2)
 
 inline iRect iRectF::toRect() const
 {
-    return iRect(std::round(xp), std::round(yp), std::round(w), std::round(h));
+    return iRect(int(std::round(xp)), int(std::round(yp)), int(std::round(w)), int(std::round(h)));
 }
 
 } // namespace iShell

@@ -82,7 +82,7 @@ private:
     int m_priority;
     int m_refCount;
 
-    xuint32 m_flags;
+    int m_flags;
 
     iEventDispatcher* m_dispatcher;
     std::list<iPollFD*> m_pollFds;

@@ -73,7 +73,7 @@ class iAbstractPlanarVideoBuffer : public iAbstractVideoBuffer
 {
 public:
     iAbstractPlanarVideoBuffer(HandleType type);
-    virtual ~iAbstractPlanarVideoBuffer();
+    virtual ~iAbstractPlanarVideoBuffer() override;
 
     uchar *map(MapMode mode, int *numBytes, int *bytesPerLine) override;
     virtual int map(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) = 0;

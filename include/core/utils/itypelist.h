@@ -61,7 +61,7 @@ struct iTypeList
     {
     }
 
-    iTypeList(ConstHeadType& h, ConstTailType& t):head((HeadType)h), tail((TailType)t)
+    iTypeList(ConstHeadType& h, ConstTailType& t):head(HeadType(h)), tail(TailType(t))
     {
     }
 

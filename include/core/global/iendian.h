@@ -89,17 +89,17 @@ template <> inline xuint8 ibswap<xuint8>(xuint8 source)
 // signed specializations
 template <> inline xint64 ibswap<xint64>(xint64 source)
 {
-    return ibswap<xuint64>(xuint64(source));
+    return xint64(ibswap<xuint64>(xuint64(source)));
 }
 
 template <> inline xint32 ibswap<xint32>(xint32 source)
 {
-    return ibswap<xuint32>(xuint32(source));
+    return xint32(ibswap<xuint32>(xuint32(source)));
 }
 
 template <> inline xint16 ibswap<xint16>(xint16 source)
 {
-    return ibswap<xuint16>(xuint16(source));
+    return xint16(ibswap<xuint16>(xuint16(source)));
 }
 
 template <> inline xint8 ibswap<xint8>(xint8 source)

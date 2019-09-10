@@ -151,7 +151,7 @@ class iLogger{
     // Template to print unknown pointer types with their address
     template<typename T>
     void append(T* value) {
-        append((const void*)value);
+        append(static_cast<const void*>(value));
     }
 
     // Template to print unknown types

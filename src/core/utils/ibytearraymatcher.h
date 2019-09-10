@@ -67,7 +67,7 @@ private:
     static Skiptable generate(const char *pattern, uint n)
     {
         const auto uchar_max = (std::numeric_limits<uchar>::max)();
-        uchar max = n > uchar_max ? uchar_max : n;
+        uchar max = n > uchar_max ? uchar_max : uchar(n);
         Skiptable table = {
             // this verbose initialization code aims to avoid some opaque error messages
             // even on powerful compilers such as GCC 5.3. Even though for GCC a loop

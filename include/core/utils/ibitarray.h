@@ -102,7 +102,7 @@ inline bool iBitArray::toggleBit(int i)
  uchar c = uchar(*p&b); *p^=b; return c!=0; }
 
 inline bool iBitArray::operator[](int i) const { return testBit(i); }
-inline bool iBitArray::operator[](uint i) const { return testBit(i); }
+inline bool iBitArray::operator[](uint i) const { return testBit(int(i)); }
 inline bool iBitArray::at(int i) const { return testBit(i); }
 
 class iBitRef
@@ -110,7 +110,11 @@ class iBitRef
 private:
     iBitArray& a;
     int i;
+
     inline iBitRef(iBitArray& array, int idx) : a(array), i(idx) {}
+
+    iBitRef();
+    iBitRef(const iBitRef&);
     friend class iBitArray;
 public:
     inline operator bool() const { return a.testBit(i); }
@@ -122,7 +126,7 @@ public:
 inline iBitRef iBitArray::operator[](int i)
 { IX_ASSERT(i >= 0); return iBitRef(*this, i); }
 inline iBitRef iBitArray::operator[](uint i)
-{ return iBitRef(*this, i); }
+{ return iBitRef(*this, int(i)); }
 
 } // namespace iShell
 

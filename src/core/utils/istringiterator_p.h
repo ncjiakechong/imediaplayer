@@ -61,7 +61,7 @@ public:
 
     inline int index() const
     {
-        return pos - i;
+        return int(pos - i);
     }
 
     inline void setPosition(iString::const_iterator position)

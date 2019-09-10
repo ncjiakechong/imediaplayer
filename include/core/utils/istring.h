@@ -41,7 +41,7 @@ public:
     explicit iLatin1String(const char *f, const char *l)
         : iLatin1String(f, int(l - f)) {}
     inline explicit iLatin1String(const char *s, int sz) : m_size(sz), m_data(s) {}
-    inline explicit iLatin1String(const iByteArray &s) : m_size(int(istrnlen(s.constData(), s.size()))), m_data(s.constData()) {}
+    inline explicit iLatin1String(const iByteArray &s) : m_size(int(istrnlen(s.constData(), uint(s.size())))), m_data(s.constData()) {}
 
     const char *latin1() const { return m_data; }
     int size() const { return m_size; }
@@ -137,7 +137,7 @@ public:
 
 private:
     int m_size;
-    const char *m_data;
+    const char* m_data;
 };
 IX_DECLARE_TYPEINFO(iLatin1String, IX_MOVABLE_TYPE);
 
@@ -426,11 +426,11 @@ public:
         return fromLocal8Bit_helper(str, (str && size == -1) ? int(strlen(str)) : size);
     }
     static inline iString fromLatin1(const iByteArray &str)
-    { return str.isNull() ? iString() : fromLatin1(str.data(), istrnlen(str.constData(), str.size())); }
+    { return str.isNull() ? iString() : fromLatin1(str.data(), int(istrnlen(str.constData(), uint(str.size())))); }
     static inline iString fromUtf8(const iByteArray &str)
-    { return str.isNull() ? iString() : fromUtf8(str.data(), istrnlen(str.constData(), str.size())); }
+    { return str.isNull() ? iString() : fromUtf8(str.data(), int(istrnlen(str.constData(), uint(str.size())))); }
     static inline iString fromLocal8Bit(const iByteArray &str)
-    { return str.isNull() ? iString() : fromLocal8Bit(str.data(), istrnlen(str.constData(), str.size())); }
+    { return str.isNull() ? iString() : fromLocal8Bit(str.data(), int(istrnlen(str.constData(), uint(str.size())))); }
     static iString fromUtf16(const ushort *, int size = -1);
     static iString fromUcs4(const uint *, int size = -1);
     static iString fromRawData(const iChar *, int size);
@@ -519,7 +519,7 @@ public:
         : d(fromAscii_helper(ch, ch ? int(strlen(ch)) : -1))
     {}
     inline iString(const iByteArray &a)
-        : d(fromAscii_helper(a.constData(), istrnlen(a.constData(), a.size())))
+        : d(fromAscii_helper(a.constData(), int(istrnlen(a.constData(), uint(a.size())))))
     {}
     inline iString &operator=(const char *ch)
     { return (*this = fromUtf8(ch)); }
@@ -792,7 +792,7 @@ inline iString iString::section(iChar asep, int astart, int aend, SectionFlags a
 inline int iString::toWCharArray(wchar_t *array) const
 {
     if (sizeof(wchar_t) == sizeof(iChar)) {
-        memcpy(array, d->data(), sizeof(iChar) * size());
+        memcpy(array, d->data(), sizeof(iChar) * uint(size()));
         return size();
     } else {
         return toUcs4_helper(d->data(), size(), reinterpret_cast<uint *>(array));
@@ -811,6 +811,9 @@ class iCharRef {
     int i;
     inline iCharRef(iString &str, int idx)
         : s(str),i(idx) {}
+
+    iCharRef();
+    iCharRef(const iCharRef&);
     friend class iString;
 public:
 
@@ -827,7 +830,7 @@ public:
     inline iCharRef &operator=(char c)
     { return operator=(iChar::fromLatin1(c)); }
     inline iCharRef &operator=(uchar c)
-    { return operator=(iChar::fromLatin1(c)); }
+    { return operator=(iChar::fromLatin1(char(c))); }
     inline iCharRef &operator=(const iCharRef &c) { return operator=(iChar(c)); }
     inline iCharRef &operator=(ushort rc) { return operator=(iChar(rc)); }
     inline iCharRef &operator=(short rc) { return operator=(iChar(rc)); }
@@ -888,7 +891,7 @@ inline iString::~iString() { if (!d->ref.deref()) Data::deallocate(d); }
 inline void iString::reserve(int asize)
 {
     if (d->ref.isShared() || uint(asize) >= d->alloc)
-        reallocData(std::max(asize, d->size) + 1u);
+        reallocData(std::max<uint>(uint(asize), uint(d->size)) + 1u);
 
     if (!d->capacityReserved) {
         // cannot set unconditionally, since d could be the shared_null/shared_empty (which is const)
@@ -913,7 +916,7 @@ inline iString &iString::setUtf16(const ushort *autf16, int asize)
 inline iCharRef iString::operator[](int i)
 { IX_ASSERT(i >= 0); return iCharRef(*this, i); }
 inline iCharRef iString::operator[](uint i)
-{ return iCharRef(*this, i); }
+{ return iCharRef(*this, int(i)); }
 inline iCharRef iString::front() { return operator[](0); }
 inline iCharRef iString::back() { return operator[](size() - 1); }
 inline iString::iterator iString::begin()
@@ -943,13 +946,13 @@ inline bool iString::contains(iChar c, iShell::CaseSensitivity cs) const
 
 
 inline bool operator==(iLatin1String s1, iLatin1String s2)
-{ return s1.size() == s2.size() && (!s1.size() || !memcmp(s1.latin1(), s2.latin1(), s1.size())); }
+{ return s1.size() == s2.size() && (!s1.size() || !memcmp(s1.latin1(), s2.latin1(), size_t(s1.size()))); }
 inline bool operator!=(iLatin1String s1, iLatin1String s2)
 { return !operator==(s1, s2); }
 inline bool operator<(iLatin1String s1, iLatin1String s2)
 {
     const int len = std::min(s1.size(), s2.size());
-    const int r = len ? memcmp(s1.latin1(), s2.latin1(), len) : 0;
+    const int r = len ? memcmp(s1.latin1(), s2.latin1(), size_t(len)) : 0;
     return r < 0 || (r == 0 && s1.size() < s2.size());
 }
 inline bool operator>(iLatin1String s1, iLatin1String s2)
@@ -1038,9 +1041,9 @@ inline bool iLatin1String::operator>=(const iByteArray &s) const
 { return iString::fromUtf8(s) <= *this; }
 
 inline bool iString::operator==(const iByteArray &s) const
-{ return iString::compare_helper(constData(), size(), s.constData(), istrnlen(s.constData(), s.size())) == 0; }
+{ return iString::compare_helper(constData(), size(), s.constData(), int(istrnlen(s.constData(), uint(s.size())))) == 0; }
 inline bool iString::operator!=(const iByteArray &s) const
-{ return iString::compare_helper(constData(), size(), s.constData(), istrnlen(s.constData(), s.size())) != 0; }
+{ return iString::compare_helper(constData(), size(), s.constData(), int(istrnlen(s.constData(), uint(s.size())))) != 0; }
 inline bool iString::operator<(const iByteArray &s) const
 { return iString::compare_helper(constData(), size(), s.constData(), s.size()) < 0; }
 inline bool iString::operator>(const iByteArray &s) const
@@ -1051,9 +1054,9 @@ inline bool iString::operator>=(const iByteArray &s) const
 { return iString::compare_helper(constData(), size(), s.constData(), s.size()) >= 0; }
 
 inline bool iByteArray::operator==(const iString &s) const
-{ return iString::compare_helper(s.constData(), s.size(), constData(), istrnlen(constData(), size())) == 0; }
+{ return iString::compare_helper(s.constData(), s.size(), constData(), int(istrnlen(constData(), uint(size())))) == 0; }
 inline bool iByteArray::operator!=(const iString &s) const
-{ return iString::compare_helper(s.constData(), s.size(), constData(), istrnlen(constData(), size())) != 0; }
+{ return iString::compare_helper(s.constData(), s.size(), constData(), int(istrnlen(constData(), uint(size())))) != 0; }
 inline bool iByteArray::operator<(const iString &s) const
 { return iString::compare_helper(s.constData(), s.size(), constData(), size()) > 0; }
 inline bool iByteArray::operator>(const iString &s) const
@@ -1109,12 +1112,12 @@ inline iString iString::fromStdString(const std::string &s)
 inline std::wstring iString::toStdWString() const
 {
     std::wstring str;
-    str.resize(length());
+    str.resize(size_t(length()));
 
     if (!length())
         return str;
 
-    str.resize(toWCharArray(&(*str.begin())));
+    str.resize(size_t(toWCharArray(&(*str.begin()))));
     return str;
 }
 
@@ -1125,16 +1128,16 @@ inline iString iString::fromStdU16String(const std::u16string &s)
 { return fromUtf16(s.data(), int(s.size())); }
 
 inline std::u16string iString::toStdU16String() const
-{ return std::u16string(reinterpret_cast<const char16_t*>(utf16()), length()); }
+{ return std::u16string(reinterpret_cast<const char16_t*>(utf16()), size_t(length())); }
 
 inline iString iString::fromStdU32String(const std::u32string &s)
 { return fromUcs4(s.data(), int(s.size())); }
 
 inline std::u32string iString::toStdU32String() const
 {
-    std::u32string u32str(length(), char32_t(0));
+    std::u32string u32str(size_t(length()), char32_t(0));
     int len = toUcs4_helper(d->data(), length(), reinterpret_cast<uint*>(&u32str[0]));
-    u32str.resize(len);
+    u32str.resize(size_t(len));
     return u32str;
 }
 
@@ -1271,7 +1274,7 @@ public:
     int compare(const iStringRef &s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     int compare(iLatin1String s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     int compare(const iByteArray &s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    { return iString::compare_helper(unicode(), size(), s.data(), istrnlen(s.data(), s.size()), cs); }
+    { return iString::compare_helper(unicode(), size(), s.data(), int(istrnlen(s.data(), uint(s.size()))), cs); }
     static int compare(const iStringRef &s1, const iString &s2,
                        iShell::CaseSensitivity = iShell::CaseSensitive);
     static int compare(const iStringRef &s1, const iStringRef &s2,
