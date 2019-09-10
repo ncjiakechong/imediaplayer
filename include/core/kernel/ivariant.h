@@ -107,23 +107,16 @@ public:
     }
 
 private:
-    class iAbstractVariantImpl
+    struct iAbstractVariantImpl
     {
-    public:
-        virtual ~iAbstractVariantImpl();
-
-    protected:
         iAbstractVariantImpl(void* ptr);
-
+        virtual ~iAbstractVariantImpl();
         void* data;
-        IX_DISABLE_COPY(iAbstractVariantImpl)
-        friend class iVariant;
     };
 
     template<class T>
-    class iVariantImpl : public iAbstractVariantImpl
+    struct iVariantImpl : public iAbstractVariantImpl
     {
-    public:
         iVariantImpl(typename type_wrapper<T>::CONSTREFTYPE data)
             : iAbstractVariantImpl(&mValue), mValue(data) {}
         virtual ~iVariantImpl() {}
