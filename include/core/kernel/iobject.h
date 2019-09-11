@@ -30,7 +30,7 @@ namespace iShell {
 #define IPROPERTY_BEGIN(PARENT) \
     virtual const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>& getOrInitProperty() { \
         static std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> s_propertys; \
-        std::unordered_map<iString, isignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propertyNofity = IX_NULLPTR; \
+        std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propertyNofity = IX_NULLPTR; \
         std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertyIns = IX_NULLPTR; \
         if (s_propertys.size() <= 0) { \
             propertyIns = &s_propertys; \
@@ -48,7 +48,7 @@ namespace iShell {
     } \
     \
     void doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propIns, \
-                      std::unordered_map<iString, isignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propNotify) { \
+                      std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propNotify) { \
         typedef PARENT PARENT_CLASS; \
         PARENT_CLASS::doInitProperty(propIns, propNotify);
 
@@ -61,7 +61,7 @@ namespace iShell {
         } \
         \
         if (propNotify) { \
-            propNotify->insert(std::pair<iString, isignal<iVariant>*>(NAME, &SIGNAL)); \
+            propNotify->insert(std::pair<iString, iSignal<iVariant>*>(NAME, &SIGNAL)); \
         }
 
 #define IPROPERTY_END \
@@ -71,34 +71,34 @@ class iObject;
 class iThread;
 class iThreadData;
 class iEvent;
-class _isignalBase;
+class _iSignalBase;
 
 namespace isharedpointer {
 struct ExternalRefCountData;
 }
 
-class _iconnection
+class _iConnection
 {
 public:
-    typedef void (iObject::*pobjfunc_t)();
-    typedef void (*callback_t)(iObject* obj, pobjfunc_t func, void* args);
+    typedef void (iObject::*Function)();
+    typedef void (*Callback)(iObject* obj, Function func, void* args);
 
-    _iconnection(iObject* obj, pobjfunc_t func, callback_t cb, ConnectionType type);
+    _iConnection(iObject* obj, Function func, Callback cb, ConnectionType type);
 
 protected:
-    _iconnection();
-    _iconnection(const _iconnection&);
-    ~_iconnection();
+    _iConnection();
+    _iConnection(const _iConnection&);
+    ~_iConnection();
 
-    _iconnection& operator=(const _iconnection&);
+    _iConnection& operator=(const _iConnection&);
 
     void ref();
     void deref();
 
     iObject* getdest() const { return m_pobject; }
 
-    _iconnection* clone() const;
-    _iconnection* duplicate(iObject* newobj) const;
+    _iConnection* clone() const;
+    _iConnection* duplicate(iObject* newobj) const;
 
     void setOrphaned();
 
@@ -106,36 +106,36 @@ protected:
 
 private:
     int m_orphaned : 1;
-    int  m_ref : 31;
+    int m_ref : 31;
     ConnectionType m_type;
     iObject* m_pobject;
-    void (iObject::*m_pfunc)();
-    callback_t m_emitcb;
+    Function m_pfunc;
+    Callback m_emitcb;
 
     friend class iObject;
-    friend class _isignalBase;
+    friend class _iSignalBase;
 };
 
 /**
  * @brief signal base
  */
-class _isignalBase
+class _iSignalBase
 {
 public:
-    virtual ~_isignalBase();
+    virtual ~_iSignalBase();
 
     void disconnectAll();
-    void disconnect(iObject* pclass);
+    void disconnect(iObject* obj);
 
 protected:
-    typedef std::list<_iconnection *>  connections_list;
+    typedef std::list<_iConnection *>  connections_list;
     typedef void* (*clone_args_t)(void*);
     typedef void (*free_args_t)(void*);
 
-    _isignalBase();
-    _isignalBase(const _isignalBase& s);
+    _iSignalBase();
+    _iSignalBase(const _iSignalBase& s);
 
-    void slotConnect(_iconnection* conn);
+    void slotConnect(_iConnection* conn);
     void slotDisconnect(iObject* pslot);
     void slotDuplicate(const iObject* oldtarget, iObject* newtarget);
 
@@ -145,376 +145,350 @@ private:
     iMutex      m_sigLock;
     connections_list m_connected_slots;
 
-    _isignalBase& operator=(const _isignalBase&);
-
+    _iSignalBase& operator=(const _iSignalBase&);
     friend class iObject;
 };
 
 /**
- * @brief isignal implements
+ * @brief iSignal implements
  */
 struct _iNULLArgument {};
 
-template<class arg1_type = _iNULLArgument,
-         class arg2_type = _iNULLArgument,
-         class arg3_type = _iNULLArgument,
-         class arg4_type = _iNULLArgument,
-         class arg5_type = _iNULLArgument,
-         class arg6_type = _iNULLArgument,
-         class arg7_type = _iNULLArgument,
-         class arg8_type = _iNULLArgument>
-class isignal : public _isignalBase
+template<class Arg1 = _iNULLArgument,
+         class Arg2 = _iNULLArgument,
+         class Arg3 = _iNULLArgument,
+         class Arg4 = _iNULLArgument,
+         class Arg5 = _iNULLArgument,
+         class Arg6 = _iNULLArgument,
+         class Arg7 = _iNULLArgument,
+         class Arg8 = _iNULLArgument>
+class iSignal : public _iSignalBase
 {
 public:
-    isignal() {}
+    iSignal() {}
 
-    isignal(const isignal<arg1_type, arg2_type, arg3_type, arg4_type,
-        arg5_type, arg6_type, arg7_type, arg8_type>& s)
-        : _isignalBase(s) {}
+    iSignal(const iSignal<Arg1, Arg2, Arg3, Arg4,
+        Arg5, Arg6, Arg7, Arg8>& s)
+        : _iSignalBase(s) {}
 
     /**
      * connect 0
      */
-    template<class desttype, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(), ConnectionType type = AutoConnection)
+    template<class Obj, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)();
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)();
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void*) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
+            static void callback (iObject* obj, _iConnection::Function func, void*) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
 
-                (pclass->*pmemtarget)();
+                (tObj->*tFunc)();
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
     /**
      * connect 1
      */
-    template<class desttype, class slot1_type, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type), ConnectionType type = AutoConnection)
+    template<class Obj, class Slot1, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(Slot1), ConnectionType type = AutoConnection)
     {
-        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg1, Slot1>::value));
 
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(slot1_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Slot1);
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<slot1_type>(t->template get<0>()));
+                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()));
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
     /**
      * connect 2
      */
-    template<class desttype, class slot1_type, class slot2_type, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type, slot2_type), ConnectionType type = AutoConnection)
+    template<class Obj, class Slot1, class Slot2, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(Slot1, Slot2), ConnectionType type = AutoConnection)
     {
-        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg1, Slot1>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg2, Slot2>::value));
 
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Slot1, Slot2);
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<slot1_type>(t->template get<0>()),
-                                      static_cast<slot2_type>(t->template get<1>()));
+                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
+                                      static_cast<Slot2>(t->template get<1>()));
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
     /**
      * connect 3
      */
-    template<class desttype, class slot1_type, class slot2_type, class slot3_type, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
-        slot2_type, slot3_type), ConnectionType type = AutoConnection)
+    template<class Obj, class Slot1, class Slot2, class Slot3, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(Slot1, Slot2, Slot3), ConnectionType type = AutoConnection)
     {
-        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg1, Slot1>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg2, Slot2>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg3, Slot3>::value));
 
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Slot1, Slot2, Slot3);
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<slot1_type>(t->template get<0>()),
-                                      static_cast<slot2_type>(t->template get<1>()),
-                                      static_cast<slot3_type>(t->template get<2>()));
+                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
+                                      static_cast<Slot2>(t->template get<1>()),
+                                      static_cast<Slot3>(t->template get<2>()));
 
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
     /**
      * connect 4
      */
-    template<class desttype, class slot1_type, class slot2_type, class slot3_type, class slot4_type, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
-        slot2_type, slot3_type, slot4_type), ConnectionType type = AutoConnection)
+    template<class Obj, class Slot1, class Slot2, class Slot3, class Slot4, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(Slot1, Slot2, Slot3, Slot4), ConnectionType type = AutoConnection)
     {
-        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg1, Slot1>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg2, Slot2>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg3, Slot3>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg4, Slot4>::value));
 
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Slot1, Slot2, Slot3, Slot4);
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<slot1_type>(t->template get<0>()),
-                                      static_cast<slot2_type>(t->template get<1>()),
-                                      static_cast<slot3_type>(t->template get<2>()),
-                                      static_cast<slot4_type>(t->template get<3>()));
+                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
+                                      static_cast<Slot2>(t->template get<1>()),
+                                      static_cast<Slot3>(t->template get<2>()),
+                                      static_cast<Slot4>(t->template get<3>()));
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
     /**
      * connect 5
      */
-    template<class desttype, class slot1_type, class slot2_type, class slot3_type, class slot4_type,
-             class slot5_type, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
-        slot2_type, slot3_type, slot4_type, slot5_type), ConnectionType type = AutoConnection)
+    template<class Obj, class Slot1, class Slot2, class Slot3, class Slot4,
+             class Slot5, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(Slot1, Slot2, Slot3, Slot4, Slot5), ConnectionType type = AutoConnection)
     {
-        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg1, Slot1>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg2, Slot2>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg3, Slot3>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg4, Slot4>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg5, Slot5>::value));
 
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type,
-                                            slot5_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Slot1, Slot2, Slot3, Slot4, Slot5);
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<slot1_type>(t->template get<0>()),
-                                      static_cast<slot2_type>(t->template get<1>()),
-                                      static_cast<slot3_type>(t->template get<2>()),
-                                      static_cast<slot4_type>(t->template get<3>()),
-                                      static_cast<slot5_type>(t->template get<4>()));
+                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
+                                      static_cast<Slot2>(t->template get<1>()),
+                                      static_cast<Slot3>(t->template get<2>()),
+                                      static_cast<Slot4>(t->template get<3>()),
+                                      static_cast<Slot5>(t->template get<4>()));
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
     /**
      * connect 6
      */
-    template<class desttype, class slot1_type, class slot2_type, class slot3_type, class slot4_type,
-             class slot5_type, class slot6_type, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
-        slot2_type, slot3_type, slot4_type, slot5_type, slot6_type), ConnectionType type = AutoConnection)
+    template<class Obj, class Slot1, class Slot2, class Slot3, class Slot4,
+             class Slot5, class Slot6, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(Slot1, Slot2, Slot3, Slot4, Slot5, Slot6),
+                 ConnectionType type = AutoConnection)
     {
-        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg1, Slot1>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg2, Slot2>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg3, Slot3>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg4, Slot4>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg5, Slot5>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg6, Slot6>::value));
 
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type,
-                                            slot5_type, slot6_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Slot1, Slot2, Slot3, Slot4, Slot5, Slot6);
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<slot1_type>(t->template get<0>()),
-                                      static_cast<slot2_type>(t->template get<1>()),
-                                      static_cast<slot3_type>(t->template get<2>()),
-                                      static_cast<slot4_type>(t->template get<3>()),
-                                      static_cast<slot5_type>(t->template get<4>()),
-                                      static_cast<slot6_type>(t->template get<5>()));
+                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
+                                      static_cast<Slot2>(t->template get<1>()),
+                                      static_cast<Slot3>(t->template get<2>()),
+                                      static_cast<Slot4>(t->template get<3>()),
+                                      static_cast<Slot5>(t->template get<4>()),
+                                      static_cast<Slot6>(t->template get<5>()));
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
     /**
      * connect 7
      */
-    template<class desttype, class slot1_type, class slot2_type, class slot3_type, class slot4_type,
-             class slot5_type, class slot6_type, class slot7_type, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
-        slot2_type, slot3_type, slot4_type, slot5_type, slot6_type, slot7_type)
-                 , ConnectionType type = AutoConnection)
+    template<class Obj, class Slot1, class Slot2, class Slot3, class Slot4,
+             class Slot5, class Slot6, class Slot7, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7),
+                 ConnectionType type = AutoConnection)
     {
-        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg7_type, slot7_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg1, Slot1>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg2, Slot2>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg3, Slot3>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg4, Slot4>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg5, Slot5>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg6, Slot6>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg7, Slot7>::value));
 
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type,
-                                            slot5_type, slot6_type, slot7_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7);
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<slot1_type>(t->template get<0>()),
-                                      static_cast<slot2_type>(t->template get<1>()),
-                                      static_cast<slot3_type>(t->template get<2>()),
-                                      static_cast<slot4_type>(t->template get<3>()),
-                                      static_cast<slot5_type>(t->template get<4>()),
-                                      static_cast<slot6_type>(t->template get<5>()),
-                                      static_cast<slot7_type>(t->template get<6>()));
+                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
+                                      static_cast<Slot2>(t->template get<1>()),
+                                      static_cast<Slot3>(t->template get<2>()),
+                                      static_cast<Slot4>(t->template get<3>()),
+                                      static_cast<Slot5>(t->template get<4>()),
+                                      static_cast<Slot6>(t->template get<5>()),
+                                      static_cast<Slot7>(t->template get<6>()));
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
     /**
      * connect 8
      */
-    template<class desttype, class slot1_type, class slot2_type, class slot3_type, class slot4_type,
-             class slot5_type, class slot6_type, class slot7_type, class slot8_type, class ret_type>
-    void connect(desttype* pclass, ret_type (desttype::*pmemfun)(slot1_type,
-        slot2_type, slot3_type, slot4_type, slot5_type, slot6_type,
-        slot7_type, slot8_type), ConnectionType type = AutoConnection)
+    template<class Obj, class Slot1, class Slot2, class Slot3, class Slot4,
+             class Slot5, class Slot6, class Slot7, class Slot8, class Ret>
+    void connect(Obj* obj, Ret (Obj::*func)(Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8),
+                ConnectionType type = AutoConnection)
     {
-        IX_COMPILER_VERIFY((is_convertible<arg1_type, slot1_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg2_type, slot2_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg3_type, slot3_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg4_type, slot4_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg5_type, slot5_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg6_type, slot6_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg7_type, slot7_type>::value));
-        IX_COMPILER_VERIFY((is_convertible<arg8_type, slot8_type>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg1, Slot1>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg2, Slot2>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg3, Slot3>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg4, Slot4>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg5, Slot5>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg6, Slot6>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg7, Slot7>::value));
+        IX_COMPILER_VERIFY((is_convertible<Arg8, Slot8>::value));
 
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(slot1_type, slot2_type, slot3_type, slot4_type,
-                                            slot5_type, slot6_type, slot7_type, slot8_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Slot1, Slot2, Slot3, Slot4, Slot5, Slot6, Slot7, Slot8);
 
         struct __emit_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<slot1_type>(t->template get<0>()),
-                                      static_cast<slot2_type>(t->template get<1>()),
-                                      static_cast<slot3_type>(t->template get<2>()),
-                                      static_cast<slot4_type>(t->template get<3>()),
-                                      static_cast<slot5_type>(t->template get<4>()),
-                                      static_cast<slot6_type>(t->template get<5>()),
-                                      static_cast<slot7_type>(t->template get<6>()),
-                                      static_cast<slot8_type>(t->template get<7>()));
+                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
+                                      static_cast<Slot2>(t->template get<1>()),
+                                      static_cast<Slot3>(t->template get<2>()),
+                                      static_cast<Slot4>(t->template get<3>()),
+                                      static_cast<Slot5>(t->template get<4>()),
+                                      static_cast<Slot6>(t->template get<5>()),
+                                      static_cast<Slot7>(t->template get<6>()),
+                                      static_cast<Slot8>(t->template get<7>()));
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection* conn = new _iconnection(pclass, pmemtarget, __emit_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
         slotConnect(conn);
     }
 
@@ -522,13 +496,11 @@ public:
      * clone arguments
      */
     static void* cloneArgs(void* args) {
-        iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                arg5_type, arg6_type, arg7_type, arg8_type>* impArgs =
-                static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* impArgs =
+                static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-        return new iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                arg5_type, arg6_type, arg7_type, arg8_type>(impArgs->template get<0>(),
+        return new iTuple<Arg1, Arg2, Arg3, Arg4,
+                Arg5, Arg6, Arg7, Arg8>(impArgs->template get<0>(),
                                                             impArgs->template get<1>(),
                                                             impArgs->template get<2>(),
                                                             impArgs->template get<3>(),
@@ -542,32 +514,30 @@ public:
      * free arguments
      */
     static void freeArgs(void* args) {
-        iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                arg5_type, arg6_type, arg7_type, arg8_type>* impArgs =
-                static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* impArgs =
+                static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
         delete impArgs;
     }
 
     /**
      * emit this signal
      */
-    void emits(typename type_wrapper<arg1_type>::CONSTREFTYPE a1 = TYPEWRAPPER_DEFAULTVALUE(arg1_type),
-              typename type_wrapper<arg2_type>::CONSTREFTYPE a2 = TYPEWRAPPER_DEFAULTVALUE(arg2_type),
-              typename type_wrapper<arg3_type>::CONSTREFTYPE a3 = TYPEWRAPPER_DEFAULTVALUE(arg3_type),
-              typename type_wrapper<arg4_type>::CONSTREFTYPE a4 = TYPEWRAPPER_DEFAULTVALUE(arg4_type),
-              typename type_wrapper<arg5_type>::CONSTREFTYPE a5 = TYPEWRAPPER_DEFAULTVALUE(arg5_type),
-              typename type_wrapper<arg6_type>::CONSTREFTYPE a6 = TYPEWRAPPER_DEFAULTVALUE(arg6_type),
-              typename type_wrapper<arg7_type>::CONSTREFTYPE a7 = TYPEWRAPPER_DEFAULTVALUE(arg7_type),
-              typename type_wrapper<arg8_type>::CONSTREFTYPE a8 = TYPEWRAPPER_DEFAULTVALUE(arg8_type))
+    void emits(typename type_wrapper<Arg1>::CONSTREFTYPE a1 = TYPEWRAPPER_DEFAULTVALUE(Arg1),
+              typename type_wrapper<Arg2>::CONSTREFTYPE a2 = TYPEWRAPPER_DEFAULTVALUE(Arg2),
+              typename type_wrapper<Arg3>::CONSTREFTYPE a3 = TYPEWRAPPER_DEFAULTVALUE(Arg3),
+              typename type_wrapper<Arg4>::CONSTREFTYPE a4 = TYPEWRAPPER_DEFAULTVALUE(Arg4),
+              typename type_wrapper<Arg5>::CONSTREFTYPE a5 = TYPEWRAPPER_DEFAULTVALUE(Arg5),
+              typename type_wrapper<Arg6>::CONSTREFTYPE a6 = TYPEWRAPPER_DEFAULTVALUE(Arg6),
+              typename type_wrapper<Arg7>::CONSTREFTYPE a7 = TYPEWRAPPER_DEFAULTVALUE(Arg7),
+              typename type_wrapper<Arg8>::CONSTREFTYPE a8 = TYPEWRAPPER_DEFAULTVALUE(Arg8))
     {
-        iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-               arg5_type, arg6_type, arg7_type, arg8_type> args(a1, a2, a3, a4, a5, a6, a7, a8);
+        iTuple<Arg1, Arg2, Arg3, Arg4,
+               Arg5, Arg6, Arg7, Arg8> args(a1, a2, a3, a4, a5, a6, a7, a8);
         doEmit(&args, &cloneArgs, &freeArgs);
     }
 
 private:
-    isignal& operator=(const isignal&);
+    iSignal& operator=(const iSignal&);
 };
 
 /**
@@ -586,18 +556,18 @@ struct _iproperty_base
     set_t set;
 };
 
-template<class desttype, typename ret, typename param>
+template<class Obj, typename ret, typename param>
 struct iProperty : public _iproperty_base
 {
-    typedef ret (desttype::*pgetfunc_t)() const;
-    typedef void (desttype::*psetfunc_t)(param);
+    typedef ret (Obj::*pgetfunc_t)() const;
+    typedef void (Obj::*psetfunc_t)(param);
 
     iProperty(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR)
         : _iproperty_base(getFunc, setFunc)
         , m_getFunc(_getfunc), m_setFunc(_setfunc) {}
 
     static iVariant getFunc(const _iproperty_base* _this, const iObject* obj) {
-        const desttype* _classThis = static_cast<const desttype*>(obj);
+        const Obj* _classThis = static_cast<const Obj*>(obj);
         const iProperty* _typedThis = static_cast<const iProperty *>(_this);
         IX_CHECK_PTR(_typedThis);
         if (!_typedThis->m_getFunc)
@@ -608,7 +578,7 @@ struct iProperty : public _iproperty_base
     }
 
     static void setFunc(const _iproperty_base* _this, iObject* obj, const iVariant& value) {
-        desttype* _classThis = static_cast<desttype*>(obj);
+        Obj* _classThis = static_cast<Obj*>(obj);
         const iProperty *_typedThis = static_cast<const iProperty *>(_this);
         IX_CHECK_PTR(_typedThis);
         if (!_typedThis->m_setFunc)
@@ -622,12 +592,12 @@ struct iProperty : public _iproperty_base
     psetfunc_t m_setFunc;
 };
 
-template<class desttype, typename ret, typename param>
-_iproperty_base* newProperty(ret (desttype::*get)() const = IX_NULLPTR,
-                        void (desttype::*set)(param) = IX_NULLPTR)
+template<class Obj, typename ret, typename param>
+_iproperty_base* newProperty(ret (Obj::*get)() const = IX_NULLPTR,
+                        void (Obj::*set)(param) = IX_NULLPTR)
 {
     IX_COMPILER_VERIFY((is_same<typename type_wrapper<ret>::TYPE, typename type_wrapper<param>::TYPE>::VALUE));
-    return new iProperty<desttype, ret, param>(get, set);
+    return new iProperty<Obj, ret, param>(get, set);
 }
 
 /**
@@ -650,8 +620,8 @@ public:
     void setObjectName(const iString& name);
     const iString& objectName() const { return m_objName; }
 
-    isignal<iVariant> objectNameChanged;
-    isignal<iObject*> destroyed;
+    iSignal<iVariant> objectNameChanged;
+    iSignal<iObject*> destroyed;
 
     void setParent(iObject *parent);
 
@@ -664,17 +634,17 @@ public:
     iVariant property(const char *name) const;
     bool setProperty(const char *name, const iVariant& value);
 
-    template<class desttype, class param>
-    void observeProperty(const char *name, desttype* pclass, void (desttype::*pmemfun)(param)) {
+    template<class Obj, class param>
+    void observeProperty(const char *name, Obj* obj, void (Obj::*func)(param)) {
         getOrInitProperty();
 
-        std::unordered_map<iString, isignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+        std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
         it = m_propertyNofity.find(iString(name));
         if (it == m_propertyNofity.cend() || !it->second)
             return;
 
-        isignal<iVariant>* singal = it->second;
-        singal->connect(pclass, pmemfun);
+        iSignal<iVariant>* singal = it->second;
+        singal->connect(obj, func);
     }
 
     void disconnectAll();
@@ -686,19 +656,19 @@ public:
     ///   If type is AutoConnection, the member is invoked synchronously if obj lives in the same thread as the caller; otherwise it will invoke the member asynchronously.
     ///
     /// You can pass up to eight arguments (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) to the member function.
-    template<class desttype, class ret_type>
-    static bool invokeMethod(desttype* pclass, ret_type (desttype::*pmemfun)(), ConnectionType type = AutoConnection)
+    template<class Obj, class Ret>
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)();
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)();
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void*) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
+            static void callback (iObject* obj, _iConnection::Function func, void*) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
 
-                (pclass->*pmemtarget)();
+                (tObj->*tFunc)();
             }
 
             static void* cloneArgs(void*) {
@@ -709,233 +679,221 @@ public:
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
         return invokeMethodImpl(conn, IX_NULLPTR, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
-    template<class desttype, class arg1_type, class ret_type>
-    static bool invokeMethod(desttype* pclass, ret_type (desttype::*pmemfun)(arg1_type), typename type_wrapper<arg1_type>::CONSTREFTYPE a1, ConnectionType type = AutoConnection)
+    template<class Obj, class Arg1, class Ret>
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1), typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(arg1_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Arg1);
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type>* t = static_cast<iTuple<arg1_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1>* t = static_cast<iTuple<Arg1>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<arg1_type>(t->template get<0>()));
+                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<arg1_type>* impArgs = static_cast<iTuple<arg1_type>*>(args);
+                iTuple<Arg1>* impArgs = static_cast<iTuple<Arg1>*>(args);
 
-                return new iTuple<arg1_type>(impArgs->template get<0>());
+                return new iTuple<Arg1>(impArgs->template get<0>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<arg1_type>* impArgs = static_cast<iTuple<arg1_type>*>(args);
+                iTuple<Arg1>* impArgs = static_cast<iTuple<Arg1>*>(args);
                 delete impArgs;
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<arg1_type> args(a1);
+        iTuple<Arg1> args(a1);
 
         return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
-    template<class desttype, class arg1_type, class arg2_type, class ret_type>
-    static bool invokeMethod(desttype* pclass, ret_type (desttype::*pmemfun)(arg1_type, arg2_type),
-                             typename type_wrapper<arg1_type>::CONSTREFTYPE a1,
-                             typename type_wrapper<arg2_type>::CONSTREFTYPE a2,
+    template<class Obj, class Arg1, class Arg2, class Ret>
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2),
+                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
+                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(arg1_type, arg2_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Arg1, Arg2);
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type>* t = static_cast<iTuple<arg1_type, arg2_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2>* t = static_cast<iTuple<Arg1, Arg2>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<arg1_type>(t->template get<0>()),
-                                      static_cast<arg2_type>(t->template get<1>()));
+                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
+                                      static_cast<Arg2>(t->template get<1>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<arg1_type, arg2_type>* impArgs = static_cast<iTuple<arg1_type, arg2_type>*>(args);
+                iTuple<Arg1, Arg2>* impArgs = static_cast<iTuple<Arg1, Arg2>*>(args);
 
-                return new iTuple<arg1_type, arg2_type>(impArgs->template get<0>(),
+                return new iTuple<Arg1, Arg2>(impArgs->template get<0>(),
                                                         impArgs->template get<1>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<arg1_type, arg2_type>* impArgs = static_cast<iTuple<arg1_type, arg2_type>*>(args);
+                iTuple<Arg1, Arg2>* impArgs = static_cast<iTuple<Arg1, Arg2>*>(args);
                 delete impArgs;
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<arg1_type, arg2_type> args(a1, a2);
-
+        iTuple<Arg1, Arg2> args(a1, a2);
         return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
-    template<class desttype, class arg1_type, class arg2_type, class arg3_type, class ret_type>
-    static bool invokeMethod(desttype* pclass, ret_type (desttype::*pmemfun)(arg1_type, arg2_type, arg3_type),
-                             typename type_wrapper<arg1_type>::CONSTREFTYPE a1,
-                             typename type_wrapper<arg2_type>::CONSTREFTYPE a2,
-                             typename type_wrapper<arg3_type>::CONSTREFTYPE a3,
+    template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2, Arg3),
+                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
+                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
+                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(arg1_type, arg2_type, arg3_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3);
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<arg1_type>(t->template get<0>()),
-                                      static_cast<arg2_type>(t->template get<1>()),
-                                      static_cast<arg3_type>(t->template get<2>()));
+                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
+                                      static_cast<Arg2>(t->template get<1>()),
+                                      static_cast<Arg3>(t->template get<2>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3>*>(args);
 
-                return new iTuple<arg1_type, arg2_type, arg3_type>(impArgs->template get<0>(),
+                return new iTuple<Arg1, Arg2, Arg3>(impArgs->template get<0>(),
                                                         impArgs->template get<1>(),
                                                         impArgs->template get<2>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3>*>(args);
                 delete impArgs;
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<arg1_type, arg2_type, arg3_type> args(a1, a2, a3);
-
+        iTuple<Arg1, Arg2, Arg3> args(a1, a2, a3);
         return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
-    template<class desttype, class arg1_type, class arg2_type, class arg3_type, class arg4_type, class ret_type>
-    static bool invokeMethod(desttype* pclass,
-                             ret_type (desttype::*pmemfun)(arg1_type, arg2_type, arg3_type, arg4_type),
-                             typename type_wrapper<arg1_type>::CONSTREFTYPE a1,
-                             typename type_wrapper<arg2_type>::CONSTREFTYPE a2,
-                             typename type_wrapper<arg3_type>::CONSTREFTYPE a3,
-                             typename type_wrapper<arg4_type>::CONSTREFTYPE a4,
+    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4),
+                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
+                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
+                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
+                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(arg1_type, arg2_type, arg3_type, arg4_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4);
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<arg1_type>(t->template get<0>()),
-                                      static_cast<arg2_type>(t->template get<1>()),
-                                      static_cast<arg3_type>(t->template get<2>()),
-                                      static_cast<arg4_type>(t->template get<3>()));
+                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
+                                      static_cast<Arg2>(t->template get<1>()),
+                                      static_cast<Arg3>(t->template get<2>()),
+                                      static_cast<Arg4>(t->template get<3>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4>*>(args);
 
-                return new iTuple<arg1_type, arg2_type, arg3_type, arg4_type>(impArgs->template get<0>(),
+                return new iTuple<Arg1, Arg2, Arg3, Arg4>(impArgs->template get<0>(),
                                                         impArgs->template get<1>(),
                                                         impArgs->template get<2>(),
                                                         impArgs->template get<3>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4>*>(args);
                 delete impArgs;
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<arg1_type, arg2_type, arg3_type, arg4_type> args(a1, a2, a3, a4);
-
+        iTuple<Arg1, Arg2, Arg3, Arg4> args(a1, a2, a3, a4);
         return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
-    template<class desttype, class arg1_type, class arg2_type, class arg3_type, class arg4_type,
-             class arg5_type, class ret_type>
-    static bool invokeMethod(desttype* pclass,
-                             ret_type (desttype::*pmemfun)(arg1_type, arg2_type, arg3_type, arg4_type,
-                                                       arg5_type),
-                             typename type_wrapper<arg1_type>::CONSTREFTYPE a1,
-                             typename type_wrapper<arg2_type>::CONSTREFTYPE a2,
-                             typename type_wrapper<arg3_type>::CONSTREFTYPE a3,
-                             typename type_wrapper<arg4_type>::CONSTREFTYPE a4,
-                             typename type_wrapper<arg5_type>::CONSTREFTYPE a5,
+    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
+    static bool invokeMethod(Obj* obj,
+                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5),
+                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
+                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
+                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
+                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
+                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(arg1_type, arg2_type, arg3_type, arg4_type,
-                                             arg5_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5);
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<arg1_type>(t->template get<0>()),
-                                      static_cast<arg2_type>(t->template get<1>()),
-                                      static_cast<arg3_type>(t->template get<2>()),
-                                      static_cast<arg4_type>(t->template get<3>()),
-                                      static_cast<arg5_type>(t->template get<4>()));
+                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
+                                      static_cast<Arg2>(t->template get<1>()),
+                                      static_cast<Arg3>(t->template get<2>()),
+                                      static_cast<Arg4>(t->template get<3>()),
+                                      static_cast<Arg5>(t->template get<4>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                       arg5_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>*>(args);
 
-                return new iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type>(impArgs->template get<0>(),
+                return new iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>(impArgs->template get<0>(),
                                               impArgs->template get<1>(),
                                               impArgs->template get<2>(),
                                               impArgs->template get<3>(),
@@ -943,67 +901,57 @@ public:
             }
 
             static void freeArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                       arg5_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>*>(args);
                 delete impArgs;
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-               arg5_type> args(a1, a2, a3, a4, a5);
-
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> args(a1, a2, a3, a4, a5);
         return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
-    template<class desttype, class arg1_type, class arg2_type, class arg3_type, class arg4_type,
-             class arg5_type, class arg6_type, class ret_type>
-    static bool invokeMethod(desttype* pclass,
-                             ret_type (desttype::*pmemfun)(arg1_type, arg2_type, arg3_type, arg4_type,
-                                                       arg5_type, arg6_type),
-                             typename type_wrapper<arg1_type>::CONSTREFTYPE a1,
-                             typename type_wrapper<arg2_type>::CONSTREFTYPE a2,
-                             typename type_wrapper<arg3_type>::CONSTREFTYPE a3,
-                             typename type_wrapper<arg4_type>::CONSTREFTYPE a4,
-                             typename type_wrapper<arg5_type>::CONSTREFTYPE a5,
-                             typename type_wrapper<arg6_type>::CONSTREFTYPE a6,
+    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
+             class Arg5, class Arg6, class Ret>
+    static bool invokeMethod(Obj* obj,
+                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6),
+                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
+                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
+                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
+                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
+                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
+                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(arg1_type, arg2_type, arg3_type, arg4_type,
-                                             arg5_type, arg6_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<arg1_type>(t->template get<0>()),
-                                      static_cast<arg2_type>(t->template get<1>()),
-                                      static_cast<arg3_type>(t->template get<2>()),
-                                      static_cast<arg4_type>(t->template get<3>()),
-                                      static_cast<arg5_type>(t->template get<4>()),
-                                      static_cast<arg6_type>(t->template get<5>()));
+                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
+                                      static_cast<Arg2>(t->template get<1>()),
+                                      static_cast<Arg3>(t->template get<2>()),
+                                      static_cast<Arg4>(t->template get<3>()),
+                                      static_cast<Arg5>(t->template get<4>()),
+                                      static_cast<Arg6>(t->template get<5>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                       arg5_type, arg6_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>*>(args);
 
-                return new iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type>(impArgs->template get<0>(),
+                return new iTuple<Arg1, Arg2, Arg3, Arg4,
+                        Arg5, Arg6>(impArgs->template get<0>(),
                                               impArgs->template get<1>(),
                                               impArgs->template get<2>(),
                                               impArgs->template get<3>(),
@@ -1012,69 +960,59 @@ public:
             }
 
             static void freeArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                       arg5_type, arg6_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>*>(args);
                 delete impArgs;
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-               arg5_type, arg6_type> args(a1, a2, a3, a4, a5, a6);
-
+        iTuple<Arg1, Arg2, Arg3, Arg4,Arg5, Arg6> args(a1, a2, a3, a4, a5, a6);
         return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
-    template<class desttype, class arg1_type, class arg2_type, class arg3_type, class arg4_type,
-             class arg5_type, class arg6_type, class arg7_type, class ret_type>
-    static bool invokeMethod(desttype* pclass,
-                             ret_type (desttype::*pmemfun)(arg1_type, arg2_type, arg3_type, arg4_type,
-                                                       arg5_type, arg6_type, arg7_type),
-                             typename type_wrapper<arg1_type>::CONSTREFTYPE a1,
-                             typename type_wrapper<arg2_type>::CONSTREFTYPE a2,
-                             typename type_wrapper<arg3_type>::CONSTREFTYPE a3,
-                             typename type_wrapper<arg4_type>::CONSTREFTYPE a4,
-                             typename type_wrapper<arg5_type>::CONSTREFTYPE a5,
-                             typename type_wrapper<arg6_type>::CONSTREFTYPE a6,
-                             typename type_wrapper<arg7_type>::CONSTREFTYPE a7,
+    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
+             class Arg5, class Arg6, class Arg7, class Ret>
+    static bool invokeMethod(Obj* obj,
+                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7),
+                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
+                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
+                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
+                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
+                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
+                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
+                             typename type_wrapper<Arg7>::CONSTREFTYPE a7,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(arg1_type, arg2_type, arg3_type, arg4_type,
-                                             arg5_type, arg6_type, arg7_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type, arg7_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<arg1_type>(t->template get<0>()),
-                                      static_cast<arg2_type>(t->template get<1>()),
-                                      static_cast<arg3_type>(t->template get<2>()),
-                                      static_cast<arg4_type>(t->template get<3>()),
-                                      static_cast<arg5_type>(t->template get<4>()),
-                                      static_cast<arg6_type>(t->template get<5>()),
-                                      static_cast<arg7_type>(t->template get<6>()));
+                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
+                                      static_cast<Arg2>(t->template get<1>()),
+                                      static_cast<Arg3>(t->template get<2>()),
+                                      static_cast<Arg4>(t->template get<3>()),
+                                      static_cast<Arg5>(t->template get<4>()),
+                                      static_cast<Arg6>(t->template get<5>()),
+                                      static_cast<Arg7>(t->template get<6>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                       arg5_type, arg6_type, arg7_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type, arg7_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>*>(args);
 
-                return new iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type>(impArgs->template get<0>(),
+                return new iTuple<Arg1, Arg2, Arg3, Arg4,
+                        Arg5, Arg6, Arg7>(impArgs->template get<0>(),
                                                         impArgs->template get<1>(),
                                                         impArgs->template get<2>(),
                                                         impArgs->template get<3>(),
@@ -1084,71 +1022,61 @@ public:
             }
 
             static void freeArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                       arg5_type, arg6_type, arg7_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type, arg7_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>*>(args);
                 delete impArgs;
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-               arg5_type, arg6_type, arg7_type> args(a1, a2, a3, a4, a5, a6, a7);
-
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> args(a1, a2, a3, a4, a5, a6, a7);
         return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
-    template<class desttype, class arg1_type, class arg2_type, class arg3_type, class arg4_type,
-             class arg5_type, class arg6_type, class arg7_type, class arg8_type, class ret_type>
-    static bool invokeMethod(desttype* pclass,
-                             ret_type (desttype::*pmemfun)(arg1_type, arg2_type, arg3_type, arg4_type,
-                                                       arg5_type, arg6_type, arg7_type, arg8_type),
-                             typename type_wrapper<arg1_type>::CONSTREFTYPE a1,
-                             typename type_wrapper<arg2_type>::CONSTREFTYPE a2,
-                             typename type_wrapper<arg3_type>::CONSTREFTYPE a3,
-                             typename type_wrapper<arg4_type>::CONSTREFTYPE a4,
-                             typename type_wrapper<arg5_type>::CONSTREFTYPE a5,
-                             typename type_wrapper<arg6_type>::CONSTREFTYPE a6,
-                             typename type_wrapper<arg7_type>::CONSTREFTYPE a7,
-                             typename type_wrapper<arg8_type>::CONSTREFTYPE a8,
+    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
+             class Arg5, class Arg6, class Arg7, class Arg8, class Ret>
+    static bool invokeMethod(Obj* obj,
+                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8),
+                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
+                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
+                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
+                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
+                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
+                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
+                             typename type_wrapper<Arg7>::CONSTREFTYPE a7,
+                             typename type_wrapper<Arg8>::CONSTREFTYPE a8,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (desttype::*pmemadaptor_t)();
-        typedef ret_type (desttype::*pmemfunc_t)(arg1_type, arg2_type, arg3_type, arg4_type,
-                                             arg5_type, arg6_type, arg7_type, arg8_type);
+        typedef void (Obj::*FuncAdaptor)();
+        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
 
         struct __invoke_helper {
-            static void callback (iObject* obj, _iconnection::pobjfunc_t func, void* args) {
-                desttype* pclass = static_cast<desttype*>(obj);
-                pmemadaptor_t pfunadaptor = static_cast<pmemadaptor_t>(func);
-                pmemfunc_t pmemtarget = reinterpret_cast<pmemfunc_t>(pfunadaptor);
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>* t =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+            static void callback (iObject* obj, _iConnection::Function func, void* args) {
+                Obj* tObj = static_cast<Obj*>(obj);
+                FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
+                Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (pclass->*pmemtarget)(static_cast<arg1_type>(t->template get<0>()),
-                                      static_cast<arg2_type>(t->template get<1>()),
-                                      static_cast<arg3_type>(t->template get<2>()),
-                                      static_cast<arg4_type>(t->template get<3>()),
-                                      static_cast<arg5_type>(t->template get<4>()),
-                                      static_cast<arg6_type>(t->template get<5>()),
-                                      static_cast<arg7_type>(t->template get<6>()),
-                                      static_cast<arg8_type>(t->template get<7>()));
+                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
+                                      static_cast<Arg2>(t->template get<1>()),
+                                      static_cast<Arg3>(t->template get<2>()),
+                                      static_cast<Arg4>(t->template get<3>()),
+                                      static_cast<Arg5>(t->template get<4>()),
+                                      static_cast<Arg6>(t->template get<5>()),
+                                      static_cast<Arg7>(t->template get<6>()),
+                                      static_cast<Arg8>(t->template get<7>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                       arg5_type, arg6_type, arg7_type, arg8_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                return new iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                        arg5_type, arg6_type, arg7_type, arg8_type>(impArgs->template get<0>(),
+                return new iTuple<Arg1, Arg2, Arg3, Arg4,
+                        Arg5, Arg6, Arg7, Arg8>(impArgs->template get<0>(),
                                                         impArgs->template get<1>(),
                                                         impArgs->template get<2>(),
                                                         impArgs->template get<3>(),
@@ -1159,48 +1087,44 @@ public:
             }
 
             static void freeArgs(void* args) {
-                iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                       arg5_type, arg6_type, arg7_type, arg8_type>* impArgs =
-                        static_cast<iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-                                           arg5_type, arg6_type, arg7_type, arg8_type>*>(args);
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* impArgs =
+                        static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
                 delete impArgs;
             }
         };
 
-        pmemadaptor_t pmemadaptor = reinterpret_cast<pmemadaptor_t>(pmemfun);
-        _iconnection::pobjfunc_t pmemtarget = static_cast<_iconnection::pobjfunc_t>(pmemadaptor);
-        _iconnection conn(pclass, pmemtarget, __invoke_helper::callback, type);
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+        _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<arg1_type, arg2_type, arg3_type, arg4_type,
-               arg5_type, arg6_type, arg7_type, arg8_type> args(a1, a2, a3, a4, a5, a6, a7, a8);
-
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> args(a1, a2, a3, a4, a5, a6, a7, a8);
         return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
 protected:
     virtual const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>& getOrInitProperty();
     void doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propIns,
-                      std::unordered_map<iString, isignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propNotify);
+                      std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propNotify);
 
 
     virtual bool event(iEvent *e);
 
-    std::unordered_map<iString, isignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc> m_propertyNofity;
+    std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc> m_propertyNofity;
 
 private:
-    typedef std::set<_isignalBase*> sender_set;
+    typedef std::set<_iSignalBase*> sender_set;
     typedef sender_set::const_iterator const_iterator;
     typedef std::list<iObject *> iObjectList;
 
-    void signalConnect(_isignalBase* sender);
-    void signalDisconnect(_isignalBase* sender);
+    void signalConnect(_iSignalBase* sender);
+    void signalDisconnect(_iSignalBase* sender);
 
     void setThreadData_helper(iThreadData *currentData, iThreadData *targetData);
     void moveToThread_helper();
 
     void reregisterTimers(void*);
 
-    static bool invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::clone_args_t clone, _isignalBase::free_args_t free);
+    static bool invokeMethodImpl(const _iConnection& c, void* args, _iSignalBase::clone_args_t clone, _iSignalBase::free_args_t free);
 
     iMutex      m_objLock;
     iString     m_objName;
@@ -1225,7 +1149,7 @@ private:
     iObject& operator=(const iObject&);
 
     friend class iThreadData;
-    friend class _isignalBase;
+    friend class _iSignalBase;
     friend class iCoreApplication;
     friend struct isharedpointer::ExternalRefCountData;
 };

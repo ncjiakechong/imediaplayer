@@ -30,20 +30,23 @@ namespace iShell {
 class  iMetaCallEvent : public iEvent
 {
 public:
-    iMetaCallEvent(const iSharedPtr<_iconnection>& conn, const iSharedPtr<void>& arg, iSemaphore* semph = IX_NULLPTR)
-        : iEvent(MetaCall), connection(conn), arguments(arg), semaphore(semph)
-        {}
+    iMetaCallEvent(const iSharedPtr<_iConnection>& conn, const iSharedPtr<void>& arg, iSemaphore* semph = IX_NULLPTR);
+    ~iMetaCallEvent();
 
-    ~iMetaCallEvent()
-    {
-        if (semaphore)
-            semaphore->release();
-    }
-
-    iSharedPtr<_iconnection> connection;
+    iSharedPtr<_iConnection> connection;
     iSharedPtr<void> arguments;
     iSemaphore* semaphore;
 };
+
+iMetaCallEvent::iMetaCallEvent(const iSharedPtr<_iConnection>& conn, const iSharedPtr<void>& arg, iSemaphore* semph)
+    : iEvent(MetaCall), connection(conn), arguments(arg), semaphore(semph)
+    {}
+
+iMetaCallEvent::~iMetaCallEvent()
+{
+    if (semaphore)
+        semaphore->release();
+}
 
 iObject::iObject(iObject *parent)
     : m_threadData(iThreadData::current())
@@ -360,13 +363,13 @@ void iObject::setObjectName(const iString &name)
     objectNameChanged.emits(m_objName);
 }
 
-void iObject::signalConnect(_isignalBase* sender)
+void iObject::signalConnect(_iSignalBase* sender)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
     m_senders.insert(sender);
 }
 
-void iObject::signalDisconnect(_isignalBase* sender)
+void iObject::signalDisconnect(_iSignalBase* sender)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
     m_senders.erase(sender);
@@ -415,7 +418,7 @@ const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKe
 {
     static std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> s_propertys;
 
-    std::unordered_map<iString, isignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propertyNofity = IX_NULLPTR;
+    std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propertyNofity = IX_NULLPTR;
     std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertyIns = IX_NULLPTR;
     if (s_propertys.size() <= 0) {
         propertyIns = &s_propertys;
@@ -433,7 +436,7 @@ const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKe
 }
 
 void iObject::doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propIns,
-                           std::unordered_map<iString, isignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propNotify) {
+                           std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propNotify) {
     if (propIns) {
         propIns->insert(std::pair<iString, iSharedPtr<_iproperty_base>>(
                             "objectName",
@@ -441,7 +444,7 @@ void iObject::doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_b
     }
 
     if (propNotify) {
-        propNotify->insert(std::pair<iString, isignal<iVariant>*>(
+        propNotify->insert(std::pair<iString, iSignal<iVariant>*>(
                                "objectName", &objectNameChanged));
     }
 }
@@ -508,7 +511,7 @@ void iObject::reregisterTimers(void* args)
     delete timerList;
 }
 
-bool iObject::invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::clone_args_t clone, _isignalBase::free_args_t free)
+bool iObject::invokeMethodImpl(const _iConnection& c, void* args, _iSignalBase::clone_args_t clone, _iSignalBase::free_args_t free)
 {
     if (!c.m_pobject)
         return false;
@@ -529,7 +532,7 @@ bool iObject::invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::
                 "receiver is ", receiver->objectName(), "(", receiver, ")");
         }
         iSemaphore semaphore;
-        iSharedPtr<_iconnection> _c(c.clone(), &_iconnection::deref);
+        iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
         iSharedPtr<void> _a(clone(args), free);
         iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
         iCoreApplication::postEvent(receiver, event);
@@ -537,7 +540,7 @@ bool iObject::invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::
         return true;
     }
 
-    iSharedPtr<_iconnection> _c(c.clone(), &_iconnection::deref);
+    iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
     iSharedPtr<void> _a(clone(args), free);
     iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
     iCoreApplication::postEvent(receiver, event);
@@ -545,11 +548,11 @@ bool iObject::invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::
 }
 
 
-_isignalBase::_isignalBase()
+_iSignalBase::_iSignalBase()
 {
 }
 
-_isignalBase::_isignalBase(const _isignalBase& s)
+_iSignalBase::_iSignalBase(const _iSignalBase& s)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::const_iterator it = s.m_connected_slots.begin();
@@ -564,16 +567,16 @@ _isignalBase::_isignalBase(const _isignalBase& s)
     }
 }
 
-_isignalBase::~_isignalBase()
+_iSignalBase::~_iSignalBase()
 {
     disconnectAll();
 }
 
-void _isignalBase::disconnectAll()
+void _iSignalBase::disconnectAll()
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     while (!m_connected_slots.empty()) {
-        _iconnection* conn = m_connected_slots.front();
+        _iConnection* conn = m_connected_slots.front();
         conn->getdest()->signalDisconnect(this);
         conn->setOrphaned();
         conn->deref();
@@ -582,7 +585,7 @@ void _isignalBase::disconnectAll()
     }
 }
 
-void _isignalBase::disconnect(iObject* pclass)
+void _iSignalBase::disconnect(iObject* pclass)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::iterator it = m_connected_slots.begin();
@@ -602,7 +605,7 @@ void _isignalBase::disconnect(iObject* pclass)
     pclass->signalDisconnect(this);
 }
 
-void _isignalBase::slotConnect(_iconnection* conn)
+void _iSignalBase::slotConnect(_iConnection* conn)
 {
     if (!conn || !conn->getdest()) {
         ilog_error("conn | conn->getdest is null!!!");
@@ -614,7 +617,7 @@ void _isignalBase::slotConnect(_iconnection* conn)
     conn->getdest()->signalConnect(this);
 }
 
-void _isignalBase::slotDisconnect(iObject* pslot)
+void _iSignalBase::slotDisconnect(iObject* pslot)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::iterator it = m_connected_slots.begin();
@@ -632,7 +635,7 @@ void _isignalBase::slotDisconnect(iObject* pslot)
     }
 }
 
-void _isignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
+void _iSignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::iterator it = m_connected_slots.begin();
@@ -647,7 +650,7 @@ void _isignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
     }
 }
 
-void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
+void _iSignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
 {
     IX_ASSERT(clone);
     connections_list tmp_connected_slots;
@@ -662,7 +665,7 @@ void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
 
     iThreadData* currentThreadData = iThreadData::current();
     while(!tmp_connected_slots.empty()) {
-        _iconnection* conn = tmp_connected_slots.front();
+        _iConnection* conn = tmp_connected_slots.front();
         tmp_connected_slots.pop_front();
 
         if (!conn->m_pobject) {
@@ -688,7 +691,7 @@ void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
 
             conn->ref();
             iSemaphore semaphore;
-            iSharedPtr<_iconnection> _c(conn, &_iconnection::deref);
+            iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
             iSharedPtr<void> _a(clone(args), free);
             iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
             iCoreApplication::postEvent(receiver, event);
@@ -698,7 +701,7 @@ void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
         }
 
         conn->ref();
-        iSharedPtr<_iconnection> _c(conn, &_iconnection::deref);
+        iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
         iSharedPtr<void> _a(clone(args), free);
         iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
         iCoreApplication::postEvent(receiver, event);
@@ -706,7 +709,7 @@ void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
     }
 }
 
-_iconnection::_iconnection()
+_iConnection::_iConnection()
     : m_orphaned(false)
     , m_ref(1)
     , m_type(AutoConnection)
@@ -716,7 +719,7 @@ _iconnection::_iconnection()
 {
 }
 
-_iconnection::_iconnection(const _iconnection& other)
+_iConnection::_iConnection(const _iConnection& other)
     : m_orphaned(false)
     , m_ref(1)
     , m_type(other.m_type)
@@ -726,7 +729,7 @@ _iconnection::_iconnection(const _iconnection& other)
 {
 }
 
-_iconnection::_iconnection(iObject* obj, void (iObject::*func)(), callback_t cb, ConnectionType type)
+_iConnection::_iConnection(iObject* obj, Function func, Callback cb, ConnectionType type)
     : m_orphaned(false)
     , m_ref(1)
     , m_type(type)
@@ -736,41 +739,41 @@ _iconnection::_iconnection(iObject* obj, void (iObject::*func)(), callback_t cb,
 {
 }
 
-_iconnection::~_iconnection()
+_iConnection::~_iConnection()
 {
 }
 
-void _iconnection::ref()
+void _iConnection::ref()
 {
     if (m_ref <= 0)
-        ilog_warn("_iconnection::ref error: ", m_ref);
+        ilog_warn("_iConnection::ref error: ", m_ref);
 
     ++m_ref;
 }
 
-void _iconnection::deref()
+void _iConnection::deref()
 {
     --m_ref;
     if (0 == m_ref)
         delete this;
 }
 
-void _iconnection::setOrphaned()
+void _iConnection::setOrphaned()
 {
     m_orphaned = true;
 }
 
-_iconnection* _iconnection::clone() const
+_iConnection* _iConnection::clone() const
 {
-    return new _iconnection(*this);
+    return new _iConnection(*this);
 }
 
-_iconnection* _iconnection::duplicate(iObject* newobj) const
+_iConnection* _iConnection::duplicate(iObject* newobj) const
 {
-    return new _iconnection(newobj, m_pfunc, m_emitcb, m_type);
+    return new _iConnection(newobj, m_pfunc, m_emitcb, m_type);
 }
 
-void _iconnection::emits(void* args) const
+void _iConnection::emits(void* args) const
 {
     if (m_orphaned || (IX_NULLPTR == m_emitcb)) {
         return;

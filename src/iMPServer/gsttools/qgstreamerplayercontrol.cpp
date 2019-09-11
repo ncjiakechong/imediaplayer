@@ -57,7 +57,7 @@
 
 namespace iShell {
 
-QGstreamerPlayerControl::QGstreamerPlayerControl(QGstreamerPlayerSession *session, iObject *parent)
+QGstreamerPlayerControl::QGstreamerPlayerControl(iGstreamerPlayerSession *session, iObject *parent)
     : QMediaPlayerControl(parent)
     , m_session(session)
     , m_userRequestedState(QMediaPlayer::StoppedState)

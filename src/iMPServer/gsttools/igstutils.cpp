@@ -29,7 +29,7 @@ static void addTagToMap(const GstTagList *list,
                         const gchar *tag,
                         gpointer user_data)
 {
-    std::multimap<iByteArray, iVariant> *map = reinterpret_cast<std::multimap<iByteArray, iVariant>* >(user_data);
+    std::multimap<iByteArray, iVariant> *map = static_cast<std::multimap<iByteArray, iVariant>* >(user_data);
 
     GValue val;
     val.g_type = 0;

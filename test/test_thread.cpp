@@ -36,7 +36,7 @@ public:
         slot = arg;
     }
 
-    isignal<int> tst_sig_int1;
+    iSignal<int> tst_sig_int1;
 
 public: //test result
     int slot;

@@ -1,86 +1,68 @@
-/****************************************************************************
-**
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
-**
-** This file is part of the Qt Toolkit.
-**
-** $QT_BEGIN_LICENSE:LGPL$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** GNU Lesser General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
-**
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
-**
-** $QT_END_LICENSE$
-**
-****************************************************************************/
-
-#ifndef QGSTREAMERBUSHELPER_P_H
-#define QGSTREAMERBUSHELPER_P_H
+/////////////////////////////////////////////////////////////////
+/// Copyright 2018-2020
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    igstreamerbushelper_p.h
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/////////////////////////////////////////////////////////////////
+#ifndef IGSTREAMERBUSHELPER_P_H
+#define IGSTREAMERBUSHELPER_P_H
 
 //
 //  W A R N I N G
 //  -------------
 //
-// This file is not part of the Qt API. It exists purely as an
+// This file is not part of the API. It exists purely as an
 // implementation detail. This header file may change from version to
 // version without notice, or even be removed.
 //
 // We mean it.
 //
 
+#include <gst/gst.h>
+
 #include <core/kernel/iobject.h>
+#include <core/kernel/ievent.h>
 
 #include "igstreamermessage_p.h"
 
-#include <gst/gst.h>
 
 namespace iShell {
 
-class iGstreamerSyncMessageFilter {
+class iTimer;
+
+//class iGstreamerSyncMessageFilter {
+//public:
+//    virtual ~iGstreamerSyncMessageFilter();
+
+//    //returns true if message was processed and should be dropped, false otherwise
+//    virtual bool processSyncMessage(const iGstreamerMessage &message) = 0;
+//};
+
+//class iGstreamerBusMessageFilter {
+//public:
+//    virtual ~iGstreamerBusMessageFilter();
+
+//    //returns true if message was processed and should be dropped, false otherwise
+//    virtual bool processBusMessage(const iGstreamerMessage &message) = 0;
+//};
+
+class iGstreamerMsgEvent : public iEvent
+{
 public:
-    virtual ~iGstreamerSyncMessageFilter();
+    explicit iGstreamerMsgEvent(GstMessage* message);
+    ~iGstreamerMsgEvent();
 
-    //returns true if message was processed and should be dropped, false otherwise
-    virtual bool processSyncMessage(const iGstreamerMessage &message) = 0;
+    static int eventType();
+
+    iGstreamerMessage m_message;
 };
-
-class iGstreamerBusMessageFilter {
-public:
-    virtual ~iGstreamerBusMessageFilter();
-
-    //returns true if message was processed and should be dropped, false otherwise
-    virtual bool processBusMessage(const iGstreamerMessage &message) = 0;
-};
-
-class iGstreamerBusHelperPrivate;
 
 class iGstreamerBusHelper : public iObject
 {
-    friend class iGstreamerBusHelperPrivate;
-
 public:
     iGstreamerBusHelper(GstBus* bus, iObject* parent = IX_NULLPTR);
     ~iGstreamerBusHelper();
@@ -88,10 +70,27 @@ public:
     void installMessageFilter(iObject *filter);
     void removeMessageFilter(iObject *filter);
 
-    isignal<iGstreamerMessage const&> message;
+    iSignal<iGstreamerMessage const&> message;
 
 private:
-    iGstreamerBusHelperPrivate*   d;
+    GstBus* bus() const { return m_bus; }
+
+    void interval();
+    void processMessage(GstMessage* message);
+    void queueMessage(GstMessage* message);
+
+    void doProcessMessage(const iGstreamerMessage& msg);
+
+    static gboolean busCallback(GstBus *, GstMessage *message, gpointer data);
+    static GstBusSyncReply syncGstBusFilter(GstBus* , GstMessage* message, iGstreamerBusHelper *d);
+
+    guint m_tag;
+    GstBus* m_bus;
+    iTimer*     m_intervalTimer;
+
+    iMutex filterMutex;
+    std::list<iObject*> syncFilters;
+    std::list<iObject*> busFilters;
 };
 
 } // namespace iShell

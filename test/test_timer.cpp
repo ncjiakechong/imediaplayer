@@ -76,7 +76,7 @@ public:
         iCoreApplication::postEvent(iThread::currentThread(), new iEvent(iEvent::Quit));
     }
 
-    isignal<> tst_sig;
+    iSignal<> tst_sig;
 
 private:
     int m_t500;
