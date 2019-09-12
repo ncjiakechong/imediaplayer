@@ -63,7 +63,7 @@ int test_thread(void)
     IX_ASSERT(1 == signal1->slot);
     IX_ASSERT(1 == thread1->slot);
 
-    signal1->tst_sig_int1.disconnect(thread1);
+    signal1->tst_sig_int1.disconnect(thread1, &TestThread::tst_slot_int1_block);
     signal1->tst_sig_int1.connect(thread1, &TestThread::tst_slot_int1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_sig_int1 2 start");
     signal1->tst_sig_int1.emits(2);

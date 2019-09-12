@@ -71,8 +71,8 @@ bool iGstAppSrc::setup(GstElement* appsrc)
 void iGstAppSrc::setStream(iIODevice *stream)
 {
     if (m_stream) {
-        m_stream->readyRead.disconnect(this);
-        m_stream->destroyed.disconnect(this);
+        m_stream->readyRead.disconnect(this, &iGstAppSrc::streamDestroyed);
+        m_stream->destroyed.disconnect(this, &iGstAppSrc::onDataReady);
         m_stream = 0;
     }
 
