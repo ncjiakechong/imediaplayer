@@ -52,6 +52,27 @@ enum LayoutDirection {
     LayoutDirectionAuto
 };
 
+enum DateFormat {
+    TextDate,      // default
+    ISODate,       // ISO 8601
+    SystemLocaleDate, // deprecated
+    LocalDate = SystemLocaleDate, // deprecated
+    LocaleDate,     // deprecated
+    SystemLocaleShortDate,
+    SystemLocaleLongDate,
+    DefaultLocaleShortDate,
+    DefaultLocaleLongDate,
+    RFC2822Date,        // RFC 2822 (+ 850 and 1036 during parsing)
+    ISODateWithMs
+};
+
+enum TimeSpec {
+    LocalTime,
+    UTC,
+    OffsetFromUTC,
+    TimeZone
+};
+
 
 } // namespace iShell
 

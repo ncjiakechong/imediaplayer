@@ -94,12 +94,12 @@ iObject::iObject(const iObject& other)
     setParent(other.m_parent);
 
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
-    const_iterator it = other.m_senders.begin();
-    const_iterator itEnd = other.m_senders.end();
+    sender_map::const_iterator it = other.m_senders.begin();
+    sender_map::const_iterator itEnd = other.m_senders.end();
 
     while(it != itEnd) {
-        (*it)->slotDuplicate(&other, this);
-        m_senders.insert(*it);
+        it->first->slotDuplicate(&other, this);
+        m_senders.insert(std::pair<_iSignalBase*, int>(it->first, it->second));
         ++it;
     }
 }
@@ -363,26 +363,44 @@ void iObject::setObjectName(const iString &name)
     objectNameChanged.emits(m_objName);
 }
 
-void iObject::signalConnect(_iSignalBase* sender)
+int iObject::refSignal(_iSignalBase* sender)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
-    m_senders.insert(sender);
+    sender_map::iterator it = m_senders.find(sender);
+    if (it != m_senders.end()) {
+        it->second++;
+        return it->second;
+    }
+
+    m_senders.insert(std::pair<_iSignalBase*, int>(sender, 1));
+    return 1;
 }
 
-void iObject::signalDisconnect(_iSignalBase* sender)
+int iObject::derefSignal(_iSignalBase* sender)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
-    m_senders.erase(sender);
+    sender_map::iterator it = m_senders.find(sender);
+    if (it == m_senders.end()) {
+        return 0;
+    }
+
+    it->second--;
+    if (0 == it->second) {
+        m_senders.erase(it);
+        return 0;
+    }
+
+    return it->second;
 }
 
 void iObject::disconnectAll()
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
-    const_iterator it = m_senders.begin();
-    const_iterator itEnd = m_senders.end();
+    sender_map::const_iterator it = m_senders.begin();
+    sender_map::const_iterator itEnd = m_senders.end();
 
     while(it != itEnd) {
-        (*it)->slotDisconnect(this);
+        it->first->slotDisconnect(this);
         it = m_senders.erase(it);
     }
 
@@ -559,7 +577,7 @@ _iSignalBase::_iSignalBase(const _iSignalBase& s)
     connections_list::const_iterator itEnd = s.m_connected_slots.end();
 
     while(it != itEnd) {
-        (*it)->m_pobject->signalConnect(this);
+        (*it)->m_pobject->refSignal(this);
         (*it)->ref();
         m_connected_slots.push_back(*it);
 
@@ -577,7 +595,7 @@ void _iSignalBase::disconnectAll()
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     while (!m_connected_slots.empty()) {
         _iConnection* conn = m_connected_slots.front();
-        conn->m_pobject->signalDisconnect(this);
+        conn->m_pobject->derefSignal(this);
         conn->setOrphaned();
         conn->deref();
 
@@ -591,7 +609,6 @@ void _iSignalBase::doDisconnect(iObject* obj, _iConnection::Function func)
     connections_list::iterator it = m_connected_slots.begin();
     connections_list::iterator itEnd = m_connected_slots.end();
 
-    bool blockDisObj = false;
     while(it != itEnd) {
         if (obj != (*it)->m_pobject) {
             ++it;
@@ -602,27 +619,24 @@ void _iSignalBase::doDisconnect(iObject* obj, _iConnection::Function func)
             (*it)->setOrphaned();
             (*it)->deref();
             it = m_connected_slots.erase(it);
-            continue;
+            obj->derefSignal(this);
+            return;
         }
 
-        blockDisObj = true;
         ++it;
     }
-
-    if (!blockDisObj && (IX_NULLPTR != obj))
-        obj->signalDisconnect(this);
 }
 
-void _iSignalBase::slotConnect(_iConnection* conn)
+void _iSignalBase::doConnect(const _iConnection &conn)
 {
-    if ((IX_NULLPTR == conn) || (IX_NULLPTR == conn->m_pobject)) {
+    if ((IX_NULLPTR == conn.m_pobject) || conn.m_pobject->m_wasDeleted) {
         ilog_error("conn | conn->getdest is null!!!");
         return;
     }
 
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-    m_connected_slots.push_back(conn);
-    conn->m_pobject->signalConnect(this);
+    m_connected_slots.push_back(conn.clone());
+    conn.m_pobject->refSignal(this);
 }
 
 void _iSignalBase::slotDisconnect(iObject* pslot)

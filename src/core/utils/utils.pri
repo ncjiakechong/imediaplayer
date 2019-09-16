@@ -10,6 +10,7 @@ SOURCES += \
     $$PWD/ibytearray.cpp \
     $$PWD/ibytearraymatcher.cpp \
     $$PWD/ichar.cpp \
+    $$PWD/idatetime.cpp \
     $$PWD/ifreelist.cpp \
     $$PWD/ihashfunctions.cpp \
     $$PWD/ilocale.cpp \
@@ -56,4 +57,5 @@ HEADERS += \
     ../../include/core/utils/ilocale.h \
     ../../include/core/utils/ibitarray.h \
     ../../include/core/utils/icache.h \
-    ../../include/core/utils/ihashfunctions.h
+    ../../include/core/utils/ihashfunctions.h \
+    ../../include/core/utils/idatetime.h

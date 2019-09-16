@@ -13,6 +13,7 @@
 
 #include "core/io/ilog.h"
 #include "core/utils/istring.h"
+#include "core/utils/idatetime.h"
 
 namespace iShell {
 
@@ -30,7 +31,10 @@ static void ilog_default_callback(void*, const char* tag, ilog_level_t level, co
         cur_level = log_level_arr[level];
     }
 
-    iString log_buf = iString::asprintf("%s:%c %s", tag, cur_level, msg);
+    iTime current = iDateTime::currentDateTimeUtc().time();
+    iString log_buf = iString::asprintf("%02d:%02d:%02d:%03d %s:%c %s",
+                                        current.hour(), current.minute(), current.second(), current.msec(),
+                                        tag, cur_level, msg);
     fprintf(stdout, "%s\n", log_buf.toUtf8().data());
     fflush(stdout);
 }
