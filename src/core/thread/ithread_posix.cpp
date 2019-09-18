@@ -18,6 +18,13 @@
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 
+#ifdef IX_OS_WIN
+#include <windows.h>
+#else
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
+
 #define ILOG_TAG "ix:core"
 
 namespace iShell {
@@ -63,7 +70,7 @@ void iThreadImpl::setPriority()
     sched_param param;
 
     iThread::Priority priority = m_thread->m_priority;
-    if (pthread_getschedparam((pthread_t)m_thread->m_data->threadId.value(), &sched_policy, &param) != 0) {
+    if (pthread_getschedparam((pthread_t)m_thread->m_data->threadHd.value(), &sched_policy, &param) != 0) {
         // failed to get the scheduling policy, don't bother setting
         // the priority
         ilog_warn("iThread::setPriority: Cannot get scheduler parameters");
@@ -79,14 +86,14 @@ void iThreadImpl::setPriority()
     }
 
     param.sched_priority = prio;
-    int status = pthread_setschedparam((pthread_t)m_thread->m_data->threadId.value(), sched_policy, &param);
+    int status = pthread_setschedparam((pthread_t)m_thread->m_data->threadHd.value(), sched_policy, &param);
 
     // were we trying to set to idle priority and failed?
     if (status == -1 && sched_policy == SCHED_IDLE && errno == EINVAL) {
         // reset to lowest priority possible
-        pthread_getschedparam((pthread_t)m_thread->m_data->threadId.value(), &sched_policy, &param);
+        pthread_getschedparam((pthread_t)m_thread->m_data->threadHd.value(), &sched_policy, &param);
         param.sched_priority = sched_get_priority_min(sched_policy);
-        pthread_setschedparam((pthread_t)m_thread->m_data->threadId.value(), sched_policy, &param);
+        pthread_setschedparam((pthread_t)m_thread->m_data->threadHd.value(), sched_policy, &param);
     }
 }
 
@@ -98,7 +105,7 @@ void iThreadImpl::internalThreadFunc()
 
     {
         iMutex::ScopedLock locker(thread->m_mutex);
-        data->threadId = iThread::currentThreadId();
+        data->threadHd = iThread::currentThreadHd();
         data->setCurrent();
         data->ref();
     }
@@ -199,16 +206,16 @@ bool iThreadImpl::start()
         }
     }
 
-    pthread_t threadId;
-    int code = pthread_create(&threadId, &attr, __internal_thread_func, this);
+    pthread_t threadHd;
+    int code = pthread_create(&threadHd, &attr, __internal_thread_func, this);
     if (code == EPERM) {
         // caller does not have permission to set the scheduling
         // parameters/policy
         pthread_attr_setinheritsched(&attr, PTHREAD_INHERIT_SCHED);
-        code = pthread_create(&threadId, &attr, __internal_thread_func, this);
+        code = pthread_create(&threadHd, &attr, __internal_thread_func, this);
     }
 
-    m_thread->m_data->threadId = (xintptr)threadId;
+    m_thread->m_data->threadHd = (xintptr)threadHd;
     pthread_attr_destroy(&attr);
 
     return ((0 == code) ? true : false);
@@ -224,9 +231,18 @@ void iThread::msleep(unsigned long t)
     nanosleep(&ts, IX_NULLPTR);
 }
 
-xintptr iThread::currentThreadId()
+xintptr iThread::currentThreadHd()
 {
     return (xintptr)pthread_self();
+}
+
+int iThread::currentThreadId()
+{
+#ifdef IX_OS_WIN
+    return (int)GetCurrentThreadId();
+#else
+    return (int)syscall(__NR_gettid);
+#endif
 }
 
 void iThread::yieldCurrentThread()

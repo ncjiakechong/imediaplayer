@@ -12,9 +12,9 @@
 #include <climits>
 #include <cstring>
 #include <cstdlib>
-#include <stdio.h>
+#include <cstdio>
 #include <cstdarg>
-#include <wchar.h>
+#include <cwchar>
 
 #include "core/utils/istring.h"
 #include "core/utils/iregexp.h"

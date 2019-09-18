@@ -89,7 +89,7 @@ iThreadData* iThreadData::current(bool createIfNecessary)
         data = new iThreadData;
         set_thread_data(data);
         data->thread = new iAdoptedThread(data);
-        data->threadId = iThread::currentThreadId();
+        data->threadHd = iThread::currentThreadHd();
     }
 
     return data;
@@ -199,9 +199,9 @@ iThread::~iThread()
     m_data->deref();
 }
 
-xintptr iThread::threadId() const
+xintptr iThread::threadHd() const
 {
-    return m_data->threadId;
+    return m_data->threadHd;
 }
 
 void iThread::setPriority(Priority priority)
@@ -294,7 +294,7 @@ void iThread::start(Priority pri)
         ilog_warn("iThread::start: Thread creation error");
         m_running = false;
         m_finished = false;
-        m_data->threadId = (xintptr)IX_NULLPTR;
+        m_data->threadHd = (xintptr)IX_NULLPTR;
     }
 }
 

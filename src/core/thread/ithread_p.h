@@ -59,7 +59,7 @@ public:
     bool                            requiresCoreApplication;
 
     std::list<iPostEvent>           postEventList;
-    iAtomicCounter<xintptr>        threadId;
+    iAtomicCounter<xintptr>        threadHd;
     iAtomicPointer<iThread>         thread;
     iAtomicPointer<iEventDispatcher> dispatcher;
     iAtomicPointer<iEventLoop>      eventLoop;

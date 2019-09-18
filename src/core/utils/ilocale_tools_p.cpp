@@ -9,13 +9,12 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <ctype.h>
-#include <errno.h>
-#include <float.h>
+#include <cerrno>
+#include <cfloat>
 #include <climits>
 #include <cmath>
 #include <cstdlib>
-#include <time.h>
+#include <ctime>
 
 #include "utils/ilocale_tools_p.h"
 #include "global/inumeric_p.h"

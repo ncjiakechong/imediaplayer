@@ -19,9 +19,11 @@
 
 #ifdef IX_OS_WIN
 #include "thread/ieventdispatcher_generic.h"
-#else
+#elif defined(IX_OS_UNIX)
 #include "thread/ieventdispatcher_generic.h"
 #include "thread/ieventdispatcher_glib.h"
+#else
+#error "What system is this?"
 #endif
 
 #define ILOG_TAG "ix:core"
@@ -40,8 +42,10 @@ iEventDispatcher* iCoreApplicationPrivate::createEventDispatcher() const
 
     #ifdef IX_OS_WIN
     dispatcher = new iEventDispatcher_generic();
-    #else
+    #elif defined(IX_OS_UNIX)
     dispatcher = new iEventDispatcher_Glib();
+    #else
+    #error "What system is this?"
     #endif
 
     return dispatcher;

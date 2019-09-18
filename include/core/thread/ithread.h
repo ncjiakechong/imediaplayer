@@ -26,7 +26,8 @@ class iEventDispatcher;
 class iThread : public iObject
 {
 public:
-    static xintptr currentThreadId();
+    static int currentThreadId();
+    static xintptr currentThreadHd();
     static iThread* currentThread();
     static void yieldCurrentThread();
     static iThreadData* get2(iThread *thread)
@@ -68,7 +69,7 @@ public:
     // default argument causes thread to block indefinetely
     bool wait(long time = -1);
 
-    xintptr threadId() const;
+    xintptr threadHd() const;
 
     iEventDispatcher* eventDispatcher() const;
 

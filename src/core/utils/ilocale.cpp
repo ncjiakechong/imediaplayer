@@ -2643,12 +2643,12 @@ bool iLocaleData::validateChars(iStringView str, NumberMode numMode, iByteArray 
                         // If a double has more than one decimal point, it shall be Invalid.
                         if (++decPointCnt > 1)
                             return false;
-#if 0
+                        #if 0
                         // If a double with no decimal digits has a decimal point, it shall be
                         // Invalid.
                         if (decDigits == 0)
                             return false;
-#endif                  // On second thoughts, it shall be Valid.
+                        #endif // On second thoughts, it shall be Valid.
 
                         dec = true;
                     }

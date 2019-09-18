@@ -9,7 +9,6 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <ctype.h>
 #include <climits>
 #include <cstring>
 #include <cstdlib>

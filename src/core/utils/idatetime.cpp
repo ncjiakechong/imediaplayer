@@ -10,11 +10,12 @@
 /////////////////////////////////////////////////////////////////
 
 #include <cmath>
-#include <time.h>
+#include <ctime>
 
 #include "core/utils/idatetime.h"
 
 #if defined (IX_OS_WIN)
+#include <windows.h>
 #include <locale.h>
 #elif defined(IX_OS_UNIX)
 #include <sys/time.h>
@@ -1263,14 +1264,28 @@ typedef iDateTimePrivate::iDateTimeData iDateTimeData;
 // Relies on tzset, mktime, or localtime having been called to populate timezone
 static int ix_timezone()
 {
+#if defined (_MSC_VER)
+    long offset;
+    _get_timezone(&offset);
+    return offset;
+#else
     return timezone;
+#endif
 }
 
 // Returns the tzname, assume tzset has been called already
 static iString ix_tzname(iDateTimePrivate::DaylightStatus daylightStatus)
 {
     int isDst = (daylightStatus == iDateTimePrivate::DaylightTime) ? 1 : 0;
+#if defined (_MSC_VER)
+    size_t s = 0;
+    char name[512];
+    if (_get_tzname(&s, name, 512, isDst))
+        return iString();
+    return iString::fromLocal8Bit(name);
+#else
     return iString::fromLocal8Bit(tzname[isDst]);
+#endif
 
 }
 
@@ -1369,10 +1384,15 @@ static bool ix_localtime(xint64 msecsSinceEpoch, iDate *localDate, iTime *localT
     // tzset();
     // Use the reentrant version of localtime() where available
     // as is thread-safe and doesn't use a shared static data area
+#if defined (_MSC_VER)
+    if (!_localtime64_s(&local, &secsSinceEpoch))
+        valid = true;
+#else
     tm *res = IX_NULLPTR;
     res = localtime_r(&secsSinceEpoch, &local);
     if (res)
         valid = true;
+#endif
 
     if (valid) {
         *localDate = iDate(local.tm_year + 1900, local.tm_mon + 1, local.tm_mday);
@@ -1560,7 +1580,6 @@ static xint64 localMSecsToEpochMSecs(xint64 localMsecs,
         if (localTime)
             *localTime = tm;
         return utcMsecs;
-
     }
 }
 
@@ -1728,6 +1747,7 @@ static void setTimeSpec(iDateTimeData &d, iShell::TimeSpec spec, int offsetSecon
     case iShell::TimeZone:
         // Use system time zone instead
         spec = iShell::LocalTime;
+        IX_FALLTHROUGH();
     case iShell::UTC:
     case iShell::LocalTime:
         offsetSeconds = 0;
