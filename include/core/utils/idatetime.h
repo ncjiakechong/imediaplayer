@@ -15,6 +15,7 @@
 
 #include <core/utils/istring.h>
 #include <core/utils/ishareddata.h>
+#include <core/global/iprocessordetection.h>
 
 namespace iShell {
 
@@ -127,9 +128,16 @@ class iDateTime
 {
     //revisit the optimization
     struct ShortData {
+        #if IX_BYTE_ORDER == IX_LITTLE_ENDIAN
         xuintptr status : 8;
+        #endif
+
         // note: this is only 24 bits on 32-bit systems...
         xintptr msecs : sizeof(void *) * 8 - 8;
+
+        #if IX_BYTE_ORDER == IX_BIG_ENDIAN
+        xuintptr status : 8;
+        #endif
     };
 
     union Data {
