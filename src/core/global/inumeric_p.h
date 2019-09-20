@@ -32,15 +32,15 @@ namespace iShell {
 
 namespace inumeric_std_wrapper {
 
-static inline bool isnan(double d) { return std::isnan(d); }
-static inline bool isinf(double d) { return std::isinf(d); }
-static inline bool isfinite(double d) { return std::isfinite(d); }
-static inline bool isnan(float f) { return std::isnan(f); }
-static inline bool isinf(float f) { return std::isinf(f); }
-static inline bool isfinite(float f) { return std::isfinite(f); }
+inline bool isnan(double d) { return std::isnan(d); }
+inline bool isinf(double d) { return std::isinf(d); }
+inline bool isfinite(double d) { return std::isfinite(d); }
+inline bool isnan(float f) { return std::isnan(f); }
+inline bool isinf(float f) { return std::isinf(f); }
+inline bool isfinite(float f) { return std::isfinite(f); }
 }
 
-static inline double ix_inf()
+inline double ix_inf()
 {
     // platform has no definition for infinity for type double
     IX_COMPILER_VERIFY(std::numeric_limits<double>::has_infinity);
@@ -48,7 +48,7 @@ static inline double ix_inf()
 }
 
 // Signaling NaN
-static inline double ix_snan()
+inline double ix_snan()
 {
     // platform has no definition for signaling NaN for type double
     IX_COMPILER_VERIFY(std::numeric_limits<double>::has_signaling_NaN);
@@ -56,39 +56,39 @@ static inline double ix_snan()
 }
 
 // Quiet NaN
-static inline double ix_qnan()
+inline double ix_qnan()
 {
     // platform has no definition for quiet NaN for type double
     IX_COMPILER_VERIFY(std::numeric_limits<double>::has_quiet_NaN);
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-static inline bool ix_is_inf(double d)
+inline bool ix_is_inf(double d)
 {
     return inumeric_std_wrapper::isinf(d);
 }
 
-static inline bool ix_is_nan(double d)
+inline bool ix_is_nan(double d)
 {
     return inumeric_std_wrapper::isnan(d);
 }
 
-static inline bool ix_is_finite(double d)
+inline bool ix_is_finite(double d)
 {
     return inumeric_std_wrapper::isfinite(d);
 }
 
-static inline bool ix_is_inf(float f)
+inline bool ix_is_inf(float f)
 {
     return inumeric_std_wrapper::isinf(f);
 }
 
-static inline bool ix_is_nan(float f)
+inline bool ix_is_nan(float f)
 {
     return inumeric_std_wrapper::isnan(f);
 }
 
-static inline bool ix_is_finite(float f)
+inline bool ix_is_finite(float f)
 {
     return inumeric_std_wrapper::isfinite(f);
 }
@@ -103,7 +103,8 @@ static inline bool ix_is_finite(float f)
     This function works for v containing infinities, but not NaN. It's the
     caller's responsibility to exclude that possibility before calling it.
 */
-template <typename T> static inline bool iConvertDoubleTo(double v, T *value)
+template <typename T>
+inline bool iConvertDoubleTo(double v, T *value)
 {
     IX_COMPILER_VERIFY(std::numeric_limits<T>::is_integer);
 
@@ -144,7 +145,8 @@ template <typename T> static inline bool iConvertDoubleTo(double v, T *value)
 // size_t. Implementations for 8- and 16-bit types will work but may not be as
 // efficient. Implementations for 64-bit may be missing on 32-bit platforms.
 // Generic implementations
-template <typename T> inline typename std::enable_if<std::is_unsigned<T>::value, bool>::type
+template <typename T>
+inline typename std::enable_if<std::is_unsigned<T>::value, bool>::type
 add_overflow(T v1, T v2, T *r)
 {
     // unsigned additions are well-defined
@@ -152,7 +154,8 @@ add_overflow(T v1, T v2, T *r)
     return v1 > T(v1 + v2);
 }
 
-template <typename T> inline typename std::enable_if<std::is_signed<T>::value, bool>::type
+template <typename T>
+inline typename std::enable_if<std::is_signed<T>::value, bool>::type
 add_overflow(T v1, T v2, T *r)
 {
     // Here's how we calculate the overflow:
@@ -184,7 +187,8 @@ add_overflow(T v1, T v2, T *r)
     // also: return s1 == s2 && s1 != sr;
 }
 
-template <typename T> inline typename std::enable_if<std::is_unsigned<T>::value, bool>::type
+template <typename T>
+inline typename std::enable_if<std::is_unsigned<T>::value, bool>::type
 sub_overflow(T v1, T v2, T *r)
 {
     // unsigned subtractions are well-defined
@@ -192,7 +196,8 @@ sub_overflow(T v1, T v2, T *r)
     return v1 < v2;
 }
 
-template <typename T> inline typename std::enable_if<std::is_signed<T>::value, bool>::type
+template <typename T>
+inline typename std::enable_if<std::is_signed<T>::value, bool>::type
 sub_overflow(T v1, T v2, T *r)
 {
     // See above for explanation. This is the same with some signs reversed.
@@ -212,8 +217,8 @@ sub_overflow(T v1, T v2, T *r)
     // also: return s1 == s2 && s1 != sr;
 }
 
-template <typename T> inline
-typename std::enable_if<std::is_unsigned<T>::value || std::is_signed<T>::value, bool>::type
+template <typename T>
+inline typename std::enable_if<std::is_unsigned<T>::value || std::is_signed<T>::value, bool>::type
 mul_overflow(T v1, T v2, T *r)
 {
     // use the next biggest type
