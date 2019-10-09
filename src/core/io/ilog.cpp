@@ -12,7 +12,6 @@
 #include <cstring>
 
 #include "core/io/ilog.h"
-#include "core/utils/istring.h"
 #include "core/utils/idatetime.h"
 #include "core/thread/ithread.h"
 
@@ -158,44 +157,9 @@ void iLogger::append(double value)
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(const char* value)
+void iLogger::append(const iChar& value)
 {
-    append(iString::fromUtf8(value));
-}
-
-void iLogger::append(const wchar_t* value)
-{
-    append(iString::fromWCharArray(value));
-}
-
-void iLogger::append(const char16_t* value)
-{
-    append(iString::fromUtf16(value));
-}
-
-void iLogger::append(const char32_t* value)
-{
-    append(iString::fromUcs4(value));
-}
-
-void iLogger::append(const std::string& value)
-{
-    append(iString::fromStdString(value));
-}
-
-void iLogger::append(const std::wstring& value)
-{
-    append(iString::fromStdWString(value));
-}
-
-void iLogger::append(const std::u16string& value)
-{
-    append(iString::fromStdU16String(value));
-}
-
-void iLogger::append(const std::u32string& value)
-{
-    append(iString::fromStdU32String(value));
+    m_buff += value;
 }
 
 void iLogger::append(const iString& value)
@@ -206,6 +170,162 @@ void iLogger::append(const iString& value)
 void iLogger::append(const void* value)
 {
     m_buff += iString::asprintf("%p", value);
+}
+
+iLogger& operator<<(iLogger& logger, bool value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, xint8 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, xuint8 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, xint16 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, xuint16 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, xint32 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, xuint32 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, xint64 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, xuint64 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, iHexUInt8 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, iHexUInt16 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, iHexUInt32 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, iHexUInt64 value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, float value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, double value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const iChar& value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const char* value)
+{
+    logger.append(iString::fromUtf8(value));
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const wchar_t* value)
+{
+    logger.append(iString::fromWCharArray(value));
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const char16_t* value)
+{
+    logger.append(iString::fromUtf16(value));
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const char32_t* value)
+{
+    logger.append(iString::fromUcs4(value));
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const std::string& value)
+{
+    logger.append(iString::fromStdString(value));
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const std::wstring& value)
+{
+    logger.append(iString::fromStdWString(value));
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const std::u16string& value)
+{
+    logger.append(iString::fromStdU16String(value));
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const std::u32string& value)
+{
+    logger.append(iString::fromStdU32String(value));
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const iString& value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const void* value)
+{
+    logger.append(value);
+    return logger;
 }
 
 } // namespace iShell

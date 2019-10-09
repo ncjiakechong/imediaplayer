@@ -117,29 +117,8 @@ class iLogger{
     // for float64_t
     void append(double value);
 
-    // specialization for const char*
-    void append(const char* value);
-
-    // specialization for const wchar_t*
-    void append(const wchar_t* value);
-
-    // specialization for const char16_t*
-    void append(const char16_t* value);
-
-    // specialization for const char32_t*
-    void append(const char32_t* value);
-
-    // specialization for const std::string
-    void append(const std::string& value);
-
-    // specialization for const std::wstring
-    void append(const std::wstring& value);
-
-    // specialization for const std::u16string
-    void append(const std::u16string &s);
-
-    // specialization for const std::u32string
-    void append(const std::u32string &s);
+    // for iChar
+    void append(const iChar& value);
 
     // for iString
     void append(const iString& value);
@@ -147,46 +126,39 @@ class iLogger{
     // for pointer types
     void append(const void* value);
 
-    // Template to print unknown pointer types with their address
-    template<typename T>
-    void append(T* value) {
-        append(static_cast<const void*>(value));
-    }
-
-    // Template to print unknown types
-    template<typename T>
-    void append(T) {
-        append("(UNKOWN)");
-    }
-
-#ifdef IX_HAVE_CXX11
-    // Template parameter pack to generate recursive code
-    void append(void) {}
-    template<typename T, typename... TArgs>
-    void append(T value, TArgs... args) {
-        this->append(value);
-        this->append(args...);
-    }
-#endif
-
  private:
     const char* m_tags;
     ilog_level_t m_level;
     iString m_buff;
 };
 
-#ifdef IX_HAVE_CXX11
-template<typename T, typename... TArgs>
-void iLogMeta(const char* tag, ilog_level_t level, T value, TArgs... args) {
-    iLogger logger;
-    if (!logger.start(tag, level))
-        return;
+iLogger& operator<<(iLogger&, bool);
+iLogger& operator<<(iLogger&, xint8);
+iLogger& operator<<(iLogger&, xuint8);
+iLogger& operator<<(iLogger&, xint16);
+iLogger& operator<<(iLogger&, xuint16);
+iLogger& operator<<(iLogger&, xint32);
+iLogger& operator<<(iLogger&, xuint32);
+iLogger& operator<<(iLogger&, xint64);
+iLogger& operator<<(iLogger&, xuint64);
+iLogger& operator<<(iLogger&, iHexUInt8);
+iLogger& operator<<(iLogger&, iHexUInt16);
+iLogger& operator<<(iLogger&, iHexUInt32);
+iLogger& operator<<(iLogger&, iHexUInt64);
+iLogger& operator<<(iLogger&, float);
+iLogger& operator<<(iLogger&, double);
+iLogger& operator<<(iLogger&, const iChar&);
+iLogger& operator<<(iLogger&, const char*);
+iLogger& operator<<(iLogger&, const wchar_t*);
+iLogger& operator<<(iLogger&, const char16_t*);
+iLogger& operator<<(iLogger&, const char32_t*);
+iLogger& operator<<(iLogger&, const std::string&);
+iLogger& operator<<(iLogger&, const std::wstring&);
+iLogger& operator<<(iLogger&, const std::u16string&);
+iLogger& operator<<(iLogger&, const std::u32string&);
+iLogger& operator<<(iLogger&, const iString&);
+iLogger& operator<<(iLogger&, const void*);
 
-    logger.append(value);
-    logger.append(args...);
-    logger.end();
-}
-#else
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,
          typename T13, typename T14, typename T15, typename T16, typename T17, typename T18>
@@ -197,24 +169,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
-    logger.append(value11);
-    logger.append(value12);
-    logger.append(value13);
-    logger.append(value14);
-    logger.append(value15);
-    logger.append(value16);
-    logger.append(value17);
-    logger.append(value18);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9
+           << value10 << value11 << value12 << value13 << value14 << value15 << value16 << value17 << value18;
     logger.end();
 }
 
@@ -228,23 +184,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
-    logger.append(value11);
-    logger.append(value12);
-    logger.append(value13);
-    logger.append(value14);
-    logger.append(value15);
-    logger.append(value16);
-    logger.append(value17);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9
+           << value10 << value11 << value12 << value13 << value14 << value15 << value16 << value17;
     logger.end();
 }
 
@@ -258,22 +199,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
-    logger.append(value11);
-    logger.append(value12);
-    logger.append(value13);
-    logger.append(value14);
-    logger.append(value15);
-    logger.append(value16);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9
+           << value10 << value11 << value12 << value13 << value14 << value15 << value16;
     logger.end();
 }
 
@@ -287,21 +214,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
-    logger.append(value11);
-    logger.append(value12);
-    logger.append(value13);
-    logger.append(value14);
-    logger.append(value15);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9
+           << value10 << value11 << value12 << value13 << value14 << value15;
     logger.end();
 }
 
@@ -315,20 +229,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
-    logger.append(value11);
-    logger.append(value12);
-    logger.append(value13);
-    logger.append(value14);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9
+           << value10 << value11 << value12 << value13 << value14;
     logger.end();
 }
 
@@ -342,19 +244,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
-    logger.append(value11);
-    logger.append(value12);
-    logger.append(value13);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9
+           << value10 << value11 << value12 << value13;
     logger.end();
 }
 
@@ -367,18 +258,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
-    logger.append(value11);
-    logger.append(value12);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9
+           << value10 << value11 << value12;
     logger.end();
 }
 
@@ -390,17 +271,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
-    logger.append(value11);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9
+           << value10 << value11;
     logger.end();
 }
 
@@ -412,16 +284,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
-    logger.append(value10);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9 << value10;
     logger.end();
 }
 
@@ -433,15 +296,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
-    logger.append(value9);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8 << value9;
     logger.end();
 }
 
@@ -453,14 +308,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
-    logger.append(value8);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7 << value8;
     logger.end();
 }
 
@@ -472,13 +320,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
-    logger.append(value7);
+    logger << value1 << value2 << value3 << value4 << value5 << value6 << value7;
     logger.end();
 }
 
@@ -489,12 +331,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
-    logger.append(value6);
+    logger << value1 << value2 << value3 << value4 << value5 << value6;
     logger.end();
 }
 
@@ -505,11 +342,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
-    logger.append(value5);
+    logger << value1 << value2 << value3 << value4 << value5;
     logger.end();
 }
 
@@ -519,10 +352,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
-    logger.append(value4);
+    logger << value1 << value2 << value3 << value4;
     logger.end();
 }
 
@@ -532,9 +362,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2, T3 valu
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
-    logger.append(value3);
+    logger << value1 << value2 << value3;
     logger.end();
 }
 
@@ -544,8 +372,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1, T2 value2) {
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
-    logger.append(value2);
+    logger << value1 << value2;
     logger.end();
 }
 
@@ -555,10 +382,9 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1) {
     if (!logger.start(tag, level))
         return;
 
-    logger.append(value1);
+    logger << value1;
     logger.end();
 }
-#endif
 
 /* ISO varargs available */
 #define ilog_verbose(...) iLogMeta(ILOG_TAG, ILOG_VERBOSE, ##__VA_ARGS__)

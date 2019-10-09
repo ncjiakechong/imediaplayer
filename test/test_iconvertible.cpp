@@ -67,7 +67,7 @@ int test_iconvertible(void)
     ilog_debug("hex16 ", iHexUInt16(0xefef));
     ilog_debug("hex32 ", iHexUInt32(0xefefefef));
     ilog_debug("hex64 ", iHexUInt64(0xefefefefefefefef));
-    ilog_debug("struct A ", a);
+    ilog_debug("struct A ", &a);
 
     ilog_debug("struct b to a");
     foo(b,a);
