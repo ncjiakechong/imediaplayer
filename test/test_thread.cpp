@@ -23,6 +23,7 @@ using namespace iShell;
 
 class TestThread : public iObject
 {
+    IX_OBJECT(TestThread)
 public:
     TestThread(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 

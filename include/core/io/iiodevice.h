@@ -22,6 +22,7 @@ class iIODevicePrivate;
 
 class iIODevice : public iObject
 {
+    IX_OBJECT(iIODevice)
 public:
     enum OpenModeFlag {
         NotOpen = 0x0000,

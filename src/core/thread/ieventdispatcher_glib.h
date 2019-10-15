@@ -24,6 +24,7 @@ struct iEventSourceWraper;
 
 class iEventDispatcher_Glib : public iEventDispatcher
 {
+    IX_OBJECT(iEventDispatcher_Glib)
 public:
     explicit iEventDispatcher_Glib(iObject *parent = IX_NULLPTR);
     ~iEventDispatcher_Glib();

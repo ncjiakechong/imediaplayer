@@ -18,6 +18,7 @@ namespace iShell {
 
 class iEventLoop : public iObject
 {
+    IX_OBJECT(iEventLoop)
 public:
     iEventLoop(iObject* parent = IX_NULLPTR);
     virtual ~iEventLoop();

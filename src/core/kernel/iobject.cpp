@@ -48,6 +48,46 @@ iMetaCallEvent::~iMetaCallEvent()
         semaphore->release();
 }
 
+iMetaObject::iMetaObject(const iMetaObject* supper)
+    : m_initProperty(false)
+    , m_superdata(supper)
+{
+}
+
+bool iMetaObject::inherits(const iMetaObject *metaObject) const
+{
+    const iMetaObject *m = this;
+    do {
+        if (metaObject == m)
+            return true;
+    } while ((m = m->m_superdata));
+    return false;
+}
+
+iObject* iMetaObject::cast(iObject *obj) const
+{
+    return const_cast<iObject*>(cast(const_cast<const iObject*>(obj)));
+}
+
+const iObject* iMetaObject::cast(const iObject *obj) const
+{
+    return (obj && obj->metaObject()->inherits(this)) ? obj : IX_NULLPTR;
+}
+
+void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>& ppt)
+{
+    m_initProperty = true;
+    m_property = ppt;
+}
+
+const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* iMetaObject::property() const
+{
+    if (!m_initProperty)
+        return IX_NULLPTR;
+
+    return &m_property;
+}
+
 iObject::iObject(iObject *parent)
     : m_threadData(iThreadData::current())
     , m_parent(IX_NULLPTR)
@@ -407,63 +447,82 @@ void iObject::disconnectAll()
     m_senders.clear();
 }
 
+const iMetaObject* iObject::metaObject() const
+{
+    static iMetaObject staticMetaObject = iMetaObject(IX_NULLPTR);
+    return &staticMetaObject;
+}
+
 iVariant iObject::property(const char *name) const
 {
-    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-    const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>& propertys = const_cast<iObject*>(this)->getOrInitProperty();
+    const_cast<iObject*>(this)->initProperty();
+    const iMetaObject* mo = metaObject();
 
-    it = propertys.find(iString(name));
-    if (it == propertys.cend())
-        return iVariant();
+    do {
+        std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+        const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
+        if (!propertys)
+            continue;
 
-    return it->second->get(it->second.data(), this);
+        it = propertys->find(iString(name));
+        if (it != propertys->cend())
+            return it->second->get(it->second.data(), this);
+    } while ((mo = mo->superClass()));
+
+    return iVariant();
 }
 
 bool iObject::setProperty(const char *name, const iVariant& value)
 {
-    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-    const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>& propertys = getOrInitProperty();
+    initProperty();
+    const iMetaObject* mo = metaObject();
 
-    it = propertys.find(iString(name));
-    if (it == propertys.cend())
-        return false;
+    do {
+        std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+        const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
+        if (!propertys)
+            continue;
 
-    it->second->set(it->second.data(), this, value);
-    return true;
+        it = propertys->find(iString(name));
+        if (it != propertys->cend()) {
+            it->second->set(it->second.data(), this, value);
+            return true;
+        }
+    } while ((mo = mo->superClass()));
+
+    return false;
 }
 
-const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>& iObject::getOrInitProperty()
+void iObject::initProperty()
 {
-    static std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> s_propertys;
-
-    std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propertyNofity = IX_NULLPTR;
-    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertyIns = IX_NULLPTR;
-    if (s_propertys.size() <= 0) {
-        propertyIns = &s_propertys;
+    if (m_propertyNofity.empty()) {
+        iObject::doInitProperty(&m_propertyNofity);
     }
-
-    if (m_propertyNofity.size() <= 0) {
-        propertyNofity = &m_propertyNofity;
-    }
-
-    if (propertyIns || propertyNofity) {
-        doInitProperty(propertyIns, propertyNofity);
-    }
-
-    return s_propertys;
 }
 
-void iObject::doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propIns,
-                           std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* propNotify) {
-    if (propIns) {
-        propIns->insert(std::pair<iString, iSharedPtr<_iproperty_base>>(
+void iObject::doInitProperty(std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* pptNotify) {
+    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> pptImp;
+
+    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* pptIns = IX_NULLPTR;
+
+    const iMetaObject* mobj = iObject::metaObject();
+    if (IX_NULLPTR == mobj->property()) {
+        pptIns = &pptImp;
+    }
+
+    if (pptIns) {
+        pptIns->insert(std::pair<iString, iSharedPtr<_iproperty_base>>(
                             "objectName",
                             newProperty(&iObject::objectName, &iObject::setObjectName)));
     }
 
-    if (propNotify) {
-        propNotify->insert(std::pair<iString, iSignal<iVariant>*>(
+    if (pptNotify) {
+        pptNotify->insert(std::pair<iString, iSignal<iVariant>*>(
                                "objectName", &objectNameChanged));
+    }
+
+    if (pptIns) {
+        const_cast<iMetaObject*>(mobj)->setProperty(*pptIns);
     }
 }
 

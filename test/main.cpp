@@ -27,6 +27,7 @@ using namespace iShell;
 
 class TestCase : public iObject
 {
+    IX_OBJECT(TestCase)
 public:
     TestCase(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 

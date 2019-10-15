@@ -40,6 +40,7 @@ HEADERS += \
     ../../include/core/kernel/ieventdispatcher.h \
     ../../include/core/kernel/ieventloop.h \
     ../../include/core/kernel/iobject.h \
+    ../../include/core/kernel/iobjectdefs_impl.h \
     ../../include/core/kernel/itimer.h \
     ../../include/core/kernel/ideadlinetimer.h \
     ../../include/core/kernel/ievent.h \

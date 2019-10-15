@@ -32,6 +32,7 @@ namespace iShell {
 
 class iGstAppSrc  : public iObject
 {
+    IX_OBJECT(iGstAppSrc)
 public:
     iGstAppSrc(iObject *parent = IX_NULLPTR);
     ~iGstAppSrc();

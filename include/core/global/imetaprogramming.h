@@ -236,6 +236,9 @@ struct class_wrapper<T*>
 #define TYPEWRAPPER_DEFAULTVALUE(T) typename type_wrapper<T>::TYPE()
 #endif
 
+/// Returns a reference so this work if T is an abstract class.
+template<typename T, typename Ret> T &getObjectHelper(Ret (T::*)() const);
+
 template <class T>
 struct iAlignOfHelper
 {

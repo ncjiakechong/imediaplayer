@@ -47,7 +47,8 @@ iLogger& operator<<(iLogger& logger, const iObject* value)
 
 class TestObject : public iObject
 {
-    IPROPERTY_BEGIN(iObject)
+    IX_OBJECT(TestObject)
+    IPROPERTY_BEGIN
     IPROPERTY_ITEM("testProperty", testProperty, setTestProperty, testPropertyChanged)
     IPROPERTY_END
 public:
@@ -282,6 +283,7 @@ public:
 
 class TestObjectDelete : public iObject
 {
+    IX_OBJECT(TestObjectDelete)
 public:
     TestObjectDelete(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 
@@ -290,6 +292,7 @@ public:
 
 class TestObjectDeleteSlot : public iObject
 {
+    IX_OBJECT(TestObjectDeleteSlot)
 public:
     TestObjectDeleteSlot(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 
@@ -302,7 +305,6 @@ public:
         ilog_debug(this, "slotNothing ", obj->objectName());
     }
 };
-
 
 int test_object(void)
 {
@@ -502,7 +504,7 @@ int test_object(void)
     IX_ASSERT(tst_sharedObj_5 == share_weakprt_5.data());
 
     tst_sharedObj_5->setProperty("objectName", iVariant("tst_sharedObj_5"));
-    ilog_debug("tst_sharedObj_5 name ", tst_sharedObj_5->property("objectName").value<const char*>());
+    ilog_debug("tst_sharedObj_5 name ", tst_sharedObj_5->property("objectName").value<iString>());
     IX_ASSERT(tst_sharedObj_5->property("objectName").value<iString>() == iString("tst_sharedObj_5"));
 
     tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_prop);
@@ -528,6 +530,9 @@ int test_object(void)
     tst_sig.tst_sig_int0.emits();
     IX_ASSERT(0 < tst_sharedObj_7->slot_disconnect);
 
+    iObject* tst_objcost = tst_sharedObj_7;
+    IX_ASSERT(IX_NULLPTR != iobject_cast<TestObject*>(tst_objcost));
+
     tst_sharedObj_7->slot_disconnect = 0;
     tst_sig.tst_sig_int0.emits();
     IX_ASSERT(0 == tst_sharedObj_7->slot_disconnect);
@@ -546,6 +551,8 @@ int test_object(void)
     signalObj->tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotDeleteObj);
     signalObj->tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
     signalObj->tst_sig.connect(&tst_obj, &TestObject::tst_slot_int0);
+    IX_ASSERT(IX_NULLPTR != iobject_cast<iObject*>(&tst_slotObj));
+    IX_ASSERT(IX_NULLPTR == iobject_cast<TestObjectDelete*>(&tst_slotObj));
 
     signalObj->tst_sig.emits(signalObj);
 
@@ -556,6 +563,8 @@ int test_object(void)
     signalObj2.tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
     signalObj2.tst_sig.disconnect(&tst_slotObj, &TestObjectDeleteSlot::slotDeleteObj);
     signalObj2.tst_sig.disconnect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
+    IX_ASSERT(IX_NULLPTR == iobject_cast<TestObjectDeleteSlot*>(&signalObj2));
+    IX_ASSERT(IX_NULLPTR != iobject_cast<TestObjectDelete*>(&signalObj2));
 
     signalObj2.tst_sig.emits(&signalObj2);
 
