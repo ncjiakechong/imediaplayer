@@ -66,7 +66,7 @@ public:
         testPropertyChanged.emits(m_testProp);
     }
 
-    void tst_slot_prop(const iVariant& arg1) {
+    void tst_slot_prop(iVariant arg1) {
         ilog_debug(this, " tst_slot_prop changed ", arg1.value<int>());
     }
 
@@ -306,10 +306,23 @@ public:
     }
 };
 
+template <typename Func1, typename Func2>
+static bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal,
+                                 const typename FunctionPointer<Func2>::Object *receiver, Func2 slot)
+{
+    typedef typename FunctionPointer<Func1>::Arguments arg1;
+    typedef typename FunctionPointer<Func2>::Arguments arg2;
+    IX_COMPILER_VERIFY((CheckCompatibleArguments<FunctionPointer<Func2>::ArgumentCount, arg1, arg2>::value));
+    return true;
+}
+
 int test_object(void)
 {
     TestSignals tst_sig;
     TestObject tst_obj;
+
+    connect(&tst_obj, &TestObject::tst_slot_int5, &tst_obj, &TestObject::tst_slot_int3);
+    // connect(&tst_obj, &TestObject::tst_slot_int5, &tst_obj, &TestObject::tst_slot_refAdd); // build error
 
     iRegisterConverter<TestObject*, iObject*>();
 

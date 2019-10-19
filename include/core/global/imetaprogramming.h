@@ -107,51 +107,6 @@ struct is_same<T, T>
     };
 };
 
-template <typename T1, typename T2>
-struct is_convertible
-{
-private:
-    struct True_ { char x[2]; };
-    struct False_ { };
-
-    static True_ helper(T2 const &);
-    static False_ helper(...);
-
-public:
-    static bool const value = (sizeof(True_) == sizeof(is_convertible::helper(T1())));
-};
-
-
-template <typename T1, typename T2>
-struct is_convertible<T1&, T2&>
-{
-private:
-    struct True_ { char x[2]; };
-    struct False_ { };
-
-    static True_ helper(const T2);
-    static False_ helper(...);
-
-public:
-    static bool const value = (sizeof(True_) == sizeof(is_convertible::helper(T1())));
-};
-
-
-template <typename T1, typename T2>
-struct is_convertible<T1&, T2>
-{
-private:
-    struct True_ { char x[2]; };
-    struct False_ { };
-
-    static True_ helper(T2 const &);
-    static False_ helper(...);
-
-public:
-    static bool const value = (sizeof(True_) == sizeof(is_convertible::helper(T1())));
-};
-
-
 template <typename T>
 struct type_wrapper
     /// Use the type wrapper if you want to decouple constness and references from template types.
@@ -229,6 +184,19 @@ struct class_wrapper<T*>
 {
     typedef T CLASSTYPE;
 };
+
+template <typename T1, typename T2>
+struct is_convertible
+{
+    static int test(const typename type_wrapper<T2>::TYPE&);
+    static char test(...);
+    static const typename type_wrapper<T1>::TYPE &dummy();
+
+    enum { value = sizeof(test(dummy())) == sizeof(int) };
+};
+
+template<typename A1, typename A2> struct is_convertible<A1, A2&> { enum { value = false }; };
+template<typename A> struct is_convertible<A&, A&> { enum { value = true }; };
 
 #if defined(_MSC_VER)
 #define TYPEWRAPPER_DEFAULTVALUE(T) type_wrapper<T>::TYPE()
