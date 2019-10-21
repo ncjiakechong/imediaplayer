@@ -195,7 +195,9 @@ struct is_convertible
     enum { value = sizeof(test(dummy())) == sizeof(int) };
 };
 
-template<typename A1, typename A2> struct is_convertible<A1, A2&> { enum { value = false }; };
+template<typename A> struct is_convertible<A, A&> { enum { value = false }; };
+template<typename A> struct is_convertible<A, const A&> { enum { value = true }; };
+template<typename A> struct is_convertible<const A&, A> { enum { value = true }; };
 template<typename A> struct is_convertible<A&, A&> { enum { value = true }; };
 
 #if defined(_MSC_VER)
@@ -205,6 +207,8 @@ template<typename A> struct is_convertible<A&, A&> { enum { value = true }; };
 #endif
 
 /// Returns a reference so this work if T is an abstract class.
+/// Since metaObject for ThisType will be declared later, the pointer to member function will be
+/// pointing to the metaObject of the base class, so T will be deduced to the base class type.
 template<typename T, typename Ret> T &getObjectHelper(Ret (T::*)() const);
 
 template <class T>

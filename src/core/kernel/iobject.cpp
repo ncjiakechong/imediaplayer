@@ -790,33 +790,23 @@ void _iSignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
     }
 }
 
-_iConnection::_iConnection()
-    : m_orphaned(false)
-    , m_ref(1)
-    , m_type(AutoConnection)
-    , m_pobject(IX_NULLPTR)
-    , m_pfunc(IX_NULLPTR)
-    , m_emitcb(IX_NULLPTR)
-{
-}
-
 _iConnection::_iConnection(const _iConnection& other)
     : m_orphaned(false)
     , m_ref(1)
     , m_type(other.m_type)
     , m_pobject(other.m_pobject)
     , m_pfunc(other.m_pfunc)
-    , m_emitcb(other.m_emitcb)
+    , m_impl(other.m_impl)
 {
 }
 
-_iConnection::_iConnection(iObject* obj, Function func, Callback cb, ConnectionType type)
+_iConnection::_iConnection(iObject* obj, Function func, ImplFn impl, ConnectionType type)
     : m_orphaned(false)
     , m_ref(1)
     , m_type(type)
     , m_pobject(obj)
     , m_pfunc(func)
-    , m_emitcb(cb)
+    , m_impl(impl)
 {
 }
 
@@ -835,8 +825,10 @@ void _iConnection::ref()
 void _iConnection::deref()
 {
     --m_ref;
-    if (0 == m_ref)
-        delete this;
+    if (0 == m_ref) {
+        IX_ASSERT(m_impl);
+        m_impl(Destroy, this, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
+    }
 }
 
 void _iConnection::setOrphaned()
@@ -846,21 +838,23 @@ void _iConnection::setOrphaned()
 
 _iConnection* _iConnection::clone() const
 {
-    return new _iConnection(*this);
+    IX_ASSERT(m_impl);
+    return static_cast<_iConnection*>(m_impl(Clone, this, m_pobject, m_pfunc, IX_NULLPTR));
 }
 
 _iConnection* _iConnection::duplicate(iObject* newobj) const
 {
-    return new _iConnection(newobj, m_pfunc, m_emitcb, m_type);
+    IX_ASSERT(m_impl);
+    return static_cast<_iConnection*>(m_impl(Clone, this, newobj, m_pfunc, IX_NULLPTR));
 }
 
 void _iConnection::emits(void* args) const
 {
-    if (m_orphaned || (IX_NULLPTR == m_emitcb)) {
+    if (m_orphaned || (IX_NULLPTR == m_impl)) {
         return;
     }
 
-    m_emitcb(m_pobject, m_pfunc, args);
+    m_impl(Call, this, m_pobject, m_pfunc, args);
 }
 
 } // namespace iShell
