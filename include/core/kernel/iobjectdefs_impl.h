@@ -60,7 +60,6 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) ()>
     typedef Ret (Obj::*Function) ();
     enum {ArgumentCount = 0, IsPointerToMemberFunction = true};
 
-
     static void* cloneArgs(void*) {
         return IX_NULLPTR;
     }
@@ -1040,7 +1039,12 @@ class _iSignalBase;
 class _iConnection
 {
 public:
-    typedef void (iObject::*Function)();
+    typedef void (iObject::*MemberFunction)();
+    typedef void (*RegulerFunction)();
+    union Function {
+        MemberFunction memberFunc;
+        RegulerFunction regulerFunc;
+    };
 
     ~_iConnection();
 
@@ -1056,46 +1060,51 @@ protected:
     // we'll never need. We just use one function pointer.
     typedef void* (*ImplFn)(int which, const _iConnection* this_, iObject* receiver, Function func, void* args);
 
-    _iConnection(iObject* obj, Function func, ImplFn impl, ConnectionType type);
-    _iConnection(const _iConnection&);
-    _iConnection& operator=(const _iConnection&);
+    _iConnection(ImplFn impl, ConnectionType type);
 
     void ref();
     void deref();
     void setOrphaned();
 
-    ConnectionType type() const { return m_type; }
-
     _iConnection* clone() const;
     _iConnection* duplicate(iObject* newobj) const;
 
+    void setSignal(iObject* senderObj, MemberFunction sigFunc);
+    void setSlot(iObject* receiverObj, Function slotFunc, bool isMemberFunc);
+
     void emits(void* args) const;
 
-private:
+protected:
     int m_orphaned : 1;
-    int m_ref : 31;
+    int m_isMemberFunc : 1;
+    int m_ref : 30;
     ConnectionType m_type;
-    iObject* m_pobject;
-    Function m_pfunc;
+    iObject* m_senderObj;
+    iObject* m_receiverObj;
+    MemberFunction m_sigFunc;
+    Function m_slotFunc;
     const ImplFn m_impl;
 
     _iConnection();
+    _iConnection(const _iConnection&);
+    _iConnection& operator=(const _iConnection&);
     friend class iObject;
     friend class _iSignalBase;
 };
 
-
 // implementation of _iObjConnection for which the slot is a pointer to member function of a iObject
 // Args and R are the List of arguments and the returntype of the signal to which the slot is connected.
-template<typename Func, typename Args, typename R>
+template<typename SignalFunc, typename SlotFunc>
 class _iObjConnection : public _iConnection
 {
-    typedef FunctionPointer<Func> FuncType;
-    typedef typename FunctionPointer<Func>::Object Object;
-    typedef void (Object::*FuncAdaptor)();
+    typedef FunctionPointer<SignalFunc> SignalFuncType;
+    typedef FunctionPointer<SlotFunc> SlotFuncType;
+    typedef typename FunctionPointer<SlotFunc>::Object SlotObject;
 
     static void* impl(int which, const _iConnection* this_, iObject* r, Function f, void* a)
     {
+        typedef void (SlotObject::*SlotFuncAdaptor)();
+
         switch (which) {
         case Destroy:
             delete static_cast<const _iObjConnection*>(this_);
@@ -1103,22 +1112,172 @@ class _iObjConnection : public _iConnection
 
         case Call:
             {
-            FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(f);
-            Func tFunc = reinterpret_cast<Func>(tFuncAdptor);
-            FuncType::template call<Args, R>(tFunc, static_cast<Object*>(r), a);
+            SlotFuncAdaptor tSlotAdptor = static_cast<SlotFuncAdaptor>(f.memberFunc);
+            SlotFunc tSlot = reinterpret_cast<SlotFunc>(tSlotAdptor);
+            SlotFuncType::template call<typename SignalFuncType::Arguments, typename SignalFuncType::ReturnType>(
+                        tSlot, static_cast<SlotObject*>(r), a);
             }
             break;
 
         case Clone:
-        {
+            {
             const _iObjConnection* objCon = static_cast<const _iObjConnection*>(this_);
-            return new _iObjConnection(r, f, objCon->type());
-        }
+            _iObjConnection* objConNew = new _iObjConnection(objCon->m_type);
+            objConNew->setSignal(objCon->m_senderObj, objCon->m_sigFunc);
+            objConNew ->setSlot(r, objCon->m_slotFunc, objCon->m_isMemberFunc);
+            return objConNew;
+            }
             break;
         }
+
+        return IX_NULLPTR;
     }
+
+    _iObjConnection(ConnectionType type)
+        : _iConnection(&impl, type) {}
+
 public:
-    explicit _iObjConnection(iObject* obj, Function f, ConnectionType type) : _iConnection(obj, f, &impl, type) {}
+    explicit _iObjConnection(const iObject* senderObj, SignalFunc sigFunc, const iObject* receiverObj, SlotFunc slotFunc, ConnectionType type)
+        : _iConnection(&impl, type)
+    {
+        typedef void (SlotObject::*SlotFuncAdaptor)();
+        typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
+
+        IX_COMPILER_VERIFY((SlotFuncType::IsPointerToMemberFunction));
+
+        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(sigFunc);
+        _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor);
+        setSignal(const_cast<iObject*>(senderObj), tSignal);
+
+        SlotFuncAdaptor tSlotAdptor = reinterpret_cast<SlotFuncAdaptor>(slotFunc);
+        _iConnection::MemberFunction tSlot = static_cast<_iConnection::MemberFunction>(tSlotAdptor);
+
+        _iConnection::Function tFunc;
+        tFunc.memberFunc = tSlot;
+        setSlot(const_cast<iObject*>(receiverObj), tFunc, true);
+    }
+};
+
+
+// implementation of _iObjConnection for which the slot is a pointer to member function of a iObject
+// Args and R are the List of arguments and the returntype of the signal to which the slot is connected.
+template<typename SignalFunc, typename SlotFunc>
+class _iRegulerConnection : public _iConnection
+{
+    typedef FunctionPointer<SignalFunc> SignalFuncType;
+    typedef FunctionPointer<SlotFunc> SlotFuncType;
+    typedef typename FunctionPointer<SlotFunc>::Object SlotObject;
+
+    static void* impl(int which, const _iConnection* this_, iObject* r, Function f, void* a)
+    {
+        switch (which) {
+        case Destroy:
+            delete static_cast<const _iRegulerConnection*>(this_);
+            break;
+
+        case Call:
+            {
+            SlotFunc tSlot = reinterpret_cast<SlotFunc>(f.regulerFunc);
+            SlotFuncType::template call<typename SignalFuncType::Arguments, typename SignalFuncType::ReturnType>(
+                        tSlot, static_cast<SlotObject*>(r), a);
+            }
+            break;
+
+        case Clone:
+            {
+            const _iRegulerConnection* objCon = static_cast<const _iRegulerConnection*>(this_);
+
+            _iRegulerConnection* objConNew = new _iRegulerConnection(objCon->m_type);
+            objConNew->setSignal(objCon->m_senderObj, objCon->m_sigFunc);
+            objConNew ->setSlot(r, objCon->m_slotFunc, objCon->m_isMemberFunc);
+            return objConNew;
+            }
+            break;
+        }
+
+        return IX_NULLPTR;
+    }
+
+    _iRegulerConnection(ConnectionType type)
+        : _iConnection(&impl, type) {}
+
+public:
+    explicit _iRegulerConnection(const iObject* senderObj, SignalFunc sigFunc, const iObject* receiverObj, SlotFunc slotFunc, ConnectionType type)
+        : _iConnection(&impl, type)
+    {
+        typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
+        IX_COMPILER_VERIFY((!SlotFuncType::IsPointerToMemberFunction));
+
+        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(sigFunc);
+        _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor);
+        setSignal(const_cast<iObject*>(senderObj), tSignal);
+
+        _iConnection::RegulerFunction tSlot = reinterpret_cast<_iConnection::RegulerFunction>(slotFunc);
+
+        _iConnection::Function tFunc;
+        tFunc.regulerFunc = tSlot;
+        setSlot(const_cast<iObject*>(receiverObj), tFunc, false);
+    }
+};
+
+// implementation of _iObjConnectionOld for which the slot is a pointer to member function of a iObject
+// Args and R are the List of arguments and the returntype of the signal to which the slot is connected.
+template<typename Func, typename Args, typename R>
+class _iObjConnectionOld : public _iConnection
+{
+    typedef FunctionPointer<Func> FuncType;
+    typedef typename FunctionPointer<Func>::Object Object;
+    typedef void (Object::*FuncAdaptor)();
+
+    Func function;
+    static void* impl(int which, const _iConnection* this_, iObject* r, Function f, void* a)
+    {
+        typedef void (FuncType::Object::*SlotFuncAdaptor)();
+
+        switch (which) {
+        case Destroy:
+            delete static_cast<const _iObjConnectionOld*>(this_);
+            break;
+
+        case Call:
+            {
+            SlotFuncAdaptor tSlotAdptor = static_cast<SlotFuncAdaptor>(f.memberFunc);
+            Func tSlot = reinterpret_cast<Func>(tSlotAdptor);
+            FuncType::template call<Args, R>(
+                        tSlot, static_cast<Object*>(r), a);
+            }
+            break;
+
+        case Clone:
+            {
+            const _iObjConnectionOld* objCon = static_cast<const _iObjConnectionOld*>(this_);
+            _iObjConnectionOld* objConNew = new _iObjConnectionOld(objCon->m_type);
+            objConNew ->setSlot(r, objCon->m_slotFunc, objCon->m_isMemberFunc);
+            return objConNew;
+            }
+            break;
+        }
+
+        return IX_NULLPTR;
+    }
+
+    _iObjConnectionOld(ConnectionType type)
+        : _iConnection(&impl, type) {}
+
+public:
+    explicit _iObjConnectionOld(const iObject* obj, Func f, ConnectionType type)
+        : _iConnection(&impl, type)
+        , function(f)
+    {
+        IX_COMPILER_VERIFY((FuncType::IsPointerToMemberFunction));
+        typedef void (FuncType::Object::*SlotFuncAdaptor)();
+        SlotFuncAdaptor tSlotAdptor = reinterpret_cast<SlotFuncAdaptor>(f);
+        _iConnection::MemberFunction tSlot = static_cast<_iConnection::MemberFunction>(tSlotAdptor);
+
+        _iConnection::Function tFunc;
+        tFunc.memberFunc = tSlot;
+        setSlot(const_cast<iObject*>(obj), tFunc, true);
+    }
 };
 
 /**
@@ -1143,7 +1302,7 @@ protected:
     void slotDuplicate(const iObject* oldtarget, iObject* newtarget);
 
     void doConnect(const _iConnection& conn);
-    void doDisconnect(iObject* obj, _iConnection::Function func);
+    void doDisconnect(iObject* obj, _iConnection::MemberFunction func);
     void doEmit(void* args, clone_args_t clone, free_args_t free);
 
 private:
@@ -1186,7 +1345,7 @@ public:
     {
         typedef void (FunctionPointer<Func>::Object::*FuncAdaptor)();
         FuncAdaptor tSlotAdptor = reinterpret_cast<FuncAdaptor>(slot);
-        _iConnection::Function tSlot = static_cast<_iConnection::Function>(tSlotAdptor);
+        _iConnection::MemberFunction tSlot = static_cast<_iConnection::MemberFunction>(tSlotAdptor);
 
         doDisconnect(obj, tSlot);
     }
@@ -1197,16 +1356,12 @@ public:
     template<typename Func>
     void connect(typename FunctionPointer<Func>::Object* obj, Func slot, ConnectionType type = AutoConnection)
     {
-        typedef void (FunctionPointer<Func>::Object::*FuncAdaptor)();
         typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> SignalArguments;
         typedef typename FunctionPointer<Func>::Arguments SlotArguments;
         IX_COMPILER_VERIFY((int(SignalArguments::length) >= int(FunctionPointer<Func>::ArgumentCount)));
         IX_COMPILER_VERIFY((CheckCompatibleArguments<FunctionPointer<Func>::ArgumentCount, typename SignalArguments::Type, typename SlotArguments::Type>::value));
 
-        FuncAdaptor tSlotAdptor = reinterpret_cast<FuncAdaptor>(slot);
-        _iConnection::Function tSlot = static_cast<_iConnection::Function>(tSlotAdptor);
-
-        _iObjConnection<Func, SignalArguments, void> conn(obj, tSlot, type);
+        _iObjConnectionOld<Func, SignalArguments, void> conn(obj, slot, type);
         doConnect(conn);
     }
 

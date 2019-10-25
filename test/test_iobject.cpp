@@ -76,27 +76,27 @@ public:
         delete this;
     }
 
-    int tst_slot_return() {
+    inline int tst_slot_return() {
         ilog_debug(this, " tst_slot_return");
         return 0;
     }
 
-    void tst_slot_int0() {
+    inline void tst_slot_int0() {
         ilog_debug(this, " tst_slot_int0");
     }
 
-    void tst_slot_int1(int arg1) {
+    inline void tst_slot_int1(int arg1) {
         ilog_debug(this, " tst_slot_int1 arg1 ", arg1);
         slot_arg1 = arg1;
     }
 
-    void tst_slot_int2(int arg1, int arg2) {
+    inline void tst_slot_int2(int arg1, int arg2) {
         ilog_debug(this, " tst_slot_int2 arg1 ", arg1, ", arg2 ", arg2);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
     }
 
-    int tst_slot_int3(int arg1, int arg2, int arg3) {
+    inline int tst_slot_int3(int arg1, int arg2, int arg3) {
         ilog_debug(this, " tst_slot_int3 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
@@ -104,7 +104,7 @@ public:
         return arg1;
     }
 
-    void tst_slot_int4(int arg1, int arg2, int arg3, int arg4) {
+    inline void tst_slot_int4(int arg1, int arg2, int arg3, int arg4) {
         ilog_debug(this, " tst_slot_int4 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
@@ -112,7 +112,7 @@ public:
         slot_arg4 = arg4;
     }
 
-    void tst_slot_int5(int arg1, int arg2, int arg3, int arg4, int arg5) {
+    inline void tst_slot_int5(int arg1, int arg2, int arg3, int arg4, int arg5) {
         ilog_debug(this, " tst_slot_int5 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
                    "arg5 ", arg5);
         slot_arg1 = arg1;
@@ -122,7 +122,7 @@ public:
         slot_arg5 = arg5;
     }
 
-    void tst_slot_int6(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
+    inline void tst_slot_int6(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
         ilog_debug(this, " tst_slot_int6 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
                    "arg5 ", arg5, " arg6 ", arg6);
         slot_arg1 = arg1;
@@ -133,7 +133,7 @@ public:
         slot_arg6 = arg6;
     }
 
-    void tst_slot_int7(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7) {
+    inline void tst_slot_int7(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7) {
         ilog_debug(this, " tst_slot_int7 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
                    "arg5 ", arg5, " arg6 ", arg6, " arg7 ", arg7);
         slot_arg1 = arg1;
@@ -145,7 +145,7 @@ public:
         slot_arg7 = arg7;
     }
 
-    void tst_slot_int8(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8) {
+    inline void tst_slot_int8(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8) {
         ilog_debug(this, " tst_slot_int8 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
                    "arg5 ", arg5, " arg6 ", arg6, " arg7 ", arg7, " arg8 ", arg8);
         slot_arg1 = arg1;
@@ -158,27 +158,35 @@ public:
         slot_arg8 = arg8;
     }
 
-    void tst_slot_struct(int arg1, struct E, int arg3) {
+    static void tst_slot_static(int arg1, struct E, float arg3) {
+        ilog_debug("tst_slot_static arg1 ", arg1, " arg3 ", arg3);
+    }
+
+    inline void tst_slot_struct(int arg1, struct E, int arg3) {
         ilog_debug(this, " tst_slot_struct arg1 ", arg1, ", arg3", arg3);
     }
 
-    void tst_slot_ref(int arg1, struct E&, float arg3) {
+    inline void tst_slot_ref(int arg1, struct E&, float arg3) {
         ilog_debug(this, " tst_slot_ref arg1 ", arg1, " arg3 ", arg3);
     }
 
-    void tst_slot_point(int arg1, struct E* arg2, float arg3) {
+    inline void tst_slot_constref(const int& arg1, const struct E&, const float& arg3) {
+        ilog_debug(this, " tst_slot_constref arg1 ", arg1, " arg3 ", arg3);
+    }
+
+    inline void tst_slot_point(int arg1, struct E* arg2, float arg3) {
         ilog_debug(this, " tst_slot_point arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
     }
 
-    void tst_slot_error(int arg1, struct F* arg2, float arg3) {
+    inline void tst_slot_error(int arg1, struct F* arg2, float arg3) {
         ilog_debug(this, "tst_slot_error arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
     }
 
-    void tst_slot_type_change(char arg1, struct E* arg2, int arg3) {
+    inline void tst_slot_type_change(char arg1, struct E* arg2, int arg3) {
         ilog_debug(this, " tst_slot_type_change arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
     }
 
-    void tst_slot_refAdd(int& value) {
+    inline void tst_slot_refAdd(int& value) {
         ilog_debug(this, " tst_slot_refAdd value ", value);
         ++value;
     }
@@ -436,8 +444,16 @@ int test_object(void)
 
     ilog_debug("+++++++++connect 2");
     tst_sig.tst_sig_struct.connect(&tst_obj, &TestObject::tst_slot_struct);
+    tst_sig.tst_sig_struct.connect(&tst_obj, &TestObject::tst_slot_constref);
     tst_sig.tst_sig_ref.connect(&tst_obj, &TestObject::tst_slot_ref);
     tst_sig.tst_sig_point.connect(&tst_obj, &TestObject::tst_slot_point);
+
+
+    iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &TestObject::tst_slot_static);
+    iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_static);
+    iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_constref);
+
+
 
 //    tst_sig.tst_sig_struct.connect(&tst_obj, &TestObject::tst_slot_type_change); // build error
 //    tst_sig.tst_sig_ref.connect(&tst_obj, &TestObject::tst_slot_type_change); // build error

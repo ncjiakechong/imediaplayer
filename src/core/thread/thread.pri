@@ -14,6 +14,7 @@ SOURCES += \
 
 HEADERS += \
     $$PWD/ieventdispatcher_generic.h \
+    $$PWD/iorderedmutexlocker_p.h \
     $$PWD/ithread_p.h \
     ../../include/core/thread/iatomiccounter.h \
     ../../include/core/thread/icondition.h \
