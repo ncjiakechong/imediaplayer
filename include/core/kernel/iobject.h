@@ -87,11 +87,13 @@ public:
         typedef FunctionPointer<Func1> SignalType;
         typedef FunctionPointer<Func2> SlotType;
 
-        //compilation error if the arguments does not match.
+        // compilation error if the arguments does not match.
         // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
+        // Return type of the slot is not compatible with the return type of the signal.
+        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
         _iObjConnection<Func1, Func2> conn(sender, signal, receiver, slot, type);
         return connectImpl(conn);
@@ -112,14 +114,53 @@ public:
         typedef FunctionPointer<Func1> SignalType;
         typedef FunctionPointer<Func2> SlotType;
 
-        //compilation error if the arguments does not match.
+        // compilation error if the arguments does not match.
         // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
+        // Return type of the slot is not compatible with the return type of the signal.
+        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
         _iRegulerConnection<Func1, Func2> conn(sender, signal, context, slot, type);
         return connectImpl(conn);
+    }
+
+    template <typename Func1, typename Func2>
+    static inline bool disconnect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal,
+                                  const typename FunctionPointer<Func2>::Object *receiver, Func2 slot)
+    {
+        typedef FunctionPointer<Func1> SignalType;
+        typedef FunctionPointer<Func2> SlotType;
+
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
+        // Return type of the slot is not compatible with the return type of the signal.
+        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
+
+        _iObjConnection<Func1, Func2> conn(sender, signal, receiver, slot, AutoConnection);
+        return disconnectImpl(conn);
+    }
+
+    template <typename Func1, typename Func2 = _iConnection::RegulerFunction>
+    static inline bool disconnect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, const iObject *receiver = IX_NULLPTR, Func2 slot = IX_NULLPTR)
+    {
+        typedef FunctionPointer<Func1> SignalType;
+        typedef FunctionPointer<Func2> SlotType;
+
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
+        // Return type of the slot is not compatible with the return type of the signal.
+        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
+
+        _iRegulerConnection<Func1, Func2> conn(sender, signal, receiver, slot, AutoConnection);
+        return disconnectImpl(conn);
     }
 
     /// Invokes the member on the object obj. Returns true if the member could be invoked. Returns false if there is no such member or the parameters did not match.
@@ -430,10 +471,18 @@ protected:
     std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc> m_propertyNofity;
 
 private:
-    typedef std::unordered_map<_iSignalBase*, int> sender_map;
+    typedef std::unordered_map<_iSignalBase*, int> __sender_map;
+    typedef std::unordered_map<_iConnection::MemberFunction, _iConnection*, iConKeyHashFunc> sender_map;
     typedef std::list<iObject *> iObjectList;
 
+    struct _iConnectionList {
+        _iConnectionList() : first(nullptr), last(nullptr) {}
+        _iConnection *first;
+        _iConnection *last;
+    };
+
     static bool connectImpl(const _iConnection& conn);
+    static bool disconnectImpl(const _iConnection& conn);
 
     int refSignal(_iSignalBase* sender);
     int derefSignal(_iSignalBase* sender);
@@ -445,9 +494,15 @@ private:
 
     static bool invokeMethodImpl(const _iConnection& c, void* args, _iSignalBase::clone_args_t clone, _iSignalBase::free_args_t free);
 
+    uint m_wasDeleted : 1;
+    uint m_isDeletingChildren : 1;
+    uint m_deleteLaterCalled : 1;
+    uint m_unused : 29;
+    int  m_postedEvents;
+
     iMutex      m_objLock;
     iString     m_objName;
-    sender_map  m_senders;
+    __sender_map  __m_senders;
 
     iAtomicPointer< typename isharedpointer::ExternalRefCountData > m_refCount;
 
@@ -457,13 +512,11 @@ private:
     iObject* m_currentChildBeingDeleted;
     iObjectList m_children;
 
-    std::set<int> m_runningTimers;
+    // linked list of connections connected to this object
+    sender_map m_senders;
+    _iConnectionList m_recivers;
 
-    uint m_wasDeleted : 1;
-    uint m_isDeletingChildren : 1;
-    uint m_deleteLaterCalled : 1;
-    uint m_unused : 29;
-    int  m_postedEvents;
+    std::set<int> m_runningTimers;
 
     iObject& operator=(const iObject&);
 
