@@ -95,7 +95,7 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iObjConnection<Func1, Func2> conn(sender, signal, receiver, slot, type);
+        _iConnectionHelper<Func1, Func2> conn(sender, signal, receiver, slot, type);
         return connectImpl(conn);
     }
 
@@ -122,7 +122,7 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iRegulerConnection<Func1, Func2> conn(sender, signal, context, slot, type);
+        _iConnectionHelper<Func1, Func2> conn(sender, signal, context, slot, type);
         return connectImpl(conn);
     }
 
@@ -141,15 +141,16 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iObjConnection<Func1, Func2> conn(sender, signal, receiver, slot, AutoConnection);
+        _iConnectionHelper<Func1, Func2> conn(sender, signal, receiver, slot, AutoConnection);
         return disconnectImpl(conn);
     }
 
-    template <typename Func1, typename Func2 = _iConnection::RegulerFunction>
-    static inline bool disconnect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, const iObject *receiver = IX_NULLPTR, Func2 slot = IX_NULLPTR)
+    // This is the overload for when one wish to disconnect a signal from any slot. (slot=IX_NULLPTR)
+    template <typename Func1, typename Func2>
+    static inline bool disconnect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, const iObject *receiver, Func2 slot)
     {
         typedef FunctionPointer<Func1> SignalType;
-        typedef FunctionPointer<Func2> SlotType;
+        typedef FunctionPointer<typename FunctionHelper<Func2>::Function> SlotType;
 
         // compilation error if the arguments does not match.
         // The slot requires more arguments than the signal provides.
@@ -159,7 +160,7 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iRegulerConnection<Func1, Func2> conn(sender, signal, receiver, slot, AutoConnection);
+        _iConnectionHelper<typename SignalType::Function, typename SlotType::Function> conn(sender, signal, receiver, slot, AutoConnection);
         return disconnectImpl(conn);
     }
 
@@ -174,7 +175,7 @@ public:
     static bool invokeMethod(Obj* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection)
     {
         typedef Ret (Obj::*Function)();
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -185,7 +186,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -199,7 +200,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -214,7 +215,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -230,7 +231,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -248,7 +249,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4, a5);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -268,7 +269,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -289,7 +290,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -311,7 +312,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -319,7 +320,7 @@ public:
     static bool invokeMethod(Obj* obj, Ret (Obj::*func)() const, ConnectionType type = AutoConnection)
     {
         typedef Ret (Obj::*Function)() const;
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -330,7 +331,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -344,7 +345,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -359,7 +360,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -375,7 +376,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -393,7 +394,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4, a5);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -413,7 +414,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -434,7 +435,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -456,7 +457,7 @@ public:
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
-        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
+        _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 

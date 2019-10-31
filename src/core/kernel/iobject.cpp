@@ -442,16 +442,31 @@ void iObject::disconnectAll()
 
 bool iObject::connectImpl(const _iConnection& conn)
 {
-    if (conn._isMemberFunc
-        && (conn._sigFunc == conn._slotFunc.memberFunc))
+    if ((IX_NULLPTR == conn._senderObj)
+        || (IX_NULLPTR == conn._receiverObj)
+        || (IX_NULLPTR == conn._sigFunc)) {
+        ilog_warn(__func__, " invalid argument for NULL pointer");
         return false;
+    }
 
-    return false;
+    _iConnection::MemberFunction __slotFunc = *reinterpret_cast<_iConnection::MemberFunction *>(conn._slotFunc);
+    if (conn._sigFunc == __slotFunc) {
+        ilog_warn(__func__, " invalid argument for connecting same signal/slot");
+        return false;
+    }
+
+    return true;
 }
 
 bool iObject::disconnectImpl(const _iConnection& conn)
 {
-    return false;
+    if ((IX_NULLPTR == conn._senderObj)
+        || (IX_NULLPTR == conn._sigFunc)) {
+        ilog_warn(__func__, " invalid argument for NULL pointer");
+        return false;
+    }
+
+    return true;
 }
 
 const iMetaObject* iObject::metaObject() const
@@ -681,7 +696,8 @@ void _iSignalBase::doDisconnect(iObject* obj, _iConnection::MemberFunction func)
             continue;
         }
 
-        if((*it)->_isMemberFunc && func == (*it)->_slotFunc.memberFunc) {
+        _iConnection::MemberFunction __slotFunc = *reinterpret_cast<_iConnection::MemberFunction *>((*it)->_slotFunc);
+        if(func == __slotFunc) {
             (*it)->setOrphaned();
             (*it)->deref();
             it = m_connected_slots.erase(it);
@@ -799,7 +815,6 @@ void _iSignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
 
 _iConnection::_iConnection(ImplFn impl, ConnectionType type)
     : _orphaned(false)
-    , _isMemberFunc(false)
     , _ref(1)
     , _type(type)
     , _recvNext(IX_NULLPTR)
@@ -809,7 +824,7 @@ _iConnection::_iConnection(ImplFn impl, ConnectionType type)
     , _receiverObj(IX_NULLPTR)
     , _impl(impl)
     , _sigFunc(IX_NULLPTR)
-    , _slotFunc{IX_NULLPTR}
+    , _slotFunc(IX_NULLPTR)
 {
 }
 
@@ -857,9 +872,8 @@ void _iConnection::setSignal(iObject* senderObj, MemberFunction sigFunc)
     _sigFunc = sigFunc;
 }
 
-void _iConnection::setSlot(iObject* receiverObj, Function slotFunc, bool isMemberFunc)
+void _iConnection::setSlot(iObject* receiverObj, void **slotFunc)
 {
-    _isMemberFunc = isMemberFunc;
     _receiverObj = receiverObj;
     _slotFunc = slotFunc;
 }
