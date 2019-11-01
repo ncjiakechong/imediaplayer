@@ -455,11 +455,10 @@ int test_object(void)
     IX_ASSERT((!iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_struct)));
 
     // iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &tst_obj); // build error
-    iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, IX_NULLPTR, IX_NULLPTR);
     iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_static);
     iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_constref);
-
-
+    iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, IX_NULLPTR, IX_NULLPTR);
+    iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
 
     // tst_sig.tst_sig_struct.connect(&tst_obj, &TestObject::tst_slot_type_change); // build error
     // tst_sig.tst_sig_ref.connect(&tst_obj, &TestObject::tst_slot_type_change); // build error

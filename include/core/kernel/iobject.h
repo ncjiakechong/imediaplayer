@@ -147,9 +147,9 @@ public:
 
     // This is the overload for when one wish to disconnect a signal from any slot. (slot=IX_NULLPTR)
     template <typename Func1, typename Func2>
-    static inline bool disconnect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, const iObject *receiver, Func2 slot)
+    static inline bool disconnect(const typename FunctionPointer<typename FunctionHelper<Func1>::Function>::Object *sender, Func1 signal, const iObject *receiver, Func2 slot)
     {
-        typedef FunctionPointer<Func1> SignalType;
+        typedef FunctionPointer<typename FunctionHelper<Func1>::Function> SignalType;
         typedef FunctionPointer<typename FunctionHelper<Func2>::Function> SlotType;
 
         // compilation error if the arguments does not match.
@@ -472,18 +472,21 @@ protected:
     std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc> m_propertyNofity;
 
 private:
-    typedef std::unordered_map<_iSignalBase*, int> __sender_map;
-    typedef std::unordered_map<_iConnection::MemberFunction, _iConnection*, iConKeyHashFunc> sender_map;
-    typedef std::list<iObject *> iObjectList;
-
     struct _iConnectionList {
         _iConnectionList() : first(nullptr), last(nullptr) {}
         _iConnection *first;
         _iConnection *last;
     };
 
+    typedef std::unordered_map<_iSignalBase*, int> __sender_map;
+    typedef std::unordered_map<_iConnection::MemberFunction, _iConnectionList, iConKeyHashFunc> sender_map;
+    typedef std::list<iObject *> iObjectList;
+
     static bool connectImpl(const _iConnection& conn);
     static bool disconnectImpl(const _iConnection& conn);
+
+    void cleanConnectionLists();
+    bool disconnectHelper(const _iConnection& conn);
 
     int refSignal(_iSignalBase* sender);
     int derefSignal(_iSignalBase* sender);
@@ -498,11 +501,13 @@ private:
     uint m_wasDeleted : 1;
     uint m_isDeletingChildren : 1;
     uint m_deleteLaterCalled : 1;
-    uint m_unused : 29;
+    uint m_connListDirty : 1;
+    uint m_unused : 28;
     int  m_postedEvents;
+    int m_connListInUse;
 
-    iMutex      m_objLock;
     iString     m_objName;
+    iMutex      m_objLock;
     __sender_map  __m_senders;
 
     iAtomicPointer< typename isharedpointer::ExternalRefCountData > m_refCount;
@@ -514,8 +519,9 @@ private:
     iObjectList m_children;
 
     // linked list of connections connected to this object
-    sender_map m_senders;
-    _iConnectionList m_recivers;
+    sender_map m_connectionLists;
+    _iConnection* m_senders;
+    iMutex     m_signalSlotLock;
 
     std::set<int> m_runningTimers;
 
