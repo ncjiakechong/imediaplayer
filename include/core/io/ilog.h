@@ -387,12 +387,12 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1) {
 }
 
 /* ISO varargs available */
-#define ilog_verbose(...) iLogMeta(ILOG_TAG, ILOG_VERBOSE, ##__VA_ARGS__)
-#define ilog_debug(...)   iLogMeta(ILOG_TAG, ILOG_DEBUG, ##__VA_ARGS__)
-#define ilog_info(...)    iLogMeta(ILOG_TAG, ILOG_INFO, ##__VA_ARGS__)
-#define ilog_notice(...)  iLogMeta(ILOG_TAG, ILOG_NOTICE, ##__VA_ARGS__)
-#define ilog_warn(...)    iLogMeta(ILOG_TAG, ILOG_WARN, ##__VA_ARGS__)
-#define ilog_error(...)   iLogMeta(ILOG_TAG, ILOG_ERROR, ##__VA_ARGS__)
+#define ilog_verbose(...) iLogMeta(ILOG_TAG, ILOG_VERBOSE, __VA_ARGS__)
+#define ilog_debug(...)   iLogMeta(ILOG_TAG, ILOG_DEBUG, __VA_ARGS__)
+#define ilog_info(...)    iLogMeta(ILOG_TAG, ILOG_INFO, __VA_ARGS__)
+#define ilog_notice(...)  iLogMeta(ILOG_TAG, ILOG_NOTICE, __VA_ARGS__)
+#define ilog_warn(...)    iLogMeta(ILOG_TAG, ILOG_WARN, __VA_ARGS__)
+#define ilog_error(...)   iLogMeta(ILOG_TAG, ILOG_ERROR, __VA_ARGS__)
 
 } // namespace iShell
 

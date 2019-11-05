@@ -1036,8 +1036,16 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
 class iObject;
 class _iSignalBase;
 
-template<typename Func> struct FunctionHelper { typedef  Func Function; };
-template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR) > { typedef void (iObject::*Function)(); };
+template<typename Func> struct FunctionHelper
+{
+    typedef Func Function;
+    static Function safeFunc(Function f) { return f; }
+};
+template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR) >
+{
+    typedef void (iObject::*Function)();
+    static Function safeFunc(IX_TYPEOF(IX_NULLPTR)) { return IX_NULLPTR; }
+};
 
 // internal base class (interface) containing functions required to call a slot managed by a pointer to function.
 class _iConnection
@@ -1453,9 +1461,11 @@ private:
 };
 
 #define IX_OBJECT(TYPE) \
-    inline void getThisTypeHelper() const; \
-    using IX_ThisType = class_wrapper< IX_TYPEOF(getObjectHelper(&TYPE::getThisTypeHelper)) >::CLASSTYPE; \
-    using IX_BaseType = class_wrapper< IX_TYPEOF(getObjectHelper(&IX_ThisType::metaObject)) >::CLASSTYPE; \
+    inline void _getThisTypeHelper() const; \
+    using IX_ThisType = FunctionPointer< IX_TYPEOF(&TYPE::_getThisTypeHelper) >::Object; \
+    using IX_BaseType = FunctionPointer< IX_TYPEOF(&IX_ThisType::metaObject) >::Object; \
+    /* Since metaObject for ThisType will be declared later, the pointer to member function will be */ \
+    /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */ \
 public: \
     virtual const iMetaObject *metaObject() const \
     { \
@@ -1463,6 +1473,19 @@ public: \
         return &staticMetaObject; \
     } \
 private:
+
+#define iSIGNAL(name, ...)  { \
+    typedef FunctionPointer< IX_TYPEOF(&IX_ThisType::signal_struct) > ThisFuncitonPointer; \
+    typedef void (IX_ThisType::*SignalFuncAdaptor)(); \
+    typedef typename ThisFuncitonPointer::Arguments Arguments; \
+    \
+    SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(&IX_ThisType::signal_struct); \
+    _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor); \
+    \
+    Arguments tArgs(__VA_ARGS__); \
+    _iArgumentHelper argHelper = {&tArgs, &ThisFuncitonPointer::cloneArgs, &ThisFuncitonPointer::freeArgs}; \
+    activateImpl(tSignal, argHelper); \
+    }
 
 #define IPROPERTY_BEGIN \
     virtual void initProperty() \
