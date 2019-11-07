@@ -1130,7 +1130,7 @@ class _iConnectionHelper : public _iConnection
         case Compare:
             {
             const _iConnectionHelper* objCon = static_cast<const _iConnectionHelper*>(this_);
-            if (*reinterpret_cast<const SlotFunc *>(f) == objCon->_func) {
+            if ((IX_NULLPTR != f) && *reinterpret_cast<const SlotFunc *>(f) == objCon->_func) {
                return const_cast<_iConnection*>(this_);
             }
             }
@@ -1474,19 +1474,6 @@ public: \
     } \
 private:
 
-#define iSIGNAL(name, ...)  { \
-    typedef FunctionPointer< IX_TYPEOF(&IX_ThisType::signal_struct) > ThisFuncitonPointer; \
-    typedef void (IX_ThisType::*SignalFuncAdaptor)(); \
-    typedef typename ThisFuncitonPointer::Arguments Arguments; \
-    \
-    SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(&IX_ThisType::signal_struct); \
-    _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor); \
-    \
-    Arguments tArgs(__VA_ARGS__); \
-    _iArgumentHelper argHelper = {&tArgs, &ThisFuncitonPointer::cloneArgs, &ThisFuncitonPointer::freeArgs}; \
-    activateImpl(tSignal, argHelper); \
-    }
-
 #define IPROPERTY_BEGIN \
     virtual void initProperty() \
     { \
@@ -1523,6 +1510,21 @@ private:
             const_cast<iMetaObject*>(mobj)->setProperty(*pptIns); \
         } \
     }
+
+#define ISIGNAL(name, ...)  { \
+    typedef FunctionPointer< IX_TYPEOF(&IX_ThisType::name) > ThisFuncitonPointer; \
+    typedef void (IX_ThisType::*SignalFuncAdaptor)(); \
+    typedef typename ThisFuncitonPointer::Arguments Arguments; \
+    \
+    SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(&IX_ThisType::name); \
+    _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor); \
+    \
+    Arguments tArgs = Arguments(__VA_ARGS__); \
+    _iArgumentHelper argHelper = {&tArgs, &ThisFuncitonPointer::cloneArgs, &ThisFuncitonPointer::freeArgs}; \
+    emitImpl(tSignal, argHelper); \
+    }
+
+#define IEMIT
 
 } // namespace iShell
 

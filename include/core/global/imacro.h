@@ -163,7 +163,7 @@ void ix_assert_x(const char *what, const char *file, int line);
 #ifdef IX_HAVE_CXX11
 #define IX_NULLPTR nullptr
 #else
-#define IX_NULLPTR 0
+#define IX_NULLPTR NULL
 #endif
 
 #ifdef IX_HAVE_CXX11

@@ -61,11 +61,11 @@ iGstreamerBusHelper::iGstreamerBusHelper(GstBus* bus, iObject* parent):
     iObject(parent),
     m_tag(0),
     m_bus(bus),
-    m_intervalTimer(nullptr)
+    m_intervalTimer(IX_NULLPTR)
 {
     m_intervalTimer = new iTimer(this);
     m_intervalTimer->setInterval(250);
-    m_intervalTimer->timeout.connect(this, &iGstreamerBusHelper::interval);
+    connect(m_intervalTimer, &iTimer::timeout, this, &iGstreamerBusHelper::interval);
     m_intervalTimer->start();
 
     #if GST_CHECK_VERSION(1,0,0)
@@ -150,7 +150,7 @@ void iGstreamerBusHelper::doProcessMessage(const iGstreamerMessage& msg)
             break;
     }
 
-    message.emits(msg);
+    IEMIT message(msg);
 }
 
 } // namespace iShell

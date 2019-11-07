@@ -37,7 +37,7 @@ public:
         slot = arg;
     }
 
-    iSignal<int> tst_sig_int1;
+    void tst_sig_int1(int arg) ISIGNAL(tst_sig_int1, arg)
 
 public: //test result
     int slot;
@@ -46,7 +46,7 @@ public: //test result
 int test_thread(void)
 {
     TestThread* signal1 = new TestThread;
-    signal1->tst_sig_int1.connect(signal1, &TestThread::tst_slot_int1);
+    iObject::connect(signal1, &TestThread::tst_sig_int1, signal1, &TestThread::tst_slot_int1);
 
     ilog_debug("test_thread: current thread ", iThread::currentThreadId());
     iThread* thread = new iThread();
@@ -55,19 +55,19 @@ int test_thread(void)
 
     TestThread* thread1 = new TestThread;
     thread1->moveToThread(thread);
-    signal1->tst_sig_int1.connect(thread1, &TestThread::tst_slot_int1_block, BlockingQueuedConnection);
+    iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1_block, BlockingQueuedConnection);
     thread->start();
 
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 start");
-    signal1->tst_sig_int1.emits(1);
+    IEMIT signal1->tst_sig_int1(1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 end");
     IX_ASSERT(1 == signal1->slot);
     IX_ASSERT(1 == thread1->slot);
 
-    signal1->tst_sig_int1.disconnect(thread1, &TestThread::tst_slot_int1_block);
-    signal1->tst_sig_int1.connect(thread1, &TestThread::tst_slot_int1);
+    iObject::disconnect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1_block);
+    iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_sig_int1 2 start");
-    signal1->tst_sig_int1.emits(2);
+    IEMIT signal1->tst_sig_int1(2);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_sig_int1 2 end");
 
     iThread::yieldCurrentThread();
@@ -78,13 +78,14 @@ int test_thread(void)
 
     thread1 = new TestThread;
     thread1->moveToThread(thread);
-    signal1->disconnectAll();
-    signal1->tst_sig_int1.connect(signal1, &TestThread::tst_slot_int1, QueuedConnection);
-    signal1->tst_sig_int1.connect(thread1, &TestThread::tst_slot_int1, DirectConnection);
+    signal1->disconnect(signal1, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
+    iObject::connect(signal1, &TestThread::tst_sig_int1, signal1, &TestThread::tst_slot_int1, QueuedConnection);
+    IX_ASSERT(iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1, ConnectionType(DirectConnection | UniqueConnection)));
+    IX_ASSERT(!iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1, ConnectionType(DirectConnection | UniqueConnection)));
     thread->start();
 
     ilog_debug("test_thread: [", iThread::currentThreadId(),"]tst_sig_int1");
-    signal1->tst_sig_int1.emits(2);
+    IEMIT signal1->tst_sig_int1(2);
     IX_ASSERT(2 == thread1->slot);
 
     iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));

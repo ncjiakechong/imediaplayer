@@ -63,7 +63,7 @@ public:
             mtx2->lock();
             return true;
         }
-        if (!mtx2->tryLock()) {
+        if (mtx2->tryLock() < 0) {
             mtx1->unlock();
             mtx2->lock();
             mtx1->lock();

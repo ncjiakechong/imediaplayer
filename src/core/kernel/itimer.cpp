@@ -64,7 +64,7 @@ bool iTimer::event(iEvent *e)
         if (m_single)
             stop();
 
-        timeout.emits();
+        IEMIT timeout();
         return true;
     }
 

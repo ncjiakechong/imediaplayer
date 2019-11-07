@@ -33,8 +33,8 @@ public:
 
     int start() const {
         TestCase* _This = const_cast<TestCase*>(this);
-        _This->tstcase_sig.connect(_This, &TestCase::doTestCase, QueuedConnection);
-        _This->tstcase_sig.emits();
+        connect(_This, &TestCase::tstcase_sig, _This, &TestCase::doTestCase, QueuedConnection);
+        IEMIT _This->tstcase_sig(0);
 
         return 0;
     }
@@ -43,38 +43,38 @@ public:
         ilog_debug("======", num, "=============================");
         if (0 == num) {
             test_iconvertible();
-            tstcase_sig.emits(1);
+            IEMIT tstcase_sig(1);
             return;
         }
 
         if (1 == num) {
             test_ivariant();
-            tstcase_sig.emits(2);
+            IEMIT tstcase_sig(2);
             return;
         }
 
         if (2 == num) {
             test_object();
-            tstcase_sig.emits(3);
+            IEMIT tstcase_sig(3);
             return;
         }
 
         if (3 == num) {
             test_thread();
-            tstcase_sig.emits(4);
+            IEMIT tstcase_sig(4);
             return;
         }
 
         if (4 == num) {
             test_timer();
-            tstcase_sig.emits(5);
+            IEMIT tstcase_sig(5);
             return;
         }
 
         iCoreApplication::postEvent(iCoreApplication::instance(), new iEvent(iEvent::Quit));
     }
 
-    iSignal<int> tstcase_sig;
+    void tstcase_sig(int c) ISIGNAL(tstcase_sig, c)
 };
 
 int main(void)

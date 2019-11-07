@@ -71,7 +71,7 @@ public:
     void installMessageFilter(iObject *filter);
     void removeMessageFilter(iObject *filter);
 
-    iSignal<iGstreamerMessage const&> message;
+    void message(const iGstreamerMessage& msg) ISIGNAL(message, msg)
 
 private:
     GstBus* bus() const { return m_bus; }
@@ -87,7 +87,7 @@ private:
 
     guint m_tag;
     GstBus* m_bus;
-    iTimer*     m_intervalTimer;
+    iTimer* m_intervalTimer;
 
     iMutex filterMutex;
     std::list<iObject*> syncFilters;

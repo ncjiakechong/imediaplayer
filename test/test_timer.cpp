@@ -33,7 +33,7 @@ public:
     TestTimer(iObject* parent = IX_NULLPTR)
         : iObject(parent), m_quit(this)
     {
-        m_quit.timeout.connect(this, &TestTimer::quit);
+        connect(&m_quit, &iTimer::timeout, this, &TestTimer::quit);
     }
 
     void start() {
@@ -76,7 +76,7 @@ public:
         iCoreApplication::postEvent(iThread::currentThread(), new iEvent(iEvent::Quit));
     }
 
-    iSignal<> tst_sig;
+    void tst_sig() ISIGNAL(tst_sig)
 
 private:
     int m_t500;
@@ -98,10 +98,10 @@ int test_timer(void)
     TestTimer* timer = new TestTimer();
     timer->startTimer(1000, VeryCoarseTimer);
     timer->moveToThread(thread);
-    timer->tst_sig.connect(timer, &TestTimer::start);
+    iObject::connect(timer, &TestTimer::tst_sig, timer, &TestTimer::start);
     thread->start();
 
-    timer->tst_sig.emits();
+    IEMIT timer->tst_sig();
     IX_ASSERT(0 == timer->startTimer(500));
 
     thread->wait();

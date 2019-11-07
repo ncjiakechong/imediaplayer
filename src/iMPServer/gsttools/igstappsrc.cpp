@@ -71,8 +71,8 @@ bool iGstAppSrc::setup(GstElement* appsrc)
 void iGstAppSrc::setStream(iIODevice *stream)
 {
     if (m_stream) {
-        m_stream->readyRead.disconnect(this, &iGstAppSrc::streamDestroyed);
-        m_stream->destroyed.disconnect(this, &iGstAppSrc::onDataReady);
+        disconnect(m_stream, &iIODevice::destroyed, this, &iGstAppSrc::streamDestroyed);
+        disconnect(m_stream, &iIODevice::readyRead, this, &iGstAppSrc::onDataReady);
         m_stream = 0;
     }
 
@@ -90,8 +90,8 @@ void iGstAppSrc::setStream(iIODevice *stream)
 
     if (stream) {
         m_stream = stream;
-        m_stream->destroyed.connect(this, &iGstAppSrc::streamDestroyed);
-        m_stream->readyRead.connect(this, &iGstAppSrc::onDataReady);
+        connect(m_stream, &iIODevice::destroyed, this, &iGstAppSrc::streamDestroyed);
+        connect(m_stream, &iIODevice::readyRead, this, &iGstAppSrc::onDataReady);
         m_sequential = m_stream->isSequential();
     }
 }
