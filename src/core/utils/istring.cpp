@@ -118,7 +118,7 @@ xsizetype iPrivate::xustrlen(const ushort *str)
  * character is not found, this function returns a pointer to the end of the
  * string -- that is, \c{str.end()}.
  */
-const ushort *iPrivate::xustrchr(iStringView str, ushort c) noexcept
+const ushort *iPrivate::xustrchr(iStringView str, ushort c)
 {
     const ushort *n = reinterpret_cast<const ushort *>(str.begin());
     const ushort *e = reinterpret_cast<const ushort *>(str.end());
@@ -6513,7 +6513,7 @@ static ResultList splitString(const StringSource &source, const iChar *sep,
 */
 std::list<iString> iString::split(const iString &sep, SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
-    return splitString<std::list<iString>>(*this, sep.constData(), behavior, cs, sep.size());
+    return splitString< std::list<iString> >(*this, sep.constData(), behavior, cs, sep.size());
 }
 
 /*!
@@ -6538,7 +6538,7 @@ std::vector<iStringRef> iString::splitRef(const iString &sep, SplitBehavior beha
 */
 std::list<iString> iString::split(iChar sep, SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
-    return splitString<std::list<iString>>(*this, &sep, behavior, cs, 1);
+    return splitString< std::list<iString> >(*this, &sep, behavior, cs, 1);
 }
 
 /*!
@@ -6626,7 +6626,7 @@ static ResultList splitString(const iString &source, MidMethod mid, const iRegEx
 */
 std::list<iString> iString::split(const iRegExp &rx, SplitBehavior behavior) const
 {
-    return splitString<std::list<iString>>(*this, &iString::mid, rx, behavior);
+    return splitString< std::list<iString> >(*this, &iString::mid, rx, behavior);
 }
 
 /*!

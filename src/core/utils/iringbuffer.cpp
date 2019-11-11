@@ -107,7 +107,7 @@ void IRingBuffer::free(xint64 bytes)
 
         bufferSize -= chunkSize;
         bytes -= chunkSize;
-        buffers.erase(buffers.cbegin());
+        buffers.erase(buffers.begin());
     }
 }
 
@@ -148,7 +148,7 @@ char *IRingBuffer::reserveFront(xint64 bytes)
     const int chunkSize = std::max(basicBlockSize, int(bytes));
     if (bufferSize == 0) {
         if (buffers.empty())
-            buffers.insert(buffers.cbegin(), iRingChunk(chunkSize));
+            buffers.insert(buffers.begin(), iRingChunk(chunkSize));
         else
             buffers.front().allocate(chunkSize);
         buffers.front().grow(chunkSize);
@@ -157,7 +157,7 @@ char *IRingBuffer::reserveFront(xint64 bytes)
         const iRingChunk &chunk = buffers.front();
         // if need a new buffer
         if (basicBlockSize == 0 || chunk.isShared() || bytes > chunk.head()) {
-            buffers.insert(buffers.cbegin(), iRingChunk(chunkSize));
+            buffers.insert(buffers.begin(), iRingChunk(chunkSize));
             buffers.front().grow(chunkSize);
             buffers.front().advance(chunkSize - bytes);
         } else {
@@ -270,7 +270,7 @@ iByteArray IRingBuffer::read()
 
     bufferSize -= buffers.front().size();
     iRingChunk ret = buffers.front();
-    buffers.erase(buffers.cbegin());
+    buffers.erase(buffers.begin());
     return ret.toByteArray();
 }
 

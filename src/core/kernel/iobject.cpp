@@ -450,37 +450,7 @@ void iObject::setObjectName(const iString &name)
         return;
 
     m_objName = name;
-    objectNameChanged.emits(m_objName);
-}
-
-int iObject::refSignal(_iSignalBase* sender)
-{
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
-    __sender_map::iterator it = __m_senders.find(sender);
-    if (it != __m_senders.end()) {
-        it->second++;
-        return it->second;
-    }
-
-    __m_senders.insert(std::pair<_iSignalBase*, int>(sender, 1));
-    return 1;
-}
-
-int iObject::derefSignal(_iSignalBase* sender)
-{
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
-    __sender_map::iterator it = __m_senders.find(sender);
-    if (it == __m_senders.end()) {
-        return 0;
-    }
-
-    it->second--;
-    if (0 == it->second) {
-        __m_senders.erase(it);
-        return 0;
-    }
-
-    return it->second;
+    IEMIT objectNameChanged(m_objName);
 }
 
 void iObject::cleanConnectionLists()
@@ -712,6 +682,8 @@ void iObject::emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelp
         }
 
         _iObjectConnectionList* operator->() const { return connectionLists; }
+
+        IX_DISABLE_COPY(ConnectionListsRef)
     };
 
     iScopedLock<iMutex> locker(m_signalSlotLock);
@@ -735,6 +707,8 @@ void iObject::emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelp
     // We need to check against last here to ensure that signals added
     // during the signal emission are not emitted in this emission.
     _iConnection* last = list.last;
+    iSharedPtr<void> _cloneArgs;
+    iSharedPtr<void> _cloneArgsAdaptor;
 
     do {
         if (connectionLists->orphaned)
@@ -748,19 +722,39 @@ void iObject::emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelp
 
         // determine if this connection should be sent immediately or
         // put into the event queue
-        if ((AutoConnection == conn->_type && receiverInSameThread)
-            || (DirectConnection == conn->_type)) {
+        uint _type = conn->_type & Connection_PrimaryMask;
+        if ((AutoConnection == _type && receiverInSameThread)
+            || (DirectConnection == _type)) {
             locker.unlock();
-            conn->emits(arg.args);
+            if ((conn->_type & AgrumentsAdaptor) && _cloneArgsAdaptor.isNull())
+                _cloneArgsAdaptor = iSharedPtr<void>(arg.cloneAdaptor(arg.args), arg.freeAdaptor);
+
+            if (conn->_type & AgrumentsAdaptor) {
+                conn->emits(_cloneArgsAdaptor.data());
+            } else {
+                conn->emits(arg.args);
+            }
+
             if (connectionLists->orphaned)
                 break;
 
             locker.relock();
             continue;
-        } else if (BlockingQueuedConnection != conn->_type) {
+        } else if (BlockingQueuedConnection != _type) {
             conn->ref();
+            iSharedPtr<void> _a;
             iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-            iSharedPtr<void> _a(arg.clone(arg.args), arg.free);
+            if ((conn->_type & AgrumentsAdaptor) && _cloneArgsAdaptor.isNull())
+                _cloneArgsAdaptor = iSharedPtr<void>(arg.cloneAdaptor(arg.args), arg.freeAdaptor);
+            if (!(conn->_type & AgrumentsAdaptor) && _cloneArgs.isNull())
+                _cloneArgs = iSharedPtr<void>(arg.cloneArgs(arg.args), arg.freeArgs);
+
+            if (conn->_type & AgrumentsAdaptor) {
+                 _a = _cloneArgsAdaptor;
+            } else {
+                _a = _cloneArgs;
+            }
+
             iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
             iCoreApplication::postEvent(receiver, event);
             continue;
@@ -773,8 +767,19 @@ void iObject::emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelp
 
         conn->ref();
         iSemaphore semaphore;
+        iSharedPtr<void> _a;
         iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-        iSharedPtr<void> _a(arg.clone(arg.args), arg.free);
+        if ((conn->_type & AgrumentsAdaptor) && _cloneArgsAdaptor.isNull())
+            _cloneArgsAdaptor = iSharedPtr<void>(arg.cloneAdaptor(arg.args), arg.freeAdaptor);
+        if (!(conn->_type & AgrumentsAdaptor) && _cloneArgs.isNull())
+            _cloneArgs = iSharedPtr<void>(arg.cloneArgs(arg.args), arg.freeArgs);
+
+        if (conn->_type & AgrumentsAdaptor) {
+             _a = _cloneArgsAdaptor;
+        } else {
+            _a = _cloneArgs;
+        }
+
         iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
         iCoreApplication::postEvent(receiver, event);
         locker.unlock();
@@ -805,7 +810,7 @@ iVariant iObject::property(const char *name) const
 
         it = propertys->find(iString(name));
         if (it != propertys->cend())
-            return it->second->get(it->second.data(), this);
+            return it->second->_get(it->second.data(), this);
     } while ((mo = mo->superClass()));
 
     return iVariant();
@@ -824,7 +829,7 @@ bool iObject::setProperty(const char *name, const iVariant& value)
 
         it = propertys->find(iString(name));
         if (it != propertys->cend()) {
-            it->second->set(it->second.data(), this, value);
+            it->second->_set(it->second.data(), this, value);
             return true;
         }
     } while ((mo = mo->superClass()));
@@ -834,12 +839,6 @@ bool iObject::setProperty(const char *name, const iVariant& value)
 
 void iObject::initProperty()
 {
-    if (m_propertyNofity.empty()) {
-        iObject::doInitProperty(&m_propertyNofity);
-    }
-}
-
-void iObject::doInitProperty(std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* pptNotify) {
     std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> pptImp;
 
     std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* pptIns = IX_NULLPTR;
@@ -851,13 +850,8 @@ void iObject::doInitProperty(std::unordered_map<iString, iSignal<iVariant>*, iKe
 
     if (pptIns) {
         pptIns->insert(std::pair<iString, iSharedPtr<_iproperty_base>>(
-                            "objectName",
-                            newProperty(&iObject::objectName, &iObject::setObjectName)));
-    }
-
-    if (pptNotify) {
-        pptNotify->insert(std::pair<iString, iSignal<iVariant>*>(
-                               "objectName", &objectNameChanged));
+                            iString("objectName"),
+                            iSharedPtr<_iproperty_base>(newProperty(&iObject::objectName, &iObject::setObjectName, &iObject::objectNameChanged))));
     }
 
     if (pptIns) {
@@ -938,18 +932,19 @@ bool iObject::invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& ar
 
     // determine if this connection should be sent immediately or
     // put into the event queue
-    if ((AutoConnection == c._type && receiverInSameThread)
-        || (DirectConnection == c._type)) {
+    uint _type = c._type & Connection_PrimaryMask;
+    if ((AutoConnection == _type && receiverInSameThread)
+        || (DirectConnection == _type)) {
         c.emits(arg.args);
         return true;
-    } else if (c._type == BlockingQueuedConnection) {
+    } else if (_type == BlockingQueuedConnection) {
         if (receiverInSameThread) {
             ilog_warn("iObject Dead lock detected while activating a BlockingQueuedConnection: "
                 "receiver is ", receiver->objectName(), "(", receiver, ")");
         }
         iSemaphore semaphore;
         iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
-        iSharedPtr<void> _a(arg.clone(arg.args), arg.free);
+        iSharedPtr<void> _a(arg.cloneArgs(arg.args), arg.freeArgs);
         iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
         iCoreApplication::postEvent(receiver, event);
         semaphore.acquire();
@@ -957,177 +952,10 @@ bool iObject::invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& ar
     }
 
     iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
-    iSharedPtr<void> _a(arg.clone(arg.args), arg.free);
+    iSharedPtr<void> _a(arg.cloneArgs(arg.args), arg.freeArgs);
     iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
     iCoreApplication::postEvent(receiver, event);
     return true;
-}
-
-
-_iSignalBase::_iSignalBase()
-{
-}
-
-_iSignalBase::_iSignalBase(const _iSignalBase& s)
-{
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-    connections_list::const_iterator it = s.m_connected_slots.begin();
-    connections_list::const_iterator itEnd = s.m_connected_slots.end();
-
-    while(it != itEnd) {
-        (*it)->_receiver->refSignal(this);
-        (*it)->ref();
-        m_connected_slots.push_back(*it);
-
-        ++it;
-    }
-}
-
-_iSignalBase::~_iSignalBase()
-{
-    disconnectAll();
-}
-
-void _iSignalBase::disconnectAll()
-{
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-    while (!m_connected_slots.empty()) {
-        _iConnection* conn = m_connected_slots.front();
-        conn->_receiver->derefSignal(this);
-        conn->_orphaned = true;
-        conn->deref();
-
-        m_connected_slots.pop_front();
-    }
-}
-
-void _iSignalBase::doDisconnect(iObject* obj, _iConnection::MemberFunction func)
-{
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-    connections_list::iterator it = m_connected_slots.begin();
-    connections_list::iterator itEnd = m_connected_slots.end();
-
-    while(it != itEnd) {
-        if (obj != (*it)->_receiver) {
-            ++it;
-            continue;
-        }
-
-        _iConnection::MemberFunction __slotFunc = *reinterpret_cast<const _iConnection::MemberFunction *>((*it)->_slot);
-        if(func == __slotFunc) {
-            (*it)->_orphaned = true;
-            (*it)->deref();
-            it = m_connected_slots.erase(it);
-            obj->derefSignal(this);
-            return;
-        }
-
-        ++it;
-    }
-}
-
-void _iSignalBase::doConnect(const _iConnection &conn)
-{
-    if ((IX_NULLPTR == conn._receiver) || conn._receiver->m_wasDeleted) {
-        ilog_error("conn | conn->getdest is null!!!");
-        return;
-    }
-
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-    m_connected_slots.push_back(conn.clone());
-    conn._receiver->refSignal(this);
-}
-
-void _iSignalBase::slotDisconnect(iObject* pslot)
-{
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-    connections_list::iterator it = m_connected_slots.begin();
-    connections_list::iterator itEnd = m_connected_slots.end();
-
-    while(it != itEnd) {
-        if((*it)->_receiver == pslot) {
-            (*it)->_orphaned = true;
-            (*it)->deref();
-            it = m_connected_slots.erase(it);
-            continue;
-        }
-
-        ++it;
-    }
-}
-
-void _iSignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
-{
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-    connections_list::iterator it = m_connected_slots.begin();
-    connections_list::iterator itEnd = m_connected_slots.end();
-
-    while(it != itEnd) {
-        if((*it)->_receiver == oldtarget) {
-            m_connected_slots.push_back((*it)->duplicate(newtarget));
-        }
-
-        ++it;
-    }
-}
-
-void _iSignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
-{
-    IX_ASSERT(clone);
-    connections_list tmp_connected_slots;
-
-    {
-        iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-        for (connections_list::iterator it = m_connected_slots.begin(); it != m_connected_slots.end(); ++it) {
-            (*it)->ref();
-            tmp_connected_slots.push_back(*it);
-        }
-    }
-
-    iThreadData* currentThreadData = iThreadData::current();
-    while(!tmp_connected_slots.empty()) {
-        _iConnection* conn = tmp_connected_slots.front();
-        tmp_connected_slots.pop_front();
-
-        if (!conn->_receiver) {
-            conn->deref();
-            continue;
-        }
-
-        iObject * const receiver = conn->_receiver;
-        const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
-
-        // determine if this connection should be sent immediately or
-        // put into the event queue
-        if ((AutoConnection == conn->_type && receiverInSameThread)
-            || (DirectConnection == conn->_type)) {
-            conn->emits(args);
-            conn->deref();
-            continue;
-        } else if (conn->_type == BlockingQueuedConnection) {
-            if (receiverInSameThread) {
-                ilog_warn("iObject Dead lock detected while activating a BlockingQueuedConnection: "
-                    "receiver is ", receiver->objectName(), "(", receiver, ")");
-            }
-
-            conn->ref();
-            iSemaphore semaphore;
-            iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-            iSharedPtr<void> _a(clone(args), free);
-            iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
-            iCoreApplication::postEvent(receiver, event);
-            semaphore.acquire();
-            conn->deref();
-            continue;
-        }
-
-        conn->ref();
-        iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-        iSharedPtr<void> _a(clone(args), free);
-        iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
-        iCoreApplication::postEvent(receiver, event);
-        conn->deref();
-    }
 }
 
 _iConnection::_iConnection(ImplFn impl, ConnectionType type)

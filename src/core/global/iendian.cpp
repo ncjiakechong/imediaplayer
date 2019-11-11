@@ -699,13 +699,13 @@ namespace iShell {
 */
 
 template <typename T>
-static inline size_t simdSwapLoop(const uchar *, size_t, uchar *) noexcept
+static inline size_t simdSwapLoop(const uchar *, size_t, uchar *)
 {
     return 0;
 }
 
 template <typename T>
-static inline void *bswapLoop(const uchar *src, size_t n, uchar *dst) noexcept
+static inline void *bswapLoop(const uchar *src, size_t n, uchar *dst)
 {
     // Buffers cannot partially overlap: either they're identical or totally
     // disjoint (note: they can be adjacent).
@@ -725,7 +725,7 @@ static inline void *bswapLoop(const uchar *src, size_t n, uchar *dst) noexcept
     return dst + i;
 }
 
-template <> void *ibswap<2>(const void *source, xsizetype n, void *dest) noexcept
+template <> void *ibswap<2>(const void *source, xsizetype n, void *dest)
 {
     const uchar *src = reinterpret_cast<const uchar *>(source);
     uchar *dst = reinterpret_cast<uchar *>(dest);
@@ -733,7 +733,7 @@ template <> void *ibswap<2>(const void *source, xsizetype n, void *dest) noexcep
     return bswapLoop<xuint16>(src, n << 1, dst);
 }
 
-template <> void *ibswap<4>(const void *source, xsizetype n, void *dest) noexcept
+template <> void *ibswap<4>(const void *source, xsizetype n, void *dest)
 {
     const uchar *src = reinterpret_cast<const uchar *>(source);
     uchar *dst = reinterpret_cast<uchar *>(dest);
@@ -741,7 +741,7 @@ template <> void *ibswap<4>(const void *source, xsizetype n, void *dest) noexcep
     return bswapLoop<xuint32>(src, n << 2, dst);
 }
 
-template <> void *ibswap<8>(const void *source, xsizetype n, void *dest) noexcept
+template <> void *ibswap<8>(const void *source, xsizetype n, void *dest)
 {
     const uchar *src = reinterpret_cast<const uchar *>(source);
     uchar *dst = reinterpret_cast<uchar *>(dest);

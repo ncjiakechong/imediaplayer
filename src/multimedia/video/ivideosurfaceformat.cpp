@@ -570,8 +570,8 @@ void iVideoSurfaceFormat::setProperty(const char *name, const iVariant &value)
             d->mirrored = value.value<bool>();
     } else {
         int id = 0;
-        std::list<iByteArray>::const_iterator it = d->propertyNames.cbegin();
-        for (it = d->propertyNames.cbegin(); it != d->propertyNames.cend(); ++it, ++id) {
+        std::list<iByteArray>::iterator it = d->propertyNames.begin();
+        for (it = d->propertyNames.begin(); it != d->propertyNames.end(); ++it, ++id) {
             if (*it == name)
                 break;
         }

@@ -29,23 +29,23 @@ namespace iShell {
 */
 
 //template <typename List1, typename List2> struct CheckCompatibleArguments { enum { value = false }; };
-//template <> struct CheckCompatibleArguments<iTypeListType<>, iTypeListType<>> { enum { value = true }; };
-//template <typename List1> struct CheckCompatibleArguments<List1, iTypeListType<>> { enum { value = true }; };
+//template <> struct CheckCompatibleArguments<iTypeListType<>, iTypeListType<> > { enum { value = true }; };
+//template <typename List1> struct CheckCompatibleArguments<List1, iTypeListType<> > { enum { value = true }; };
 template <int N, class List1, class List2>
 struct CheckCompatibleArguments { enum { value = false }; };
 
 template <int N, class Head1, class Tail1, class Head2, class Tail2>
-struct CheckCompatibleArguments<N, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2>>
+struct CheckCompatibleArguments<N, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2> >
 {
-    typedef typename iTypeGetter<N-1, iTypeList<Head1, Tail1>>::HeadType ArgType1;
-    typedef typename iTypeGetter<N-1, iTypeList<Head2, Tail2>>::HeadType ArgType2;
+    typedef typename iTypeGetter<N-1, iTypeList<Head1, Tail1> >::HeadType ArgType1;
+    typedef typename iTypeGetter<N-1, iTypeList<Head2, Tail2> >::HeadType ArgType2;
 
     enum { value = is_convertible<ArgType1, ArgType2>::value
-                && CheckCompatibleArguments<N - 1, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2>>::value };
+                && CheckCompatibleArguments<N - 1, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2> >::value };
 };
 
 template <class Head1, class Tail1, class Head2, class Tail2>
-struct CheckCompatibleArguments<0, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2>>
+struct CheckCompatibleArguments<0, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2> >
 {
     enum { value = true };
 };
@@ -59,6 +59,13 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) ()>
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) ();
     enum {ArgumentCount = 0, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void*) {
         return IX_NULLPTR;
@@ -76,9 +83,20 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
 {
     typedef Obj Object;
     typedef iTuple<Arg1> Arguments;
+    typedef iTuple<iVariant> ArgumentsAdaptor;
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        return new ArgumentsAdaptor(iVariant(tArgs->template get<0>()));
+    }
+
+    static void freeArgAdaptor(void* args) {
+        ArgumentsAdaptor* tArgs = static_cast<ArgumentsAdaptor*>(args);
+        delete tArgs;
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -105,6 +123,13 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -133,6 +158,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3)>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -160,6 +192,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4)>
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -190,6 +229,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -222,6 +268,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -252,6 +305,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -286,6 +346,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -318,6 +385,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -353,6 +427,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -387,6 +468,13 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const>
     typedef Ret (Obj::*Function) () const;
     enum {ArgumentCount = 0, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void*) {
         return IX_NULLPTR;
     }
@@ -403,9 +491,18 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
 {
     typedef Obj Object;
     typedef iTuple<Arg1> Arguments;
+    typedef iTuple<iVariant> ArgumentsAdaptor;
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        return new ArgumentsAdaptor(tArgs->template get<0>());
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -432,6 +529,13 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -460,6 +564,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -487,6 +598,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const>
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -517,6 +635,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const>
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -549,6 +674,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -579,6 +711,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) c
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -613,6 +752,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -645,6 +791,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret ReturnType;
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -680,6 +833,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -714,6 +874,13 @@ template<typename Ret> struct FunctionPointer<Ret (*) ()>
     typedef Ret (*Function) ();
     enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void*) {
         return IX_NULLPTR;
     }
@@ -733,6 +900,13 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -759,6 +933,13 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -787,6 +968,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3)>
     typedef Ret (*Function) (Arg1, Arg2, Arg3);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -814,6 +1002,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4)>
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -844,6 +1039,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -876,6 +1078,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -906,6 +1115,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -940,6 +1156,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -972,6 +1195,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
 
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
@@ -1007,6 +1237,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
+    static void* cloneArgAdaptor(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgAdaptor(void*) {
+    }
+
     static void* cloneArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
 
@@ -1034,7 +1271,6 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
 };
 
 class iObject;
-class _iSignalBase;
 
 template<typename Func> struct FunctionHelper
 {
@@ -1069,6 +1305,7 @@ protected:
     typedef _iConnection* (*ImplFn)(int which, const _iConnection* this_, iObject* receiver, void* const* func, void* args);
 
     _iConnection(ImplFn impl, ConnectionType type);
+    // virtual ~_iConnection(); // ignore destructor
 
     void ref();
     void deref();
@@ -1103,7 +1340,6 @@ protected:
     _iConnection(const _iConnection&);
     _iConnection& operator=(const _iConnection&);
     friend class iObject;
-    friend class _iSignalBase;
 };
 
 struct iConKeyHashFunc
@@ -1180,206 +1416,6 @@ public:
     }
 };
 
-// implementation of _iConnectionHelperOld for which the slot is a pointer to member function of a iObject
-// Args and R are the List of arguments and the returntype of the signal to which the slot is connected.
-template<typename Func, typename Args, typename R>
-class _iConnectionHelperOld : public _iConnection
-{
-    typedef FunctionPointer<Func> FuncType;
-    typedef typename FunctionPointer<Func>::Object Object;
-    typedef void (Object::*FuncAdaptor)();
-
-    Func function;
-    static _iConnection* impl(int which, const _iConnection* this_, iObject* r, void* const* f, void* a)
-    {
-        switch (which) {
-        case Destroy:
-            delete static_cast<const _iConnectionHelperOld*>(this_);
-            break;
-			
-        case Compare:
-        {
-        const _iConnectionHelperOld* objCon = static_cast<const _iConnectionHelperOld*>(this_);
-        if (*reinterpret_cast<const Func *>(f) == objCon->function) {
-           return const_cast<_iConnection*>(this_);
-        }
-        }
-        break;
-
-
-        case Call:
-            {
-            const _iConnectionHelperOld* objCon = static_cast<const _iConnectionHelperOld*>(this_);
-            FuncType::template call<Args, R>(
-                        objCon->function, static_cast<Object*>(r), a);
-            }
-            break;
-
-        case Clone:
-            {
-            const _iConnectionHelperOld* objCon = static_cast<const _iConnectionHelperOld*>(this_);
-            _iConnectionHelperOld* objConNew = new _iConnectionHelperOld(objCon->_type, objCon->function);
-            objConNew ->setSlot(r, reinterpret_cast<void**>(&objConNew->function));
-            return objConNew;
-            }
-            break;
-        }
-
-        return IX_NULLPTR;
-    }
-
-    _iConnectionHelperOld(ConnectionType type, Func f)
-        : _iConnection(&impl, type), function(f) {}
-
-public:
-    explicit _iConnectionHelperOld(const iObject* obj, Func f, ConnectionType type)
-        : _iConnection(&impl, type)
-        , function(f)
-    {
-        IX_COMPILER_VERIFY((FuncType::IsPointerToMemberFunction));
-
-        void** tSlot = reinterpret_cast<void**>(&function);
-        setSlot(const_cast<iObject*>(obj), tSlot);
-    }
-};
-
-/**
- * @brief signal base
- */
-class _iSignalBase
-{
-public:
-    virtual ~_iSignalBase();
-
-    void disconnectAll();
-
-protected:
-    typedef std::list<_iConnection *>  connections_list;
-    typedef void* (*clone_args_t)(void*);
-    typedef void (*free_args_t)(void*);
-
-    _iSignalBase();
-    _iSignalBase(const _iSignalBase& s);
-
-    void slotDisconnect(iObject* pslot);
-    void slotDuplicate(const iObject* oldtarget, iObject* newtarget);
-
-    void doConnect(const _iConnection& conn);
-    void doDisconnect(iObject* obj, _iConnection::MemberFunction func);
-    void doEmit(void* args, clone_args_t clone, free_args_t free);
-
-private:
-    iMutex      m_sigLock;
-    connections_list m_connected_slots;
-
-    _iSignalBase& operator=(const _iSignalBase&);
-    friend class iObject;
-};
-
-/**
- * @brief iSignal implements
- */
-struct _iNULLArgument {};
-
-template<class Arg1 = _iNULLArgument,
-         class Arg2 = _iNULLArgument,
-         class Arg3 = _iNULLArgument,
-         class Arg4 = _iNULLArgument,
-         class Arg5 = _iNULLArgument,
-         class Arg6 = _iNULLArgument,
-         class Arg7 = _iNULLArgument,
-         class Arg8 = _iNULLArgument,
-         class Arg9 = _iNULLArgument,
-         class Arg10 = _iNULLArgument>
-class iSignal : public _iSignalBase
-{
-public:
-    iSignal() {}
-
-    iSignal(const iSignal<Arg1, Arg2, Arg3, Arg4,
-        Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>& s)
-        : _iSignalBase(s) {}
-
-    /**
-     * disconnect
-     */
-    template<typename Func>
-    void disconnect(typename FunctionPointer<Func>::Object* obj, Func slot)
-    {
-        typedef void (FunctionPointer<Func>::Object::*FuncAdaptor)();
-        FuncAdaptor tSlotAdptor = reinterpret_cast<FuncAdaptor>(slot);
-        _iConnection::MemberFunction tSlot = static_cast<_iConnection::MemberFunction>(tSlotAdptor);
-
-        doDisconnect(obj, tSlot);
-    }
-
-    /**
-     * connect
-     */
-    template<typename Func>
-    void connect(typename FunctionPointer<Func>::Object* obj, Func slot, ConnectionType type = AutoConnection)
-    {
-        typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> SignalArguments;
-        typedef typename FunctionPointer<Func>::Arguments SlotArguments;
-        IX_COMPILER_VERIFY((int(SignalArguments::length) >= int(FunctionPointer<Func>::ArgumentCount)));
-        IX_COMPILER_VERIFY((CheckCompatibleArguments<FunctionPointer<Func>::ArgumentCount, typename SignalArguments::Type, typename SlotArguments::Type>::value));
-
-        _iConnectionHelperOld<Func, SignalArguments, void> conn(obj, slot, type);
-        doConnect(conn);
-    }
-
-    /**
-     * clone arguments
-     */
-    static void* cloneArgs(void* args) {
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>* tArgs =
-                static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>*>(args);
-
-        return new iTuple<Arg1, Arg2, Arg3, Arg4,
-                Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>(tArgs->template get<0>(),
-                                        tArgs->template get<1>(),
-                                        tArgs->template get<2>(),
-                                        tArgs->template get<3>(),
-                                        tArgs->template get<4>(),
-                                        tArgs->template get<5>(),
-                                        tArgs->template get<6>(),
-                                        tArgs->template get<7>(),
-                                        tArgs->template get<8>(),
-                                        tArgs->template get<9>());
-    }
-
-    /**
-     * free arguments
-     */
-    static void freeArgs(void* args) {
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>* tArgs =
-                static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>*>(args);
-        delete tArgs;
-    }
-
-    /**
-     * emit this signal
-     */
-    void emits(typename type_wrapper<Arg1>::CONSTREFTYPE a1 = TYPEWRAPPER_DEFAULTVALUE(Arg1),
-              typename type_wrapper<Arg2>::CONSTREFTYPE a2 = TYPEWRAPPER_DEFAULTVALUE(Arg2),
-              typename type_wrapper<Arg3>::CONSTREFTYPE a3 = TYPEWRAPPER_DEFAULTVALUE(Arg3),
-              typename type_wrapper<Arg4>::CONSTREFTYPE a4 = TYPEWRAPPER_DEFAULTVALUE(Arg4),
-              typename type_wrapper<Arg5>::CONSTREFTYPE a5 = TYPEWRAPPER_DEFAULTVALUE(Arg5),
-              typename type_wrapper<Arg6>::CONSTREFTYPE a6 = TYPEWRAPPER_DEFAULTVALUE(Arg6),
-              typename type_wrapper<Arg7>::CONSTREFTYPE a7 = TYPEWRAPPER_DEFAULTVALUE(Arg7),
-              typename type_wrapper<Arg8>::CONSTREFTYPE a8 = TYPEWRAPPER_DEFAULTVALUE(Arg8),
-              typename type_wrapper<Arg9>::CONSTREFTYPE a9 = TYPEWRAPPER_DEFAULTVALUE(Arg9),
-              typename type_wrapper<Arg10>::CONSTREFTYPE a10 = TYPEWRAPPER_DEFAULTVALUE(Arg10))
-    {
-        iTuple<Arg1, Arg2, Arg3, Arg4,
-               Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> tArgs(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
-        doEmit(&tArgs, &cloneArgs, &freeArgs);
-    }
-
-private:
-    iSignal& operator=(const iSignal&);
-};
-
 /**
  * @brief property
  */
@@ -1389,22 +1425,29 @@ struct _iproperty_base
     typedef void (*set_t)(const _iproperty_base*, iObject*, const iVariant&);
 
     _iproperty_base(get_t g = IX_NULLPTR, set_t s = IX_NULLPTR)
-        : get(g), set(s) {}
+        : _get(g), _set(s) {}
     // virtual ~_iproperty_base(); // ignore destructor
 
-    get_t get;
-    set_t set;
+    get_t _get;
+    set_t _set;
+    _iConnection::MemberFunction _signal;
 };
 
-template<class Obj, typename ret, typename param>
+template<class Obj, typename retGet, typename setArg, typename signalArg>
 struct iProperty : public _iproperty_base
 {
-    typedef ret (Obj::*pgetfunc_t)() const;
-    typedef void (Obj::*psetfunc_t)(param);
+    typedef retGet (Obj::*pgetfunc_t)() const;
+    typedef void (Obj::*psetfunc_t)(setArg);
+    typedef void (Obj::*psignalfunc_t)(signalArg);
 
-    iProperty(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR)
+    iProperty(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR, psignalfunc_t _signalfunc = IX_NULLPTR)
         : _iproperty_base(getFunc, setFunc)
-        , m_getFunc(_getfunc), m_setFunc(_setfunc) {}
+        , m_getFunc(_getfunc), m_setFunc(_setfunc) {
+        typedef void (Obj::*SignalFuncAdaptor)();
+
+        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(_signalfunc);
+        _signal = static_cast<_iConnection::MemberFunction>(tSignalAdptor);
+    }
 
     static iVariant getFunc(const _iproperty_base* _this, const iObject* obj) {
         const Obj* _classThis = static_cast<const Obj*>(obj);
@@ -1425,19 +1468,19 @@ struct iProperty : public _iproperty_base
             return;
 
         IX_CHECK_PTR(_classThis);
-        (_classThis->*(_typedThis->m_setFunc))(value.value<typename type_wrapper<param>::TYPE>());
+        (_classThis->*(_typedThis->m_setFunc))(value.value<typename type_wrapper<setArg>::TYPE>());
     }
 
     pgetfunc_t m_getFunc;
     psetfunc_t m_setFunc;
 };
 
-template<class Obj, typename ret, typename param>
-_iproperty_base* newProperty(ret (Obj::*get)() const = IX_NULLPTR,
-                        void (Obj::*set)(param) = IX_NULLPTR)
+template<class Obj, typename retGet, typename setArg, typename signalArg>
+_iproperty_base* newProperty(retGet (Obj::*get)() const, void (Obj::*set)(setArg), void (Obj::*signal)(signalArg))
 {
-    IX_COMPILER_VERIFY((is_same<typename type_wrapper<ret>::TYPE, typename type_wrapper<param>::TYPE>::VALUE));
-    return new iProperty<Obj, ret, param>(get, set);
+    IX_COMPILER_VERIFY((set && is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<setArg>::TYPE>::VALUE));
+    IX_COMPILER_VERIFY((signal && is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<signalArg>::TYPE>::VALUE));
+    return new iProperty<Obj, retGet, setArg, signalArg>(get, set, signal);
 }
 
 class iMetaObject
@@ -1475,19 +1518,12 @@ public: \
 private:
 
 #define IPROPERTY_BEGIN \
-    virtual void initProperty() \
-    { \
-        if (m_propertyNofity.empty()) { \
-            IX_ThisType::doInitProperty(&m_propertyNofity); \
-        } \
-    } \
-    \
-    void doInitProperty(std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* pptNotify) { \
+    virtual void initProperty() { \
         std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> pptImp; \
         \
         std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* pptIns = IX_NULLPTR; \
         \
-        IX_BaseType::doInitProperty(pptNotify); \
+        IX_BaseType::initProperty(); \
         const iMetaObject* mobj = IX_ThisType::metaObject(); \
         if (IX_NULLPTR == mobj->property()) { \
             pptIns = &pptImp; \
@@ -1496,13 +1532,10 @@ private:
 #define IPROPERTY_ITEM(NAME, GETFUNC, SETFUNC, SIGNAL) \
         if (pptIns) { \
             pptIns->insert(std::pair<iString, iSharedPtr<_iproperty_base> >( \
-                        NAME, \
-                        newProperty(&class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::GETFUNC, \
-                                    &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SETFUNC))); \
-        } \
-        \
-        if (pptNotify) { \
-            pptNotify->insert(std::pair<iString, iSignal<iVariant>*>(NAME, &SIGNAL)); \
+                        iString(NAME), \
+                        iSharedPtr<_iproperty_base>(newProperty(&class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::GETFUNC, \
+                                        &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SETFUNC, \
+                                        &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SIGNAL)))); \
         }
 
 #define IPROPERTY_END \
@@ -1520,7 +1553,7 @@ private:
     _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor); \
     \
     Arguments tArgs = Arguments(__VA_ARGS__); \
-    _iArgumentHelper argHelper = {&tArgs, &ThisFuncitonPointer::cloneArgs, &ThisFuncitonPointer::freeArgs}; \
+    _iArgumentHelper argHelper = {&tArgs, &ThisFuncitonPointer::cloneArgs, &ThisFuncitonPointer::freeArgs, &ThisFuncitonPointer::cloneArgAdaptor, &ThisFuncitonPointer::freeArgAdaptor}; \
     emitImpl(tSignal, argHelper); \
     }
 

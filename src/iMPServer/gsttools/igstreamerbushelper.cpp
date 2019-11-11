@@ -112,11 +112,11 @@ void iGstreamerBusHelper::removeMessageFilter(iObject *filter)
 {
     if (filter) {
         iScopedLock<iMutex> lock(filterMutex);
-        syncFilters.erase(std::find(syncFilters.cbegin(), syncFilters.cend(), filter));
+        syncFilters.erase(std::find(syncFilters.begin(), syncFilters.end(), filter));
     }
 
     if (filter)
-        busFilters.erase(std::find(busFilters.cbegin(), busFilters.cend(), filter));
+        busFilters.erase(std::find(busFilters.begin(), busFilters.end(), filter));
 }
 
 void iGstreamerBusHelper::interval()

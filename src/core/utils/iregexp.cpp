@@ -2007,7 +2007,7 @@ bool iRegExpMatchState::matchHere()
         */
         j = 0;
         while (j < sleeping.size()) {
-            std::list<std::vector<int> >::const_iterator it = sleeping.cbegin();
+            std::list<std::vector<int> >::iterator it = sleeping.begin();
             std::advance(it, j);
             if ((*it)[0] == i) {
                 const std::vector<int> &zzZ = *it;
