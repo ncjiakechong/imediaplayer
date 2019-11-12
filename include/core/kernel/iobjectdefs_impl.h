@@ -1478,8 +1478,8 @@ struct iProperty : public _iproperty_base
 template<class Obj, typename retGet, typename setArg, typename signalArg>
 _iproperty_base* newProperty(retGet (Obj::*get)() const, void (Obj::*set)(setArg), void (Obj::*signal)(signalArg))
 {
-    IX_COMPILER_VERIFY((set && is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<setArg>::TYPE>::VALUE));
-    IX_COMPILER_VERIFY((signal && is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<signalArg>::TYPE>::VALUE));
+    IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<setArg>::TYPE>::VALUE));
+    IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<signalArg>::TYPE>::VALUE));
     return new iProperty<Obj, retGet, setArg, signalArg>(get, set, signal);
 }
 
