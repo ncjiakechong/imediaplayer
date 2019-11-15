@@ -1419,14 +1419,14 @@ public:
 /**
  * @brief property
  */
-struct _iproperty_base
+struct _iProperty
 {
-    typedef iVariant (*get_t)(const _iproperty_base*, const iObject*);
-    typedef void (*set_t)(const _iproperty_base*, iObject*, const iVariant&);
+    typedef iVariant (*get_t)(const _iProperty*, const iObject*);
+    typedef void (*set_t)(const _iProperty*, iObject*, const iVariant&);
 
-    _iproperty_base(get_t g = IX_NULLPTR, set_t s = IX_NULLPTR)
+    _iProperty(get_t g = IX_NULLPTR, set_t s = IX_NULLPTR)
         : _get(g), _set(s) {}
-    // virtual ~_iproperty_base(); // ignore destructor
+    // virtual ~_iProperty(); // ignore destructor
 
     get_t _get;
     set_t _set;
@@ -1434,14 +1434,14 @@ struct _iproperty_base
 };
 
 template<class Obj, typename retGet, typename setArg, typename signalArg>
-struct iProperty : public _iproperty_base
+struct _iPropertyHelper : public _iProperty
 {
     typedef retGet (Obj::*pgetfunc_t)() const;
     typedef void (Obj::*psetfunc_t)(setArg);
     typedef void (Obj::*psignalfunc_t)(signalArg);
 
-    iProperty(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR, psignalfunc_t _signalfunc = IX_NULLPTR)
-        : _iproperty_base(getFunc, setFunc)
+    _iPropertyHelper(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR, psignalfunc_t _signalfunc = IX_NULLPTR)
+        : _iProperty(getFunc, setFunc)
         , m_getFunc(_getfunc), m_setFunc(_setfunc) {
         typedef void (Obj::*SignalFuncAdaptor)();
 
@@ -1449,9 +1449,9 @@ struct iProperty : public _iproperty_base
         _signal = static_cast<_iConnection::MemberFunction>(tSignalAdptor);
     }
 
-    static iVariant getFunc(const _iproperty_base* _this, const iObject* obj) {
+    static iVariant getFunc(const _iProperty* _this, const iObject* obj) {
         const Obj* _classThis = static_cast<const Obj*>(obj);
-        const iProperty* _typedThis = static_cast<const iProperty *>(_this);
+        const _iPropertyHelper* _typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
         if (!_typedThis->m_getFunc)
             return iVariant();
@@ -1460,9 +1460,9 @@ struct iProperty : public _iproperty_base
         return (_classThis->*(_typedThis->m_getFunc))();
     }
 
-    static void setFunc(const _iproperty_base* _this, iObject* obj, const iVariant& value) {
+    static void setFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
         Obj* _classThis = static_cast<Obj*>(obj);
-        const iProperty *_typedThis = static_cast<const iProperty *>(_this);
+        const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
         if (!_typedThis->m_setFunc)
             return;
@@ -1476,11 +1476,11 @@ struct iProperty : public _iproperty_base
 };
 
 template<class Obj, typename retGet, typename setArg, typename signalArg>
-_iproperty_base* newProperty(retGet (Obj::*get)() const, void (Obj::*set)(setArg), void (Obj::*signal)(signalArg))
+_iProperty* newProperty(retGet (Obj::*get)() const, void (Obj::*set)(setArg), void (Obj::*signal)(signalArg))
 {
     IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<setArg>::TYPE>::VALUE));
     IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<signalArg>::TYPE>::VALUE));
-    return new iProperty<Obj, retGet, setArg, signalArg>(get, set, signal);
+    return new _iPropertyHelper<Obj, retGet, setArg, signalArg>(get, set, signal);
 }
 
 class iMetaObject
@@ -1494,13 +1494,13 @@ public:
     iObject *cast(iObject *obj) const;
     const iObject *cast(const iObject *obj) const;
 
-    void setProperty(const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>& ppt);
-    const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* property() const;
+    void setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>& ppt);
+    const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* property() const;
 
 private:
     bool m_initProperty;
     const iMetaObject* m_superdata;
-    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> m_property;
+    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> m_property;
 };
 
 #define IX_OBJECT(TYPE) \
@@ -1519,29 +1519,23 @@ private:
 
 #define IPROPERTY_BEGIN \
     virtual void initProperty() { \
-        std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> pptImp; \
-        \
-        std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* pptIns = IX_NULLPTR; \
-        \
-        IX_BaseType::initProperty(); \
         const iMetaObject* mobj = IX_ThisType::metaObject(); \
-        if (IX_NULLPTR == mobj->property()) { \
-            pptIns = &pptImp; \
-        }
+        if (IX_NULLPTR != mobj->property()) \
+            return; \
+        \
+        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> pptImp;
+
 
 #define IPROPERTY_ITEM(NAME, GETFUNC, SETFUNC, SIGNAL) \
-        if (pptIns) { \
-            pptIns->insert(std::pair<iString, iSharedPtr<_iproperty_base> >( \
-                        iString(NAME), \
-                        iSharedPtr<_iproperty_base>(newProperty(&class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::GETFUNC, \
-                                        &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SETFUNC, \
-                                        &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SIGNAL)))); \
-        }
+        pptImp.insert(std::pair<iString, iSharedPtr<_iProperty> >( \
+                    iString(NAME), \
+                    iSharedPtr<_iProperty>(newProperty(&class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::GETFUNC, \
+                                    &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SETFUNC, \
+                                    &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SIGNAL))));
 
 #define IPROPERTY_END \
-        if (pptIns) { \
-            const_cast<iMetaObject*>(mobj)->setProperty(*pptIns); \
-        } \
+        const_cast<iMetaObject*>(mobj)->setProperty(pptImp); \
+        IX_BaseType::initProperty(); \
     }
 
 #define ISIGNAL(name, ...)  { \

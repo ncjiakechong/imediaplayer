@@ -76,8 +76,8 @@ public:
         const iMetaObject* mo = metaObject();
 
         do {
-            std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-            const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
+            std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+            const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
             if (!propertys)
                 continue;
 
