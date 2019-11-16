@@ -6,7 +6,7 @@
 
 BUILD_TOPDIR = $$OUT_PWD/..
 
-TARGET = icorelibtest
+TARGET = imediaplayertest
 TEMPLATE = app
 
 QT =
@@ -20,7 +20,7 @@ INCLUDEPATH += \
     ../include
 
 LIBS += \
-    -L$${BUILD_TOPDIR} -licore -limpserver
+    -L$${BUILD_TOPDIR} -licore -limultimedia
 
 QMAKE_LFLAGS += -Wl,-rpath,"'\$$ORIGIN'"
 
