@@ -16,7 +16,7 @@
 
 namespace iShell {
 
-class iRect
+class IX_CORE_EXPORT iRect
 {
 public:
     iRect() : x1(0), y1(0), x2(-1), y2(-1) {}
@@ -402,7 +402,7 @@ inline bool operator!=(const iRect &r1, const iRect &r2)
     return r1.x1!=r2.x1 || r1.x2!=r2.x2 || r1.y1!=r2.y1 || r1.y2!=r2.y2;
 }
 
-class iRectF
+class IX_CORE_EXPORT iRectF
 {
 public:
     iRectF() : xp(0.), yp(0.), w(0.), h(0.) {}

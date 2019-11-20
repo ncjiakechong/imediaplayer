@@ -26,7 +26,7 @@ public:
 };
 
 
-class iMutex
+class IX_CORE_EXPORT iMutex
     /// A iMutex (mutual exclusion) is a synchronization
     /// mechanism used to control access to a shared resource
     /// in a concurrent (multithreaded) scenario.
@@ -78,7 +78,7 @@ private:
     iMutexImpl* m_mutex;
 };
 
-class iNullMutex
+class IX_CORE_EXPORT iNullMutex
     /// A iNullMutex is an empty mutex implementation
     /// which performs no locking at all. Useful in policy driven design
     /// where the type of mutex used can be now a template parameter allowing the user to switch

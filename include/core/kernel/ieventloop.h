@@ -16,7 +16,7 @@
 
 namespace iShell {
 
-class iEventLoop : public iObject
+class IX_CORE_EXPORT iEventLoop : public iObject
 {
     IX_OBJECT(iEventLoop)
 public:

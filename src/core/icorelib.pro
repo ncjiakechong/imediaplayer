@@ -14,6 +14,7 @@ QT         =
 DESTDIR = $${BUILD_TOPDIR}
 
 #CONFIG += c++11
+QMAKE_CXXFLAGS += -DIBUILD_CORE_LIB
 
 INCLUDEPATH += \
     ../../include

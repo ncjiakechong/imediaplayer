@@ -11,11 +11,13 @@
 #ifndef ISEMAPHORE_H
 #define ISEMAPHORE_H
 
+#include <core/global/iglobal.h>
+
 namespace iShell {
 
 class iSemaphoreImp;
 
-class iSemaphore
+class IX_CORE_EXPORT iSemaphore
 {
 public:
     explicit iSemaphore(int n = 0);

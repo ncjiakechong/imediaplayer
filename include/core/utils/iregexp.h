@@ -20,7 +20,7 @@ namespace iShell {
 
 class iRegExpPrivate;
 
-class iRegExp
+class IX_CORE_EXPORT iRegExp
 {
 public:
     enum PatternSyntax {

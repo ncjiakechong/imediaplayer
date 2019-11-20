@@ -15,18 +15,18 @@
 
 namespace iShell {
 
-bool iIsInf(double d);
-bool iIsNaN(double d);
-bool iIsFinite(double d);
-bool iIsInf(float f);
-bool iIsNaN(float f);
-bool iIsFinite(float f);
-double iSNaN();
-double iQNaN();
-double iInf();
+IX_CORE_EXPORT bool iIsInf(double d);
+IX_CORE_EXPORT bool iIsNaN(double d);
+IX_CORE_EXPORT bool iIsFinite(double d);
+IX_CORE_EXPORT bool iIsInf(float f);
+IX_CORE_EXPORT bool iIsNaN(float f);
+IX_CORE_EXPORT bool iIsFinite(float f);
+IX_CORE_EXPORT double iSNaN();
+IX_CORE_EXPORT double iQNaN();
+IX_CORE_EXPORT double iInf();
 
-xuint32 iFloatDistance(float a, float b);
-xuint64 iFloatDistance(double a, double b);
+IX_CORE_EXPORT xuint32 iFloatDistance(float a, float b);
+IX_CORE_EXPORT xuint64 iFloatDistance(double a, double b);
 
 } // namespace iShell
 

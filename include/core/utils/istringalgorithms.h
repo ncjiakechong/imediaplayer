@@ -24,38 +24,37 @@ class iStringView;
 
 namespace iPrivate {
 
-xsizetype xustrlen(const ushort *str);
-const ushort *xustrchr(iStringView str, ushort ch);
+IX_CORE_EXPORT xsizetype xustrlen(const ushort *str);
+IX_CORE_EXPORT const ushort *xustrchr(iStringView str, ushort ch);
 
-int compareStrings(iStringView   lhs, iStringView   rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-int compareStrings(iStringView   lhs, iLatin1String rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-int compareStrings(iLatin1String lhs, iStringView   rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-int compareStrings(iLatin1String lhs, iLatin1String rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT int compareStrings(iStringView   lhs, iStringView   rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT int compareStrings(iStringView   lhs, iLatin1String rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT int compareStrings(iLatin1String lhs, iStringView   rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT int compareStrings(iLatin1String lhs, iLatin1String rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
 
+IX_CORE_EXPORT bool startsWith(iStringView   haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT bool startsWith(iStringView   haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT bool startsWith(iLatin1String haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT bool startsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
 
-bool startsWith(iStringView   haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-bool startsWith(iStringView   haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-bool startsWith(iLatin1String haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-bool startsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT bool endsWith(iStringView   haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT bool endsWith(iStringView   haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT bool endsWith(iLatin1String haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT bool endsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
 
-bool endsWith(iStringView   haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-bool endsWith(iStringView   haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-bool endsWith(iLatin1String haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
-bool endsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT iStringView   trimmed(iStringView   s);
+IX_CORE_EXPORT iLatin1String trimmed(iLatin1String s);
 
-iStringView   trimmed(iStringView   s);
-iLatin1String trimmed(iLatin1String s);
+IX_CORE_EXPORT iByteArray convertToLatin1(iStringView str);
+IX_CORE_EXPORT iByteArray convertToUtf8(iStringView str);
+IX_CORE_EXPORT iByteArray convertToLocal8Bit(iStringView str);
+IX_CORE_EXPORT std::vector<uint> convertToUcs4(iStringView str);
+IX_CORE_EXPORT bool isRightToLeft(iStringView string);
 
-iByteArray convertToLatin1(iStringView str);
-iByteArray convertToUtf8(iStringView str);
-iByteArray convertToLocal8Bit(iStringView str);
-std::vector<uint> convertToUcs4(iStringView str);
-bool isRightToLeft(iStringView string);
-
-bool isAscii(iLatin1String s);
-bool isAscii(iStringView   s);
-bool isLatin1(iLatin1String s);
-bool isLatin1(iStringView   s);
+IX_CORE_EXPORT bool isAscii(iLatin1String s);
+IX_CORE_EXPORT bool isAscii(iStringView   s);
+IX_CORE_EXPORT bool isLatin1(iLatin1String s);
+IX_CORE_EXPORT bool isLatin1(iStringView   s);
 
 } // namespace iPrivate
 

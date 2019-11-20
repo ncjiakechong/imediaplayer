@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <algorithm>
 
+#include <core/global/imacro.h>
+
 typedef unsigned char uchar;
 typedef unsigned short ushort;
 typedef unsigned int uint;
@@ -123,6 +125,12 @@ inline bool is_little_endian()
     union {uint16_t u16; uint8_t c;} __byte_order{1};
     return (__byte_order.c > 0);
 }
+
+#if defined(IBUILD_CORE_LIB)
+#  define IX_CORE_EXPORT IX_DECL_EXPORT
+#else
+#  define IX_CORE_EXPORT IX_DECL_IMPORT
+#endif
 
 } // namespace iShell
 

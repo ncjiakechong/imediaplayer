@@ -17,7 +17,7 @@
 
 namespace iShell {
 
-class iSize
+class IX_CORE_EXPORT iSize
 {
 public:
     iSize();
@@ -160,7 +160,7 @@ inline iSize iSize::boundedTo(const iSize & otherSize) const
     return iSize(std::min(wd,otherSize.wd), std::min(ht,otherSize.ht));
 }
 
-class iSizeF
+class IX_CORE_EXPORT iSizeF
 {
 public:
     iSizeF();

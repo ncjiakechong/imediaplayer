@@ -23,7 +23,7 @@ class iObject;
 class iThread;
 class iEventSource;
 
-class iEventDispatcher : public iObject
+class IX_CORE_EXPORT iEventDispatcher : public iObject
 {
     IX_OBJECT(iEventDispatcher)
 public:

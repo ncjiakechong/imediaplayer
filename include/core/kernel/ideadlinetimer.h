@@ -31,7 +31,7 @@ namespace iShell {
   * iDeadlineTimer objects can be passed to functions being called to execute
   * this operation so they know how long to still operate.
  */
-class iDeadlineTimer
+class IX_CORE_EXPORT iDeadlineTimer
 {
 public:
     enum ForeverConstant { Forever };

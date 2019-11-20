@@ -155,7 +155,7 @@ bool iStringView::startsWith(iLatin1String s, iShell::CaseSensitivity cs) const
 bool iStringView::endsWith(iLatin1String s, iShell::CaseSensitivity cs) const
 { return iPrivate::endsWith(*this, s, cs); }
 
-class iString
+class IX_CORE_EXPORT iString
 {
 public:
     typedef iStringData Data;
@@ -806,7 +806,7 @@ inline iString iString::fromWCharArray(const wchar_t *string, int size)
 }
 
 
-class iCharRef {
+class IX_CORE_EXPORT iCharRef {
     iString &s;
     int i;
     inline iCharRef(iString &str, int idx)
@@ -1143,7 +1143,7 @@ inline std::u32string iString::toStdU32String() const
 
 IX_DECLARE_SHARED(iString)
 
-class iStringRef {
+class IX_CORE_EXPORT iStringRef {
     const iString *m_string;
     int m_position;
     int m_size;
