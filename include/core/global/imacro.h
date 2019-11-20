@@ -14,14 +14,6 @@
 #include <cstdlib> // for abort
 #include <algorithm>
 
-void ix_assert(const char *assertion, const char *file, int line);
-void ix_assert_x(const char *what, const char *file, int line);
-
-#define IX_CHECK_PTR(ptr)             do { if (!(ptr)) std::abort(); } while (0)
-
-#define IX_ASSERT(cond) ((cond) ? static_cast<void>(0) : ix_assert(#cond, __FILE__, __LINE__))
-#define IX_ASSERT_X(cond, what) ((cond) ? static_cast<void>(0) : ix_assert_x(what, __FILE__, __LINE__))
-
 /** \file
  * GCC attribute macros */
 
@@ -195,7 +187,7 @@ void ix_assert_x(const char *what, const char *file, int line);
    operator to disable copying (the compiler gives an error message).
 */
 #define IX_DISABLE_COPY(Class) \
-    Class(const Class &);\
-    Class &operator=(const Class &);
+    Class(const Class &) = delete;\
+    Class &operator=(const Class &) = delete;
 
 #endif // IMACRO_H

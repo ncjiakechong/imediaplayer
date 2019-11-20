@@ -6,7 +6,7 @@
 
 SOURCES += \
     $$PWD/iendian.cpp \
-    $$PWD/imacro.cpp \
+    $$PWD/iglobal.cpp \
     $$PWD/inumeric.cpp
 
 HEADERS += \

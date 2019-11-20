@@ -718,12 +718,11 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg)
             return _rawArg;
         }
 
-
         IX_DISABLE_COPY(ConnectArgHelper)
     };
 
     iScopedLock<iMutex> locker(m_signalSlotLock);
-    ConnectionListsRef connectionLists = this->m_connectionLists;
+    ConnectionListsRef connectionLists(m_connectionLists);
     if (IX_NULLPTR == connectionLists.connectionLists)
         return;
 
@@ -741,7 +740,7 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg)
     // We need to check against last here to ensure that signals added
     // during the signal emission are not emitted in this emission.
     _iConnection* last = list.last;
-    ConnectArgHelper argHelper = ConnectArgHelper(arg);
+    ConnectArgHelper argHelper(arg);
     iSharedPtr<void> _cloneArgs;
     iSharedPtr<void> _cloneArgsAdaptor;
 

@@ -19,7 +19,7 @@
 
 namespace iShell {
 
-struct iAbstractConverterFunction
+struct IX_CORE_EXPORT iAbstractConverterFunction
 {
     typedef bool (*Converter)(const iAbstractConverterFunction *, const void *, void*);
     explicit iAbstractConverterFunction(int from, int to, Converter c = IX_NULLPTR)
