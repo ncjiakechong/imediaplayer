@@ -143,9 +143,9 @@ template<> inline void *ibswap<1>(const void *source, xsizetype count, void *des
 {
     return source != dest ? memcpy(dest, source, size_t(count)) : dest;
 }
-template<> void *ibswap<2>(const void *source, xsizetype count, void *dest);
-template<> void *ibswap<4>(const void *source, xsizetype count, void *dest);
-template<> void *ibswap<8>(const void *source, xsizetype count, void *dest);
+template<> IX_CORE_EXPORT void *ibswap<2>(const void *source, xsizetype count, void *dest);
+template<> IX_CORE_EXPORT void *ibswap<4>(const void *source, xsizetype count, void *dest);
+template<> IX_CORE_EXPORT void *ibswap<8>(const void *source, xsizetype count, void *dest);
 
 template <typename T> inline T iToBigEndian(T source)
 {

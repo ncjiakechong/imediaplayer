@@ -19,31 +19,48 @@
 
 namespace iShell {
 
-typedef iBasicAtomicBitField< std::numeric_limits<xint16>::max() > iTypeIdRegistry;
-typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc, iKeyEqualFunc> iMetaTypeConverterRegistry;
+typedef iBasicAtomicBitField< std::numeric_limits<xint16>::max() > iTypeIdContainer;
+typedef std::unordered_map< iLatin1String, int, iKeyHashFunc, iKeyEqualFunc > iTypeIdRegister;
+typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc, iKeyEqualFunc > iMetaTypeConverter;
 
-IX_GLOBAL_STATIC(iTypeIdRegistry, typeIdRegistry)
-IX_GLOBAL_STATIC(iMetaTypeConverterRegistry, typesConversionRegistry)
+struct _iMetaType {
+    iMutex           _lock;
+    iTypeIdContainer _typeIdContainer;
+    iTypeIdRegister  _typeIdRegister;
+    iMetaTypeConverter _metaTypeConverter;
+};
+
+IX_GLOBAL_STATIC(_iMetaType, _iMetaTypeDef)
 
 iAbstractConverterFunction::~iAbstractConverterFunction()
 {
     iVariant::unregisterConverterFunction(fromTypeId, toTypeId);
 }
 
-int iVariant::iRegisterMetaType(int hint)
+int iVariant::iRegisterMetaType(const char *type, int hint)
 {
-    if ((hint > 0)
-        && (hint < iTypeIdRegistry::NumBits)
-        && typeIdRegistry()->allocateSpecific(hint))
-        return hint;
+    iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
+    iTypeIdRegister::iterator it = _iMetaTypeDef->_typeIdRegister.find(iLatin1String(type));
+    if (it != _iMetaTypeDef->_typeIdRegister.end())
+        return it->second;
 
-    return typeIdRegistry()->allocateNext();
+    if ((hint > 0)
+        && (hint < iTypeIdContainer::NumBits)
+        && _iMetaTypeDef->_typeIdContainer.allocateSpecific(hint)) {
+        _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
+        return hint;
+    }
+
+    hint = _iMetaTypeDef->_typeIdContainer.allocateNext();
+    _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
+    return hint;
 }
 
 bool iVariant::registerConverterFunction(const iAbstractConverterFunction *f, int from, int to)
 {
-    std::pair<iMetaTypeConverterRegistry::iterator,bool> ret;
-    ret = typesConversionRegistry()->insert(
+    iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
+    std::pair<iMetaTypeConverter::iterator,bool> ret;
+    ret = _iMetaTypeDef->_metaTypeConverter.insert(
                 std::pair<std::pair<int, int>, const iAbstractConverterFunction*>
                           (std::pair<int, int>(from, to), f));
 
@@ -55,10 +72,11 @@ bool iVariant::registerConverterFunction(const iAbstractConverterFunction *f, in
 
 void iVariant::unregisterConverterFunction(int from, int to)
 {
-    if (typesConversionRegistry.isDestroyed())
+    if (_iMetaTypeDef.isDestroyed())
         return;
 
-    typesConversionRegistry()->erase(std::pair<int, int>(from, to));
+    iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
+    _iMetaTypeDef->_metaTypeConverter.erase(std::pair<int, int>(from, to));
 }
 
 iVariant::iAbstractVariantImpl::iAbstractVariantImpl(void* ptr)
@@ -297,9 +315,10 @@ bool iVariant::convert(int t, void *result) const
 
     } while (0);
 
-    iMetaTypeConverterRegistry::const_iterator it;
-    it = typesConversionRegistry()->find(std::pair<int, int>(m_typeId, t));
-    if (it == typesConversionRegistry()->end() || !it->second)
+    iMetaTypeConverter::const_iterator it;
+    iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
+    it = _iMetaTypeDef->_metaTypeConverter.find(std::pair<int, int>(m_typeId, t));
+    if (it == _iMetaTypeDef->_metaTypeConverter.end() || !it->second)
         return false;
 
     if (IX_NULLPTR == result)
@@ -324,7 +343,7 @@ struct systemConvertHelper
         iRegisterConverter<char, double>();
         iRegisterConverter<char, unsigned char>();
         iRegisterConverter<char, unsigned short>();
-        iRegisterConverter<char, uint>();
+        iRegisterConverter<char, unsigned int>();
         iRegisterConverter<char, unsigned long>();
         iRegisterConverter<char, unsigned long long>();
 
@@ -336,7 +355,7 @@ struct systemConvertHelper
         iRegisterConverter<unsigned char, float>();
         iRegisterConverter<unsigned char, double>();
         iRegisterConverter<unsigned char, unsigned short>();
-        iRegisterConverter<unsigned char, uint>();
+        iRegisterConverter<unsigned char, unsigned int>();
         iRegisterConverter<unsigned char, unsigned long>();
         iRegisterConverter<unsigned char, unsigned long long>();
 
@@ -348,7 +367,7 @@ struct systemConvertHelper
         iRegisterConverter<short, double>();
         iRegisterConverter<short, unsigned char>();
         iRegisterConverter<short, unsigned short>();
-        iRegisterConverter<short, uint>();
+        iRegisterConverter<short, unsigned int>();
         iRegisterConverter<short, unsigned long>();
         iRegisterConverter<short, unsigned long long>();
 
@@ -360,7 +379,7 @@ struct systemConvertHelper
         iRegisterConverter<unsigned short, float>();
         iRegisterConverter<unsigned short, double>();
         iRegisterConverter<unsigned short, unsigned char>();
-        iRegisterConverter<unsigned short, uint>();
+        iRegisterConverter<unsigned short, unsigned int>();
         iRegisterConverter<unsigned short, unsigned long>();
         iRegisterConverter<unsigned short, unsigned long long>();
 
@@ -372,21 +391,21 @@ struct systemConvertHelper
         iRegisterConverter<int, double>();
         iRegisterConverter<int, unsigned char>();
         iRegisterConverter<int, unsigned short>();
-        iRegisterConverter<int, uint>();
+        iRegisterConverter<int, unsigned int>();
         iRegisterConverter<int, unsigned long>();
         iRegisterConverter<int, unsigned long long>();
 
-        iRegisterConverter<uint, char>();
-        iRegisterConverter<uint, short>();
-        iRegisterConverter<uint, int>();
-        iRegisterConverter<uint, long>();
-        iRegisterConverter<uint, long long>();
-        iRegisterConverter<uint, float>();
-        iRegisterConverter<uint, double>();
-        iRegisterConverter<uint, unsigned char>();
-        iRegisterConverter<uint, unsigned short>();
-        iRegisterConverter<uint, unsigned long>();
-        iRegisterConverter<uint, unsigned long long>();
+        iRegisterConverter<unsigned int, char>();
+        iRegisterConverter<unsigned int, short>();
+        iRegisterConverter<unsigned int, int>();
+        iRegisterConverter<unsigned int, long>();
+        iRegisterConverter<unsigned int, long long>();
+        iRegisterConverter<unsigned int, float>();
+        iRegisterConverter<unsigned int, double>();
+        iRegisterConverter<unsigned int, unsigned char>();
+        iRegisterConverter<unsigned int, unsigned short>();
+        iRegisterConverter<unsigned int, unsigned long>();
+        iRegisterConverter<unsigned int, unsigned long long>();
 
         iRegisterConverter<long, char>();
         iRegisterConverter<long, short>();
@@ -396,7 +415,7 @@ struct systemConvertHelper
         iRegisterConverter<long, double>();
         iRegisterConverter<long, unsigned char>();
         iRegisterConverter<long, unsigned short>();
-        iRegisterConverter<long, uint>();
+        iRegisterConverter<long, unsigned int>();
         iRegisterConverter<long, unsigned long>();
         iRegisterConverter<long, unsigned long long>();
 
@@ -409,7 +428,7 @@ struct systemConvertHelper
         iRegisterConverter<unsigned long, double>();
         iRegisterConverter<unsigned long, unsigned char>();
         iRegisterConverter<unsigned long, unsigned short>();
-        iRegisterConverter<unsigned long, uint>();
+        iRegisterConverter<unsigned long, unsigned int>();
         iRegisterConverter<unsigned long, unsigned long long>();
 
         iRegisterConverter<long long, char>();
@@ -419,7 +438,7 @@ struct systemConvertHelper
         iRegisterConverter<long long, double>();
         iRegisterConverter<long long, unsigned char>();
         iRegisterConverter<long long, unsigned short>();
-        iRegisterConverter<long long, uint>();
+        iRegisterConverter<long long, unsigned int>();
         iRegisterConverter<long long, unsigned long>();
         iRegisterConverter<long long, unsigned long long>();
 
@@ -432,7 +451,7 @@ struct systemConvertHelper
         iRegisterConverter<unsigned long long, double>();
         iRegisterConverter<unsigned long long, unsigned char>();
         iRegisterConverter<unsigned long long, unsigned short>();
-        iRegisterConverter<unsigned long long, uint>();
+        iRegisterConverter<unsigned long long, unsigned int>();
         iRegisterConverter<unsigned long long, unsigned long>();
 
         iRegisterConverter<float, char>();
@@ -443,7 +462,7 @@ struct systemConvertHelper
         iRegisterConverter<float, double>();
         iRegisterConverter<float, unsigned char>();
         iRegisterConverter<float, unsigned short>();
-        iRegisterConverter<float, uint>();
+        iRegisterConverter<float, unsigned int>();
         iRegisterConverter<float, unsigned long>();
         iRegisterConverter<float, unsigned long long>();
 
@@ -455,7 +474,7 @@ struct systemConvertHelper
         iRegisterConverter<double, float>();
         iRegisterConverter<double, unsigned char>();
         iRegisterConverter<double, unsigned short>();
-        iRegisterConverter<double, uint>();
+        iRegisterConverter<double, unsigned int>();
         iRegisterConverter<double, unsigned long>();
         iRegisterConverter<double, unsigned long long>();
 

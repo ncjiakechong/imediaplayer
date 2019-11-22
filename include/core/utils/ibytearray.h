@@ -11,7 +11,6 @@
 #ifndef IBYTEARRAY_H
 #define IBYTEARRAY_H
 
-#include <cstdlib>
 #include <cstring>
 #include <cstdarg>
 

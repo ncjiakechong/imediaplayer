@@ -12,7 +12,6 @@
 #define ILOG_H
 
 #include <cstdarg>
-#include <cstdlib>
 #include <cstdint>
 
 #include <core/global/iglobal.h>
@@ -75,29 +74,35 @@ class IX_CORE_EXPORT iLogger{
     // for bool
     void append(bool value);
 
-    // for xint8
-    void append(xint8 value);
+    // for char
+    void append(char value);
 
-    // for xuint8
-    void append(xuint8 value);
+    // for unsigned char
+    void append(unsigned char value);
 
-    // for xint16
-    void append(xint16 value);
+    // for short
+    void append(short value);
 
-    // for xuint16
-    void append(xuint16 value);
+    // for unsigned short
+    void append(unsigned short value);
 
-    // for xint32
-    void append(xint32 value);
+    // for int
+    void append(int value);
 
-    // for xuint32
-    void append(xuint32 value);
+    // for unsigned int
+    void append(unsigned int value);
 
-    // for xint64
-    void append(xint64 value);
+    // for long
+    void append(long value);
+
+    // for unsigned int
+    void append(unsigned long value);
+
+    // for long long
+    void append(long long value);
 
     // for xuint64
-    void append(xuint64 value);
+    void append(unsigned long long value);
 
     // for iHexUInt8
     void append(iHexUInt8 value);
@@ -133,14 +138,16 @@ class IX_CORE_EXPORT iLogger{
 };
 
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, bool);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, xint8);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, xuint8);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, xint16);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, xuint16);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, xint32);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, xuint32);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, xint64);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, xuint64);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, char);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, unsigned char);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, short);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, unsigned short);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, int);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, unsigned int);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, long);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, unsigned long);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, long long);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, unsigned long long);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, iHexUInt8);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, iHexUInt16);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, iHexUInt32);
