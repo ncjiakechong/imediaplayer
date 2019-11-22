@@ -119,12 +119,12 @@ void iLogger::append(unsigned int value)
 
 void iLogger::append(long value)
 {
-    m_buff += iString("%1").arg(value);
+    m_buff += iString("%1").arg(xlonglong(value));
 }
 
 void iLogger::append(unsigned long value)
 {
-    m_buff += iString("%1").arg(value);
+    m_buff += iString("%1").arg(xulonglong(value));
 }
 
 void iLogger::append(long long value)
