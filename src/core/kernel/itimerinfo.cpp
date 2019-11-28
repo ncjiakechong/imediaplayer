@@ -251,7 +251,7 @@ int iTimerInfoList::timerRemainingTime(int timerId)
         }
     }
 
-    ilog_warn("iTimerInfoList::timerRemainingTime: timer id %i not found", timerId);
+    ilog_warn(__FUNCTION__, ": timer id %i not found", timerId);
     return -1;
 }
 

@@ -39,6 +39,11 @@ iAbstractConverterFunction::~iAbstractConverterFunction()
     iVariant::unregisterConverterFunction(fromTypeId, toTypeId);
 }
 
+bool iAbstractConverterFunction::registerTo() const
+{
+    return iVariant::registerConverterFunction(this, fromTypeId, toTypeId);
+}
+
 int iVariant::iRegisterMetaType(const char *type, int hint)
 {
     bool needInitSystemConvert = !_iMetaTypeDef.exists();
@@ -254,7 +259,7 @@ bool iVariant::convert(int t, void *result) const
         if (charTypeId == m_typeId) {
             iVariantImpl<char>* imp = static_cast< iVariantImpl<char>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = iChar(imp->mValue);
 
             return true;
         }
@@ -262,7 +267,7 @@ bool iVariant::convert(int t, void *result) const
         if (ccharTypeId == m_typeId) {
             iVariantImpl<const char>* imp = static_cast< iVariantImpl<const char>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = iChar(imp->mValue);
 
             return true;
         }
@@ -294,7 +299,7 @@ bool iVariant::convert(int t, void *result) const
         if (wCharTypeId == m_typeId) {
             iVariantImpl<wchar_t>* imp = static_cast< iVariantImpl<wchar_t>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = iChar(imp->mValue);
 
             return true;
         }
@@ -302,7 +307,7 @@ bool iVariant::convert(int t, void *result) const
         if (wcCharTypeId == m_typeId) {
             iVariantImpl<const wchar_t>* imp = static_cast< iVariantImpl<const wchar_t>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = iChar(imp->mValue);
 
             return true;
         }

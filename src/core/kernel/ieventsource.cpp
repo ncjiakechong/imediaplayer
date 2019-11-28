@@ -36,7 +36,7 @@ iEventSource::~iEventSource()
 void iEventSource::ref()
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn("iEventSource::ref in diffrent thread");
+        ilog_warn(__FUNCTION__, ": in diffrent thread");
     }
 
     ++m_refCount;
@@ -45,7 +45,7 @@ void iEventSource::ref()
 void iEventSource::deref()
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn("iEventSource::ref in diffrent thread");
+        ilog_warn(__FUNCTION__, ": in diffrent thread");
     }
 
     --m_refCount;
@@ -56,17 +56,17 @@ void iEventSource::deref()
 int iEventSource::attach(iEventDispatcher* dispatcher)
 {
     if (IX_NULLPTR == dispatcher) {
-        ilog_warn("iEventSource::attach to invalid dispatcher");
+        ilog_warn(__FUNCTION__, ": to invalid dispatcher");
         return -1;
     }
 
     if (iThread::currentThread() != dispatcher->thread()) {
-        ilog_warn("iEventSource::attach must in same thread as dispatcher");
+        ilog_warn(__FUNCTION__, ": must in same thread as dispatcher");
         return -1;
     }
 
     if (IX_NULLPTR != m_dispatcher) {
-        ilog_warn("iEventSource::attach has attached to ", m_dispatcher->objectName());
+        ilog_warn(__FUNCTION__, ": has attached to ", m_dispatcher->objectName());
         return -1;
     }
 
@@ -85,12 +85,12 @@ int iEventSource::attach(iEventDispatcher* dispatcher)
 int iEventSource::detach()
 {
     if (IX_NULLPTR == m_dispatcher) {
-        ilog_warn("iEventSource::detach invalid");
+        ilog_warn(__FUNCTION__, ": invalid");
         return -1;
     }
 
     if (iThread::currentThread() != m_dispatcher->thread()) {
-        ilog_warn("iEventSource::detach must in same thread as dispatcher");
+        ilog_warn(__FUNCTION__, ": must in same thread as dispatcher");
         return -1;
     }
 
@@ -109,7 +109,7 @@ int iEventSource::detach()
 int iEventSource::addPoll(iPollFD* fd)
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn("iEventSource::addPoll must in same thread as dispatcher");
+        ilog_warn(__FUNCTION__, ": must in same thread as dispatcher");
         return -1;
     }
 
@@ -124,7 +124,7 @@ int iEventSource::addPoll(iPollFD* fd)
 int iEventSource::removePoll(iPollFD* fd)
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn("iEventSource::addPoll must in same thread as dispatcher");
+        ilog_warn(__FUNCTION__, ": must in same thread as dispatcher");
         return -1;
     }
 

@@ -194,7 +194,7 @@ iCondition::~iCondition()
 int iCondition::wait(iMutex &mutex, long milliseconds)
 {
     if (mutex.isRecursive())
-        ilog_error("iCondition::wait mute is recursive");
+        ilog_error(__FUNCTION__, ": mute is recursive");
 
     if (milliseconds < 0)
         return m_cond->wait(mutex);

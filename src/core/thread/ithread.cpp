@@ -38,7 +38,7 @@ public:
 protected:
     void run() {
         // this function should never be called
-        ilog_error("iAdoptedThread::run(): Internal error, this implementation should never be called.");
+        ilog_error(__FUNCTION__, ": Internal error, this implementation should never be called.");
     }
 };
 
@@ -135,7 +135,7 @@ bool iThread::wait(long time)
     iMutex::ScopedLock lock(m_mutex);
 
     if (iThreadData::current(false) == m_data) {
-        ilog_warn("iThread::wait: Thread tried to wait on itself");
+        ilog_warn(__FUNCTION__, ": Thread tried to wait on itself");
         return false;
     }
 
@@ -192,7 +192,7 @@ iThread::~iThread()
     }
 
     if (m_running && !m_finished)
-        ilog_error("iThread: Destroyed while thread is still running");
+        ilog_error(__FUNCTION__, ": Destroyed while thread is still running");
 
     m_data->thread = IX_NULLPTR;
     delete m_impl;
@@ -209,7 +209,7 @@ void iThread::setPriority(Priority priority)
 {
     iMutex::ScopedLock lock(m_mutex);
     if (!m_running) {
-        ilog_warn("iThread::setPriority: Cannot set priority, thread is not running");
+        ilog_warn(__FUNCTION__, ": Cannot set priority, thread is not running");
         return;
     }
     m_priority = priority;
@@ -292,7 +292,7 @@ void iThread::start(Priority pri)
     m_priority = pri;
 
     if (!m_impl->start()) {
-        ilog_warn("iThread::start: Thread creation error");
+        ilog_warn(__FUNCTION__, ": Thread creation error");
         m_running = false;
         m_finished = false;
         m_data->threadHd = (xintptr)IX_NULLPTR;

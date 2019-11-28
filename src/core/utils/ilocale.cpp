@@ -435,7 +435,7 @@ bool ix_splitLocaleName(const iString &name, iString &lang, iString &script, iSt
             break;
         case NoState:
             // shouldn't happen
-            ilog_warn("iLocale: This should never happen");
+            ilog_warn(__FUNCTION__, ": This should never happen");
             break;
         }
         ++i;

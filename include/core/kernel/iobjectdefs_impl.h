@@ -1439,7 +1439,7 @@ struct _iPropertyHelper : public _iProperty
 
     _iPropertyHelper(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR, psignalfunc_t _signalfunc = IX_NULLPTR)
         : _iProperty(getFunc, setFunc)
-        , m_getFunc(_getfunc), m_setFunc(_setfunc) {
+        , _getFunc(_getfunc), _setFunc(_setfunc) {
         typedef void (Obj::*SignalFuncAdaptor)();
 
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(_signalfunc);
@@ -1450,26 +1450,26 @@ struct _iPropertyHelper : public _iProperty
         const Obj* _classThis = static_cast<const Obj*>(obj);
         const _iPropertyHelper* _typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
-        if (IX_NULLPTR == _typedThis->m_getFunc)
+        if (IX_NULLPTR == _typedThis->_getFunc)
             return iVariant();
 
         IX_CHECK_PTR(_classThis);
-        return (_classThis->*(_typedThis->m_getFunc))();
+        return (_classThis->*(_typedThis->_getFunc))();
     }
 
     static void setFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
         Obj* _classThis = static_cast<Obj*>(obj);
         const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
-        if (IX_NULLPTR == _typedThis->m_setFunc)
+        if (IX_NULLPTR == _typedThis->_setFunc)
             return;
 
         IX_CHECK_PTR(_classThis);
-        (_classThis->*(_typedThis->m_setFunc))(value.value<typename type_wrapper<setArg>::TYPE>());
+        (_classThis->*(_typedThis->_setFunc))(value.value<typename type_wrapper<setArg>::TYPE>());
     }
 
-    pgetfunc_t m_getFunc;
-    psetfunc_t m_setFunc;
+    pgetfunc_t _getFunc;
+    psetfunc_t _setFunc;
 };
 
 template<class Obj, typename retGet, typename setArg, typename signalArg>
