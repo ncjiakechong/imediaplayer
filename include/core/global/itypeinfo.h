@@ -12,6 +12,7 @@
 #define ITYPEINFO_H
 
 #include <core/global/iglobal.h>
+#include <core/global/imetaprogramming.h>
 
 namespace iShell {
 
@@ -105,7 +106,7 @@ struct iTypeInfoQuery : public iTypeInfo<T>
 
 // if iTypeInfo<T>::isRelocatable exists, use it
 template <typename T>
-struct iTypeInfoQuery<T, typename std::enable_if<iTypeInfo<T>::isRelocatable || true>::type> : public iTypeInfo<T>
+struct iTypeInfoQuery<T, typename enable_if<iTypeInfo<T>::isRelocatable || true>::type> : public iTypeInfo<T>
 {};
 
 /*!

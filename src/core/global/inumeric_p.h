@@ -27,6 +27,7 @@
 
 #include <core/global/imacro.h>
 #include <core/global/iglobal.h>
+#include <core/global/imetaprogramming.h>
 
 namespace iShell {
 
@@ -146,7 +147,7 @@ inline bool iConvertDoubleTo(double v, T *value)
 // efficient. Implementations for 64-bit may be missing on 32-bit platforms.
 // Generic implementations
 template <typename T>
-inline typename std::enable_if<std::is_unsigned<T>::value, bool>::type
+inline typename enable_if<std::is_unsigned<T>::value, bool>::type
 add_overflow(T v1, T v2, T *r)
 {
     // unsigned additions are well-defined
@@ -155,7 +156,7 @@ add_overflow(T v1, T v2, T *r)
 }
 
 template <typename T>
-inline typename std::enable_if<std::is_signed<T>::value, bool>::type
+inline typename enable_if<std::is_signed<T>::value, bool>::type
 add_overflow(T v1, T v2, T *r)
 {
     // Here's how we calculate the overflow:
@@ -188,7 +189,7 @@ add_overflow(T v1, T v2, T *r)
 }
 
 template <typename T>
-inline typename std::enable_if<std::is_unsigned<T>::value, bool>::type
+inline typename enable_if<std::is_unsigned<T>::value, bool>::type
 sub_overflow(T v1, T v2, T *r)
 {
     // unsigned subtractions are well-defined
@@ -197,7 +198,7 @@ sub_overflow(T v1, T v2, T *r)
 }
 
 template <typename T>
-inline typename std::enable_if<std::is_signed<T>::value, bool>::type
+inline typename enable_if<std::is_signed<T>::value, bool>::type
 sub_overflow(T v1, T v2, T *r)
 {
     // See above for explanation. This is the same with some signs reversed.
@@ -218,7 +219,7 @@ sub_overflow(T v1, T v2, T *r)
 }
 
 template <typename T>
-inline typename std::enable_if<std::is_unsigned<T>::value || std::is_signed<T>::value, bool>::type
+inline typename enable_if<std::is_unsigned<T>::value || std::is_signed<T>::value, bool>::type
 mul_overflow(T v1, T v2, T *r)
 {
     // use the next biggest type
