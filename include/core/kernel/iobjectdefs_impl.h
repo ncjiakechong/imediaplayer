@@ -1318,11 +1318,11 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
 
 template <typename T>
 struct _iFuncRequiresRet
-{ static const bool value = true; };
+{ enum { value = 1 }; };
 
 template <>
 struct _iFuncRequiresRet<void>
-{ static const bool value = false; };
+{ enum { value = 0 }; };
 
 class iObject;
 
