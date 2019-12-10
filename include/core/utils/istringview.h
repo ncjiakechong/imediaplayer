@@ -28,10 +28,10 @@ namespace iPrivate {
 template <typename Char>
 struct IsCompatibleCharTypeHelper
     : std::integral_constant<bool,
-                             std::is_same<Char, iChar>::value ||
-                             std::is_same<Char, ushort>::value ||
-                             std::is_same<Char, char16_t>::value ||
-                             (std::is_same<Char, wchar_t>::value && sizeof(wchar_t) == sizeof(iChar))> {};
+                             is_same<Char, iChar>::value ||
+                             is_same<Char, ushort>::value ||
+                             is_same<Char, char16_t>::value ||
+                             (is_same<Char, wchar_t>::value && sizeof(wchar_t) == sizeof(iChar))> {};
 template <typename Char>
 struct IsCompatibleCharType
     : IsCompatibleCharTypeHelper<typename std::remove_cv<typename std::remove_reference<Char>::type>::type> {};
@@ -99,7 +99,7 @@ private:
     using if_compatible_string = typename enable_if<iPrivate::IsCompatibleStdBasicString<T>::value, bool>::type;
 
     template <typename T>
-    using if_compatible_istring_like = typename enable_if<std::is_same<T, iString>::value || std::is_same<T, iStringRef>::value, bool>::type;
+    using if_compatible_istring_like = typename enable_if<is_same<T, iString>::value || is_same<T, iStringRef>::value, bool>::type;
 
     template <typename Char, size_t N>
     static xsizetype lengthHelperArray(const Char (&)[N])
@@ -246,7 +246,7 @@ private:
 IX_DECLARE_TYPEINFO(iStringView, IX_PRIMITIVE_TYPE);
 
 template <typename iStringLike, typename enable_if<
-    std::is_same<iStringLike, iString>::value || std::is_same<iStringLike, iStringRef>::value,
+    is_same<iStringLike, iString>::value || is_same<iStringLike, iStringRef>::value,
     bool>::type = true>
 inline iStringView iToStringViewIgnoringNull(const iStringLike &s)
 { return iStringView(s.data(), s.size()); }

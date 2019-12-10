@@ -500,6 +500,9 @@ public:
     virtual const iMetaObject *metaObject() const;
 
 protected:
+    template <typename ReturnType, bool V>
+    using if_requires_ret = typename enable_if<_iFuncRequiresRet<ReturnType>::value == V, ReturnType>::type;
+
     struct _iArgumentHelper {
         typedef void* (*clone)(void*);
         typedef void (*free)(void*);
@@ -513,7 +516,21 @@ protected:
 
     virtual void initProperty();
     virtual bool event(iEvent *e);
-    void emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg);
+
+    template <typename ReturnType>
+    if_requires_ret<ReturnType, true> emitHelper(_iMemberFunction signal, const _iArgumentHelper& arg)
+    {
+        ReturnType ret = TYPEWRAPPER_DEFAULTVALUE(ReturnType);
+        emitImpl(signal, arg, &ret);
+        return ret;
+    }
+
+    template <typename ReturnType>
+    if_requires_ret<ReturnType, false> emitHelper(_iMemberFunction signal, const _iArgumentHelper& arg)
+    {
+        IX_COMPILER_VERIFY((is_same<ReturnType, void>::value));
+        return emitImpl(signal, arg, IX_NULLPTR);
+    }
 
 private:
     struct _iConnectionList {
@@ -539,6 +556,7 @@ private:
 
     typedef std::list<iObject *> iObjectList;
 
+    void emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, void* ret);
     static bool connectImpl(const _iConnection& conn);
     static bool disconnectImpl(const _iConnection& conn);
 

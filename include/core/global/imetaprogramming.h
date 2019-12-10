@@ -21,7 +21,7 @@ struct is_reference
 {
     enum
     {
-        VALUE = 0
+        value = 0
     };
 };
 
@@ -31,7 +31,7 @@ struct is_reference<T&>
 {
     enum
     {
-        VALUE = 1
+        value = 1
     };
 };
 
@@ -41,7 +41,7 @@ struct is_reference<const T&>
 {
     enum
     {
-        VALUE = 1
+        value = 1
     };
 };
 
@@ -52,7 +52,7 @@ struct is_const
 {
     enum
     {
-        VALUE = 0
+        value = 0
     };
 };
 
@@ -62,7 +62,7 @@ struct is_const<const T&>
 {
     enum
     {
-        VALUE = 1
+        value = 1
     };
 };
 
@@ -72,7 +72,7 @@ struct is_const<const T>
 {
     enum
     {
-        VALUE = 1
+        value = 1
     };
 };
 
@@ -83,7 +83,7 @@ struct is_const<const T[i]>
 {
     enum
     {
-        VALUE = 1
+        value = 1
     };
 };
 
@@ -93,7 +93,7 @@ struct is_same
 {
     enum
     {
-        VALUE = 0
+        value = 0
     };
 };
 
@@ -103,7 +103,7 @@ struct is_same<T, T>
 {
     enum
     {
-        VALUE = 1
+        value = 1
     };
 };
 

@@ -662,7 +662,7 @@ bool iObject::disconnectImpl(const _iConnection& conn)
     return success;
 }
 
-void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg)
+void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, void* ret)
 {
     struct ConnectionListsRef {
         _iObjectConnectionList* connectionLists;
@@ -760,7 +760,7 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg)
         if ((AutoConnection == _type && receiverInSameThread)
             || (DirectConnection == _type)) {
             locker.unlock();
-            conn->emits(argHelper.arg(conn->_type & AgrumentsAdaptor, false).data());
+            conn->emits(argHelper.arg(conn->_type & AgrumentsAdaptor, false).data(), ret);
 
             if (connectionLists->orphaned)
                 break;
@@ -866,7 +866,7 @@ bool iObject::event(iEvent *e)
     switch (e->type()) {
     case iEvent::MetaCall: {
         iMetaCallEvent* event = static_cast<iMetaCallEvent*>(e);
-        event->connection->emits(event->arguments.data());
+        event->connection->emits(event->arguments.data(), IX_NULLPTR);
         break;
     }
 
@@ -931,7 +931,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& ar
     uint _type = c._type & Connection_PrimaryMask;
     if ((AutoConnection == _type && receiverInSameThread)
         || (DirectConnection == _type)) {
-        c.emits(arg.args);
+        c.emits(arg.args, IX_NULLPTR);
         return true;
     } else if (_type == BlockingQueuedConnection) {
         if (receiverInSameThread) {
@@ -986,7 +986,7 @@ void _iConnection::deref()
     --_ref;
     if (0 == _ref) {
         IX_ASSERT(_impl);
-        _impl(Destroy, this, IX_NULLPTR, _slot, IX_NULLPTR);
+        _impl(Destroy, this, IX_NULLPTR, _slot, IX_NULLPTR, IX_NULLPTR);
     }
 }
 
@@ -1002,13 +1002,13 @@ void _iConnection::setSlot(iObject* receiver, void * const *slot)
     _slot = slot;
 }
 
-void _iConnection::emits(void* args) const
+void _iConnection::emits(void* args, void* ret) const
 {
     if (_orphaned || (IX_NULLPTR == _impl)) {
         return;
     }
 
-    _impl(Call, this, _receiver, _slot, args);
+    _impl(Call, this, _receiver, _slot, args, ret);
 }
 
 size_t iConKeyHashFunc::operator()(const _iMemberFunction& key) const
