@@ -1,53 +1,24 @@
-/****************************************************************************
-**
-** Copyright (C) 2016 Jolla Ltd.
-** Contact: https://www.qt.io/licensing/
-**
-** This file is part of the Qt Toolkit.
-**
-** $QT_BEGIN_LICENSE:LGPL$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** GNU Lesser General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
-**
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
-**
-** $QT_END_LICENSE$
-**
-****************************************************************************/
-
+/////////////////////////////////////////////////////////////////
+/// Copyright 2018-2020
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    igstreamerbufferprobe.cpp
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/////////////////////////////////////////////////////////////////
 #include "igstreamerbufferprobe_p.h"
 #include "igstutils_p.h"
 
 namespace iShell {
 
 iGstreamerBufferProbe::iGstreamerBufferProbe(Flags flags)
-#if GST_CHECK_VERSION(1,0,0)
+    #if GST_CHECK_VERSION(1,0,0)
     : m_capsProbeId(-1)
-#else
+    #else
     : m_caps(0)
-#endif
+    #endif
     , m_bufferProbeId(-1)
     , m_flags(flags)
 {
@@ -55,10 +26,10 @@ iGstreamerBufferProbe::iGstreamerBufferProbe(Flags flags)
 
 iGstreamerBufferProbe::~iGstreamerBufferProbe()
 {
-#if !GST_CHECK_VERSION(1,0,0)
+    #if !GST_CHECK_VERSION(1,0,0)
     if (m_caps)
         gst_caps_unref(m_caps);
-#endif
+    #endif
 }
 
 void iGstreamerBufferProbe::addProbeToPad(GstPad *pad, bool downstream)
@@ -67,7 +38,7 @@ void iGstreamerBufferProbe::addProbeToPad(GstPad *pad, bool downstream)
         probeCaps(caps);
         gst_caps_unref(caps);
     }
-#if GST_CHECK_VERSION(1,0,0)
+    #if GST_CHECK_VERSION(1,0,0)
     if (m_flags & ProbeCaps) {
         m_capsProbeId = gst_pad_add_probe(
                     pad,
@@ -76,22 +47,20 @@ void iGstreamerBufferProbe::addProbeToPad(GstPad *pad, bool downstream)
                         : GST_PAD_PROBE_TYPE_EVENT_UPSTREAM,
                     capsProbe,
                     this,
-                    IX_NULLPTR);
+                    NULL);
     }
     if (m_flags & ProbeBuffers) {
         m_bufferProbeId = gst_pad_add_probe(
-                    pad, GST_PAD_PROBE_TYPE_BUFFER, bufferProbe, this, IX_NULLPTR);
+                    pad, GST_PAD_PROBE_TYPE_BUFFER, bufferProbe, this, NULL);
     }
-#else
-    IX_GCC_UNUSED(downstream);
-
+    #else
     m_bufferProbeId = gst_pad_add_buffer_probe(pad, G_CALLBACK(bufferProbe), this);
-#endif
+    #endif
 }
 
 void iGstreamerBufferProbe::removeProbeFromPad(GstPad *pad)
 {
-#if GST_CHECK_VERSION(1,0,0)
+    #if GST_CHECK_VERSION(1,0,0)
     if (m_capsProbeId != -1) {
         gst_pad_remove_probe(pad, m_capsProbeId);
         m_capsProbeId = -1;
@@ -100,7 +69,7 @@ void iGstreamerBufferProbe::removeProbeFromPad(GstPad *pad)
         gst_pad_remove_probe(pad, m_bufferProbeId);
         m_bufferProbeId = -1;
     }
-#else
+    #else
     if (m_bufferProbeId != -1) {
         gst_pad_remove_buffer_probe(pad, m_bufferProbeId);
         m_bufferProbeId = -1;
@@ -109,7 +78,7 @@ void iGstreamerBufferProbe::removeProbeFromPad(GstPad *pad)
             m_caps = 0;
         }
     }
-#endif
+    #endif
 }
 
 void iGstreamerBufferProbe::probeCaps(GstCaps *)
@@ -168,5 +137,4 @@ gboolean iGstreamerBufferProbe::bufferProbe(GstElement *, GstBuffer *buffer, gpo
     }
 }
 #endif
-
 } // namespace iShell

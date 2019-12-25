@@ -100,7 +100,7 @@ public:
 
     This class is typically used in conjunction with QAudioInput or
     QAudioOutput to allow you to specify the parameters of the audio
-    stream being read or written, or with QAudioBuffer when dealing with
+    stream being read or written, or with iAudioBuffer when dealing with
     samples in memory.
 
     You can obtain audio formats compatible with the audio device used

@@ -25,12 +25,11 @@
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
 
-#include <core/kernel/iobject.h>
 #include <core/io/iiodevice.h>
 
 namespace iShell {
 
-class iGstAppSrc  : public iObject
+class iGstAppSrc : public iObject
 {
     IX_OBJECT(iGstAppSrc)
 public:

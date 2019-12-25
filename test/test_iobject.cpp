@@ -73,7 +73,7 @@ public:
     void testPropertyChanged(int value) ISIGNAL(testPropertyChanged, value)
 
     void signal_void() ISIGNAL(signal_void)
-    void signal_struct(int arg1, struct E arg2, int arg3) ISIGNAL(signal_struct, arg1, arg2, arg3)
+    void signal_struct(int arg1, const struct E& arg2, int arg3) ISIGNAL(signal_struct, arg1, arg2, arg3)
 
     void destory() {
         delete this;
@@ -173,7 +173,7 @@ public:
         ilog_debug(this, " tst_slot_ref arg1 ", arg1, " arg3 ", arg3);
     }
 
-    inline void tst_slot_constref(const int& arg1, const struct E&, const float& arg3) {
+    inline void tst_slot_constref(int arg1, const struct E&, float arg3) {
         ilog_debug(this, " tst_slot_constref arg1 ", arg1, " arg3 ", arg3);
     }
 
@@ -283,7 +283,7 @@ public:
     void tst_sig_int8(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8) ISIGNAL(tst_sig_int8, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
 
 
-    void tst_sig_struct(int arg1, struct E arg2, int arg3) ISIGNAL(tst_sig_struct, arg1, arg2, arg3)
+    void tst_sig_struct(int arg1, const struct E& arg2, int arg3) ISIGNAL(tst_sig_struct, arg1, arg2, arg3)
     void tst_sig_ref(int arg1, struct E& arg2, int arg3) ISIGNAL(tst_sig_ref, arg1, arg2, arg3)
     void tst_sig_point(int arg1, struct E* arg2, int arg3) ISIGNAL(tst_sig_point, arg1, arg2, arg3)
 

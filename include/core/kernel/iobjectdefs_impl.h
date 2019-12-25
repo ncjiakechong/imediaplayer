@@ -1342,6 +1342,15 @@ typedef void (iObject::*_iMemberFunction)();
 // internal base class (interface) containing functions required to call a slot managed by a pointer to function.
 class IX_CORE_EXPORT _iConnection
 {
+public:
+    void ref();
+    void deref();
+
+    inline _iConnection* clone() const {return _impl(Clone, this, _receiver, _slot, IX_NULLPTR, IX_NULLPTR);}
+    inline bool compare(void* const* func) const {return (IX_NULLPTR != _impl(Compare, this, _receiver, func, IX_NULLPTR, IX_NULLPTR));}
+
+    void emits(void* args, void* ret) const;
+
 protected:
     enum Operation {
         Destroy,
@@ -1358,17 +1367,8 @@ protected:
     _iConnection(ImplFn impl, ConnectionType type);
     ~_iConnection();
 
-    void ref();
-    void deref();
-
-    inline _iConnection* clone() const {return _impl(Clone, this, _receiver, _slot, IX_NULLPTR, IX_NULLPTR);}
-    inline _iConnection* duplicate(iObject* newobj) const { return _impl(Clone, this, newobj, _slot, IX_NULLPTR, IX_NULLPTR);}
-    inline bool compare(void* const* func) const {return (IX_NULLPTR != _impl(Compare, this, _receiver, func, IX_NULLPTR, IX_NULLPTR));}
-
     void setSlot(iObject* receiver, void* const* slot);
     void setSignal(iObject* sender, _iMemberFunction signal);
-
-    void emits(void* args, void* ret) const;
 
     int _orphaned : 1;
     int _ref : 31;

@@ -59,7 +59,8 @@ iCoreApplication::iCoreApplication(iCoreApplicationPrivate* priv)
 }
 
 iCoreApplication::iCoreApplication(int, char **)
-    : m_private(new iCoreApplicationPrivate)
+    : m_aboutToQuitEmitted(false)
+    , m_private(new iCoreApplicationPrivate)
 {
     self = this;
     init();
@@ -67,12 +68,14 @@ iCoreApplication::iCoreApplication(int, char **)
 
 iCoreApplication::~iCoreApplication()
 {
-    m_threadData->dispatcher.load()->closingDown();
-    delete m_threadData->dispatcher.load();
+    iEventDispatcher* dispatcher = m_threadData->dispatcher.load();
     m_threadData->dispatcher = IX_NULLPTR;
+    if (IX_NULLPTR != dispatcher) {
+        dispatcher->closingDown();
+        delete dispatcher;
+    }
 
     delete m_private;
-
     self = IX_NULLPTR;
 }
 
@@ -143,7 +146,29 @@ int iCoreApplication::exec()
     int returnCode = eventLoop.exec();
     threadData->quitNow = false;
 
+    if (self)
+        self->execCleanup();
+
     return returnCode;
+}
+
+
+// Cleanup after eventLoop is done executing in QCoreApplication::exec().
+// This is for use cases in which QCoreApplication is instantiated by a
+// library and not by an application executable, for example, Active X
+// servers.
+
+void iCoreApplication::execCleanup()
+{
+    if (!m_aboutToQuitEmitted)
+        IEMIT aboutToQuit();
+    m_aboutToQuitEmitted = true;
+    sendPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
+}
+
+void iCoreApplication::quit()
+{
+    exit(0);
 }
 
 void iCoreApplication::exit(int retCode)
@@ -271,22 +296,42 @@ void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
     }
 }
 
-void iCoreApplication::sendPostedEvents(iObject *receiver, int)
+void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
 {
+    if (event_type == -1) {
+        // we were called by an obsolete event dispatcher.
+        event_type = 0;
+    }
+
+    if (receiver && receiver->m_threadData != iThreadData::current()) {
+        ilog_warn("iCoreApplication::sendPostedEvents: Cannot send "
+                 "posted events for objects in another thread");
+        return;
+    }
+
     iThreadData *threadData = receiver ? receiver->m_threadData : iThreadData::current();
 
-    do {
-        threadData->eventMutex.lock();
-        if (threadData->postEventList.empty()) {
-            threadData->eventMutex.unlock();
-            break;
-        }
+    iScopedLock<iMutex> locker(threadData->eventMutex);
+    int insertionOffset = static_cast<int>(threadData->postEventList.size());
+    int idx = 0;
 
+    // TODO: re-architect
+    do {
+        if (threadData->postEventList.empty() || (idx >= insertionOffset))
+            break;
+
+        ++idx;
         iPostEvent event = *(threadData->postEventList.begin());
         threadData->postEventList.erase(threadData->postEventList.begin());
-        threadData->eventMutex.unlock();
-
         --event.receiver->m_postedEvents;
+
+        struct MutexUnlocker
+        {
+            iScopedLock<iMutex> &m;
+            MutexUnlocker(iScopedLock<iMutex> &m) : m(m) { m.unlock(); }
+            ~MutexUnlocker() { m.relock(); }
+        };
+        MutexUnlocker unlocker(locker);
         sendEvent(event.receiver, event.event);
         delete event.event;
     } while (true);

@@ -304,9 +304,9 @@ iIODevicePrivate::~iIODevicePrivate()
     return true).
 
     Note for developers implementing classes derived from iIODevice:
-    you should always emit readyRead() when new data has arrived (do not
-    emit it only because there's data still to be read in your
-    buffers). Do not emit readyRead() in other conditions.
+    you should always IEMIT readyRead() when new data has arrived (do not
+    IEMIT it only because there's data still to be read in your
+    buffers). Do not IEMIT readyRead() in other conditions.
 
     \sa bytesWritten()
 */
@@ -542,7 +542,7 @@ int iIODevice::currentReadChannel() const
     Sets the current read channel of the iIODevice to the given \a
     channel. The current input channel is used by the functions
     read(), readAll(), readLine(), and getChar(). It also determines
-    which channel triggers iIODevice to emit readyRead().
+    which channel triggers iIODevice to IEMIT readyRead().
 
     \sa currentReadChannel(), readChannelCount(), QProcess
 */
@@ -589,7 +589,7 @@ int iIODevice::currentWriteChannel() const
     Sets the current write channel of the iIODevice to the given \a
     channel. The current output channel is used by the functions
     write(), putChar(). It also determines  which channel triggers
-    iIODevice to emit bytesWritten().
+    iIODevice to IEMIT bytesWritten().
 
     \sa currentWriteChannel(), writeChannelCount()
 */
