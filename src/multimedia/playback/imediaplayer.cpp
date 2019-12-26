@@ -15,6 +15,7 @@
 #include "plugins/gstreamer/igstutils_p.h"
 #include "plugins/gstreamer/igstreamerplayersession_p.h"
 #include "plugins/gstreamer/igstreamerplayercontrol_p.h"
+#include "plugins/gstreamer/igstreamerautorenderer.h"
 
 namespace iShell {
 
@@ -137,6 +138,8 @@ iMediaPlayer::iMediaPlayer(iObject *parent, iMediaPlayer::Flags flags)
     iGstUtils::initializeGst();
 
     m_control = new iGstreamerPlayerControl(new iGstreamerPlayerSession(this), this);
+    m_control->setVideoOutput(new iGstreamerAutoRenderer(this));
+
     if (m_control != IX_NULLPTR) {
         connect(m_control, &iMediaPlayerControl::mediaChanged, this, &iMediaPlayer::currentMediaChanged);
         connect(m_control, &iMediaPlayerControl::stateChanged, this, &iMediaPlayer::_q_stateChanged);
@@ -177,7 +180,7 @@ iMediaPlayer::~iMediaPlayer()
     disconnect(this, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
 }
 
-iString iMediaPlayer::media() const
+iUrl iMediaPlayer::media() const
 {
     return m_rootMedia;
 }
@@ -200,7 +203,7 @@ const iIODevice *iMediaPlayer::mediaStream() const
     return IX_NULLPTR;
 }
 
-iString iMediaPlayer::currentMedia() const
+iUrl iMediaPlayer::currentMedia() const
 {
     if (m_control)
         return m_control->media();
@@ -403,11 +406,11 @@ void iMediaPlayer::setPlaybackRate(xreal rate)
     when an error occurs during loading.
 */
 
-void iMediaPlayer::setMedia(const iString &media, iIODevice *stream)
+void iMediaPlayer::setMedia(const iUrl &media, iIODevice *stream)
 {
     stop();
 
-    iString oldMedia = m_rootMedia;
+    iUrl oldMedia = m_rootMedia;
     m_rootMedia = media;
 
     if (oldMedia != media)
@@ -463,6 +466,12 @@ iMultimedia::SupportEstimate iMediaPlayer::hasSupport(const iString &mimeType,
 std::list<iString> iMediaPlayer::supportedMimeTypes(Flags flags)
 {
     return std::list<iString>();
+}
+
+void iMediaPlayer::setVideoOutput(iObject* render)
+{
+    if (m_control)
+        m_control->setVideoOutput(render);
 }
 
 /*! \reimp */

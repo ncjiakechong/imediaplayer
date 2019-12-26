@@ -17,9 +17,12 @@
 
 namespace iShell {
 
-static bool ilog_default_filter(void*, const char*, ilog_level_t)
+static bool ilog_default_filter(void*, const char*, ilog_level_t level)
 {
-    return true;
+    if (level <= ILOG_DEBUG)
+        return true;
+
+    return false;
 }
 
 static void ilog_default_callback(void*, const char* tag, ilog_level_t level, const char *msg)

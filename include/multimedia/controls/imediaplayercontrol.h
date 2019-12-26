@@ -46,6 +46,7 @@ public:
 
     virtual bool isAudioAvailable() const = 0;
     virtual bool isVideoAvailable() const = 0;
+    virtual void setVideoOutput(iObject *output) = 0;
 
     virtual bool isSeekable() const = 0;
 
@@ -54,16 +55,16 @@ public:
     virtual xreal playbackRate() const = 0;
     virtual void setPlaybackRate(xreal rate) = 0;
 
-    virtual iString media() const = 0;
+    virtual iUrl media() const = 0;
     virtual const iIODevice *mediaStream() const = 0;
-    virtual void setMedia(const iString &media, iIODevice *stream) = 0;
+    virtual void setMedia(const iUrl& media, iIODevice *stream) = 0;
 
     virtual void play() = 0;
     virtual void pause() = 0;
     virtual void stop() = 0;
 
-    // signal
-    void mediaChanged(const iString& content) ISIGNAL(mediaChanged, content)
+public: // signal
+    void mediaChanged(const iUrl& content) ISIGNAL(mediaChanged, content)
     void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration)
     void positionChanged(xint64 position) ISIGNAL(positionChanged, position)
     void stateChanged(iMediaPlayer::State newState) ISIGNAL(stateChanged, newState)

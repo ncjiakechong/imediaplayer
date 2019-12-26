@@ -72,7 +72,7 @@ public:
 
     bool isAudioAvailable() const;
 
-    void setVideoRenderer(iObject *renderer);
+    void setVideoRenderer(iGstreamerVideoRendererInterface *renderer);
     iGstreamerVideoRendererInterface *renderer() const { return m_renderer; }
     bool isVideoAvailable() const;
 
@@ -107,8 +107,8 @@ public:
     void endOfMediaReset();
 
 public:
-    void loadFromUri(const iString& url);
-    void loadFromStream(const iString& url, iIODevice *stream);
+    void loadFromUri(const iUrl& url);
+    void loadFromStream(const iUrl& url, iIODevice *stream);
     bool play();
     bool pause();
     void stop();
@@ -173,12 +173,12 @@ private:
     void resumeVideoProbes();
     void setPipeline(GstElement *pipeline);
 
-    iString m_request;
+    iUrl m_request;
     iMediaPlayer::State m_state;
     iMediaPlayer::State m_pendingState;
     iGstreamerBusHelper* m_busHelper;
-    GstElement *m_playbin = IX_NULLPTR; // Can be null
-    GstElement *m_pipeline = IX_NULLPTR; // Never null
+    GstElement *m_playbin; // Can be null
+    GstElement *m_pipeline; // Never null
 
     GstElement* m_videoSink;
 
@@ -195,7 +195,6 @@ private:
     GstElement* m_volumeElement;
 
     GstBus* m_bus;
-    iObject *m_videoOutput;
     iGstreamerVideoRendererInterface *m_renderer;
 
     iGstAppSrc *m_appSrc;

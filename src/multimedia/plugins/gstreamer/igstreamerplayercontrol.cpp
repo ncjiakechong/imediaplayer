@@ -45,6 +45,7 @@
 
 #include "igstreamerplayercontrol_p.h"
 #include "igstreamerplayersession_p.h"
+#include "igstreamervideorendererinterface_p.h"
 
 #define ILOG_TAG "ix:media"
 
@@ -239,7 +240,7 @@ void iGstreamerPlayerControl::playOrPause(iMediaPlayer::State newState)
     //the pipeline is paused instead of playing, seeked to requested position,
     //and after seeking is finished (position updated) playback is restarted
     //with show-preroll-frame enabled.
-    if (newState == iMediaPlayer::PlayingState/* && m_pendingSeekPosition == -1*/)
+    if (newState == iMediaPlayer::PlayingState && m_pendingSeekPosition == -1)
         ok = m_session->play();
     else
         ok = m_session->pause();
@@ -301,7 +302,7 @@ void iGstreamerPlayerControl::setMuted(bool muted)
     m_session->setMuted(muted);
 }
 
-iString iGstreamerPlayerControl::media() const
+iUrl iGstreamerPlayerControl::media() const
 {
     return m_currentResource;
 }
@@ -311,14 +312,14 @@ const iIODevice *iGstreamerPlayerControl::mediaStream() const
     return m_stream;
 }
 
-void iGstreamerPlayerControl::setMedia(const iString &content, iIODevice *stream)
+void iGstreamerPlayerControl::setMedia(const iUrl &content, iIODevice *stream)
 {
     ilog_debug(__FUNCTION__);
 
     pushState();
 
     m_currentState = iMediaPlayer::StoppedState;
-    iString oldMedia = m_currentResource;
+    iUrl oldMedia = m_currentResource;
     m_pendingSeekPosition = 0;
     m_session->showPrerollFrames(false); // do not show prerolled frames until pause() or play() explicitly called
     m_setMediaPending = false;
@@ -336,6 +337,8 @@ void iGstreamerPlayerControl::setMedia(const iString &content, iIODevice *stream
     m_stream = stream;
 
     if (m_stream) {
+        userStreamValid = stream->isOpen() && m_stream->isReadable();
+
         if (userStreamValid){
             m_session->loadFromStream(content, m_stream);
         } else {
@@ -365,7 +368,13 @@ void iGstreamerPlayerControl::setMedia(const iString &content, iIODevice *stream
 
 void iGstreamerPlayerControl::setVideoOutput(iObject *output)
 {
-    m_session->setVideoRenderer(output);
+    iGstreamerVideoRendererInterface* renderer = iobject_cast<iGstreamerVideoRendererInterface*>(output);
+    if (output && !renderer) {
+        ilog_warn(__FUNCTION__, ": invalid argument!!!", output);
+        return;
+    }
+
+    m_session->setVideoRenderer(renderer);
 }
 
 bool iGstreamerPlayerControl::isAudioAvailable() const
@@ -410,7 +419,7 @@ void iGstreamerPlayerControl::updateMediaStatus()
 
     switch (m_session->state()) {
     case iMediaPlayer::StoppedState:
-        if (m_currentResource.isNull())
+        if (m_currentResource.isEmpty())
             m_mediaStatus = iMediaPlayer::NoMedia;
         else if (oldStatus != iMediaPlayer::InvalidMedia)
             m_mediaStatus = iMediaPlayer::LoadingMedia;
@@ -539,10 +548,10 @@ void iGstreamerPlayerControl::popAndNotifyState()
 {
     IX_ASSERT(!m_stateStack.empty());
 
-    iMediaPlayer::State oldState = m_stateStack.front();
-    m_stateStack.pop_front();
-    iMediaPlayer::MediaStatus oldMediaStatus = m_mediaStatusStack.front();
-    m_mediaStatusStack.pop_front();
+    iMediaPlayer::State oldState = m_stateStack.back();
+    m_stateStack.pop_back();
+    iMediaPlayer::MediaStatus oldMediaStatus = m_mediaStatusStack.back();
+    m_mediaStatusStack.pop_back();
 
     if (m_stateStack.empty()) {
         if (m_mediaStatus != oldMediaStatus) {

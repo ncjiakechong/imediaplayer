@@ -100,11 +100,11 @@ void iGstreamerBusHelper::installMessageFilter(iObject *filter)
 {
     if (filter) {
         iScopedLock<iMutex> lock(filterMutex);
-        if (std::find(syncFilters.cbegin(), syncFilters.cend(), filter) != syncFilters.cend())
+        if (std::find(syncFilters.cbegin(), syncFilters.cend(), filter) == syncFilters.cend())
             syncFilters.push_front(filter);
     }
 
-    if (filter && std::find(busFilters.cbegin(), busFilters.cend(), filter) != busFilters.cend())
+    if (filter && std::find(busFilters.cbegin(), busFilters.cend(), filter) == busFilters.cend())
         busFilters.push_front(filter);
 }
 

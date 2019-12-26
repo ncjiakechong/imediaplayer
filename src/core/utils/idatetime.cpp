@@ -30,12 +30,12 @@ namespace iShell {
 class iDateTimePrivate
 {
 public:
-    // forward the declarations from QDateTime (this makes them public)
+    // forward the declarations from iDateTime (this makes them public)
     typedef iDateTime::ShortData QDateTimeShortData;
     typedef iDateTime::Data iDateTimeData;
 
     // Never change or delete this enum, it is required for backwards compatible
-    // serialization of QDateTime before 5.2, so is essentially public API
+    // serialization of iDateTime before 5.2, so is essentially public API
     enum Spec {
         LocalUnknown = -1,
         LocalStandard = 0,
@@ -89,7 +89,7 @@ public:
     mutable iAtomicCounter<int> ref;
 
     // expose publicly in iDateTime
-    // The first and last years of which QDateTime can represent some part:
+    // The first and last years of which iDateTime can represent some part:
     enum class YearRange : xint32 { First = -292275056,  Last = +292278994 };
 };
 
