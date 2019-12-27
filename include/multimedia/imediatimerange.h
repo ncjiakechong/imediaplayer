@@ -89,6 +89,11 @@ private:
     iSharedDataPointer<iMediaTimeRangePrivate> d;
 };
 
+IX_MULTIMEDIA_EXPORT bool operator==(const iMediaTimeRange&, const iMediaTimeRange&);
+IX_MULTIMEDIA_EXPORT bool operator!=(const iMediaTimeRange&, const iMediaTimeRange&);
+IX_MULTIMEDIA_EXPORT iMediaTimeRange operator+(const iMediaTimeRange&, const iMediaTimeRange&);
+IX_MULTIMEDIA_EXPORT iMediaTimeRange operator-(const iMediaTimeRange&, const iMediaTimeRange&);
+
 
 } // namespace iShell
 

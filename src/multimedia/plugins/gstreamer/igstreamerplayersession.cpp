@@ -238,7 +238,7 @@ void iGstreamerPlayerSession::configureAppSrcElement(GObject*, GObject *orig, GP
 
 void iGstreamerPlayerSession::loadFromStream(const iUrl &url, iIODevice *appSrcStream)
 {
-    ilog_debug(__FUNCTION__, " url: ", url.toEncoded().constData());
+    ilog_debug(__FUNCTION__, " url: ", url.toString());
     m_request = url;
     m_duration = 0;
     m_lastPosition = 0;
@@ -264,14 +264,14 @@ void iGstreamerPlayerSession::loadFromStream(const iUrl &url, iIODevice *appSrcS
 
 void iGstreamerPlayerSession::loadFromUri(const iUrl& url)
 {
-    ilog_debug(__FUNCTION__, " url: ", url.toEncoded().constData());
+    ilog_debug(__FUNCTION__, " url: ", url.toString());
     m_request = url;
     m_duration = 0;
     m_lastPosition = 0;
 
     if (m_appSrc) {
         m_appSrc->deleteLater();
-        m_appSrc = 0;
+        m_appSrc = IX_NULLPTR;
     }
 
     if (m_request.scheme() == iLatin1String("gst-pipeline")) {
@@ -874,7 +874,7 @@ bool iGstreamerPlayerSession::play()
     if (m_pipeline) {
         m_pendingState = iMediaPlayer::PlayingState;
         if (gst_element_set_state(m_pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
-            ilog_warn(__FUNCTION__, " : GStreamer; Unable to play -", m_request.toEncoded().constData());
+            ilog_warn(__FUNCTION__, " : GStreamer; Unable to play -", m_request.toString());
             m_pendingState = m_state = iMediaPlayer::StoppedState;
             IEMIT stateChanged(m_state);
         } else {
@@ -896,7 +896,7 @@ bool iGstreamerPlayerSession::pause()
             return true;
 
         if (gst_element_set_state(m_pipeline, GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE) {
-            ilog_warn(__FUNCTION__, " : GStreamer; Unable to pause -", m_request.toEncoded().constData());
+            ilog_warn(__FUNCTION__, " : GStreamer; Unable to pause -", m_request.toString());
             m_pendingState = m_state = iMediaPlayer::StoppedState;
             IEMIT stateChanged(m_state);
         } else {
@@ -1029,7 +1029,6 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
         } else if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_DURATION) {
             updateDuration();
         }
-
 
         if (m_sourceType == MMSSrc && istrcmp(GST_OBJECT_NAME(GST_MESSAGE_SRC(gm)), "source") == 0) {
             ilog_verbose(__FUNCTION__, " Message from MMSSrc: ", GST_MESSAGE_TYPE(gm));
@@ -1389,7 +1388,7 @@ void iGstreamerPlayerSession::getStreamsInfo()
     }
 
     // TODO:
-    if (oldProperties.size() != m_streamProperties.size() || oldTypes.size() != m_streamTypes.size() || oldOffset.size() != m_playbin2StreamOffset.size())
+    if (oldProperties.size() != m_streamProperties.size() || oldTypes != m_streamTypes || oldOffset != m_playbin2StreamOffset)
         IEMIT streamsChanged();
 }
 

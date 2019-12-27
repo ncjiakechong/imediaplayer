@@ -76,16 +76,11 @@ public:
         const iMetaObject* mo = metaObject();
 
         do {
-            std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-            const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
-            if (IX_NULLPTR == propertys)
+            const _iProperty* tProperty = mo->property(iString(name));
+            if (IX_NULLPTR == tProperty)
                 continue;
 
-            it = propertys->find(iString(name));
-            if (it == propertys->cend() || !it->second)
-                continue;
-
-            FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(it->second->_signal);
+            FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(tProperty->_signalRaw);
             SignalFunc tFunc = reinterpret_cast<SignalFunc>(tFuncAdptor);
             _iConnectionHelper<SignalFunc, Func> conn(this, tFunc, obj, slot, ConnectionType(AutoConnection | AgrumentsAdaptor));
             return connectImpl(conn);

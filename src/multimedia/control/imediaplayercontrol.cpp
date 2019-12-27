@@ -11,7 +11,6 @@
 
 #include "multimedia/controls/imediaplayercontrol.h"
 
-
 namespace iShell {
 
 /*!

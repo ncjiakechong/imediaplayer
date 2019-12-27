@@ -181,7 +181,7 @@ struct AudioFormat
     iAudioFormat::Endian byteOrder;
     int sampleSize;
 };
-static const AudioFormat qt_audioLookup[] =
+static const AudioFormat ix_audioLookup[] =
 {
     { GST_AUDIO_FORMAT_S8   , iAudioFormat::SignedInt  , iAudioFormat::LittleEndian, 8  },
     { GST_AUDIO_FORMAT_U8   , iAudioFormat::UnSignedInt, iAudioFormat::LittleEndian, 8  },
@@ -217,13 +217,13 @@ iAudioFormat iGstUtils::audioFormatForCaps(const GstCaps *caps)
     #if GST_CHECK_VERSION(1,0,0)
     GstAudioInfo info;
     if (gst_audio_info_from_caps(&info, caps)) {
-        for (int i = 0; i < lengthOf(qt_audioLookup); ++i) {
-            if (qt_audioLookup[i].format != info.finfo->format)
+        for (int i = 0; i < lengthOf(ix_audioLookup); ++i) {
+            if (ix_audioLookup[i].format != info.finfo->format)
                 continue;
 
-            format.setSampleType(qt_audioLookup[i].sampleType);
-            format.setByteOrder(qt_audioLookup[i].byteOrder);
-            format.setSampleSize(qt_audioLookup[i].sampleSize);
+            format.setSampleType(ix_audioLookup[i].sampleType);
+            format.setByteOrder(ix_audioLookup[i].byteOrder);
+            format.setSampleSize(ix_audioLookup[i].sampleSize);
             format.setSampleRate(info.rate);
             format.setChannelCount(info.channels);
             format.setCodec(iStringLiteral("audio/pcm"));
@@ -353,16 +353,16 @@ GstCaps *iGstUtils::capsForAudioFormat(const iAudioFormat &format)
     const iAudioFormat::Endian byteOrder = format.byteOrder();
     const int sampleSize = format.sampleSize();
 
-    for (int i = 0; i < lengthOf(qt_audioLookup); ++i) {
-        if (qt_audioLookup[i].sampleType != sampleType
-                || qt_audioLookup[i].byteOrder != byteOrder
-                || qt_audioLookup[i].sampleSize != sampleSize) {
+    for (int i = 0; i < lengthOf(ix_audioLookup); ++i) {
+        if (ix_audioLookup[i].sampleType != sampleType
+                || ix_audioLookup[i].byteOrder != byteOrder
+                || ix_audioLookup[i].sampleSize != sampleSize) {
             continue;
         }
 
         return gst_caps_new_simple(
                     "audio/x-raw",
-                    "format"  , G_TYPE_STRING, gst_audio_format_to_string(qt_audioLookup[i].format),
+                    "format"  , G_TYPE_STRING, gst_audio_format_to_string(ix_audioLookup[i].format),
                     "rate"    , G_TYPE_INT   , format.sampleRate(),
                     "channels", G_TYPE_INT   , format.channelCount(),
                     IX_NULLPTR);
@@ -637,7 +637,7 @@ struct YuvFormat
     int bitsPerPixel;
 };
 
-static const YuvFormat qt_yuvColorLookup[] =
+static const YuvFormat ix_yuvColorLookup[] =
 {
     { iVideoFrame::Format_YUV420P, GST_MAKE_FOURCC('I','4','2','0'), 8 },
     { iVideoFrame::Format_YV12,    GST_MAKE_FOURCC('Y','V','1','2'), 8 },
@@ -650,10 +650,10 @@ static const YuvFormat qt_yuvColorLookup[] =
 
 static int indexOfYuvColor(iVideoFrame::PixelFormat format)
 {
-    const int count = sizeof(qt_yuvColorLookup) / sizeof(YuvFormat);
+    const int count = sizeof(ix_yuvColorLookup) / sizeof(YuvFormat);
 
     for (int i = 0; i < count; ++i)
-        if (qt_yuvColorLookup[i].pixelFormat == format)
+        if (ix_yuvColorLookup[i].pixelFormat == format)
             return i;
 
     return -1;
@@ -661,10 +661,10 @@ static int indexOfYuvColor(iVideoFrame::PixelFormat format)
 
 static int indexOfYuvColor(guint32 fourcc)
 {
-    const int count = sizeof(qt_yuvColorLookup) / sizeof(YuvFormat);
+    const int count = sizeof(ix_yuvColorLookup) / sizeof(YuvFormat);
 
     for (int i = 0; i < count; ++i)
-        if (qt_yuvColorLookup[i].fourcc == fourcc)
+        if (ix_yuvColorLookup[i].fourcc == fourcc)
             return i;
 
     return -1;
@@ -682,7 +682,7 @@ struct RgbFormat
     int alpha;
 };
 
-static const RgbFormat qt_rgbColorLookup[] =
+static const RgbFormat ix_rgbColorLookup[] =
 {
     { iVideoFrame::Format_RGB32 , 32, 24, 4321, 0x0000FF00, 0x00FF0000, int(0xFF000000), 0x00000000 },
     { iVideoFrame::Format_RGB32 , 32, 24, 1234, 0x00FF0000, 0x0000FF00, 0x000000FF, 0x00000000 },
@@ -698,16 +698,16 @@ static const RgbFormat qt_rgbColorLookup[] =
 static int indexOfRgbColor(
         int bits, int depth, int endianness, int red, int green, int blue, int alpha)
 {
-    const int count = sizeof(qt_rgbColorLookup) / sizeof(RgbFormat);
+    const int count = sizeof(ix_rgbColorLookup) / sizeof(RgbFormat);
 
     for (int i = 0; i < count; ++i) {
-        if (qt_rgbColorLookup[i].bitsPerPixel == bits
-            && qt_rgbColorLookup[i].depth == depth
-            && qt_rgbColorLookup[i].endianness == endianness
-            && qt_rgbColorLookup[i].red == red
-            && qt_rgbColorLookup[i].green == green
-            && qt_rgbColorLookup[i].blue == blue
-            && qt_rgbColorLookup[i].alpha == alpha) {
+        if (ix_rgbColorLookup[i].bitsPerPixel == bits
+            && ix_rgbColorLookup[i].depth == depth
+            && ix_rgbColorLookup[i].endianness == endianness
+            && ix_rgbColorLookup[i].red == red
+            && ix_rgbColorLookup[i].green == green
+            && ix_rgbColorLookup[i].blue == blue
+            && ix_rgbColorLookup[i].alpha == alpha) {
             return i;
         }
     }
@@ -798,28 +798,28 @@ GstCaps *iGstUtils::capsForFormats(const std::list<iVideoFrame::PixelFormat> &fo
         if (index != -1) {
             gst_caps_append_structure(caps, gst_structure_new(
                     "video/x-raw-yuv",
-                    "format", GST_TYPE_FOURCC, qt_yuvColorLookup[index].fourcc,
+                    "format", GST_TYPE_FOURCC, ix_yuvColorLookup[index].fourcc,
                     IX_NULLPTR));
             continue;
         }
 
-        const int count = sizeof(qt_rgbColorLookup) / sizeof(RgbFormat);
+        const int count = sizeof(ix_rgbColorLookup) / sizeof(RgbFormat);
 
         for (int i = 0; i < count; ++i) {
-            if (qt_rgbColorLookup[i].pixelFormat == format) {
+            if (ix_rgbColorLookup[i].pixelFormat == format) {
                 GstStructure *structure = gst_structure_new(
                         "video/x-raw-rgb",
-                        "bpp"       , G_TYPE_INT, qt_rgbColorLookup[i].bitsPerPixel,
-                        "depth"     , G_TYPE_INT, qt_rgbColorLookup[i].depth,
-                        "endianness", G_TYPE_INT, qt_rgbColorLookup[i].endianness,
-                        "red_mask"  , G_TYPE_INT, qt_rgbColorLookup[i].red,
-                        "green_mask", G_TYPE_INT, qt_rgbColorLookup[i].green,
-                        "blue_mask" , G_TYPE_INT, qt_rgbColorLookup[i].blue,
+                        "bpp"       , G_TYPE_INT, ix_rgbColorLookup[i].bitsPerPixel,
+                        "depth"     , G_TYPE_INT, ix_rgbColorLookup[i].depth,
+                        "endianness", G_TYPE_INT, ix_rgbColorLookup[i].endianness,
+                        "red_mask"  , G_TYPE_INT, ix_rgbColorLookup[i].red,
+                        "green_mask", G_TYPE_INT, ix_rgbColorLookup[i].green,
+                        "blue_mask" , G_TYPE_INT, ix_rgbColorLookup[i].blue,
                         IX_NULLPTR);
 
-                if (qt_rgbColorLookup[i].alpha != 0) {
+                if (ix_rgbColorLookup[i].alpha != 0) {
                     gst_structure_set(
-                            structure, "alpha_mask", G_TYPE_INT, qt_rgbColorLookup[i].alpha, IX_NULLPTR);
+                            structure, "alpha_mask", G_TYPE_INT, ix_rgbColorLookup[i].alpha, IX_NULLPTR);
                 }
                 gst_caps_append_structure(caps, structure);
             }
@@ -970,9 +970,9 @@ iVideoFrame::PixelFormat iGstUtils::structurePixelFormat(const GstStructure *str
 
         int index = indexOfYuvColor(fourcc);
         if (index != -1) {
-            pixelFormat = qt_yuvColorLookup[index].pixelFormat;
+            pixelFormat = ix_yuvColorLookup[index].pixelFormat;
             if (bpp)
-                *bpp = qt_yuvColorLookup[index].bitsPerPixel;
+                *bpp = ix_yuvColorLookup[index].bitsPerPixel;
         }
     } else if (istrcmp(gst_structure_get_name(structure), "video/x-raw-rgb") == 0) {
         int bitsPerPixel = 0;
@@ -994,9 +994,9 @@ iVideoFrame::PixelFormat iGstUtils::structurePixelFormat(const GstStructure *str
         int index = indexOfRgbColor(bitsPerPixel, depth, endianness, red, green, blue, alpha);
 
         if (index != -1) {
-            pixelFormat = qt_rgbColorLookup[index].pixelFormat;
+            pixelFormat = ix_rgbColorLookup[index].pixelFormat;
             if (bpp)
-                *bpp = qt_rgbColorLookup[index].bitsPerPixel;
+                *bpp = ix_rgbColorLookup[index].bitsPerPixel;
         }
     }
     #endif
@@ -1212,7 +1212,7 @@ gboolean ix_gst_caps_can_intersect(const GstCaps * caps1, const GstCaps * caps2)
 }
 
 #if !GST_CHECK_VERSION(0, 10, 31)
-static gboolean qt_gst_videosink_factory_filter(GstPluginFeature *feature, gpointer)
+static gboolean ix_gst_videosink_factory_filter(GstPluginFeature *feature, gpointer)
 {
   guint rank;
   const gchar *klass;
@@ -1231,7 +1231,7 @@ static gboolean qt_gst_videosink_factory_filter(GstPluginFeature *feature, gpoin
   return TRUE;
 }
 
-static gint qt_gst_compare_ranks(GstPluginFeature *f1, GstPluginFeature *f2)
+static gint ix_gst_compare_ranks(GstPluginFeature *f1, GstPluginFeature *f2)
 {
   gint diff;
 
@@ -1252,9 +1252,9 @@ GList *ix_gst_video_sinks()
                                                  GST_RANK_MARGINAL);
     #else
     list = gst_registry_feature_filter(gst_registry_get_default(),
-                                       (GstPluginFeatureFilter)qt_gst_videosink_factory_filter,
+                                       (GstPluginFeatureFilter)ix_gst_videosink_factory_filter,
                                        FALSE, IX_NULLPTR);
-    list = g_list_sort(list, (GCompareFunc)qt_gst_compare_ranks);
+    list = g_list_sort(list, (GCompareFunc)ix_gst_compare_ranks);
     #endif
 
     return list;

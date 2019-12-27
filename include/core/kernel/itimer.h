@@ -22,7 +22,7 @@ public:
     explicit iTimer(iObject *parent = IX_NULLPTR);
     ~iTimer();
 
-    inline bool isActive() const { return m_id >= 0; }
+    inline bool isActive() const { return m_id > 0; }
     int timerId() const { return m_id; }
 
     void setInterval(int msec);

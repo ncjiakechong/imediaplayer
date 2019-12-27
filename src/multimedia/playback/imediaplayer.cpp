@@ -50,7 +50,7 @@ namespace iShell {
     \sa iMediaObject, QMediaService, QVideoWidget, QMediaPlaylist
 */
 
-void iMediaPlayer::_q_stateChanged(State ps)
+void iMediaPlayer::_x_stateChanged(State ps)
 {
     if (ps != m_state) {
         m_state = ps;
@@ -64,7 +64,7 @@ void iMediaPlayer::_q_stateChanged(State ps)
     }
 }
 
-void iMediaPlayer::_q_mediaStatusChanged(iMediaPlayer::MediaStatus s)
+void iMediaPlayer::_x_mediaStatusChanged(iMediaPlayer::MediaStatus s)
 {
     if (int(s) == m_ignoreNextStatusChange) {
         m_ignoreNextStatusChange = -1;
@@ -88,14 +88,14 @@ void iMediaPlayer::_q_mediaStatusChanged(iMediaPlayer::MediaStatus s)
     }
 }
 
-void iMediaPlayer::_q_error(int error, const iString &errorString)
+void iMediaPlayer::_x_error(int error, const iString &errorString)
 {
     m_error = Error(error);
     m_errorString = errorString;
     IEMIT errorEvent(m_error);
 }
 
-void iMediaPlayer::_q_updateMedia(const iString &media)
+void iMediaPlayer::_x_updateMedia(const iString &media)
 {
     if (!m_control)
         return;
@@ -117,7 +117,7 @@ void iMediaPlayer::_q_updateMedia(const iString &media)
         }
     }
 
-    _q_stateChanged(m_control->state());
+    _x_stateChanged(m_control->state());
 }
 
 /*!
@@ -142,10 +142,10 @@ iMediaPlayer::iMediaPlayer(iObject *parent, iMediaPlayer::Flags flags)
 
     if (m_control != IX_NULLPTR) {
         connect(m_control, &iMediaPlayerControl::mediaChanged, this, &iMediaPlayer::currentMediaChanged);
-        connect(m_control, &iMediaPlayerControl::stateChanged, this, &iMediaPlayer::_q_stateChanged);
+        connect(m_control, &iMediaPlayerControl::stateChanged, this, &iMediaPlayer::_x_stateChanged);
         connect(m_control, &iMediaPlayerControl::mediaStatusChanged,
-                this, &iMediaPlayer::_q_mediaStatusChanged);
-        connect(m_control, &iMediaPlayerControl::error, this, &iMediaPlayer::_q_error);
+                this, &iMediaPlayer::_x_mediaStatusChanged);
+        connect(m_control, &iMediaPlayerControl::error, this, &iMediaPlayer::_x_error);
 
         connect(m_control, &iMediaPlayerControl::durationChanged, this, &iMediaPlayer::durationChanged);
         connect(m_control, &iMediaPlayerControl::positionChanged, this, &iMediaPlayer::positionChanged);
@@ -269,6 +269,10 @@ int iMediaPlayer::bufferStatus() const
     return 0;
 }
 
+void iMediaPlayer::setBufferStatus(int)
+{
+}
+
 bool iMediaPlayer::isAudioAvailable() const
 {
     if (m_control != IX_NULLPTR)
@@ -322,7 +326,7 @@ iString iMediaPlayer::errorString() const
 void iMediaPlayer::play()
 {
     if (m_control == IX_NULLPTR) {
-        iObject::invokeMethod(this, &iMediaPlayer::_q_error,
+        iObject::invokeMethod(this, &iMediaPlayer::_x_error,
                                     ServiceMissingError,
                                     "The iMediaPlayer object does not have a valid service", QueuedConnection);
         return;

@@ -19,47 +19,9 @@
 
 namespace iShell {
 
-static thread_local iThreadData *currentThreadData = IX_NULLPTR;
-
-// thread wrapper for the main() thread
-class iAdoptedThread : public iThread
-{
-    IX_OBJECT(iAdoptedThread)
-public:
-    iAdoptedThread(iThreadData *data)
-        : iThread(data)
-    {
-        m_running = true;
-        m_finished = false;
-    }
-
-    ~iAdoptedThread() {}
-
-protected:
-    void run() {
-        // this function should never be called
-        ilog_error(__FUNCTION__, ": Internal error, this implementation should never be called.");
-    }
-};
-
-// Utility functions for getting, setting and clearing thread specific data.
-static iThreadData *get_thread_data()
-{
-    return currentThreadData;
-}
-
-static void set_thread_data(iThreadData *data)
-{
-    currentThreadData = data;
-}
-
-static void clear_thread_data()
-{
-    currentThreadData = IX_NULLPTR;
-}
-
 iThreadData::iThreadData(int initialRefCount)
     : quitNow(false)
+    , isAdopted(false)
     , requiresCoreApplication(true)
     , m_ref(initialRefCount)
 {
@@ -67,6 +29,9 @@ iThreadData::iThreadData(int initialRefCount)
 
 iThreadData::~iThreadData()
 {
+    // ~iThread() sets thread to nullptr, so if it isn't null here, it's
+    // because we're being run before the main object itself. This can only
+    // happen for iAdoptedThread.
     iThread *t = thread;
     thread = IX_NULLPTR;
     delete t;
@@ -83,24 +48,6 @@ iThreadData::~iThreadData()
     }
 }
 
-iThreadData* iThreadData::current(bool createIfNecessary)
-{
-    iThreadData *data = get_thread_data();
-    if (!data && createIfNecessary) {
-        data = new iThreadData;
-        set_thread_data(data);
-        data->thread = new iAdoptedThread(data);
-        data->threadHd = iThread::currentThreadHd();
-    }
-
-    return data;
-}
-
-void iThreadData::clearCurrentThreadData()
-{
-    clear_thread_data();
-}
-
 void iThreadData::ref()
 {
     ++m_ref;
@@ -111,11 +58,6 @@ void iThreadData::deref()
     --m_ref;
     if (0 == m_ref.value())
         delete this;
-}
-
-void iThreadData::setCurrent()
-{
-    set_thread_data(this);
 }
 
 iThread* iThread::currentThread()
@@ -191,7 +133,7 @@ iThread::~iThread()
         m_mutex.lock();
     }
 
-    if (m_running && !m_finished)
+    if (m_running && !m_finished && !m_data->isAdopted)
         ilog_error(__FUNCTION__, ": Destroyed while thread is still running");
 
     m_data->thread = IX_NULLPTR;

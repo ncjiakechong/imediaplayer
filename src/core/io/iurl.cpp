@@ -1691,7 +1691,7 @@ iString iUrlPrivate::toLocalFile(iUrl::FormattingOptions options) const
     // magic for shared drive on windows
     if (!host.isEmpty()) {
         tmp = iLatin1String("//") + host;
-        #ifdef IX_OS_WIN // QTBUG-42346, WebDAV is visible as local file on Windows only.
+        #ifdef IX_OS_WIN // WebDAV is visible as local file on Windows only.
         if (scheme == webDavScheme())
             tmp += webDavSslTag();
         #endif
@@ -1947,41 +1947,6 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
     return true;
 }
 
-#if 0
-inline void iUrlPrivate::validate() const
-{
-    iUrlPrivate *that = (iUrlPrivate *)this;
-    that->encodedOriginal = that->toEncoded(); // may detach
-    parse(ParseOnly);
-
-    QURL_SETFLAG(that->stateFlags, Validated);
-
-    if (!isValid)
-        return;
-
-    iString auth = authority(); // causes the non-encoded forms to be valid
-
-    // authority() calls canonicalHost() which sets this
-    if (!isHostValid)
-        return;
-
-    if (scheme == iLatin1String("mailto")) {
-        if (!host.isEmpty() || port != -1 || !userName.isEmpty() || !password.isEmpty()) {
-            that->isValid = false;
-            that->errorInfo.setParams(0, QT_TRANSLATE_NOOP(iUrl, "expected empty host, username,"
-                                                           "port and password"),
-                                      0, 0);
-        }
-    } else if (scheme == ftpScheme() || scheme == httpScheme()) {
-        if (host.isEmpty() && !(path.isEmpty() && encodedPath.isEmpty())) {
-            that->isValid = false;
-            that->errorInfo.setParams(0, QT_TRANSLATE_NOOP(iUrl, "the host is empty, but not the path"),
-                                      0, 0);
-        }
-    }
-}
-#endif
-
 /*!
     \macro QT_NO_URL_CAST_FROM_STRING
     \relates iUrl
@@ -2036,7 +2001,7 @@ inline void iUrlPrivate::validate() const
 
     \sa setUrl(), fromEncoded(), TolerantMode
 */
-iUrl::iUrl(const iString &url, ParsingMode parsingMode) : d(0)
+iUrl::iUrl(const iString &url, ParsingMode parsingMode) : d(IX_NULLPTR)
 {
     setUrl(url, parsingMode);
 }
@@ -2044,7 +2009,7 @@ iUrl::iUrl(const iString &url, ParsingMode parsingMode) : d(0)
 /*!
     Constructs an empty iUrl object.
 */
-iUrl::iUrl() : d(0)
+iUrl::iUrl() : d(IX_NULLPTR)
 {
 }
 

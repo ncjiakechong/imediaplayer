@@ -2090,7 +2090,7 @@ bool ix_nameprep(iString *source, int from)
     return true;
 }
 
-static const iChar *qt_find_nonstd3(const iChar *uc, int len, CaseSensitivity cs)
+static const iChar *ix_find_nonstd3(const iChar *uc, int len, CaseSensitivity cs)
 {
     if (len > 63)
         return uc;
@@ -2118,13 +2118,13 @@ static const iChar *qt_find_nonstd3(const iChar *uc, int len, CaseSensitivity cs
 
 bool ix_check_std3rules(const iChar *uc, int len)
 {
-    return qt_find_nonstd3(uc, len, CaseInsensitive) == nullptr;
+    return ix_find_nonstd3(uc, len, CaseInsensitive) == nullptr;
 }
 
-static bool qt_check_nameprepped_std3(const iChar *in, int len)
+static bool ix_check_nameprepped_std3(const iChar *in, int len)
 {
     // fast path: check for lowercase ASCII
-    const iChar *firstNonAscii = qt_find_nonstd3(in, len, CaseSensitive);
+    const iChar *firstNonAscii = ix_find_nonstd3(in, len, CaseSensitive);
     if (firstNonAscii == nullptr) {
         // everything was lowercase ASCII, digits or hyphen
         return true;
@@ -2406,7 +2406,7 @@ static bool equal(const iChar *a, int l, const char *b)
     return l == 0;
 }
 
-static bool qt_is_idn_enabled(const iString &domain)
+static bool ix_is_idn_enabled(const iString &domain)
 {
     int idx = domain.lastIndexOf(iLatin1Char('.'));
     if (idx == -1)
@@ -2467,7 +2467,7 @@ iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot)
     iString result;
     result.reserve(domain.length());
 
-    const bool isIdnEnabled = op == NormalizeAce ? qt_is_idn_enabled(domain) : false;
+    const bool isIdnEnabled = op == NormalizeAce ? ix_is_idn_enabled(domain) : false;
     int lastIdx = 0;
     iString aceForm; // this variable is here for caching
 
@@ -2545,7 +2545,7 @@ iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot)
                 iString tmp = ix_punycodeDecoder(aceForm);
                 if (tmp.isEmpty())
                     return iString(); // shouldn't happen, since we've just punycode-encoded it
-                if (qt_check_nameprepped_std3(tmp.constData(), tmp.size())) {
+                if (ix_check_nameprepped_std3(tmp.constData(), tmp.size())) {
                     result.resize(prevLen + tmp.size());
                     memcpy(result.data() + prevLen, tmp.constData(), tmp.size() * sizeof(iChar));
                     appended = true;
