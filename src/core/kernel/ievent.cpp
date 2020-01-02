@@ -83,6 +83,7 @@ iChildEvent::~iChildEvent()
 
 iDeferredDeleteEvent::iDeferredDeleteEvent()
     : iEvent(iEvent::DeferredDelete)
+    , level(0)
 { }
 
 /*!

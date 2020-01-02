@@ -23,6 +23,8 @@ iThreadData::iThreadData(int initialRefCount)
     : quitNow(false)
     , isAdopted(false)
     , requiresCoreApplication(true)
+    , loopLevel(0)
+    , scopeLevel(0)
     , m_ref(initialRefCount)
 {
 }
@@ -195,16 +197,13 @@ void iThread::exit(int retCode)
     iMutex::ScopedLock _lockThis(m_mutex);
     m_exited = true;
     m_returnCode = retCode;
+    m_data->quitNow = true;
 
-    iEventLoop* eventLoop = IX_NULLPTR;
-    {
-        iMutex::ScopedLock _lockData(m_data->eventMutex);
-        m_data->quitNow = true;
-        eventLoop = m_data->eventLoop.load();
-    }
-
-    if (eventLoop)
+    for (std::list<iEventLoop *>::iterator it = m_data->eventLoops.begin();
+         it != m_data->eventLoops.end(); ++it) {
+        iEventLoop* eventLoop = *it;
         eventLoop->exit(retCode);
+    }
 }
 
 bool iThread::event(iEvent *e)

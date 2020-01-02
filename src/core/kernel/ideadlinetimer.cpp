@@ -41,8 +41,9 @@ iDeadlineTimer iDeadlineTimer::current(TimerType timerType)
     xint64 currentTime  = xint64(std::chrono::duration_cast<std::chrono::nanoseconds>(now - min).count());
 
     iDeadlineTimer result;
-    result.t1 = toSecsAndNSecs(currentTime).first;
-    result.t2 = toSecsAndNSecs(currentTime).second;
+    auto pnsecs = toSecsAndNSecs(currentTime);
+    result.t1 = pnsecs.first;
+    result.t2 = pnsecs.second;
     result.type = timerType;
     return result;
 }
@@ -53,8 +54,9 @@ iDeadlineTimer iDeadlineTimer::current(TimerType timerType)
 {
     timespec currentTime = igettime();
     iDeadlineTimer result;
-    result.t1 = currentTime.tv_sec + toSecsAndNSecs(currentTime.tv_nsec).first;
-    result.t2 = toSecsAndNSecs(currentTime.tv_nsec).second;
+    auto pnsecs = toSecsAndNSecs(currentTime.tv_nsec);
+    result.t1 = currentTime.tv_sec + pnsecs.first;
+    result.t2 = pnsecs.second;
     result.type = timerType;
     return result;
 }
@@ -82,8 +84,9 @@ void iDeadlineTimer::setPreciseRemainingTime(xint64 secs, xint64 nsecs, TimerTyp
     }
 
     *this = current(timerType);
-    t1 += secs + toSecsAndNSecs(nsecs).first;
-    t2 += toSecsAndNSecs(nsecs).second;
+    auto pnsecs = toSecsAndNSecs(nsecs);
+    t1 += secs + pnsecs.first;
+    t2 += pnsecs.second;
     if (t2 > 1000*1000*1000) {
         t2 -= 1000*1000*1000;
         ++t1;
@@ -153,8 +156,9 @@ void iDeadlineTimer::setPreciseDeadline(xint64 secs, xint64 nsecs, TimerType tim
     if (secs == (std::numeric_limits<xint64>::max)() || nsecs == (std::numeric_limits<xint64>::max)()) {
         *this = iDeadlineTimer(Forever, timerType);
     } else {
-        t1 = secs + toSecsAndNSecs(nsecs).first;
-        t2 = toSecsAndNSecs(nsecs).second;
+        auto pnsecs = toSecsAndNSecs(nsecs);
+        t1 = secs + pnsecs.first;
+        t2 = pnsecs.second;
     }
 }
 
@@ -163,8 +167,9 @@ iDeadlineTimer iDeadlineTimer::addNSecs(iDeadlineTimer dt, xint64 nsecs)
     if (dt.isForever() || nsecs == (std::numeric_limits<xint64>::max)()) {
         dt = iDeadlineTimer(Forever, dt.timerType());
     } else {
-        dt.t1 += toSecsAndNSecs(nsecs).first;
-        dt.t2 += toSecsAndNSecs(nsecs).second;
+        auto pnsecs = toSecsAndNSecs(nsecs);
+        dt.t1 += pnsecs.first;
+        dt.t2 += pnsecs.second;
         if (dt.t2 > 1000*1000*1000) {
             dt.t2 -= 1000*1000*1000;
             ++dt.t1;

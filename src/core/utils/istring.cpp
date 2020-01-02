@@ -1590,7 +1590,7 @@ void iString::reallocData(uint alloc, bool grow)
 iString &iString::operator=(const iString &other)
 {
     other.d->ref.ref();
-    if (!d->ref.deref())
+    if ((IX_NULLPTR != d) && !d->ref.deref())
         Data::deallocate(d);
     d = other.d;
     return *this;

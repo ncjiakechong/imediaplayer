@@ -19,7 +19,7 @@
 
 namespace iShell {
 
-typedef iBasicAtomicBitField< std::numeric_limits<xint16>::max() > iTypeIdContainer;
+typedef iBasicAtomicBitField<4096> iTypeIdContainer;
 typedef std::unordered_map< iLatin1String, int, iKeyHashFunc, iKeyEqualFunc > iTypeIdRegister;
 typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc, iKeyEqualFunc > iMetaTypeConverter;
 
@@ -67,6 +67,9 @@ int iVariant::iRegisterMetaType(const char *type, int hint)
 
     if (needInitSystemConvert)
         _iMetaType::initSystemConvert();
+
+    if (hint < 0)
+        ilog_warn(__FUNCTION__, ": ", type, " regist fail!!!, container(", iTypeIdContainer::NumBits,") maybe full");
 
     return hint;
 }

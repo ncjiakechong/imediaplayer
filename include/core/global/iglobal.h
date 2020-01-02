@@ -126,6 +126,15 @@ inline bool is_little_endian()
     return (__byte_order.c > 0);
 }
 
+# define IX_DESTRUCTOR_FUNCTION0(AFUNC) \
+    namespace { \
+    static const struct AFUNC ## _dtor_class_ { \
+        inline AFUNC ## _dtor_class_() { } \
+        inline ~ AFUNC ## _dtor_class_() { AFUNC(); } \
+    } AFUNC ## _dtor_instance_; \
+    }
+# define IX_DESTRUCTOR_FUNCTION(AFUNC) IX_DESTRUCTOR_FUNCTION0(AFUNC)
+
 #if defined(IBUILD_CORE_LIB)
 #  define IX_CORE_EXPORT IX_DECL_EXPORT
 #else

@@ -136,7 +136,7 @@ int iCoreApplication::exec()
         ilog_warn(self->objectName(), __FUNCTION__, ": Must be called from the main thread");
         return -1;
     }
-    if (threadData->eventLoop.load()) {
+    if (!threadData->eventLoops.empty()) {
         ilog_warn(self->objectName(), __FUNCTION__, ": The event loop is already running");
         return -1;
     }
@@ -178,9 +178,11 @@ void iCoreApplication::exit(int retCode)
 
     iThreadData *data = self->m_threadData;
     data->quitNow = true;
-    iEventLoop* eventLoop = data->eventLoop.load();
-    if (eventLoop)
+    for (std::list<iEventLoop *>::iterator it = data->eventLoops.begin();
+         it != data->eventLoops.end(); ++it) {
+        iEventLoop* eventLoop = *it;
         eventLoop->exit(retCode);
+    }
 }
 
 bool iCoreApplication::threadRequiresCoreApplication()
@@ -209,6 +211,7 @@ bool iCoreApplication::sendEvent(iObject *receiver, iEvent *event)
     if (!self && selfRequired)
         return false;
 
+    iScopedScopeLevelCounter scopeLevelCounter(receiver->m_threadData);
     if (!selfRequired)
         return doNotify(receiver, event);
 
@@ -257,6 +260,28 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event)
 
     if (event->type() == iEvent::DeferredDelete)
         receiver->m_deleteLaterCalled = true;
+
+    if (event->type() == iEvent::DeferredDelete && data == iThreadData::current()) {
+        // remember the current running eventloop for DeferredDelete
+        // events posted in the receiver's thread.
+
+        // Events sent by non-IX event handlers (such as glib) may not
+        // have the scopeLevel set correctly. The scope level makes sure that
+        // code like this:
+        //     foo->deleteLater();
+        //     iApp->processEvents(); // without passing iEvent::DeferredDelete
+        // will not cause "foo" to be deleted before returning to the event loop.
+
+        // If the scope level is 0 while loopLevel != 0, we are called from a
+        // non-conformant code path, and our best guess is that the scope level
+        // should be 1. (Loop level 0 is special: it means that no event loops
+        // are running.)
+        int loopLevel = data->loopLevel;
+        int scopeLevel = data->scopeLevel;
+        if (scopeLevel == 0 && loopLevel != 0)
+            scopeLevel = 1;
+        static_cast<iDeferredDeleteEvent *>(event)->level = loopLevel + scopeLevel;
+    }
 
     iPostEvent pe(receiver, event);
     bool needWake = data->postEventList.empty();
@@ -324,6 +349,32 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
         iPostEvent event = *(threadData->postEventList.begin());
         threadData->postEventList.erase(threadData->postEventList.begin());
         --event.receiver->m_postedEvents;
+
+        if (event.event->type() == iEvent::DeferredDelete) {
+            // DeferredDelete events are sent either
+            // 1) when the event loop that posted the event has returned; or
+            // 2) if explicitly requested (with iEvent::DeferredDelete) for
+            //    events posted by the current event loop; or
+            // 3) if the event was posted before the outermost event loop.
+
+            int eventLevel = static_cast<iDeferredDeleteEvent *>(event.event)->loopLevel();
+            int loopLevel = threadData->loopLevel + threadData->scopeLevel;
+            const bool allowDeferredDelete =
+                (eventLevel > loopLevel
+                 || (!eventLevel && loopLevel > 0)
+                 || (event_type == iEvent::DeferredDelete
+                     && eventLevel == loopLevel));
+            if (!allowDeferredDelete) {
+                // cannot send deferred delete
+                if (!event_type && !receiver) {
+                    // re-post the copied event so it isn't lost
+                    threadData->postEventList.push_back(event);
+                } else {
+                    delete event.event;
+                }
+                continue;
+            }
+        }
 
         struct MutexUnlocker
         {

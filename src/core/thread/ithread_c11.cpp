@@ -152,8 +152,8 @@ void iThreadImpl::internalThreadFunc()
     {
         iMutex::ScopedLock locker(thread->m_mutex);
         data->threadHd = iThread::currentThreadHd();
-        data->ref();
         set_thread_data(data);
+        data->ref();
     }
 
     if (IX_NULLPTR == data->dispatcher.load())
@@ -170,7 +170,7 @@ void iThreadImpl::internalThreadFunc()
 
         iEventDispatcher *eventDispatcher = data->dispatcher.load();
         if (eventDispatcher) {
-            data->dispatcher = 0;
+            data->dispatcher = IX_NULLPTR;
             thread->m_mutex.unlock();
             eventDispatcher->closingDown();
             delete eventDispatcher;
@@ -181,6 +181,7 @@ void iThreadImpl::internalThreadFunc()
         thread->m_finished = true;
         thread->m_isInFinish = false;
         thread->m_doneCond.broadcast();
+        // TODO: memory leak
         data->deref();
         thread->m_mutex.unlock();
     }

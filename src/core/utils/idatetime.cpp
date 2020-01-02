@@ -507,7 +507,7 @@ int iDate::weekNumber(int *yearNumber) const
         IX_ASSERT(week == 53 || week == 1);
     }
 
-    if (yearNumber != 0)
+    if (yearNumber != IX_NULLPTR)
         *yearNumber = year;
     return week;
 }
@@ -1490,8 +1490,8 @@ static bool epochMSecsToLocalTime(xint64 msecs, iDate *localDate, iTime *localTi
 // values from mktime for the adjusted local date and time.
 static xint64 localMSecsToEpochMSecs(xint64 localMsecs,
                                      iDateTimePrivate::DaylightStatus *daylightStatus,
-                                     iDate *localDate = 0, iTime *localTime = 0,
-                                     iString *abbreviation = 0)
+                                     iDate *localDate = IX_NULLPTR, iTime *localTime = IX_NULLPTR,
+                                     iString *abbreviation = IX_NULLPTR)
 {
     iDate dt;
     iTime tm;
@@ -2219,7 +2219,7 @@ iDate iDateTime::date() const
     if (!(status & iDateTimePrivate::ValidDate))
         return iDate();
     iDate dt;
-    msecsToTime(getMSecs(d), &dt, 0);
+    msecsToTime(getMSecs(d), &dt, IX_NULLPTR);
     return dt;
 }
 
@@ -2235,7 +2235,7 @@ iTime iDateTime::time() const
     if (!(status & iDateTimePrivate::ValidTime))
         return iTime();
     iTime tm;
-    msecsToTime(getMSecs(d), 0, &tm);
+    msecsToTime(getMSecs(d), IX_NULLPTR, &tm);
     return tm;
 }
 
@@ -2319,7 +2319,7 @@ iString iDateTime::timeZoneAbbreviation() const
     case iShell::LocalTime:  {
         iString abbrev;
         auto status = extractDaylightStatus(getStatus(d));
-        localMSecsToEpochMSecs(getMSecs(d), &status, 0, 0, &abbrev);
+        localMSecsToEpochMSecs(getMSecs(d), &status, IX_NULLPTR, IX_NULLPTR, &abbrev);
         return abbrev;
         }
     }
@@ -3000,14 +3000,14 @@ xint64 iDateTime::currentMSecsSinceEpoch()
     // posix compliant system
     // we have milliseconds
     struct timeval tv;
-    gettimeofday(&tv, 0);
+    gettimeofday(&tv, IX_NULLPTR);
     return xint64(tv.tv_sec) * IX_INT64_C(1000) + tv.tv_usec / 1000;
 }
 
 xint64 iDateTime::currentSecsSinceEpoch()
 {
     struct timeval tv;
-    gettimeofday(&tv, 0);
+    gettimeofday(&tv, IX_NULLPTR);
     return xint64(tv.tv_sec);
 }
 #else
