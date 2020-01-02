@@ -33,13 +33,16 @@ class MutexImpl_BaseMutex
     // Helper class to make std::recursive_timed_mutex and std::timed_mutex generic
 {
 public:
-    virtual ~MutexImpl_BaseMutex() {}
+    virtual ~MutexImpl_BaseMutex();
 
     virtual int lock() = 0;
     virtual int tryLock() = 0;
     virtual int tryLock(long milliseconds) = 0;
     virtual int unlock() = 0;
 };
+
+MutexImpl_BaseMutex::~MutexImpl_BaseMutex()
+{}
 
 template <class T>
 class MutexImpl_MutexI : public MutexImpl_BaseMutex
