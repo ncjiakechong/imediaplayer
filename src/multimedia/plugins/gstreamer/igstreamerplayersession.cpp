@@ -374,7 +374,7 @@ xreal iGstreamerPlayerSession::playbackRate() const
 
 void iGstreamerPlayerSession::setPlaybackRate(xreal rate)
 {
-    ilog_debug(__FUNCTION__, " : ", rate);
+    ilog_debug(__FUNCTION__, ": ", rate);
     if (!iFuzzyCompare(m_playbackRate, rate)) {
         m_playbackRate = rate;
         if (m_pipeline && m_seekable) {
@@ -470,7 +470,7 @@ int iGstreamerPlayerSession::activeStream(iMediaStreamsControl::StreamType strea
 
 void iGstreamerPlayerSession::setActiveStream(iMediaStreamsControl::StreamType streamType, int streamNumber)
 {
-    ilog_debug(__FUNCTION__, " : ", streamType, ", ", streamNumber);
+    ilog_debug(__FUNCTION__, ": ", streamType, ", ", streamNumber);
 
     if (streamNumber >= 0) {
         std::multimap<iMediaStreamsControl::StreamType, int>::const_iterator it = m_playbin2StreamOffset.find(streamType);
@@ -528,7 +528,7 @@ static void block_pad_cb(GstPad *pad, gboolean blocked, gpointer user_data)
 
 void iGstreamerPlayerSession::updateVideoRenderer()
 {
-    ilog_debug(__FUNCTION__, " : Video sink has chaged, reload video output");
+    ilog_debug(__FUNCTION__, ": Video sink has chaged, reload video output");
 
     if (m_renderer)
         setVideoRenderer(m_renderer);
@@ -575,21 +575,21 @@ void iGstreamerPlayerSession::setVideoRenderer(iGstreamerVideoRendererInterface 
     if (!videoSink)
         videoSink = m_nullVideoSink;
 
-    ilog_debug(__FUNCTION__, " : Set video output:", videoOutput);
+    ilog_debug(__FUNCTION__, ": Set video output:", videoOutput);
     ilog_debug(__FUNCTION__, "Current sink:", (m_videoSink ? GST_ELEMENT_NAME(m_videoSink) : ""), m_videoSink
              , "pending: ", (m_pendingVideoSink ? GST_ELEMENT_NAME(m_pendingVideoSink) : ""), m_pendingVideoSink
              , "new sink: ", (videoSink ? GST_ELEMENT_NAME(videoSink) : ""), videoSink);
 
     if (m_pendingVideoSink == videoSink ||
         (m_pendingVideoSink == IX_NULLPTR && m_videoSink == videoSink)) {
-        ilog_debug(__FUNCTION__, " : Video sink has not changed, skip video output reconfiguration");
+        ilog_debug(__FUNCTION__, ": Video sink has not changed, skip video output reconfiguration");
         return;
     }
 
-    ilog_debug(__FUNCTION__, " : Reconfigure video output");
+    ilog_debug(__FUNCTION__, ": Reconfigure video output");
 
     if (m_state == iMediaPlayer::StoppedState) {
-        ilog_debug(__FUNCTION__, " : The pipeline has not started yet, pending state: ", m_pendingState);
+        ilog_debug(__FUNCTION__, ": The pipeline has not started yet, pending state: ", m_pendingState);
 
         //the pipeline has not started yet
         flushVideoProbes();
@@ -626,7 +626,7 @@ void iGstreamerPlayerSession::setVideoRenderer(iGstreamerVideoRendererInterface 
         #endif
 
         if (!linked)
-            ilog_warn(__FUNCTION__, " : Linking video output element failed");
+            ilog_warn(__FUNCTION__, ": Linking video output element failed");
 
         if (g_object_class_find_property(G_OBJECT_GET_CLASS(m_videoSink), "show-preroll-frame") != 0) {
             gboolean value = m_displayPrerolledFrame;
@@ -650,14 +650,14 @@ void iGstreamerPlayerSession::setVideoRenderer(iGstreamerVideoRendererInterface 
 
     } else {
         if (m_pendingVideoSink) {
-            ilog_debug(__FUNCTION__, " : already waiting for pad to be blocked, just change the pending sink");
+            ilog_debug(__FUNCTION__, ": already waiting for pad to be blocked, just change the pending sink");
             m_pendingVideoSink = videoSink;
             return;
         }
 
         m_pendingVideoSink = videoSink;
 
-        ilog_debug(__FUNCTION__, " : Blocking the video output pad...");
+        ilog_debug(__FUNCTION__, ": Blocking the video output pad...");
 
         //block pads, async to avoid locking in paused state
         GstPad *srcPad = gst_element_get_static_pad(m_videoIdentity, "src");
@@ -672,7 +672,7 @@ void iGstreamerPlayerSession::setVideoRenderer(iGstreamerVideoRendererInterface 
         //while the sink is paused. The pad will be blocked as soon as the current
         //buffer is processed.
         if (m_state == iMediaPlayer::PausedState) {
-            ilog_debug(__FUNCTION__, " : Starting video output to avoid blocking in paused state...");
+            ilog_debug(__FUNCTION__, ": Starting video output to avoid blocking in paused state...");
             gst_element_set_state(m_videoSink, GST_STATE_PLAYING);
         }
     }
@@ -683,13 +683,13 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
     if (!m_playbin || !m_pendingVideoSink)
         return;
 
-    ilog_debug(__FUNCTION__, " : ", m_pendingVideoSink);
+    ilog_debug(__FUNCTION__, ": ", m_pendingVideoSink);
 
     GstPad *srcPad = gst_element_get_static_pad(m_videoIdentity, "src");
 
     if (!gst_pad_is_blocked(srcPad)) {
         //pad is not blocked, it's possible to swap outputs only in the null state
-        ilog_warn(__FUNCTION__, " : Pad is not blocked yet, could not switch video sink");
+        ilog_warn(__FUNCTION__, ": Pad is not blocked yet, could not switch video sink");
         GstState identityElementState = GST_STATE_NULL;
         gst_element_get_state(m_videoIdentity, &identityElementState, IX_NULLPTR, GST_CLOCK_TIME_NONE);
         if (identityElementState != GST_STATE_NULL) {
@@ -699,7 +699,7 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
     }
 
     if (m_pendingVideoSink == m_videoSink) {
-        ilog_debug(__FUNCTION__, " : Abort, no change");
+        ilog_debug(__FUNCTION__, ": Abort, no change");
         //video output was change back to the current one,
         //no need to torment the pipeline, just unblock the pad
         if (gst_pad_is_blocked(srcPad))
@@ -754,9 +754,9 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
     #endif
 
     if (!linked)
-        ilog_warn(__FUNCTION__, " : Linking video output element failed");
+        ilog_warn(__FUNCTION__, ": Linking video output element failed");
 
-    ilog_debug(__FUNCTION__, " : notify the video connector it has to IEMIT a new segment message...");
+    ilog_debug(__FUNCTION__, ": notify the video connector it has to IEMIT a new segment message...");
 
     #if !GST_CHECK_VERSION(1,0,0)
     //it's necessary to send a new segment event just before
@@ -824,8 +824,8 @@ void iGstreamerPlayerSession::insertColorSpaceElement(GstElement *element, gpoin
         return;
     session->m_usingColorspaceElement = true;
 
-    ilog_debug(__FUNCTION__, " : Failed to connect video output, inserting the colorspace elemnt.");
-    ilog_debug(__FUNCTION__, " : notify the video connector it has to IEMIT a new segment message...");
+    ilog_debug(__FUNCTION__, ": Failed to connect video output, inserting the colorspace elemnt.");
+    ilog_debug(__FUNCTION__, ": notify the video connector it has to IEMIT a new segment message...");
     //it's necessary to send a new segment event just before
     //the first buffer pushed to the new sink
     g_signal_emit_by_name(session->m_videoIdentity,
@@ -874,7 +874,7 @@ bool iGstreamerPlayerSession::play()
     if (m_pipeline) {
         m_pendingState = iMediaPlayer::PlayingState;
         if (gst_element_set_state(m_pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
-            ilog_warn(__FUNCTION__, " : GStreamer; Unable to play -", m_request.toString());
+            ilog_warn(__FUNCTION__, ": GStreamer; Unable to play -", m_request.toString());
             m_pendingState = m_state = iMediaPlayer::StoppedState;
             IEMIT stateChanged(m_state);
         } else {
@@ -896,7 +896,7 @@ bool iGstreamerPlayerSession::pause()
             return true;
 
         if (gst_element_set_state(m_pipeline, GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE) {
-            ilog_warn(__FUNCTION__, " : GStreamer; Unable to pause -", m_request.toString());
+            ilog_warn(__FUNCTION__, ": GStreamer; Unable to pause -", m_request.toString());
             m_pendingState = m_state = iMediaPlayer::StoppedState;
             IEMIT stateChanged(m_state);
         } else {
@@ -936,7 +936,7 @@ void iGstreamerPlayerSession::stop()
 
 bool iGstreamerPlayerSession::seek(xint64 ms)
 {
-    ilog_verbose(__FUNCTION__, " : ", ms);
+    ilog_verbose(__FUNCTION__, ": ", ms);
 
     //seek locks when the video output sink is changing and pad is blocked
     if (m_pipeline && !m_pendingVideoSink && m_state != iMediaPlayer::StoppedState && m_seekable) {
@@ -961,7 +961,7 @@ bool iGstreamerPlayerSession::seek(xint64 ms)
 
 void iGstreamerPlayerSession::setVolume(int volume)
 {
-    ilog_verbose(__FUNCTION__, " : ", volume);
+    ilog_verbose(__FUNCTION__, ": ", volume);
 
     if (m_volume != volume) {
         m_volume = volume;
@@ -975,7 +975,7 @@ void iGstreamerPlayerSession::setVolume(int volume)
 
 void iGstreamerPlayerSession::setMuted(bool muted)
 {
-    ilog_verbose(__FUNCTION__, " : ", muted);
+    ilog_verbose(__FUNCTION__, ": ", muted);
 
     if (m_muted != muted) {
         m_muted = muted;
@@ -990,7 +990,7 @@ void iGstreamerPlayerSession::setMuted(bool muted)
 
 void iGstreamerPlayerSession::setSeekable(bool seekable)
 {
-    ilog_verbose(__FUNCTION__, " : ", seekable);
+    ilog_verbose(__FUNCTION__, ": ", seekable);
 
     if (seekable != m_seekable) {
         m_seekable = seekable;
@@ -1055,7 +1055,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
 
                     gst_message_parse_state_changed(gm, &oldState, &newState, &pending);
 
-                    ilog_verbose(__FUNCTION__, " state changed: old: ", oldState, " new: ", newState, " pending: ", pending);
+                    ilog_debug(__FUNCTION__, " state changed: old: ", oldState, " new: ", newState, " pending: ", pending);
 
                     switch (newState) {
                     case GST_STATE_VOID_PENDING:
@@ -1138,7 +1138,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                         processInvalidMedia(iMediaPlayer::FormatError, "Cannot play stream of type: <unknown>");
                     else
                         processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(err->message));
-                    ilog_warn(__FUNCTION__, " Error:", iString::fromUtf8(err->message));
+                    ilog_warn(__FUNCTION__, " Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
                     g_error_free(err);
                     g_free(debug);
                 }
@@ -1148,7 +1148,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     GError *err;
                     gchar *debug;
                     gst_message_parse_warning (gm, &err, &debug);
-                    ilog_warn(__FUNCTION__, " Warning:", iString::fromUtf8(err->message));
+                    ilog_warn(__FUNCTION__, " Warning domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
                     g_error_free (err);
                     g_free (debug);
                 }
@@ -1158,7 +1158,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     GError *err;
                     gchar *debug;
                     gst_message_parse_info (gm, &err, &debug);
-                    ilog_debug(__FUNCTION__, " Info:", iString::fromUtf8(err->message));
+                    ilog_info(__FUNCTION__, " Info domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
                     g_error_free (err);
                     g_free (debug);
                 }
@@ -1238,7 +1238,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                 handlePlaybin2 = true;
             }
             if (!handlePlaybin2)
-                ilog_warn(__FUNCTION__, " Error:", iString::fromUtf8(err->message));
+                ilog_warn(__FUNCTION__, " Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
             g_error_free(err);
             g_free(debug);
         } else if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_ELEMENT
@@ -1262,7 +1262,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     IEMIT error(int(iMediaPlayer::FormatError), "Cannot play stream of type: <unknown>");
                 // GStreamer shows warning for HTTP playlists
                 if (err && err->message)
-                    ilog_warn(__FUNCTION__, " Warning:", iString::fromUtf8(err->message));
+                    ilog_warn(__FUNCTION__, " Warning domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
                 g_error_free(err);
                 g_free(debug);
             } else if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_ERROR) {
@@ -1279,7 +1279,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                 }
                 processInvalidMedia(qerror, iString::fromUtf8(err->message));
                 if (err && err->message)
-                    ilog_warn(__FUNCTION__, " Error:", iString::fromUtf8(err->message));
+                    ilog_warn(__FUNCTION__, " Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
 
                 g_error_free(err);
                 g_free(debug);
@@ -1472,7 +1472,7 @@ void iGstreamerPlayerSession::updateDuration()
         iTimer::singleShot(delay, this, &iGstreamerPlayerSession::updateDuration);
         m_durationQueries--;
     }
-    ilog_verbose(__FUNCTION__, " : ", m_duration);
+    ilog_verbose(__FUNCTION__, ": ", m_duration);
 }
 
 void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpointer d)
@@ -1482,7 +1482,7 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
     if (source == 0)
         return;
 
-    ilog_debug(__FUNCTION__, " :Playbin source added: ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)));
+    ilog_debug(__FUNCTION__, ":Playbin source added: ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)));
 
     // Set Headers
     const iByteArray userAgentString("User-Agent");
@@ -1591,7 +1591,7 @@ void iGstreamerPlayerSession::updateVolume()
 
     if (m_volume != int(volume*100 + 0.5)) {
         m_volume = int(volume*100 + 0.5);
-        ilog_debug(__FUNCTION__, " : ", m_volume);
+        ilog_debug(__FUNCTION__, ": ", m_volume);
         IEMIT volumeChanged(m_volume);
     }
 }
@@ -1608,7 +1608,7 @@ void iGstreamerPlayerSession::updateMuted()
     g_object_get(G_OBJECT(m_playbin), "mute", &muted, IX_NULLPTR);
     if (m_muted != muted) {
         m_muted = muted;
-        ilog_debug(__FUNCTION__, " : ", m_muted);
+        ilog_debug(__FUNCTION__, ": ", m_muted);
         IEMIT mutedStateChanged(muted);
     }
 }
@@ -1721,7 +1721,7 @@ void iGstreamerPlayerSession::processInvalidMedia(iMediaPlayer::Error errorCode,
 
 void iGstreamerPlayerSession::showPrerollFrames(bool enabled)
 {
-    ilog_verbose(__FUNCTION__, " : ", enabled);
+    ilog_verbose(__FUNCTION__, ": ", enabled);
     if (enabled != m_displayPrerolledFrame && m_videoSink &&
             g_object_class_find_property(G_OBJECT_GET_CLASS(m_videoSink), "show-preroll-frame") != 0) {
 

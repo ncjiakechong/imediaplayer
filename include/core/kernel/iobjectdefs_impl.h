@@ -1486,23 +1486,21 @@ struct IX_CORE_EXPORT _iProperty
     _iMemberFunction _signalRaw;
 };
 
-template<class Obj, typename retGet, typename setArg, typename signalArg>
+template<typename GetFunc, typename SetFunc, typename SignalFunc>
 struct _iPropertyHelper : public _iProperty
 {
-    typedef retGet (Obj::*pgetfunc_t)() const;
-    typedef void (Obj::*psetfunc_t)(setArg);
-    typedef void (Obj::*psignalfunc_t)(signalArg);
-
-    _iPropertyHelper(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR, psignalfunc_t _signalfunc = IX_NULLPTR)
+    _iPropertyHelper(GetFunc _getfunc = IX_NULLPTR, SetFunc _setfunc = IX_NULLPTR, SignalFunc _signalfunc = IX_NULLPTR)
         : _iProperty(&getFunc, &setFunc, &signalFunc)
         , _getFunc(_getfunc), _setFunc(_setfunc), _signalFunc(_signalfunc) {
-        typedef void (Obj::*SignalFuncAdaptor)();
+        typedef void (FunctionPointer<SignalFunc>::Object::*SignalFuncAdaptor)();
 
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(_signalfunc);
         _signalRaw = static_cast<_iMemberFunction>(tSignalAdptor);
     }
 
     static iVariant getFunc(const _iProperty* _this, const iObject* obj) {
+        typedef typename FunctionPointer<GetFunc>::Object Obj;
+
         const Obj* _classThis = static_cast<const Obj*>(obj);
         const _iPropertyHelper* _typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
@@ -1514,6 +1512,8 @@ struct _iPropertyHelper : public _iProperty
     }
 
     static void setFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
+        typedef typename FunctionPointer<SetFunc>::Object Obj;
+
         Obj* _classThis = static_cast<Obj*>(obj);
         const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
@@ -1521,10 +1521,12 @@ struct _iPropertyHelper : public _iProperty
             return;
 
         IX_CHECK_PTR(_classThis);
-        (_classThis->*(_typedThis->_setFunc))(value.value<typename type_wrapper<setArg>::TYPE>());
+        (_classThis->*(_typedThis->_setFunc))(value.value< typename iTypeGetter<0, typename FunctionPointer<SetFunc>::Arguments::Type>::HeadType >());
     }
 
     static void signalFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
+        typedef typename FunctionPointer<SignalFunc>::Object Obj;
+
         Obj* _classThis = static_cast<Obj*>(obj);
         const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
@@ -1532,20 +1534,26 @@ struct _iPropertyHelper : public _iProperty
             return;
 
         IX_CHECK_PTR(_classThis);
-        (_classThis->*(_typedThis->_signalFunc))(value.value<typename type_wrapper<signalArg>::TYPE>());
+        (_classThis->*(_typedThis->_signalFunc))(value.value< typename iTypeGetter<0, typename FunctionPointer<SignalFunc>::Arguments::Type>::HeadType >());
     }
 
-    pgetfunc_t _getFunc;
-    psetfunc_t _setFunc;
-    psignalfunc_t _signalFunc;
+    GetFunc _getFunc;
+    SetFunc _setFunc;
+    SignalFunc _signalFunc;
 };
 
-template<class Obj, typename retGet, typename setArg, typename signalArg>
-_iProperty* newProperty(retGet (Obj::*get)() const, void (Obj::*set)(setArg), void (Obj::*signal)(signalArg))
+template<typename GetFunc, typename SetFunc, typename SignalFunc>
+_iProperty* newProperty(GetFunc _getfunc, SetFunc _setfunc, SignalFunc _signalfunc)
 {
-    IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<setArg>::TYPE>::value));
-    IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<signalArg>::TYPE>::value));
-    return new _iPropertyHelper<Obj, retGet, setArg, signalArg>(get, set, signal);
+    typedef FunctionPointer<GetFunc> GetType;
+    typedef FunctionPointer<SetFunc> SetType;
+    typedef FunctionPointer<SignalFunc> SignalType;
+
+    IX_COMPILER_VERIFY(!(is_same<typename GetType::ReturnType, void>::value));
+    IX_COMPILER_VERIFY((is_same<typename GetType::Object, typename SetType::Object>::value));
+    IX_COMPILER_VERIFY((is_same<typename GetType::Object, typename SignalType::Object>::value));
+    IX_COMPILER_VERIFY((CheckCompatibleArguments<SignalType::ArgumentCount, typename SetType::Arguments::Type, typename SignalType::Arguments::Type>::value));
+    return new _iPropertyHelper<GetFunc, SetFunc, SignalFunc>(_getfunc, _setfunc, _signalfunc);
 }
 
 class IX_CORE_EXPORT iMetaObject

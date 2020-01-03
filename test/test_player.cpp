@@ -32,12 +32,12 @@ public:
 
     void errorEvent(iMediaPlayer::Error errorNum)
     {
-        ilog_warn(__FUNCTION__, " : ", errorNum);
+        ilog_warn(__FUNCTION__, ": ", errorNum);
     }
 
     void stateChanged(iMediaPlayer::State newState)
     {
-        ilog_debug(__FUNCTION__, " : ", newState);
+        ilog_debug(__FUNCTION__, ": ", newState);
         if (newState == iMediaPlayer::StoppedState) {
             deleteLater();
             iCoreApplication::quit();
@@ -46,7 +46,7 @@ public:
 
     void positionChanged(xint64 position)
     {
-        ilog_debug(__FUNCTION__, " : ", position, "/", player->duration());
+        ilog_debug(__FUNCTION__, ": ", position, "/", player->duration());
     }
 
     int play() {
