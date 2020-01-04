@@ -1387,8 +1387,7 @@ void iGstreamerPlayerSession::getStreamsInfo()
         IEMIT videoAvailableChanged(m_videoAvailable);
     }
 
-    // TODO:
-    if (oldProperties.size() != m_streamProperties.size() || oldTypes != m_streamTypes || oldOffset != m_playbin2StreamOffset)
+    if (oldProperties != m_streamProperties || oldTypes != m_streamTypes || oldOffset != m_playbin2StreamOffset)
         IEMIT streamsChanged();
 }
 

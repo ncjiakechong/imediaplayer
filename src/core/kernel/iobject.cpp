@@ -705,15 +705,15 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, voi
         iSharedPtr<void> _rawArg;
         iSharedPtr<void> _cloneArg;
         iSharedPtr<void> _cloneAdaptorArg;
-        ConnectArgHelper(const _iArgumentHelper& a) : _arg(a)  {}
+        ConnectArgHelper(const _iArgumentHelper& a) :_arg(a) {}
 
         static void fakefree(void*) {}
 
-        const iSharedPtr<void>& arg(bool adaptor, bool clone) {
-            if (adaptor && _cloneAdaptorArg.isNull())
-                _cloneAdaptorArg = iSharedPtr<void>(_arg.cloneAdaptor(_arg.args), _arg.freeAdaptor);
+        const iSharedPtr<void>& arg(const _iConnection& c, bool clone) {
+            if ((IX_NULLPTR != c._argWraper) && _cloneAdaptorArg.isNull())
+                _cloneAdaptorArg = iSharedPtr<void>(c._argWraper(_arg.args), c._argDeleter);
 
-            if (adaptor)
+            if (IX_NULLPTR != c._argWraper)
                 return _cloneAdaptorArg;
 
             if (clone && _cloneArg.isNull())
@@ -770,7 +770,7 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, voi
         if ((AutoConnection == _type && receiverInSameThread)
             || (DirectConnection == _type)) {
             locker.unlock();
-            conn->emits(argHelper.arg(conn->_type & AgrumentsAdaptor, false).data(), ret);
+            conn->emits(argHelper.arg(*conn, false).data(), ret);
 
             if (connectionLists->orphaned)
                 break;
@@ -780,7 +780,7 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, voi
         } else if (BlockingQueuedConnection != _type) {
             conn->ref();
             iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-            iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.arg(conn->_type & AgrumentsAdaptor, true));
+            iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.arg(*conn, true));
             iCoreApplication::postEvent(receiver, event);
             continue;
         } else {}
@@ -793,7 +793,7 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, voi
         conn->ref();
         iSemaphore semaphore;
         iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-        iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.arg(conn->_type & AgrumentsAdaptor, true), &semaphore);
+        iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.arg(*conn, true), &semaphore);
         iCoreApplication::postEvent(receiver, event);
         locker.unlock();
         semaphore.acquire();
@@ -967,6 +967,8 @@ _iConnection::_iConnection(ImplFn impl, ConnectionType type)
     , _sender(IX_NULLPTR)
     , _receiver(IX_NULLPTR)
     , _impl(impl)
+    , _argWraper(IX_NULLPTR)
+    , _argDeleter(IX_NULLPTR)
     , _signal(IX_NULLPTR)
     , _slot(IX_NULLPTR)
 {
