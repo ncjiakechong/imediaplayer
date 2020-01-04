@@ -37,6 +37,9 @@ int test_ivariant(void)
 
     IX_ASSERT(iVariant(1234) == iVariant(1234));
     IX_ASSERT(iVariant(1234) != iVariant(5678));
+    IX_ASSERT(iVariant(xuint16(1234)) == iVariant(xint32(1234)));
+    IX_ASSERT(iVariant(xint16(-1)) == iVariant(xint32(-1)));
+    IX_ASSERT(iVariant(xint32(-1)) == iVariant(xint16(-1)));
     IX_ASSERT(iVariant(5.0) != iVariant(6));
     IX_ASSERT(iVariant("1234") == iVariant("1234"));
     IX_ASSERT(iVariant(iString("1234")) == iVariant(iString("1234")));

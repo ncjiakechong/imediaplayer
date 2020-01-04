@@ -102,13 +102,18 @@ void iVariant::unregisterConverterFunction(int from, int to)
     _iMetaTypeDef->_metaTypeConverter.erase(std::pair<int, int>(from, to));
 }
 
-iVariant::iAbstractVariantImpl::iAbstractVariantImpl(void* ptr)
-    : data(ptr)
+iVariant::iAbstractVariantImpl::iAbstractVariantImpl(void* ptr, ImplFn impl)
+    : _data(ptr), _impl(impl)
 {
 }
 
 iVariant::iAbstractVariantImpl::~iAbstractVariantImpl()
 {
+}
+
+void iVariant::iAbstractVariantImpl::free()
+{
+    _impl(Destroy, this, IX_NULLPTR);
 }
 
 iVariant::iVariant()
@@ -152,9 +157,6 @@ void iVariant::clear()
 
 bool iVariant::equal(const iVariant &other) const
 {
-    if (other.m_typeId != m_typeId)
-        return false;
-
     iVariant::iTypeHandler handler;
     {
         iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
@@ -165,7 +167,14 @@ bool iVariant::equal(const iVariant &other) const
         handler = it->second;
     }
 
-    return handler.equal(m_dataImpl->data, other.m_dataImpl->data);
+    if (other.m_typeId == m_typeId)
+        return handler.equal(m_dataImpl->_data, other.m_dataImpl->_data);
+
+    iSharedPtr< iAbstractVariantImpl > tDataImpl((*m_dataImpl->_impl)(iAbstractVariantImpl::Create, IX_NULLPTR, IX_NULLPTR), &iAbstractVariantImpl::free);
+    if (!other.convert(m_typeId, tDataImpl->_data))
+        return false;
+
+    return handler.equal(m_dataImpl->_data, tDataImpl->_data);
 }
 
 bool iVariant::canConvert(int targetTypeId) const
@@ -194,7 +203,7 @@ bool iVariant::convert(int t, void *result) const
         if (charTypeId == m_typeId) {
             iVariantImpl<char>* imp = static_cast< iVariantImpl<char>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
 
             return true;
         }
@@ -202,7 +211,7 @@ bool iVariant::convert(int t, void *result) const
         if (ccharTypeId == m_typeId) {
             iVariantImpl<const char>* imp = static_cast< iVariantImpl<const char>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
 
             return true;
         }
@@ -210,7 +219,7 @@ bool iVariant::convert(int t, void *result) const
         if (charXTypeId == m_typeId) {
             iVariantImpl<char*>* imp = static_cast< iVariantImpl<char*>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
 
             return true;
         }
@@ -218,7 +227,7 @@ bool iVariant::convert(int t, void *result) const
         if (ccharXTypeId == m_typeId) {
             iVariantImpl<const char*>* imp = static_cast< iVariantImpl<const char*>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
 
             return true;
         }
@@ -238,7 +247,7 @@ bool iVariant::convert(int t, void *result) const
         if (wCharTypeId == m_typeId) {
             iVariantImpl<wchar_t>* imp = static_cast< iVariantImpl<wchar_t>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
 
             return true;
         }
@@ -246,7 +255,7 @@ bool iVariant::convert(int t, void *result) const
         if (wcCharTypeId == m_typeId) {
             iVariantImpl<const wchar_t>* imp = static_cast< iVariantImpl<const wchar_t>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
 
             return true;
         }
@@ -254,14 +263,14 @@ bool iVariant::convert(int t, void *result) const
         if (wCharXTypeId == m_typeId) {
             iVariantImpl<wchar_t*>* imp = static_cast< iVariantImpl<wchar_t*>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
             return true;
         }
 
         if (wcCharXTypeId == m_typeId) {
             iVariantImpl<const wchar_t*>* imp = static_cast< iVariantImpl<const wchar_t*>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
 
             return true;
         }
@@ -269,7 +278,7 @@ bool iVariant::convert(int t, void *result) const
         if (wcCharXTypeId == m_typeId) {
             iVariantImpl<const wchar_t*>* imp = static_cast< iVariantImpl<const wchar_t*>* >(m_dataImpl.data());
             if (str)
-                *str = imp->mValue;
+                *str = imp->_value;
 
             return true;
         }
@@ -284,7 +293,7 @@ bool iVariant::convert(int t, void *result) const
         if (charTypeId == m_typeId) {
             iVariantImpl<char>* imp = static_cast< iVariantImpl<char>* >(m_dataImpl.data());
             if (str)
-                *str = iChar(imp->mValue);
+                *str = iChar(imp->_value);
 
             return true;
         }
@@ -292,7 +301,7 @@ bool iVariant::convert(int t, void *result) const
         if (ccharTypeId == m_typeId) {
             iVariantImpl<const char>* imp = static_cast< iVariantImpl<const char>* >(m_dataImpl.data());
             if (str)
-                *str = iChar(imp->mValue);
+                *str = iChar(imp->_value);
 
             return true;
         }
@@ -300,7 +309,7 @@ bool iVariant::convert(int t, void *result) const
         if (charXTypeId == m_typeId) {
             iVariantImpl<char*>* imp = static_cast< iVariantImpl<char*>* >(m_dataImpl.data());
             if (str)
-                *str = iString::fromUtf8(imp->mValue);
+                *str = iString::fromUtf8(imp->_value);
 
             return true;
         }
@@ -308,7 +317,7 @@ bool iVariant::convert(int t, void *result) const
         if (ccharXTypeId == m_typeId) {
             iVariantImpl<const char*>* imp = static_cast< iVariantImpl<const char*>* >(m_dataImpl.data());
             if (str)
-                *str = iString::fromUtf8(imp->mValue);
+                *str = iString::fromUtf8(imp->_value);
 
             return true;
         }
@@ -316,7 +325,7 @@ bool iVariant::convert(int t, void *result) const
         if (stringTypeId == m_typeId) {
             iVariantImpl<std::string>* imp = static_cast< iVariantImpl<std::string>* >(m_dataImpl.data());
             if (str)
-                *str = iString::fromStdString(imp->mValue);
+                *str = iString::fromStdString(imp->_value);
 
             return true;
         }
@@ -324,7 +333,7 @@ bool iVariant::convert(int t, void *result) const
         if (wCharTypeId == m_typeId) {
             iVariantImpl<wchar_t>* imp = static_cast< iVariantImpl<wchar_t>* >(m_dataImpl.data());
             if (str)
-                *str = iChar(imp->mValue);
+                *str = iChar(imp->_value);
 
             return true;
         }
@@ -332,7 +341,7 @@ bool iVariant::convert(int t, void *result) const
         if (wcCharTypeId == m_typeId) {
             iVariantImpl<const wchar_t>* imp = static_cast< iVariantImpl<const wchar_t>* >(m_dataImpl.data());
             if (str)
-                *str = iChar(imp->mValue);
+                *str = iChar(imp->_value);
 
             return true;
         }
@@ -340,7 +349,7 @@ bool iVariant::convert(int t, void *result) const
         if (wCharXTypeId == m_typeId) {
             iVariantImpl<wchar_t*>* imp = static_cast< iVariantImpl<wchar_t*>* >(m_dataImpl.data());
             if (str)
-                *str = iString::fromWCharArray(imp->mValue);
+                *str = iString::fromWCharArray(imp->_value);
 
             return true;
         }
@@ -348,7 +357,7 @@ bool iVariant::convert(int t, void *result) const
         if (wStringTypeId == m_typeId) {
             iVariantImpl<std::wstring>* imp = static_cast< iVariantImpl<std::wstring>* >(m_dataImpl.data());
             if (str)
-                *str = iString::fromStdWString(imp->mValue);
+                *str = iString::fromStdWString(imp->_value);
 
             return true;
         }
@@ -366,7 +375,7 @@ bool iVariant::convert(int t, void *result) const
     if (IX_NULLPTR == result)
         return true;
 
-    return it->second->convert(it->second, m_dataImpl->data, result);
+    return it->second->convert(it->second, m_dataImpl->_data, result);
 }
 
 /////////////////////////////////////////////////////////////////

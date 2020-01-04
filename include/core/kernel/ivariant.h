@@ -49,7 +49,7 @@ public:
     template<typename T>
     iVariant(T data)
         : m_typeId(iMetaTypeId<typename type_wrapper<T>::TYPE>(0))
-        , m_dataImpl(new iVariantImpl<typename type_wrapper<T>::TYPE>(data))
+        , m_dataImpl(new iVariantImpl<typename type_wrapper<T>::TYPE>(data), &iAbstractVariantImpl::free)
     {}
 
     iVariant& operator=(const iVariant &other);
@@ -80,7 +80,7 @@ public:
 
         int toTypeId = iMetaTypeId<typename type_wrapper<T>::TYPE>(0);
         if (toTypeId == m_typeId)
-            return static_cast< iVariantImpl<typename type_wrapper<T>::TYPE>* >(m_dataImpl.data())->mValue;
+            return static_cast< iVariantImpl<typename type_wrapper<T>::TYPE>* >(m_dataImpl.data())->_value;
 
         typename type_wrapper<T>::TYPE t = TYPEWRAPPER_DEFAULTVALUE(T);
         convert(toTypeId, &t);
@@ -91,7 +91,7 @@ public:
     void setValue(T data)
     {
         m_typeId = iMetaTypeId<typename type_wrapper<T>::TYPE>(0);
-        m_dataImpl.reset(new iVariantImpl<typename type_wrapper<T>::TYPE>(data));
+        m_dataImpl.reset(new iVariantImpl<typename type_wrapper<T>::TYPE>(data), &iAbstractVariantImpl::free);
     }
 
     template<typename T>
@@ -131,18 +131,52 @@ public:
 private:
     struct IX_CORE_EXPORT iAbstractVariantImpl
     {
-        iAbstractVariantImpl(void* ptr);
-        virtual ~iAbstractVariantImpl();
-        void* data;
+        enum Operation {
+            Destroy,
+            Create
+        };
+
+        // don't use virtual functions here; we don't want the
+        // compiler to create tons of per-polymorphic-class stuff that
+        // we'll never need. We just use one function pointer.
+        typedef iAbstractVariantImpl* (*ImplFn)(int which, const iAbstractVariantImpl* this_, void* arg);
+
+        iAbstractVariantImpl(void* ptr, ImplFn impl);
+        ~iAbstractVariantImpl();
+
+        void free();
+
+        void* _data;
+        ImplFn _impl;
     };
 
     template<class T>
     struct iVariantImpl : public iAbstractVariantImpl
     {
         iVariantImpl(typename type_wrapper<T>::CONSTREFTYPE data)
-            : iAbstractVariantImpl(&mValue), mValue(data) {}
-        virtual ~iVariantImpl() {}
-        T mValue;
+            : iAbstractVariantImpl(&_value, &iVariantImpl::impl), _value(data) {}
+        ~iVariantImpl() {}
+
+        static iAbstractVariantImpl* impl(int which, const iAbstractVariantImpl* this_, void*)
+        {
+            iAbstractVariantImpl* ret = IX_NULLPTR;
+            switch (which) {
+            case Destroy:
+                delete static_cast<const iVariantImpl*>(this_);
+                break;
+
+            case Create:
+                ret = new iVariantImpl(TYPEWRAPPER_DEFAULTVALUE(T));
+                break;
+
+            default:
+                break;
+            }
+
+            return ret;
+        }
+
+        T _value;
     };
 
     static int iRegisterMetaType(const char* type, const iTypeHandler& handler, int hint);
