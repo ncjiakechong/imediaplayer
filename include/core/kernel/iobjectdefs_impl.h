@@ -1136,8 +1136,9 @@ protected:
     void setSlot(iObject* receiver, void* const* slot);
     void setSignal(iObject* sender, _iMemberFunction signal);
 
+    int _isArgAdapter : 1;
     int _orphaned : 1;
-    int _ref : 31;
+    int _ref : 30;
     ConnectionType _type;
 
     // The next pointer for the singly-linked ConnectionList
@@ -1205,6 +1206,7 @@ class _iConnectionHelper : public _iConnection
             _iConnectionHelper* objConNew = new _iConnectionHelper(objCon->_type, objCon->_func);
             objConNew->_argWraper = objCon->_argWraper;
             objConNew->_argDeleter = objCon->_argDeleter;
+            objConNew->_isArgAdapter = objCon->_isArgAdapter;
             objConNew->setSignal(objCon->_sender, objCon->_signal);
             objConNew ->setSlot(r, reinterpret_cast<void* const*>(&objConNew->_func));
             return objConNew;
@@ -1228,6 +1230,8 @@ public:
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
         _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
         setSignal(const_cast<iObject*>(sender), tSignal);
+        _argWraper = &SignalFuncType::cloneArgs;
+        _argDeleter = &SignalFuncType::freeArgs;
 
         void* const* tSlot = IX_NULLPTR;
         if (IX_NULLPTR != slot)
@@ -1362,10 +1366,11 @@ public:
 
     void setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>& ppt);
     const _iProperty* property(const iString& name) const;
-    bool hasProperty() const { return m_initProperty; }
+    bool hasProperty() const { return (m_propertyCandidate || m_propertyInited); }
 
 private:
-    bool m_initProperty;
+    bool m_propertyCandidate : 1; // hack for init property
+    bool m_propertyInited : 1;
     const iMetaObject* m_superdata;
     std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> m_property;
 };
@@ -1380,14 +1385,20 @@ public: \
     virtual const iMetaObject *metaObject() const \
     { \
         static iMetaObject staticMetaObject = iMetaObject(IX_BaseType::metaObject()); \
+        if (!staticMetaObject.hasProperty()) { \
+            std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> ppt; \
+            staticMetaObject.setProperty(ppt); \
+            IX_ThisType::initProperty(&staticMetaObject); \
+            staticMetaObject.setProperty(ppt); \
+        } \
         return &staticMetaObject; \
     } \
 private:
 
 #define IPROPERTY_BEGIN \
-    virtual void initProperty() { \
-        const iMetaObject* mobj = IX_ThisType::metaObject(); \
-        if (mobj->hasProperty()) \
+    void initProperty(iMetaObject* mobj) const { \
+        const iMetaObject* _mobj = IX_ThisType::metaObject(); \
+        if (_mobj != mobj) \
             return; \
         \
         std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> pptImp;
@@ -1400,8 +1411,7 @@ private:
                                     &IX_ThisType::SETFUNC, &IX_ThisType::SIGNAL))));
 
 #define IPROPERTY_END \
-        const_cast<iMetaObject*>(mobj)->setProperty(pptImp); \
-        IX_BaseType::initProperty(); \
+        mobj->setProperty(pptImp); \
     }
 
 #define ISIGNAL(name, ...)  { \
@@ -1413,8 +1423,7 @@ private:
     _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor); \
     \
     Arguments tArgs = Arguments(__VA_ARGS__); \
-    _iArgumentHelper argHelper = {&tArgs, &ThisFuncitonPointer::cloneArgs, &ThisFuncitonPointer::freeArgs}; \
-    return emitHelper< typename ThisFuncitonPointer::ReturnType >(tSignal, argHelper); \
+    return emitHelper< typename ThisFuncitonPointer::ReturnType >(tSignal, &tArgs); \
     }
 
 #define IEMIT

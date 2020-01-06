@@ -35,6 +35,9 @@ int test_ivariant(void)
     ilog_debug("var_int uinit ", var_int.value<const uint>());
     ilog_debug("var_int to long ", var_int.canConvert<long>());
 
+    IX_ASSERT(iVariant() == iVariant());
+    IX_ASSERT(iVariant() != iVariant(1234));
+    IX_ASSERT(iVariant(1234) != iVariant());
     IX_ASSERT(iVariant(1234) == iVariant(1234));
     IX_ASSERT(iVariant(1234) != iVariant(5678));
     IX_ASSERT(iVariant(xuint16(1234)) == iVariant(xint32(1234)));

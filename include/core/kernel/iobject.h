@@ -72,7 +72,6 @@ public:
 
         IX_COMPILER_VERIFY(int(FunctionPointer<Func>::ArgumentCount) <= 1);
 
-        initProperty();
         const iMetaObject* mo = metaObject();
 
         do {
@@ -85,6 +84,7 @@ public:
             _iConnectionHelper<SignalFunc, Func> conn(this, tFunc, obj, slot, AutoConnection);
             conn._argWraper = tProperty->_argWraper;
             conn._argDeleter = tProperty->_argDeleter;
+            conn._isArgAdapter = true;
             return connectImpl(conn);
         } while ((mo = mo->superClass()));
 
@@ -191,8 +191,7 @@ public:
     {
         typedef Ret (Obj::*Function)();
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, IX_NULLPTR);
     }
 
     template<class Obj, class Arg1, class Ret>
@@ -203,8 +202,7 @@ public:
 
         Arguments tArgs(a1);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Ret>
@@ -218,8 +216,7 @@ public:
 
         Arguments tArgs(a1, a2);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
@@ -234,8 +231,7 @@ public:
 
         Arguments tArgs(a1, a2, a3);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
@@ -251,8 +247,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
@@ -270,8 +265,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -291,8 +285,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -313,8 +306,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -336,8 +328,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Ret>
@@ -345,8 +336,7 @@ public:
     {
         typedef Ret (Obj::*Function)() const;
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, IX_NULLPTR);
     }
 
     template<class Obj, class Arg1, class Ret>
@@ -357,8 +347,7 @@ public:
 
         Arguments tArgs(a1);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Ret>
@@ -372,8 +361,7 @@ public:
 
         Arguments tArgs(a1, a2);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
@@ -388,8 +376,7 @@ public:
 
         Arguments tArgs(a1, a2, a3);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
@@ -405,8 +392,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
@@ -424,8 +410,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -445,8 +430,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -467,8 +451,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -490,8 +473,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
-        return invokeMethodImpl(conn, argHelper);
+        return invokeMethodImpl(conn, &tArgs);
     }
 
     virtual const iMetaObject *metaObject() const;
@@ -500,31 +482,22 @@ protected:
     template <typename ReturnType, bool V>
     using if_requires_ret = typename enable_if<_iFuncRequiresRet<ReturnType>::value == V, ReturnType>::type;
 
-    struct _iArgumentHelper {
-        typedef void* (*clone)(void*);
-        typedef void (*free)(void*);
-
-        void*  args;
-        clone cloneArgs;
-        free  freeArgs;
-    };
-
-    virtual void initProperty();
+    void initProperty(iMetaObject* mobj) const;
     virtual bool event(iEvent *e);
 
     template <typename ReturnType>
-    if_requires_ret<ReturnType, true> emitHelper(_iMemberFunction signal, const _iArgumentHelper& arg)
+    if_requires_ret<ReturnType, true> emitHelper(_iMemberFunction signal, void* args)
     {
         ReturnType ret = TYPEWRAPPER_DEFAULTVALUE(ReturnType);
-        emitImpl(signal, arg, &ret);
+        emitImpl(signal, args, &ret);
         return ret;
     }
 
     template <typename ReturnType>
-    if_requires_ret<ReturnType, false> emitHelper(_iMemberFunction signal, const _iArgumentHelper& arg)
+    if_requires_ret<ReturnType, false> emitHelper(_iMemberFunction signal, void* args)
     {
         IX_COMPILER_VERIFY((is_same<ReturnType, void>::value));
-        return emitImpl(signal, arg, IX_NULLPTR);
+        return emitImpl(signal, args, IX_NULLPTR);
     }
 
 private:
@@ -551,7 +524,7 @@ private:
 
     typedef std::list<iObject *> iObjectList;
 
-    void emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, void* ret);
+    void emitImpl(_iMemberFunction signal, void* args, void* ret);
     static bool connectImpl(const _iConnection& conn);
     static bool disconnectImpl(const _iConnection& conn);
 
@@ -563,7 +536,7 @@ private:
 
     void reregisterTimers(void*);
 
-    static bool invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& arg);
+    static bool invokeMethodImpl(const _iConnection& c, void* args);
 
     uint m_wasDeleted : 1;
     uint m_isDeletingChildren : 1;

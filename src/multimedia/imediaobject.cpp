@@ -165,7 +165,6 @@ void iMediaObject::_x_notify()
 */
 void iMediaObject::addPropertyWatch(iByteArray const &name)
 {
-    const_cast<iMediaObject*>(this)->initProperty();
     const iMetaObject* mo = metaObject();
 
     do {
