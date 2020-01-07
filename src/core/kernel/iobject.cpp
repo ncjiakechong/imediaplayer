@@ -76,7 +76,7 @@ const iObject* iMetaObject::cast(const iObject *obj) const
     return (obj && obj->metaObject()->inherits(this)) ? obj : IX_NULLPTR;
 }
 
-void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>& ppt)
+void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc>& ppt)
 {
     if (m_propertyCandidate && m_propertyInited)
         return;
@@ -91,7 +91,7 @@ const _iProperty* iMetaObject::property(const iString& name) const
     if (!hasProperty())
         return IX_NULLPTR;
 
-    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc>::const_iterator it;
     it = m_property.find(name);
     if (it == m_property.cend() || it->second.isNull())
         return IX_NULLPTR;
@@ -808,9 +808,9 @@ const iMetaObject* iObject::metaObject() const
 {
     static iMetaObject staticMetaObject = iMetaObject(IX_NULLPTR);
     if (!staticMetaObject.hasProperty()) {
-        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> ppt;
+        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> ppt;
         staticMetaObject.setProperty(ppt);
-        initProperty(&staticMetaObject);
+        iObject::initProperty(&staticMetaObject);
         // protected for non-initProperty object
         staticMetaObject.setProperty(ppt);
     }
@@ -855,7 +855,7 @@ void iObject::initProperty(iMetaObject* mobj) const
     if (_mobj != mobj)
         return;
 
-    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> pptImp;
+    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> pptImp;
 
     pptImp.insert(std::pair<iString, iSharedPtr<_iProperty>>(
                         iString("objectName"),

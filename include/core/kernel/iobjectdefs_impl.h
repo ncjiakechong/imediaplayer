@@ -1364,15 +1364,15 @@ public:
     iObject *cast(iObject *obj) const;
     const iObject *cast(const iObject *obj) const;
 
-    void setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>& ppt);
+    void setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc>& ppt);
     const _iProperty* property(const iString& name) const;
     bool hasProperty() const { return (m_propertyCandidate || m_propertyInited); }
 
 private:
     bool m_propertyCandidate : 1; // hack for init property
-    bool m_propertyInited : 1;
+    bool m_propertyInited : 1; // hack for init property
     const iMetaObject* m_superdata;
-    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> m_property;
+    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> m_property;
 };
 
 #define IX_OBJECT(TYPE) \
@@ -1386,7 +1386,7 @@ public: \
     { \
         static iMetaObject staticMetaObject = iMetaObject(IX_BaseType::metaObject()); \
         if (!staticMetaObject.hasProperty()) { \
-            std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> ppt; \
+            std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> ppt; \
             staticMetaObject.setProperty(ppt); \
             IX_ThisType::initProperty(&staticMetaObject); \
             staticMetaObject.setProperty(ppt); \
@@ -1401,7 +1401,7 @@ private:
         if (_mobj != mobj) \
             return; \
         \
-        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> pptImp;
+        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> pptImp;
 
 
 #define IPROPERTY_ITEM(NAME, GETFUNC, SETFUNC, SIGNAL) \
@@ -1422,8 +1422,8 @@ private:
     SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(&IX_ThisType::name); \
     _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor); \
     \
-    Arguments tArgs = Arguments(__VA_ARGS__); \
-    return emitHelper< typename ThisFuncitonPointer::ReturnType >(tSignal, &tArgs); \
+    Arguments args = Arguments(__VA_ARGS__); \
+    return emitHelper< typename ThisFuncitonPointer::ReturnType >(tSignal, &args); \
     }
 
 #define IEMIT
