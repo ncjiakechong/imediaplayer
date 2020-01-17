@@ -9,7 +9,7 @@ BUILD_TOPDIR = $$OUT_PWD/..
 TARGET = imediaplayertest
 TEMPLATE = app
 
-QT =
+#QT += core
 
 DESTDIR = $${BUILD_TOPDIR}
 QMAKE_LIBDIR += $${BUILD_TOPDIR}

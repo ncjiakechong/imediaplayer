@@ -1088,6 +1088,7 @@ struct _iFuncRequiresRet<void>
 { enum { value = 0 }; };
 
 class iObject;
+typedef void (iObject::*_iMemberFunction)();
 
 template<typename Func> struct FunctionHelper
 {
@@ -1096,11 +1097,9 @@ template<typename Func> struct FunctionHelper
 };
 template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR) >
 {
-    typedef void (iObject::*Function)();
+    typedef _iMemberFunction Function;
     static Function safeFunc(IX_TYPEOF(IX_NULLPTR)) { return IX_NULLPTR; }
 };
-
-typedef void (iObject::*_iMemberFunction)();
 
 // internal base class (interface) containing functions required to call a slot managed by a pointer to function.
 class IX_CORE_EXPORT _iConnection
