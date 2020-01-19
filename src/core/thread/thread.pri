@@ -36,7 +36,7 @@ unix {
     QMAKE_USE += glib
 } else {
     SOURCES += \
-        thread/ithread_c11.cpp
+        thread/ithread_win.cpp
 
     LIBS += -lUser32
 }

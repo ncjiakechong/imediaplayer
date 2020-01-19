@@ -311,17 +311,21 @@ iEventDispatcher_Glib::~iEventDispatcher_Glib()
     m_mainContext = IX_NULLPTR;
 }
 
-bool iEventDispatcher_Glib::processEvents()
+bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
 {
-    m_timerSource->runWithIdlePriority = false;
+    const bool canWait = (flags & iEventLoop::WaitForMoreEvents);
 
-    bool result = g_main_context_iteration(m_mainContext, true);
-    while (!result)
-        result = g_main_context_iteration(m_mainContext, true);
+    if (!(flags & iEventLoop::EventLoopExec)) {
+        // force timers to be sent at normal priority
+        m_timerSource->runWithIdlePriority = false;
+    }
+
+    bool result = g_main_context_iteration(m_mainContext, canWait);
+    while (!result && canWait)
+        result = g_main_context_iteration(m_mainContext, canWait);
 
     return result;
 }
-
 
 void iEventDispatcher_Glib::registerTimer(int timerId, int interval, TimerType timerType, iObject *object)
 {

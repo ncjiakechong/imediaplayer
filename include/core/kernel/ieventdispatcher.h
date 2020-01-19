@@ -16,6 +16,7 @@
 #include <core/global/inamespace.h>
 #include <core/kernel/iobject.h>
 #include <core/kernel/ipoll.h>
+#include <core/kernel/ieventloop.h>
 
 namespace iShell {
 
@@ -46,7 +47,7 @@ public:
 
     static iEventDispatcher *instance(iThread *thread = IX_NULLPTR);
 
-    virtual bool processEvents() = 0;
+    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags) = 0;
 
     int registerTimer(int interval, TimerType timerType, iObject *object);
     virtual void registerTimer(int timerId, int interval, TimerType timerType, iObject *object) = 0;

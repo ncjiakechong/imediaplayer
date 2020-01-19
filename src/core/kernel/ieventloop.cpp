@@ -34,16 +34,16 @@ iEventLoop::~iEventLoop()
 {
 }
 
-bool iEventLoop::processEvents()
+bool iEventLoop::processEvents(ProcessEventsFlags flags)
 {
     iThreadData* data = iThread::get2(thread());
     if (!data->dispatcher.load())
         return false;
 
-    return data->dispatcher.load()->processEvents();
+    return data->dispatcher.load()->processEvents(flags);
 }
 
-int iEventLoop::exec()
+int iEventLoop::exec(ProcessEventsFlags flags)
 {
     //we need to protect from race condition with iThread::exit
     iThreadData *threadData = iThread::get2(thread());
@@ -88,7 +88,7 @@ int iEventLoop::exec()
     LoopReference ref(this, _lock);
 
     while (0 == m_exit.value())
-        processEvents();
+        processEvents(flags | WaitForMoreEvents | EventLoopExec);
 
     return m_returnCode.value();
 }
