@@ -9,6 +9,8 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 #include <map>
+#include <unordered_map>
+
 #include "core/io/ilog.h"
 #include "core/kernel/ivariant.h"
 #include "core/utils/istring.h"

@@ -205,11 +205,11 @@ inline int iFreeList<T, ConstantsType>::next()
 
         if (!v) {
             v = allocate((id & ConstantsType::IndexMask) - at, ConstantsType::Sizes[block]);
-            if (!_v[block].testAndSet(0, v)) {
+            if (!_v[block].testAndSet(IX_NULLPTR, v)) {
                 // race with another thread lost
                 delete [] v;
                 v = _v[block].load();
-                IX_ASSERT(v != 0);
+                IX_ASSERT(v != IX_NULLPTR);
             }
         }
 

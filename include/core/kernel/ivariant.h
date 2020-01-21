@@ -11,7 +11,6 @@
 #ifndef IVARIANT_H
 #define IVARIANT_H
 
-#include <unordered_map>
 #include <core/global/imetaprogramming.h>
 #include <core/thread/iatomiccounter.h>
 #include <core/utils/ihashfunctions.h>

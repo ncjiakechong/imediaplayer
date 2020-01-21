@@ -25,9 +25,9 @@ public:
     : iObject(parent)
     {
         player = new iMediaPlayer();
-        iObject::connect(player, &iMediaPlayer::stateChanged, this, &TestPlayer::stateChanged);
+        player->observeProperty("state", this, &TestPlayer::stateChanged);
+        player->observeProperty("position", this, &TestPlayer::positionChanged);
         iObject::connect(player, &iMediaPlayer::errorEvent, this, &TestPlayer::errorEvent);
-        iObject::connect(player, &iMediaPlayer::positionChanged, this, &TestPlayer::positionChanged);
     }
 
     void errorEvent(iMediaPlayer::Error errorNum)

@@ -26,11 +26,15 @@ class IX_MULTIMEDIA_EXPORT iMediaPlayer : public iMediaObject
 {
     IX_OBJECT(iMediaPlayer)
     IPROPERTY_BEGIN
-    IPROPERTY_ITEM("position", position, setPosition, positionChanged)
-    IPROPERTY_ITEM("volume", volume, setVolume, volumeChanged)
-    IPROPERTY_ITEM("muted", isMuted, setMuted, mutedChanged)
-    IPROPERTY_ITEM("bufferStatus", bufferStatus, setBufferStatus, bufferStatusChanged)
-    IPROPERTY_ITEM("playbackRate", playbackRate, setPlaybackRate, playbackRateChanged)
+    IPROPERTY_ITEM("duration", IREAD duration, INOTIFY durationChanged)
+    IPROPERTY_ITEM("position", IREAD position, IWRITE setPosition, INOTIFY positionChanged)
+    IPROPERTY_ITEM("volume", IREAD volume, IWRITE setVolume, INOTIFY volumeChanged)
+    IPROPERTY_ITEM("muted", IREAD isMuted, IWRITE setMuted, INOTIFY mutedChanged)
+    IPROPERTY_ITEM("bufferStatus", IREAD bufferStatus, INOTIFY bufferStatusChanged)
+    IPROPERTY_ITEM("seekable", IREAD isSeekable, INOTIFY seekableChanged)
+    IPROPERTY_ITEM("playbackRate", IREAD playbackRate, IWRITE setPlaybackRate, INOTIFY playbackRateChanged)
+    IPROPERTY_ITEM("state", IREAD state, INOTIFY stateChanged)
+    IPROPERTY_ITEM("mediaStatus", IREAD mediaStatus, INOTIFY mediaStatusChanged)
     IPROPERTY_END
 public:
     enum State
@@ -153,8 +157,6 @@ protected:
     void _x_updateMedia(const iString&);
 
 private:
-    void setBufferStatus(int percentFilled);
-
     iMediaPlayerControl* m_control;
     iString m_errorString;
 

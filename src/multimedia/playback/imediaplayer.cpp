@@ -269,10 +269,6 @@ int iMediaPlayer::bufferStatus() const
     return 0;
 }
 
-void iMediaPlayer::setBufferStatus(int)
-{
-}
-
 bool iMediaPlayer::isAudioAvailable() const
 {
     if (m_control != IX_NULLPTR)
