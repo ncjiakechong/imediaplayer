@@ -50,6 +50,7 @@ class TestObject : public iObject
     IX_OBJECT(TestObject)
     IPROPERTY_BEGIN
     IPROPERTY_ITEM("testProperty", IREAD testProperty, IWRITE setTestProperty, INOTIFY testPropertyChanged)
+    // IPROPERTY_ITEM("testProperty", INOTIFY testPropertyChanged, IWRITE setTestProperty, IREAD testProperty)
     IPROPERTY_END
 public:
     TestObject(iObject* parent = IX_NULLPTR) : iObject(parent) {}

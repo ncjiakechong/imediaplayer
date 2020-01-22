@@ -75,7 +75,7 @@ public:
         const iMetaObject* mo = metaObject();
 
         do {
-            const _iProperty* tProperty = mo->property(iString(name));
+            const _iProperty* tProperty = mo->property(iLatin1String(name));
             if (IX_NULLPTR == tProperty)
                 continue;
 

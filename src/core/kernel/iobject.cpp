@@ -76,7 +76,7 @@ const iObject* iMetaObject::cast(const iObject *obj) const
     return (obj && obj->metaObject()->inherits(this)) ? obj : IX_NULLPTR;
 }
 
-void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc>& ppt)
+void iMetaObject::setProperty(const std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc>& ppt)
 {
     if (m_propertyCandidate && m_propertyInited)
         return;
@@ -86,12 +86,12 @@ void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iPro
     m_property = ppt;
 }
 
-const _iProperty* iMetaObject::property(const iString& name) const
+const _iProperty* iMetaObject::property(const iLatin1String& name) const
 {
     if (!hasProperty())
         return IX_NULLPTR;
 
-    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc>::const_iterator it;
+    std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc>::const_iterator it;
     it = m_property.find(name);
     if (it == m_property.cend() || it->second.isNull())
         return IX_NULLPTR;
@@ -808,7 +808,7 @@ const iMetaObject* iObject::metaObject() const
 {
     static iMetaObject staticMetaObject = iMetaObject(IX_NULLPTR);
     if (!staticMetaObject.hasProperty()) {
-        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> ppt;
+        std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> ppt;
         staticMetaObject.setProperty(ppt);
         iObject::initProperty(&staticMetaObject);
         // protected for non-initProperty object
@@ -823,7 +823,7 @@ iVariant iObject::property(const char *name) const
     const iMetaObject* mo = metaObject();
 
     do {
-        const _iProperty* tProperty = mo->property(iString(name));
+        const _iProperty* tProperty = mo->property(iLatin1String(name));
         if (IX_NULLPTR == tProperty)
             continue;
 
@@ -838,12 +838,15 @@ bool iObject::setProperty(const char *name, const iVariant& value)
     const iMetaObject* mo = metaObject();
 
     do {
-        const _iProperty* tProperty = mo->property(iString(name));
+        const _iProperty* tProperty = mo->property(iLatin1String(name));
         if (IX_NULLPTR == tProperty)
             continue;
 
-        tProperty->_set(tProperty, this, value);
-        return true;
+        bool ret = tProperty->_set(tProperty, this, value);
+        if (!ret)
+            ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] no set function!");
+
+        return ret;
     } while ((mo = mo->superClass()));
 
     return false;
@@ -855,10 +858,10 @@ void iObject::initProperty(iMetaObject* mobj) const
     if (_mobj != mobj)
         return;
 
-    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> pptImp;
+    std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> pptImp;
 
-    pptImp.insert(std::pair<iString, iSharedPtr<_iProperty>>(
-                        iString("objectName"),
+    pptImp.insert(std::pair<iLatin1String, iSharedPtr<_iProperty>>(
+                        iLatin1String("objectName"),
                         iSharedPtr<_iProperty>(newProperty(_iProperty::E_READ, &iObject::objectName,
                                                            _iProperty::E_WRITE, &iObject::setObjectName,
                                                            _iProperty::E_NOTIFY, &iObject::objectNameChanged))));
