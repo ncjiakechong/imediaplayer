@@ -57,7 +57,8 @@ struct CheckCompatibleArguments<0, iTypeList<Head1, Tail1>, iTypeList<Head2, Tai
    returns void, the builtin one is used without an error.
 */
 template <typename T>
-struct ApplyReturnValue {
+struct ApplyReturnValue
+{
     void *data;
     explicit ApplyReturnValue(void* data_) : data(data_) {}
 };
@@ -1172,8 +1173,7 @@ class _iConnectionHelper : public _iConnection
     typedef FunctionPointer<SignalFunc> SignalFuncType;
     SlotFunc _func;
 
-    static _iConnection* impl(int which, const _iConnection* this_, iObject* r, void* const* f, void* args, void* ret)
-    {
+    static _iConnection* impl(int which, const _iConnection* this_, iObject* r, void* const* f, void* args, void* ret) {
         typedef FunctionPointer<SlotFunc> SlotFuncType;
         typedef typename FunctionPointer<SlotFunc>::Object SlotObject;
 
@@ -1222,8 +1222,7 @@ class _iConnectionHelper : public _iConnection
 public:
     _iConnectionHelper(const iObject* sender, SignalFunc signal, const iObject* receiver, SlotFunc slot, ConnectionType type)
         : _iConnection(&impl, type)
-        , _func(slot)
-    {
+        , _func(slot) {
         typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
 
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
@@ -1243,8 +1242,9 @@ public:
 /**
  * @brief property
  */
-struct IX_CORE_EXPORT _iProperty
+class IX_CORE_EXPORT _iProperty
 {
+public:
     typedef iVariant (*get_t)(const _iProperty*, const iObject*);
     typedef bool (*set_t)(const _iProperty*, iObject*, const iVariant&);
     typedef bool (*signal_t)(const _iProperty*, iObject*, const iVariant&);
@@ -1258,17 +1258,22 @@ struct IX_CORE_EXPORT _iProperty
         , _signalRaw(IX_NULLPTR), _argWraper(IX_NULLPTR), _argDeleter(IX_NULLPTR) {}
     // virtual ~_iProperty(); // ignore destructor
 
-    get_t _get;
-    set_t _set;
-    signal_t _signal;
+    const get_t _get;
+    const set_t _set;
+    const signal_t _signal;
+
+protected:
     _iMemberFunction _signalRaw;
     _iConnection::ArgumentWraper _argWraper;
     _iConnection::ArgumentDeleter _argDeleter;
+
+    friend class iObject;
 };
 
 template<typename GetFunc = iVariant (iObject::*)() const, typename SetFunc = void (iObject::*)(const iVariant&), typename SignalFunc = void (iObject::*)(const iVariant&)>
-struct _iPropertyHelper : public _iProperty
+class _iPropertyHelper : public _iProperty
 {
+public:
     _iPropertyHelper(GetFunc _getfunc = IX_NULLPTR, SetFunc _setfunc = IX_NULLPTR, SignalFunc _signalfunc = IX_NULLPTR)
         : _iProperty(&getFunc, &setFunc, &signalFunc)
         , _getFunc(_getfunc), _setFunc(_setfunc), _signalFunc(_signalfunc) {
@@ -1370,8 +1375,7 @@ struct _iPropertyHelper : public _iProperty
 };
 
 template<typename Flag1, typename Func1, typename Flag2, typename Func2, typename Flag3, typename Func3>
-_iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2, Flag3 flag3, Func3 func3)
-{
+_iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2, Flag3 flag3, Func3 func3) {
     _iPropertyHelper<> propInfo;
     return propInfo.parseProperty(flag1, func1)
                    .parseProperty(flag2, func2)
@@ -1380,8 +1384,7 @@ _iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2, Flag
 }
 
 template<typename Flag1, typename Func1, typename Flag2, typename Func2>
-_iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2)
-{
+_iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2) {
     _iPropertyHelper<> propInfo;
     return propInfo.parseProperty(flag1, func1)
                    .parseProperty(flag2, func2)
@@ -1417,8 +1420,7 @@ private:
     /* Since metaObject for ThisType will be declared later, the pointer to member function will be */ \
     /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */ \
 public: \
-    virtual const iMetaObject *metaObject() const \
-    { \
+    virtual const iMetaObject *metaObject() const { \
         static iMetaObject staticMetaObject = iMetaObject(IX_BaseType::metaObject()); \
         if (!staticMetaObject.hasProperty()) { \
             std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> ppt; \
