@@ -516,6 +516,9 @@ static void block_pad_cb(GstPad *pad, gboolean blocked, gpointer user_data)
 #endif
 {
     #if GST_CHECK_VERSION(1,0,0)
+    IX_UNUSED(pad);
+    IX_UNUSED(info);
+    IX_UNUSED(user_data);
     return GST_PAD_PROBE_OK;
     #else
     ilog_debug(__FUNCTION__, " blocked:", blocked);
@@ -1477,9 +1480,10 @@ void iGstreamerPlayerSession::updateDuration()
 
 void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpointer d)
 {
-    GstElement *source = 0;
+    IX_UNUSED(p);
+    GstElement *source = IX_NULLPTR;
     g_object_get(o, "source", &source, IX_NULLPTR);
-    if (source == 0)
+    if (source == IX_NULLPTR)
         return;
 
     ilog_debug(__FUNCTION__, ":Playbin source added: ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)));
@@ -1580,6 +1584,8 @@ bool iGstreamerPlayerSession::isLiveSource() const
 
 void iGstreamerPlayerSession::handleVolumeChange(GObject *o, GParamSpec *p, gpointer d)
 {
+    IX_UNUSED(o);
+    IX_UNUSED(p);
     iGstreamerPlayerSession *session = reinterpret_cast<iGstreamerPlayerSession *>(d);
     iObject::invokeMethod(session, &iGstreamerPlayerSession::updateVolume, QueuedConnection);
 }
@@ -1598,6 +1604,8 @@ void iGstreamerPlayerSession::updateVolume()
 
 void iGstreamerPlayerSession::handleMutedChange(GObject *o, GParamSpec *p, gpointer d)
 {
+    IX_UNUSED(o);
+    IX_UNUSED(p);
     iGstreamerPlayerSession *session = reinterpret_cast<iGstreamerPlayerSession *>(d);
     iObject::invokeMethod(session, &iGstreamerPlayerSession::updateMuted, QueuedConnection);
 }
@@ -1644,6 +1652,9 @@ static gboolean factory_can_src_any_caps (GstElementFactory *factory, const GstC
 
 GstAutoplugSelectResult iGstreamerPlayerSession::handleAutoplugSelect(GstBin *bin, GstPad *pad, GstCaps *caps, GstElementFactory *factory, iGstreamerPlayerSession *session)
 {
+    IX_UNUSED(bin);
+    IX_UNUSED(pad);
+    IX_UNUSED(caps);
     GstAutoplugSelectResult res = GST_AUTOPLUG_SELECT_TRY;
 
     // if VAAPI is available and can be used to decode but the current video sink cannot handle
@@ -1673,10 +1684,10 @@ GstAutoplugSelectResult iGstreamerPlayerSession::handleAutoplugSelect(GstBin *bi
 
 void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *element, iGstreamerPlayerSession *session)
 {
+    IX_UNUSED(bin);
     //we have to configure queue2 element to enable media downloading
     //and reporting available ranges,
     //but it's added dynamically to playbin2
-
     gchar *elementName = gst_element_get_name(element);
 
     if (g_str_has_prefix(elementName, "queue2")) {
@@ -1706,6 +1717,7 @@ void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *elemen
 
 void iGstreamerPlayerSession::handleStreamsChange(GstBin *bin, gpointer user_data)
 {
+    IX_UNUSED(bin);
     iGstreamerPlayerSession* session = reinterpret_cast<iGstreamerPlayerSession*>(user_data);
     iObject::invokeMethod(session, &iGstreamerPlayerSession::getStreamsInfo, QueuedConnection);
 }

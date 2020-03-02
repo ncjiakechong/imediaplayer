@@ -41,14 +41,12 @@ public:
 
     // singleShot to a iObject slot
     template <typename Duration, typename Func1>
-    static inline void singleShot(Duration interval, const typename FunctionPointer<Func1>::Object *receiver, Func1 slot)
-    {
+    static inline void singleShot(Duration interval, const typename FunctionPointer<Func1>::Object *receiver, Func1 slot) {
         singleShot(interval, defaultTypeFor(interval), receiver, slot);
     }
     template <typename Duration, typename Func1>
     static inline void singleShot(Duration interval, TimerType timerType, const typename FunctionPointer<Func1>::Object *receiver,
-                                  Func1 slot)
-    {
+                                  Func1 slot) {
         typedef void (iTimer::*SignalFunc)();
         typedef FunctionPointer<Func1> SlotType;
 
@@ -62,30 +60,26 @@ public:
     template <typename Duration, typename Func1>
     static inline typename enable_if<!FunctionPointer<Func1>::IsPointerToMemberFunction &&
                                           !is_same<const char*, Func1>::value, void>::type
-            singleShot(Duration interval, Func1 slot)
-    {
+            singleShot(Duration interval, Func1 slot) {
         singleShot(interval, defaultTypeFor(interval), IX_NULLPTR, slot);
     }
     template <typename Duration, typename Func1>
     static inline typename enable_if<!FunctionPointer<Func1>::IsPointerToMemberFunction &&
                                           !is_same<const char*, Func1>::value, void>::type
-            singleShot(Duration interval, TimerType timerType, Func1 slot)
-    {
+            singleShot(Duration interval, TimerType timerType, Func1 slot) {
         singleShot(interval, timerType, IX_NULLPTR, slot);
     }
     // singleShot to a functor or function pointer (with context)
     template <typename Duration, typename Func1>
     static inline typename enable_if<!FunctionPointer<Func1>::IsPointerToMemberFunction &&
                                           !is_same<const char*, Func1>::value, void>::type
-            singleShot(Duration interval, const iObject *context, Func1 slot)
-    {
+            singleShot(Duration interval, const iObject *context, Func1 slot) {
         singleShot(interval, defaultTypeFor(interval), context, slot);
     }
     template <typename Duration, typename Func1>
     static inline typename enable_if<!FunctionPointer<Func1>::IsPointerToMemberFunction &&
                                           !is_same<const char*, Func1>::value, void>::type
-            singleShot(Duration interval, TimerType timerType, const iObject *context, Func1 slot)
-    {
+            singleShot(Duration interval, TimerType timerType, const iObject *context, Func1 slot) {
         //compilation error if the slot has arguments.
         typedef void (iTimer::*SignalFunc)();
         typedef FunctionPointer<Func1> SlotType;

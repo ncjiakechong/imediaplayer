@@ -72,8 +72,7 @@ public:
     { return canConvert(iMetaTypeId<typename type_wrapper<T>::TYPE>(0)); }
 
     template<typename T>
-    typename type_wrapper<T>::TYPE value() const
-    {
+    typename type_wrapper<T>::TYPE value() const {
         if (m_dataImpl.isNull())
             return TYPEWRAPPER_DEFAULTVALUE(T);
 
@@ -87,8 +86,7 @@ public:
     }
 
     template<typename T>
-    void setValue(T data)
-    {
+    void setValue(T data) {
         m_typeId = iMetaTypeId<typename type_wrapper<T>::TYPE>(0);
         m_dataImpl.reset(new iVariantImpl<typename type_wrapper<T>::TYPE>(data), &iAbstractVariantImpl::free);
     }
@@ -106,12 +104,11 @@ public:
     };
 
     template <typename T>
-    static int iMetaTypeId(int hint)
-    {
-        struct _HandleHelper {
-            static bool equal(void* t1, void* t2) {
-                return (*static_cast<T*>(t1) == *static_cast<T*>(t2));
-            }
+    static int iMetaTypeId(int hint) {
+        struct _HandleHelper
+        {
+            static bool equal(void* t1, void* t2)
+            { return (*static_cast<T*>(t1) == *static_cast<T*>(t2)); }
         };
 
         static int typeId = 0;
@@ -130,7 +127,8 @@ public:
 private:
     struct IX_CORE_EXPORT iAbstractVariantImpl
     {
-        enum Operation {
+        enum Operation
+        {
             Destroy,
             Create
         };
@@ -156,8 +154,7 @@ private:
             : iAbstractVariantImpl(&_value, &iVariantImpl::impl), _value(data) {}
         ~iVariantImpl() {}
 
-        static iAbstractVariantImpl* impl(int which, const iAbstractVariantImpl* this_, void*)
-        {
+        static iAbstractVariantImpl* impl(int which, const iAbstractVariantImpl* this_, void*) {
             iAbstractVariantImpl* ret = IX_NULLPTR;
             switch (which) {
             case Destroy:

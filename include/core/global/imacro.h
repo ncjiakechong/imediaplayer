@@ -171,6 +171,10 @@
 #define IX_CONSTEXPR const
 #endif
 
+/*
+   Avoid "unused parameter" warnings
+*/
+#define IX_UNUSED(x) (void)x
 
 // combine arguments (after expanding arguments)
 #define IX_GLUE(a,b) __IX_GLUE(a,b)
