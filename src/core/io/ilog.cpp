@@ -25,7 +25,7 @@ static bool ilog_default_filter(void*, const char*, ilog_level_t level)
     return false;
 }
 
-static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t level, const iString& msg)
+static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t level, const char* msg, int)
 {
     static const char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
     char cur_level = '-';
@@ -36,21 +36,16 @@ static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t leve
 
     int  meta_len = 0;
     char meta_buf[128] = {0};
-    iString log_buf(1024, Uninitialized);
     iTime current = iDateTime::currentDateTime().time();
-    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c ",
+    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c",
                     current.hour(), current.minute(), current.second(), current.msec(),
                     iThread::currentThreadId(), tag, cur_level);
 
-    log_buf.resize(0);
-    log_buf += iLatin1String(meta_buf, std::min(meta_len, (int)sizeof(meta_buf)));
-    log_buf += msg;
-
-    fprintf(stdout, "%s\n", log_buf.toUtf8().data());
+    fprintf(stdout, "%s %s\n", meta_buf, msg);
     fflush(stdout);
 }
 
-static void ilog_default_data_callback(void*, const char* tag, ilog_level_t level, const uchar* msg, int size)
+static void ilog_default_data_callback(void*, const char* tag, ilog_level_t level, const void* msg, int size)
 {
     static const char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
     char cur_level = '-';
@@ -62,6 +57,7 @@ static void ilog_default_data_callback(void*, const char* tag, ilog_level_t leve
     int  meta_len = 0;
     char meta_buf[128];
     iString log_buf(1024, Uninitialized);
+    const uchar* data = static_cast<const uchar*>(msg);
     iTime current = iDateTime::currentDateTime().time();
     meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c ",
                     current.hour(), current.minute(), current.second(), current.msec(),
@@ -69,7 +65,7 @@ static void ilog_default_data_callback(void*, const char* tag, ilog_level_t leve
 
     int limit_len = std::min(4, size);
     for (int idx = 0; idx < limit_len && (meta_len < sizeof(meta_buf)); ++idx) {
-        meta_len = snprintf(meta_buf + meta_len, sizeof(meta_buf) - meta_len, "0x%hhx ", msg[idx]) + meta_len;
+        meta_len = snprintf(meta_buf + meta_len, sizeof(meta_buf) - meta_len, "0x%hhx ", data[idx]) + meta_len;
     }
 
     if (size > 8 && (meta_len < sizeof(meta_buf))) {
@@ -79,7 +75,7 @@ static void ilog_default_data_callback(void*, const char* tag, ilog_level_t leve
     --meta_len;
     limit_len = std::min(4, size - limit_len);
     for (int idx = 0; idx < limit_len && (meta_len < sizeof(meta_buf)); ++idx) {
-        meta_len = snprintf(meta_buf + meta_len, sizeof(meta_buf) - meta_len, " 0x%hhx", msg[size - limit_len + idx]) + meta_len;
+        meta_len = snprintf(meta_buf + meta_len, sizeof(meta_buf) - meta_len, " 0x%hhx", data[size - limit_len + idx]) + meta_len;
     }
 
     fprintf(stdout, "%s\n", meta_buf);
@@ -122,17 +118,16 @@ bool iLogger::start(const char *tag, ilog_level_t level)
 
     m_tags = tag;
     m_level = level;
-    m_buff = iString(1024, Uninitialized);
-    m_buff.resize(0);
+    m_buff.reserve(1024);
     return true;
 }
 
 void iLogger::end()
 {
-    s_ilog_target.meta_callback(s_ilog_target.user_data, m_tags, m_level, m_buff);
+    s_ilog_target.meta_callback(s_ilog_target.user_data, m_tags, m_level, m_buff.data(), m_buff.size());
 }
 
-void iLogData(const char* tag, ilog_level_t level, const uchar* data, int size)
+void iLogData(const char* tag, ilog_level_t level, const void* data, int size)
 {
     if (!s_ilog_target.filter(s_ilog_target.user_data, tag, level))
         return;
@@ -142,77 +137,152 @@ void iLogData(const char* tag, ilog_level_t level, const uchar* data, int size)
 
 void iLogger::append(bool value)
 {
-    m_buff += iString("%1").arg(value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%d", static_cast<int>(value));
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(char value)
 {
-    m_buff += iString("%1").arg(value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%c", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(unsigned char value)
 {
-    m_buff += iString("%1").arg(value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%c", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(short value)
 {
-    m_buff += iString("%1").arg(value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%hd", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(unsigned short value)
 {
-    m_buff += iString("%1").arg(value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%hu", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(int value)
 {
-    m_buff += iString("%1").arg(value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%d", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(unsigned int value)
 {
-    m_buff += iString("%1").arg(value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%u", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(long value)
 {
-    m_buff += iString("%1").arg(xlonglong(value));
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%ld", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(unsigned long value)
 {
-    m_buff += iString("%1").arg(xulonglong(value));
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%lu", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(long long value)
 {
-    m_buff += iString("%1").arg(xlonglong(value));
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%lld", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(unsigned long long value)
 {
-    m_buff += iString("%1").arg(xulonglong(value));
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%llu", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(iHexUInt8 value)
 {
-    m_buff += iString("0x%1").arg(value.value, 0, 16);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "0x%hhx", static_cast<unsigned char>(value.value));
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(iHexUInt16 value)
 {
-    m_buff += iString("0x%1").arg(value.value, 0, 16);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "0x%hx", static_cast<unsigned short>(value.value));
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(iHexUInt32 value)
 {
-    m_buff += iString("0x%1").arg(value.value, 0, 16);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "0x%x", static_cast<unsigned int>(value.value));
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(iHexUInt64 value)
 {
-    m_buff += iString("0x%1").arg(value.value, 0, 16);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "0x%llx", static_cast<unsigned long long>(value.value));
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(float value)
@@ -222,22 +292,52 @@ void iLogger::append(float value)
 
 void iLogger::append(double value)
 {
-    m_buff += iString("%1").arg(value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%f", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(const iChar& value)
 {
-    m_buff += value;
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%s", value.decomposition().toUtf8().data());
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(const iString& value)
 {
-    m_buff += value;
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%s", value.toUtf8().data());
+    m_buff.resize(buff_size + value_len);
+}
+
+void iLogger::append(const char* value)
+{
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%s", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 void iLogger::append(const void* value)
 {
-    m_buff += iString::asprintf("%p", value);
+    int value_len = 0;
+    int buff_size = m_buff.size();
+    char* buff = m_buff.data();
+    value_len = snprintf(buff + buff_size, m_buff.capacity() - buff_size,
+             "%p", value);
+    m_buff.resize(buff_size + value_len);
 }
 
 iLogger& operator<<(iLogger& logger, bool value)
@@ -350,7 +450,7 @@ iLogger& operator<<(iLogger& logger, const iChar& value)
 
 iLogger& operator<<(iLogger& logger, const char* value)
 {
-    logger.append(iString::fromUtf8(value));
+    logger.append(value);
     return logger;
 }
 
