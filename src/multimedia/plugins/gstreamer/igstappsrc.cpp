@@ -189,7 +189,6 @@ bool iGstAppSrc::doSeek(xint64 value)
     return false;
 }
 
-
 gboolean iGstAppSrc::on_seek_data(GstAppSrc *element, guint64 arg0, gpointer userdata)
 {
     IX_UNUSED(element);

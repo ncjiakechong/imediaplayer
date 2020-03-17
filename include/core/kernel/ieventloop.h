@@ -23,7 +23,7 @@ public:
     enum ProcessEventsFlag {
         AllEvents = 0x00,
         WaitForMoreEvents = 0x01,
-        EventLoopExec = 0x02,
+        EventLoopExec = 0x02
     };
     typedef uint ProcessEventsFlags;
 

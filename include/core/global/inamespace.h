@@ -19,7 +19,7 @@ enum ConnectionType {
     QueuedConnection            = 0x1 << 2,
     BlockingQueuedConnection    = 0x1 << 3,
     Connection_PrimaryMask      = 0x0f,
-    UniqueConnection            = 0x1 << 4,
+    UniqueConnection            = 0x1 << 4
 };
 
 enum TimerType {
@@ -74,7 +74,6 @@ enum TimeSpec {
     OffsetFromUTC,
     TimeZone
 };
-
 
 } // namespace iShell
 
