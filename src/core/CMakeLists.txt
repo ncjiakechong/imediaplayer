@@ -61,14 +61,19 @@ if(UNIX)
 	find_package(PkgConfig)
 	pkg_check_modules(GLIB2 REQUIRED glib-2.0)
 
+	set (Depend_Libs ${GLIB2_LIBRARIES} pthread rt)
+
 elseif(WIN32)
 	set (OsSource
 		thread/ithread_win.cpp)
 
+	find_library(USER32 user32)
+	set (Depend_Libs ${USER32})
 endif()
 
 include_directories( ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../../include ${GLIB2_INCLUDE_DIRS} )
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 add_library(${PROJECT_NAME} SHARED ${ComSource} ${OsSource})
 
-target_link_libraries(${PROJECT_NAME} ${GLIB2_LIBRARIES} pthread rt )
+target_link_libraries(${PROJECT_NAME} ${Depend_Libs} )

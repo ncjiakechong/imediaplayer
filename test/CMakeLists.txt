@@ -18,6 +18,8 @@ endif()
 
 include_directories( ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../include )
 
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+
 # Create the executable
 add_executable(${PROJECT_NAME} ${Source})
 
