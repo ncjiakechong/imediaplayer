@@ -33,3 +33,5 @@
 
 # prject file
 *.pro.user*
+.vscode
+build

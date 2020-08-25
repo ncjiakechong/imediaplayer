@@ -97,13 +97,6 @@ public:
     //connect to a function pointer  (not a member)
     template <typename Func1, typename Func2>
     static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, Func2 slot) {
-        return connect(sender, signal, sender, slot, DirectConnection);
-    }
-
-    //connect to a function pointer  (not a member)
-    template <typename Func1, typename Func2>
-    static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, const iObject *context, Func2 slot,
-                    ConnectionType type = AutoConnection) {
         typedef FunctionPointer<Func1> SignalType;
         typedef FunctionPointer<Func2> SlotType;
 
@@ -115,31 +108,13 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iConnectionHelper<Func1, Func2> conn(sender, signal, context, slot, type);
+        _iConnectionHelper<Func1, Func2> conn(sender, signal, sender, slot, DirectConnection);
         return connectImpl(conn);
     }
 
     template <typename Func1, typename Func2>
-    static inline bool disconnect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal,
-                                  const typename FunctionPointer<Func2>::Object *receiver, Func2 slot) {
-        typedef FunctionPointer<Func1> SignalType;
-        typedef FunctionPointer<Func2> SlotType;
-
-        // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
-        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
-        // Signal and slot arguments are not compatible.
-        IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
-        // Return type of the slot is not compatible with the return type of the signal.
-        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
-
-        _iConnectionHelper<Func1, Func2> conn(sender, signal, receiver, slot, AutoConnection);
-        return disconnectImpl(conn);
-    }
-
-    // This is the overload for when one wish to disconnect a signal from any slot. (slot=IX_NULLPTR)
-    template <typename Func1, typename Func2>
-    static inline bool disconnect(const typename FunctionPointer<typename FunctionHelper<Func1>::Function>::Object *sender, Func1 signal, const iObject *receiver, Func2 slot) {
+    static inline bool disconnect(const typename FunctionPointer<typename FunctionHelper<Func1>::Function>::Object *sender, Func1 signal,
+                                  const typename FunctionPointer<typename FunctionHelper<Func2>::Function>::Object *receiver, Func2 slot) {
         typedef FunctionPointer<typename FunctionHelper<Func1>::Function> SignalType;
         typedef FunctionPointer<typename FunctionHelper<Func2>::Function> SlotType;
 
