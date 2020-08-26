@@ -28,35 +28,20 @@ set (Source
     video/ivideosurfaceformat.cpp)
 
 find_package(PkgConfig)
-pkg_check_modules(GLIB2 REQUIRED glib-2.0)
-pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
-pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
-pkg_check_modules(GSTREAMER_BASE REQUIRED gstreamer-base-1.0)
-pkg_check_modules(GSTREAMER_VIDEO REQUIRED gstreamer-video-1.0)
-pkg_check_modules(GSTREAMER_AUDIO REQUIRED gstreamer-audio-1.0)
-pkg_check_modules(GSTREAMER_PBUTILS REQUIRED gstreamer-pbutils-1.0)
+pkg_check_modules(GLIB_PKG REQUIRED glib-2.0)
+pkg_check_modules(GST_PKG REQUIRED gstreamer-1.0 gstreamer-app-1.0 gstreamer-base-1.0 gstreamer-video-1.0 gstreamer-audio-1.0 gstreamer-pbutils-1.0)
 
-include_directories( 
-    ${PROJECT_SOURCE_DIR} 
-    ${PROJECT_SOURCE_DIR}/../../include 
-    ${GLIB2_INCLUDE_DIRS}
-    ${GSTREAMER_INCLUDE_DIRS}
-    ${GSTREAMER_APP_INCLUDE_DIRS}
-    ${GSTREAMER_BASE_INCLUDE_DIRS}
-    ${GSTREAMER_VIDEO_INCLUDE_DIRS}
-    ${GSTREAMER_AUDIO_INCLUDE_DIRS}
-    ${GSTREAMER_PBUTILS_INCLUDE_DIRS})
+include_directories(
+    ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/../../include
+    ${GLIB_PKG_INCLUDE_DIRS}
+    ${GST_PKG_INCLUDE_DIRS})
 
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 add_library(${PROJECT_NAME} SHARED ${Source})
 
 target_link_libraries(
-    ${PROJECT_NAME} 
-    ${GLIB2_LIBRARIES}
-    ${GSTREAMER_LIBRARIES}
-    ${GSTREAMER_APP_LIBRARIES}
-    ${GSTREAMER_BASE_LIBRARIES}
-    ${GSTREAMER_VIDEO_LIBRARIES}
-    ${GSTREAMER_AUDIO_LIBRARIES}
-    ${GSTREAMER_PBUTILS_LIBRARIES})
+    ${PROJECT_NAME}
+    ${GLIB_PKG_LIBRARIES}
+    ${GST_PKG_LIBRARIES})

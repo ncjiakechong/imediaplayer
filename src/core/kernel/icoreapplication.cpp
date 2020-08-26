@@ -40,12 +40,10 @@ iEventDispatcher* iCoreApplicationPrivate::createEventDispatcher() const
 {
     iEventDispatcher* dispatcher = IX_NULLPTR;
 
-    #ifdef IX_OS_WIN
-    dispatcher = new iEventDispatcher_generic();
-    #elif defined(IX_OS_UNIX)
+    #ifdef IBUILD_HAVE_GLIB
     dispatcher = new iEventDispatcher_Glib();
     #else
-    #error "What system is this?"
+    dispatcher = new iEventDispatcher_generic();
     #endif
 
     return dispatcher;
