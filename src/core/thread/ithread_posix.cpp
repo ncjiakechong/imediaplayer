@@ -9,6 +9,7 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
+#include <cerrno>
 #include <pthread.h>
 #include <sys/time.h>
 

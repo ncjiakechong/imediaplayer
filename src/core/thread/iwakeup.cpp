@@ -15,11 +15,11 @@
 #ifdef IX_OS_WIN
 #include <windows.h>
 #else
-#include <unistd.h>
-#include <errno.h>
-#include <sys/wait.h>
+#include <cerrno>
 #include <cstdlib>
+#include <unistd.h>
 #include <fcntl.h>
+#include <sys/wait.h>
 
 #include "kernel/icoreposix.h"
 #endif
