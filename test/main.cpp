@@ -17,14 +17,14 @@
 
 #define ILOG_TAG "test"
 
+using namespace iShell;
+
 extern int test_iconvertible(void);
 extern int test_object(void);
 extern int test_ivariant(void);
 extern int test_thread(void);
 extern int test_timer(void);
-extern int test_player(void);
-
-using namespace iShell;
+extern int test_player(const iString&);
 
 class TestCase : public iObject
 {
@@ -60,7 +60,14 @@ public:
             break;
         case 5:
         {
-            if (0 == test_player())
+            std::list<iString> args = iCoreApplication::arguments();
+            iString url = "file:///home/jiakechong/Downloads/Video.mp4";
+            if (args.size() > 1) {
+                std::list<iString>::iterator tmpIt = args.begin();
+                std::advance(tmpIt, 1);
+                url = *tmpIt;
+            }
+            if (0 == test_player(url))
                 return;
         }
             break;
@@ -76,9 +83,9 @@ public:
     void tstcase_sig(int c) ISIGNAL(tstcase_sig, c)
 };
 
-int main(void)
+int main(int argc, char **argv)
 {
-    iCoreApplication app(0, IX_NULLPTR);
+    iCoreApplication app(argc, argv);
 
     iPollFD wakeupFd = {};
     iWakeup wakeup;

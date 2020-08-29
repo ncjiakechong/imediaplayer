@@ -204,7 +204,6 @@ public:
     static std::list<iUrl> fromStringList(const std::list<iString> &uris, ParsingMode mode = TolerantMode);
 
     static void setIdnWhitelist(const std::list<iString> &);
-    friend IX_CORE_EXPORT uint qHash(const iUrl &url, uint seed);
 
 private:
     iUrlPrivate *d;

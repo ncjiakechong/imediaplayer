@@ -32,6 +32,17 @@ namespace iShell {
 
 iCoreApplication* iCoreApplication::self = IX_NULLPTR;
 
+iCoreApplicationPrivate::iCoreApplicationPrivate(int argc, char **argv)
+    : m_argc(argc)
+    , m_argv(argv)
+{
+    static const char *const empty = "";
+    if (argc == 0 || argv == IX_NULLPTR) {
+        argc = 0;
+        argv = const_cast<char **>(&empty);
+    }
+}
+
 iCoreApplicationPrivate::~iCoreApplicationPrivate()
 {
 }
@@ -56,9 +67,9 @@ iCoreApplication::iCoreApplication(iCoreApplicationPrivate* priv)
     init();
 }
 
-iCoreApplication::iCoreApplication(int, char **)
+iCoreApplication::iCoreApplication(int argc, char** argv)
     : m_aboutToQuitEmitted(false)
-    , m_private(new iCoreApplicationPrivate)
+    , m_private(new iCoreApplicationPrivate(argc, argv))
 {
     self = this;
     init();
@@ -94,6 +105,25 @@ void iCoreApplication::init()
         && m_threadData->dispatcher.load() != dispatcher)
         dispatcher->startingUp();
 
+}
+
+std::list<iString> iCoreApplication::arguments()
+{
+    std::list<iString> list;
+
+    if (!self) {
+        ilog_warn("iCoreApplication::arguments: Please instantiate the iCoreApplication object first");
+        return list;
+    }
+
+    const int ac = self->m_private->m_argc;
+    char ** const av = self->m_private->m_argv;
+
+    for (int a = 0; a < ac; ++a) {
+        list.push_back(iString::fromLocal8Bit(av[a]));
+    }
+
+    return list;
 }
 
 bool iCoreApplication::event(iEvent* e)

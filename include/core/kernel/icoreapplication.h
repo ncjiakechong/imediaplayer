@@ -18,11 +18,19 @@ namespace iShell {
 
 class iPostEvent;
 class iEventDispatcher;
+class iCoreApplication;
 
-struct IX_CORE_EXPORT iCoreApplicationPrivate
+class IX_CORE_EXPORT iCoreApplicationPrivate
 {
+public:
+    iCoreApplicationPrivate(int argc, char **argv);
     virtual ~iCoreApplicationPrivate();
     virtual iEventDispatcher* createEventDispatcher() const;
+
+private:
+    int  m_argc;
+    char** m_argv;
+    friend class iCoreApplication;
 };
 
 class IX_CORE_EXPORT iCoreApplication : public iObject
@@ -37,6 +45,8 @@ public:
     static int exec();
     static void exit(int retCode = 0);
     static void quit();
+
+    static std::list<iString> arguments();
 
     static bool sendEvent(iObject *receiver, iEvent *event);
     static void postEvent(iObject *receiver, iEvent *event);
