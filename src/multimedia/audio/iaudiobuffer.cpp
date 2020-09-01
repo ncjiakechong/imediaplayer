@@ -14,7 +14,7 @@
 namespace iShell {
 
 
-// Required for QDoc workaround
+// Required for iDoc workaround
 class iString;
 
 class IX_MULTIMEDIA_EXPORT iAbstractAudioBuffer {
@@ -180,7 +180,6 @@ iAudioBufferPrivate *iAudioBufferPrivate::clone()
 
 /*!
     \class iAudioBuffer
-    \inmodule QtMultimedia
     \ingroup multimedia
     \ingroup multimedia_audio
     \brief The iAudioBuffer class represents a collection of audio samples with a specific format and sample rate.
@@ -423,7 +422,7 @@ const void* iAudioBuffer::data() const
     Returns a pointer to this buffer's data.  You can modify the
     data through the returned pointer.
 
-    Since QAudioBuffers can share the actual sample data, calling
+    Since iAudioBuffers can share the actual sample data, calling
     this function will result in a deep copy being made if there
     are any other buffers using the sample.  You should avoid calling
     this unless you really need to modify the data.
@@ -496,7 +495,6 @@ void *iAudioBuffer::data()
 /*!
     \class iAudioBuffer::StereoFrame
     \brief The StereoFrame class provides a simple wrapper for a stereo audio frame.
-    \inmodule QtMultimedia
     \ingroup multimedia
     \ingroup multimedia_audio
 

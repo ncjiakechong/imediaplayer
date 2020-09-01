@@ -29,7 +29,6 @@ int iAbstractVideoBufferPrivate::map(
 /*!
     \class iAbstractVideoBuffer
     \brief The iAbstractVideoBuffer class is an abstraction for video data.
-    \inmodule QtMultimedia
     \ingroup multimedia
     \ingroup multimedia_video
 
@@ -39,7 +38,7 @@ int iAbstractVideoBufferPrivate::map(
 
     In addition, creating a subclass of iAbstractVideoBuffer will allow you to construct video
     frames from preallocated or static buffers, in cases where the iVideoFrame constructors
-    taking a iByteArray or a QImage do not suffice.  This may be necessary when implementing
+    taking a iByteArray or a iImage do not suffice.  This may be necessary when implementing
     a new hardware accelerated video system, for example.
 
     The contents of a buffer can be accessed by mapping the buffer to memory using the map()
@@ -61,7 +60,7 @@ int iAbstractVideoBufferPrivate::map(
     \value GLTextureHandle The handle of the buffer is an OpenGL texture ID.
     \value XvShmImageHandle The handle contains pointer to shared memory XVideo image.
     \value CoreImageHandle The handle contains pointer to \macos CIImage.
-    \value QPixmapHandle The handle of the buffer is a QPixmap.
+    \value iPixmapHandle The handle of the buffer is a iPixmap.
     \value EGLImageHandle The handle of the buffer is an EGLImageKHR.
     \value UserHandle Start value for user defined handle types.
 
@@ -241,8 +240,6 @@ int iAbstractPlanarVideoBufferPrivate::map(
 /*!
     \class iAbstractPlanarVideoBuffer
     \brief The iAbstractPlanarVideoBuffer class is an abstraction for planar video data.
-    \inmodule QtMultimedia
-    \ingroup QtMultimedia
     \ingroup multimedia
     \ingroup multimedia_video
 

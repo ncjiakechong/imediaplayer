@@ -60,7 +60,6 @@ public:
     \class iAudioFormat
     \brief The iAudioFormat class stores audio stream parameter information.
 
-    \inmodule QtMultimedia
     \ingroup multimedia
     \ingroup multimedia_audio
 
@@ -98,22 +97,22 @@ public:
             \li Byte ordering of sample (typically little endian, big endian)
     \endtable
 
-    This class is typically used in conjunction with QAudioInput or
-    QAudioOutput to allow you to specify the parameters of the audio
+    This class is typically used in conjunction with iAudioInput or
+    iAudioOutput to allow you to specify the parameters of the audio
     stream being read or written, or with iAudioBuffer when dealing with
     samples in memory.
 
     You can obtain audio formats compatible with the audio device used
-    through functions in QAudioDeviceInfo. This class also lets you
+    through functions in iAudioDeviceInfo. This class also lets you
     query available parameter values for a device, so that you can set
-    the parameters yourself. See the \l QAudioDeviceInfo class
+    the parameters yourself. See the \l iAudioDeviceInfo class
     description for details. You need to know the format of the audio
     streams you wish to play or record.
 
     In the common case of interleaved linear PCM data, the codec will
     be "audio/pcm", and the samples for all channels will be interleaved.
     One sample for each channel for the same instant in time is referred
-    to as a frame in Qt Multimedia (and other places).
+    to as a frame in Multimedia (and other places).
 */
 
 /*!
@@ -254,10 +253,10 @@ int iAudioFormat::sampleSize() const
    Sets the codec to \a codec.
 
    The parameter to this function should be one of the types
-   reported by the QAudioDeviceInfo::supportedCodecs() function
+   reported by the iAudioDeviceInfo::supportedCodecs() function
    for the audio device you are working with.
 
-   \sa QAudioDeviceInfo::supportedCodecs()
+   \sa iAudioDeviceInfo::supportedCodecs()
 */
 void iAudioFormat::setCodec(const iString &codec)
 {
@@ -267,7 +266,7 @@ void iAudioFormat::setCodec(const iString &codec)
 /*!
     Returns the current codec identifier.
 
-   \sa QAudioDeviceInfo::supportedCodecs()
+   \sa iAudioDeviceInfo::supportedCodecs()
 */
 iString iAudioFormat::codec() const
 {

@@ -655,7 +655,7 @@ int iFindString(const iChar *haystack, int haystackLen, int from,
     the position in the string where the match was made (or -1 if
     there was no match).
 
-    \sa iString, std::list<iString>, QRegExpValidator, QSortFilterProxyModel,
+    \sa iString, std::list<iString>
         {tools/regexp}{Regular Expression Example}
 */
 

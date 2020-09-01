@@ -19,7 +19,7 @@ iGstVideoBuffer::iGstVideoBuffer(GstBuffer *buffer, const GstVideoInfo &info)
     , m_videoInfo(info)
 #else
 iGstVideoBuffer::iGstVideoBuffer(GstBuffer *buffer, int bytesPerLine)
-    : QAbstractVideoBuffer(NoHandle)
+    : iAbstractVideoBuffer(NoHandle)
     , m_bytesPerLine(bytesPerLine)
 #endif
     , m_buffer(buffer)
@@ -38,7 +38,7 @@ iGstVideoBuffer::iGstVideoBuffer(GstBuffer *buffer, const GstVideoInfo &info,
 iGstVideoBuffer::iGstVideoBuffer(GstBuffer *buffer, int bytesPerLine,
                 iGstVideoBuffer::HandleType handleType,
                 const iVariant &handle)
-    : QAbstractVideoBuffer(handleType)
+    : iAbstractVideoBuffer(handleType)
     , m_bytesPerLine(bytesPerLine)
 #endif
     , m_buffer(buffer)

@@ -15,7 +15,7 @@
 
 namespace iShell {
 
-// ### move to qurl_p.h
+// ### move to iurl_p.h
 enum EncodingAction {
     DecodeCharacter = 0,
     LeaveCharacter = 1,

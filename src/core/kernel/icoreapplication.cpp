@@ -181,8 +181,8 @@ int iCoreApplication::exec()
 }
 
 
-// Cleanup after eventLoop is done executing in QCoreApplication::exec().
-// This is for use cases in which QCoreApplication is instantiated by a
+// Cleanup after eventLoop is done executing in iCoreApplication::exec().
+// This is for use cases in which iCoreApplication is instantiated by a
 // library and not by an application executable, for example, Active X
 // servers.
 

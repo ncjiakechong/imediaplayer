@@ -17,7 +17,7 @@
 namespace iShell {
 
 // needed by the punycode encoder/decoder
-#define Q_MAXINT ((uint)((uint)(-1)>>1))
+#define IX_MAXINT ((uint)((uint)(-1)>>1))
 static const uint base = 36;
 static const uint tmin = 1;
 static const uint tmax = 26;
@@ -2219,7 +2219,7 @@ void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output)
     while (h < (uint) ucLength) {
         // find the character in the input string with the lowest
         // unicode value.
-        uint m = Q_MAXINT;
+        uint m = IX_MAXINT;
         uint j;
         for (j = 0; j < (uint) ucLength; ++j) {
             if (s[j].unicode() >= n && s[j].unicode() < m)
@@ -2227,7 +2227,7 @@ void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output)
         }
 
         // reject out-of-bounds unicode characters
-        if (m - n > (Q_MAXINT - delta) / (h + 1)) {
+        if (m - n > (IX_MAXINT - delta) / (h + 1)) {
             output->truncate(outLen);
             return; // punycode_overflow
         }
@@ -2304,7 +2304,7 @@ iString ix_punycodeDecoder(const iString &pc)
             else digit = base;
 
             // reject out of range digits
-            if (digit >= base || digit > (Q_MAXINT - i) / w)
+            if (digit >= base || digit > (IX_MAXINT - i) / w)
                 return iStringLiteral("");
 
             i += (digit * w);
@@ -2601,7 +2601,7 @@ std::list<iString> iUrl::idnWhitelist()
     Note that if you call this function, you need to do so \e before
     you start any threads that might access idnWhitelist().
 
-    Qt comes with a default list that contains the Internet top-level domains
+    it comes with a default list that contains the Internet top-level domains
     that have published support for Internationalized Domain Names (IDNs)
     and rules to guarantee that no deception can happen between similarly-looking
     characters (such as the Latin lowercase letter \c 'a' and the Cyrillic

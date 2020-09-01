@@ -31,7 +31,7 @@ class iDateTimePrivate
 {
 public:
     // forward the declarations from iDateTime (this makes them public)
-    typedef iDateTime::ShortData QDateTimeShortData;
+    typedef iDateTime::ShortData iDateTimeShortData;
     typedef iDateTime::Data iDateTimeData;
 
     // Never change or delete this enum, it is required for backwards compatible
@@ -278,7 +278,7 @@ static iString toOffsetString(iShell::DateFormat format, int offset)
     for technical reasons limited to between -784350574879 and 784354017364,
     which means from before 2 billion BCE to after 2 billion CE.
 
-    \sa iTime, iDateTime, QDateEdit, QDateTimeEdit, QCalendarWidget
+    \sa iTime, iDateTime, iDateEdit, iDateTimeEdit
 */
 
 /*!
@@ -1254,7 +1254,7 @@ int iTime::elapsed() const
  *****************************************************************************/
 
 // get the types from iDateTime (through iDateTimePrivate)
-typedef iDateTimePrivate::QDateTimeShortData ShortData;
+typedef iDateTimePrivate::iDateTimeShortData ShortData;
 typedef iDateTimePrivate::iDateTimeData iDateTimeData;
 
 // Returns the platform variant of timezone, i.e. the standard time offset

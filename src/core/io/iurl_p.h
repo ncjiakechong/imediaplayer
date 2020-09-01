@@ -15,8 +15,8 @@
 //  W A R N I N G
 //  -------------
 //
-// This file is not part of the Qt API. It exists for the convenience of
-// qurl*.cpp This header file may change from version to version without
+// This file is not part of the public API. It exists for the convenience of
+// iurl*.cpp This header file may change from version to version without
 // notice, or even be removed.
 //
 // We mean it.

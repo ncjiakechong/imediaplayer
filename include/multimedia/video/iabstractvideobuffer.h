@@ -31,7 +31,7 @@ public:
         GLTextureHandle,
         XvShmImageHandle,
         CoreImageHandle,
-        QPixmapHandle,
+        IPixmapHandle,
         EGLImageHandle,
         UserHandle = 1000
     };

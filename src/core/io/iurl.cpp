@@ -11,7 +11,6 @@
 
 /*!
     \class iUrl
-    \inmodule QtCore
 
     \brief The iUrl class provides a convenient interface for working
     with URLs.
@@ -87,12 +86,12 @@
     Calling isRelative() will return whether or not the URL is relative.
     A relative URL has no \l {scheme}. For example:
 
-    \snippet code/src_corelib_io_qurl.cpp 8
+    \snippet code/src_corelib_io_iurl.cpp 8
 
     Notice that a URL can be absolute while containing a relative path, and
     vice versa:
 
-    \snippet code/src_corelib_io_qurl.cpp 9
+    \snippet code/src_corelib_io_iurl.cpp 9
 
     A relative URL can be resolved by passing it as an argument to resolved(),
     which returns an absolute URL. isParentOf() is used for determining whether
@@ -229,7 +228,7 @@
 
     Note that the case folding rules in \l{RFC 3491}{Nameprep}, which iUrl
     conforms to, require host names to always be converted to lower case,
-    regardless of the Qt::FormattingOptions used.
+    regardless of the FormattingOptions used.
 
     The options from iUrl::ComponentFormattingOptions are also possible.
 
@@ -248,8 +247,7 @@
     \value PrettyDecoded   The component is returned in a "pretty form", with
                            most percent-encoded characters decoded. The exact
                            behavior of PrettyDecoded varies from component to
-                           component and may also change from Qt release to Qt
-                           release. This is the default.
+                           component and may also change. This is the default.
 
     \value EncodeSpaces    Leave space characters in their encoded form ("%20").
 
@@ -292,7 +290,7 @@
     \section2 Full decoding
 
     The FullyDecoded mode is similar to the behavior of the functions returning
-    iString in Qt 4.x, in that every character represents itself and never has
+    iString, in that every character represents itself and never has
     any special meaning. This is true even for the percent character ('%'),
     which should be interpreted to mean a literal percent, not the beginning of
     a percent-encoded sequence. The same actual character, in all other
@@ -326,7 +324,7 @@
 
     The following example illustrates the problem:
 
-    \snippet code/src_corelib_io_qurl.cpp 10
+    \snippet code/src_corelib_io_iurl.cpp 10
 
     If the two URLs were used via HTTP GET, the interpretation by the web
     server would probably be different. In the first case, it would interpret
@@ -964,7 +962,7 @@ typedef uint PathNormalizations;
     Returns \a path with redundant directory separators removed,
     and "."s and ".."s resolved (as far as possible).
 
-    This method is shared with QUrl, so it doesn't deal with QDir::separator(),
+    This method is shared with iUrl, so it doesn't deal with iDir::separator(),
     nor does it remove the trailing slash, if any.
 */
 iString ix_normalizePathSegments(const iString &name, PathNormalizations flags, bool *ok = IX_NULLPTR)
@@ -1948,7 +1946,6 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
 }
 
 /*!
-    \macro QT_NO_URL_CAST_FROM_STRING
     \relates iUrl
 
     Disables automatic conversions from iString (or char *) to iUrl.
@@ -1965,8 +1962,6 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
         url = iUrl::fromLocalFile(filename);
         url = baseurl.resolved(iUrl(filename));
     \endcode
-
-    \sa QT_NO_CAST_FROM_ASCII
 */
 
 
@@ -1988,13 +1983,13 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
 
     Example:
 
-    \snippet code/src_corelib_io_qurl.cpp 0
+    \snippet code/src_corelib_io_iurl.cpp 0
 
     To construct a URL from an encoded string, you can also use fromEncoded():
 
-    \snippet code/src_corelib_io_qurl.cpp 1
+    \snippet code/src_corelib_io_iurl.cpp 1
 
-    Both functions are equivalent and, in Qt 5, both functions accept encoded
+    Both functions are equivalent and, both functions accept encoded
     data. Usually, the choice of the iUrl constructor or setUrl() versus
     fromEncoded() will depend on the source data: the constructor and setUrl()
     take a iString, whereas fromEncoded takes a iByteArray.
@@ -2038,7 +2033,7 @@ iUrl::~iUrl()
     must conform to the standard encoding rules of the URI standard
     for the URL to be reported as valid.
 
-    \snippet code/src_corelib_io_qurl.cpp 2
+    \snippet code/src_corelib_io_iurl.cpp 2
 */
 bool iUrl::isValid() const
 {
@@ -2130,10 +2125,10 @@ void iUrl::setUrl(const iString &url, ParsingMode parsingMode)
 
     The following example shows a URL where the scheme is "ftp":
 
-    \image qurl-authority2.png
+    \image iurl-authority2.png
 
     To set the scheme, the following call is used:
-    \snippet code/src_corelib_io_qurl.cpp 11
+    \snippet code/src_corelib_io_iurl.cpp 11
 
     The scheme can also be empty, in which case the URL is interpreted
     as relative.
@@ -2185,7 +2180,7 @@ iString iUrl::scheme() const
 
     The following example shows a valid authority string:
 
-    \image qurl-authority.png
+    \image iurl-authority.png
 
     The \a authority data is interpreted according to \a mode: in StrictMode,
     any '%' characters must be followed by exactly two hexadecimal characters
@@ -2257,7 +2252,7 @@ iString iUrl::authority(ComponentFormattingOptions options) const
     separated by a ':'. If the password is empty, the colon must be
     omitted. The following example shows a valid user info string:
 
-    \image qurl-authority3.png
+    \image iurl-authority3.png
 
     The \a userInfo data is interpreted according to \a mode: in StrictMode,
     any '%' characters must be followed by exactly two hexadecimal characters
@@ -2372,7 +2367,7 @@ void iUrl::setUserName(const iString &userName, ParsingMode mode)
 
     Note that iUrl::FullyDecoded may cause data loss if those non-representable
     sequences are present. It is recommended to use that value when the result
-    will be used in a non-URL context, such as setting in QAuthenticator or
+    will be used in a non-URL context, such as setting in iAuthenticator or
     negotiating a login.
 
     \sa setUserName(), userInfo()
@@ -2464,7 +2459,7 @@ void iUrl::setPassword(const iString &password, ParsingMode mode)
 
     Note that iUrl::FullyDecoded may cause data loss if those non-representable
     sequences are present. It is recommended to use that value when the result
-    will be used in a non-URL context, such as setting in QAuthenticator or
+    will be used in a non-URL context, such as setting in iAuthenticator or
     negotiating a login.
 
     \sa setPassword()
@@ -2651,7 +2646,7 @@ void iUrl::setPort(int port)
 
     Example:
 
-    \snippet code/src_corelib_io_qurl.cpp 3
+    \snippet code/src_corelib_io_iurl.cpp 3
 */
 int iUrl::port(int defaultPort) const
 {
@@ -2663,12 +2658,12 @@ int iUrl::port(int defaultPort) const
     Sets the path of the URL to \a path. The path is the part of the
     URL that comes after the authority but before the query string.
 
-    \image qurl-ftppath.png
+    \image iurl-ftppath.png
 
     For non-hierarchical schemes, the path will be everything
     following the scheme declaration, as in the following example:
 
-    \image qurl-mailtopath.png
+    \image iurl-mailtopath.png
 
     The \a path data is interpreted according to \a mode: in StrictMode,
     any '%' characters must be followed by exactly two hexadecimal characters
@@ -2708,7 +2703,7 @@ void iUrl::setPath(const iString &path, ParsingMode mode)
 /*!
     Returns the path of the URL.
 
-    \snippet code/src_corelib_io_qurl.cpp 12
+    \snippet code/src_corelib_io_iurl.cpp 12
 
     The \a options argument controls how to format the path component. All
     values produce an unambiguous result. With iUrl::FullyDecoded, all
@@ -2723,18 +2718,18 @@ void iUrl::setPath(const iString &path, ParsingMode mode)
     An example of data loss is when you have non-Unicode percent-encoded sequences
     and use FullyDecoded (the default):
 
-    \snippet code/src_corelib_io_qurl.cpp 13
+    \snippet code/src_corelib_io_iurl.cpp 13
 
     In this example, there will be some level of data loss because the \c %FF cannot
     be converted.
 
     Data loss can also occur when the path contains sub-delimiters (such as \c +):
 
-    \snippet code/src_corelib_io_qurl.cpp 14
+    \snippet code/src_corelib_io_iurl.cpp 14
 
     Other decoding examples:
 
-    \snippet code/src_corelib_io_qurl.cpp 15
+    \snippet code/src_corelib_io_iurl.cpp 15
 
     \sa setPath()
 */
@@ -2755,12 +2750,12 @@ iString iUrl::path(ComponentFormattingOptions options) const
     the part of the URL that comes after the authority but before the
     query string.
 
-    \image qurl-ftppath.png
+    \image iurl-ftppath.png
 
     For non-hierarchical schemes, the path will be everything
     following the scheme declaration, as in the following example:
 
-    \image qurl-mailtopath.png
+    \image iurl-mailtopath.png
 
     \obsolete Use setPath(iString::fromUtf8(path)).
 
@@ -2793,7 +2788,7 @@ iString iUrl::path(ComponentFormattingOptions options) const
 
     Example:
 
-    \snippet code/src_corelib_io_qurl.cpp 7
+    \snippet code/src_corelib_io_iurl.cpp 7
 
     The \a options argument controls how to format the file name component. All
     values produce an unambiguous result. With iUrl::FullyDecoded, all
@@ -3173,7 +3168,7 @@ iString iUrl::query(ComponentFormattingOptions options) const
     characters. It is typically used in HTTP for referring to a
     certain link or point on a page:
 
-    \image qurl-fragment.png
+    \image iurl-fragment.png
 
     The fragment is sometimes also referred to as the URL "reference".
 
@@ -3250,7 +3245,7 @@ iString iUrl::fragment(ComponentFormattingOptions options) const
     characters. It is typically used in HTTP for referring to a
     certain link or point on a page:
 
-    \image qurl-fragment.png
+    \image iurl-fragment.png
 
     The fragment is sometimes also referred to as the URL "reference".
 
@@ -3302,7 +3297,7 @@ bool iUrl::hasFragment() const
     the base URL, but with the merged path, as in the following
     example:
 
-    \snippet code/src_corelib_io_qurl.cpp 5
+    \snippet code/src_corelib_io_iurl.cpp 5
 
     Calling resolved() with ".." returns a iUrl whose directory is
     one level higher than the original. Similarly, calling resolved()
@@ -3593,7 +3588,7 @@ iString iUrl::fromPercentEncoding(const iByteArray &input)
     Unreserved is defined as:
        \tt {ALPHA / DIGIT / "-" / "." / "_" / "~"}
 
-    \snippet code/src_corelib_io_qurl.cpp 6
+    \snippet code/src_corelib_io_iurl.cpp 6
 */
 iByteArray iUrl::toPercentEncoding(const iString &input, const iByteArray &exclude, const iByteArray &include)
 {
@@ -3915,7 +3910,7 @@ bool iUrl::isDetached() const
     returned value in the form found on SMB networks (for example,
     "//servername/path/to/file.txt").
 
-    \snippet code/src_corelib_io_qurl.cpp 20
+    \snippet code/src_corelib_io_iurl.cpp 20
 
     Note: if the path component of this URL contains a non-UTF-8 binary
     sequence (such as %80), the behaviour of this function is undefined.
@@ -3938,7 +3933,7 @@ iString iUrl::toLocalFile() const
 
     Note that this function considers URLs with hostnames to be local file
     paths, even if the eventual file path cannot be opened with
-    QFile::open().
+    iFile::open().
 
     \sa fromLocalFile(), toLocalFile()
 */

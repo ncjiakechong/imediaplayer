@@ -77,7 +77,6 @@ private:
 /*!
     \class iVideoFrame
     \brief The iVideoFrame class represents a frame of video data.
-    \inmodule QtMultimedia
 
     \ingroup multimedia
     \ingroup multimedia_video
@@ -97,7 +96,7 @@ private:
     texture handle).
 
     A video frame can also have timestamp information associated with it.  These timestamps can be
-    used by an implementation of \l QAbstractVideoSurface to determine when to start and stop
+    used by an implementation of \l iAbstractVideoSurface to determine when to start and stop
     displaying the frame, but not all surfaces might respect this setting.
 
     The video pixel data in a iVideoFrame is encapsulated in a iAbstractVideoBuffer.  A iVideoFrame
@@ -117,27 +116,27 @@ private:
 
     \value Format_ARGB32
     The frame is stored using a 32-bit ARGB format (0xAARRGGBB).  This is equivalent to
-    QImage::Format_ARGB32.
+    iImage::Format_ARGB32.
 
     \value Format_ARGB32_Premultiplied
     The frame stored using a premultiplied 32-bit ARGB format (0xAARRGGBB).  This is equivalent
-    to QImage::Format_ARGB32_Premultiplied.
+    to iImage::Format_ARGB32_Premultiplied.
 
     \value Format_RGB32
     The frame stored using a 32-bit RGB format (0xffRRGGBB).  This is equivalent to
-    QImage::Format_RGB32
+    iImage::Format_RGB32
 
     \value Format_RGB24
     The frame is stored using a 24-bit RGB format (8-8-8).  This is equivalent to
-    QImage::Format_RGB888
+    iImage::Format_RGB888
 
     \value Format_RGB565
     The frame is stored using a 16-bit RGB format (5-6-5).  This is equivalent to
-    QImage::Format_RGB16.
+    iImage::Format_RGB16.
 
     \value Format_RGB555
     The frame is stored using a 16-bit RGB format (5-5-5).  This is equivalent to
-    QImage::Format_RGB555.
+    iImage::Format_RGB555.
 
     \value Format_ARGB8565_Premultiplied
     The frame is stored using a 24-bit premultiplied ARGB format (8-5-6-5).

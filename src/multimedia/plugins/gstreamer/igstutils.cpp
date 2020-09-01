@@ -839,7 +839,7 @@ GstCaps *iGstUtils::capsForFormats(const std::list<iVideoFrame::PixelFormat> &fo
 
 void iGstUtils::setFrameTimeStamps(iVideoFrame *frame, GstBuffer *buffer)
 {
-    // GStreamer uses nanoseconds, Qt uses microseconds
+    // GStreamer uses nanoseconds, uses microseconds
     xint64 startTime = GST_BUFFER_TIMESTAMP(buffer);
     if (startTime >= 0) {
         frame->setStartTime(startTime/G_GINT64_CONSTANT (1000));
