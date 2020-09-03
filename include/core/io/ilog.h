@@ -38,6 +38,7 @@ typedef enum ilog_level {
 struct IX_CORE_EXPORT iLogTarget
 {
     void* user_data;
+    void (*set_threshold)(void* user_data, const char* patterns, bool reset);
     bool (*filter)(void* user_data, const char* tag, ilog_level_t level);
     void (*meta_callback)(void* user_data, const char* tag, ilog_level_t level, const char* msg, int size);
     void (*data_callback)(void* user_data, const char* tag, ilog_level_t level, const void* msg, int size);
@@ -63,7 +64,8 @@ struct iHexUInt64 {
 class IX_CORE_EXPORT iLogger{
  public:
     /* Set a log target. */
-    static void setTarget(const iLogTarget& target);
+    static iLogTarget setDefaultTarget(const iLogTarget& target);
+    static void setThreshold(const char* patterns, bool reset);
 
     iLogger();
     ~iLogger();

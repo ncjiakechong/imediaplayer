@@ -18,6 +18,7 @@
 #include "core/global/iglobalstatic.h"
 #include "core/global/iprocessordetection.h"
 #include "multimedia/video/ivideosurfaceformat.h"
+#include "core/io/ilog.h"
 
 #include "igstutils_p.h"
 
@@ -406,12 +407,300 @@ GstCaps *iGstUtils::capsForAudioFormat(const iAudioFormat &format)
     #endif
 }
 
+
+#define MAX_BUFFER_DUMP_STRING_LEN  100
+
+static inline gchar * _gst_info_structure_to_string (const GstStructure * s)
+{
+  if (G_LIKELY (s)) {
+    gchar *str = gst_structure_to_string (s);
+    return str;
+  }
+  return NULL;
+}
+
+static inline gchar * _gst_info_describe_buffer (GstBuffer * buffer)
+{
+  const gchar *offset_str = "none";
+  const gchar *offset_end_str = "none";
+  gchar offset_buf[32], offset_end_buf[32];
+
+  if (GST_BUFFER_OFFSET_IS_VALID (buffer)) {
+    g_snprintf (offset_buf, sizeof (offset_buf), "%" G_GUINT64_FORMAT,
+        GST_BUFFER_OFFSET (buffer));
+    offset_str = offset_buf;
+  }
+  if (GST_BUFFER_OFFSET_END_IS_VALID (buffer)) {
+    g_snprintf (offset_end_buf, sizeof (offset_end_buf), "%" G_GUINT64_FORMAT,
+        GST_BUFFER_OFFSET_END (buffer));
+    offset_end_str = offset_end_buf;
+  }
+
+  return g_strdup_printf ("buffer: %p, pts %" GST_TIME_FORMAT ", dts %"
+      GST_TIME_FORMAT ", dur %" GST_TIME_FORMAT ", size %" G_GSIZE_FORMAT
+      ", offset %s, offset_end %s, flags 0x%x", buffer,
+      GST_TIME_ARGS (GST_BUFFER_PTS (buffer)),
+      GST_TIME_ARGS (GST_BUFFER_DTS (buffer)),
+      GST_TIME_ARGS (GST_BUFFER_DURATION (buffer)),
+      gst_buffer_get_size (buffer), offset_str, offset_end_str,
+      GST_BUFFER_FLAGS (buffer));
+}
+
+static inline gchar * _gst_info_describe_buffer_list (GstBufferList * list)
+{
+  GstClockTime pts = GST_CLOCK_TIME_NONE;
+  GstClockTime dts = GST_CLOCK_TIME_NONE;
+  gsize total_size = 0;
+  guint n, i;
+
+  n = gst_buffer_list_length (list);
+  for (i = 0; i < n; ++i) {
+    GstBuffer *buf = gst_buffer_list_get (list, i);
+
+    if (i == 0) {
+      pts = GST_BUFFER_PTS (buf);
+      dts = GST_BUFFER_DTS (buf);
+    }
+
+    total_size += gst_buffer_get_size (buf);
+  }
+
+  return g_strdup_printf ("bufferlist: %p, %u buffers, pts %" GST_TIME_FORMAT
+      ", dts %" GST_TIME_FORMAT ", size %" G_GSIZE_FORMAT, list, n,
+      GST_TIME_ARGS (pts), GST_TIME_ARGS (dts), total_size);
+}
+
+static inline gchar * _gst_info_describe_event (GstEvent * event)
+{
+  gchar *s, *ret;
+
+  s = _gst_info_structure_to_string (gst_event_get_structure (event));
+  ret = g_strdup_printf ("%s event: %p, time %" GST_TIME_FORMAT
+      ", seq-num %d, %s", GST_EVENT_TYPE_NAME (event), event,
+      GST_TIME_ARGS (GST_EVENT_TIMESTAMP (event)), GST_EVENT_SEQNUM (event),
+      (s ? s : "(NULL)"));
+  g_free (s);
+  return ret;
+}
+
+static inline gchar * _gst_info_describe_message (GstMessage * message)
+{
+  gchar *s, *ret;
+
+  s = _gst_info_structure_to_string (gst_message_get_structure (message));
+  ret = g_strdup_printf ("%s message: %p, time %" GST_TIME_FORMAT
+      ", seq-num %d, element '%s', %s", GST_MESSAGE_TYPE_NAME (message),
+      message, GST_TIME_ARGS (GST_MESSAGE_TIMESTAMP (message)),
+      GST_MESSAGE_SEQNUM (message),
+      ((message->src) ? GST_ELEMENT_NAME (message->src) : "(NULL)"),
+      (s ? s : "(NULL)"));
+  g_free (s);
+  return ret;
+}
+
+static inline gchar * _gst_info_describe_query (GstQuery * query)
+{
+  gchar *s, *ret;
+
+  s = _gst_info_structure_to_string (gst_query_get_structure (query));
+  ret = g_strdup_printf ("%s query: %p, %s", GST_QUERY_TYPE_NAME (query),
+      query, (s ? s : "(NULL)"));
+  g_free (s);
+  return ret;
+}
+
+static inline gchar * _gst_info_describe_stream (GstStream * stream)
+{
+  gchar *ret, *caps_str = NULL, *tags_str = NULL;
+  GstCaps *caps;
+  GstTagList *tags;
+
+  caps = gst_stream_get_caps (stream);
+  if (caps) {
+    caps_str = gst_caps_to_string (caps);
+    gst_caps_unref (caps);
+  }
+
+  tags = gst_stream_get_tags (stream);
+  if (tags) {
+    tags_str = gst_tag_list_to_string (tags);
+    gst_tag_list_unref (tags);
+  }
+
+  ret =
+      g_strdup_printf ("stream %s %p, ID %s, flags 0x%x, caps [%s], tags [%s]",
+      gst_stream_type_get_name (gst_stream_get_stream_type (stream)), stream,
+      gst_stream_get_stream_id (stream), gst_stream_get_stream_flags (stream),
+      caps_str ? caps_str : "", tags_str ? tags_str : "");
+
+  g_free (caps_str);
+  g_free (tags_str);
+
+  return ret;
+}
+
+static inline gchar * _gst_info_describe_stream_collection (GstStreamCollection * collection)
+{
+  gchar *ret;
+  GString *streams_str;
+  guint i;
+
+  streams_str = g_string_new ("<");
+  for (i = 0; i < gst_stream_collection_get_size (collection); i++) {
+    GstStream *stream = gst_stream_collection_get_stream (collection, i);
+    gchar *s;
+
+    s = _gst_info_describe_stream (stream);
+    g_string_append_printf (streams_str, " %s,", s);
+    g_free (s);
+  }
+  g_string_append (streams_str, " >");
+
+  ret = g_strdup_printf ("collection %p (%d streams) %s", collection,
+      gst_stream_collection_get_size (collection), streams_str->str);
+
+  g_string_free (streams_str, TRUE);
+  return ret;
+}
+
+static gchar * _gst_debug_print_object (GObject* object)
+{
+  /* nicely printed object */
+  if (object == NULL) {
+    return g_strdup ("(NULL)");
+  }
+  if (GST_IS_CAPS (object)) {
+    return gst_caps_to_string ((const GstCaps *) object);
+  }
+  if (GST_IS_STRUCTURE (object)) {
+    return _gst_info_structure_to_string ((const GstStructure *) object);
+  }
+  if (*(GType *) object == GST_TYPE_CAPS_FEATURES) {
+    return gst_caps_features_to_string ((const GstCapsFeatures *) object);
+  }
+  if (GST_IS_TAG_LIST (object)) {
+    gchar *str = gst_tag_list_to_string ((GstTagList *) object);
+    return str;
+  }
+  if (GST_IS_BUFFER (object)) {
+    return _gst_info_describe_buffer (GST_BUFFER_CAST (object));
+  }
+  if (GST_IS_BUFFER_LIST (object)) {
+    return _gst_info_describe_buffer_list (GST_BUFFER_LIST_CAST (object));
+  }
+  if (GST_IS_MESSAGE (object)) {
+    return _gst_info_describe_message (GST_MESSAGE_CAST (object));
+  }
+  if (GST_IS_QUERY (object)) {
+    return _gst_info_describe_query (GST_QUERY_CAST (object));
+  }
+  if (GST_IS_EVENT (object)) {
+    return _gst_info_describe_event (GST_EVENT_CAST (object));
+  }
+  if (GST_IS_CONTEXT (object)) {
+    GstContext *context = GST_CONTEXT_CAST (object);
+    gchar *s, *ret;
+    const gchar *type;
+    const GstStructure *structure;
+
+    type = gst_context_get_context_type (context);
+    structure = gst_context_get_structure (context);
+
+    s = _gst_info_structure_to_string (structure);
+
+    ret = g_strdup_printf ("context '%s'='%s'", type, s);
+    g_free (s);
+    return ret;
+  }
+  if (GST_IS_STREAM (object)) {
+    return _gst_info_describe_stream (GST_STREAM_CAST (object));
+  }
+  if (GST_IS_STREAM_COLLECTION (object)) {
+    return
+        _gst_info_describe_stream_collection (GST_STREAM_COLLECTION_CAST
+        (object));
+  }
+  if (GST_IS_PAD (object) && GST_OBJECT_NAME (object)) {
+    return g_strdup_printf ("<%s:%s>", GST_DEBUG_PAD_NAME (object));
+  }
+  if (GST_IS_OBJECT (object) && GST_OBJECT_NAME (object)) {
+    return g_strdup_printf ("<%s>", GST_OBJECT_NAME (object));
+  }
+  if (G_IS_OBJECT (object)) {
+    return g_strdup_printf ("<%s@%p>", G_OBJECT_TYPE_NAME (object), object);
+  }
+
+  return g_strdup_printf ("%p", object);
+}
+
+static void printf_extension_log_func (GstDebugCategory* category,
+            GstDebugLevel level, const gchar* file, const gchar* function, gint line, 
+            GObject* object, GstDebugMessage* message, gpointer unused)
+{
+    const gchar *dbg_msg;
+    gchar *obj = IX_NULLPTR;
+
+    dbg_msg = gst_debug_message_get (message);
+    IX_ASSERT (dbg_msg != IX_NULLPTR);
+
+    if (object) {
+        obj = _gst_debug_print_object (object);
+    } else {
+        obj = (gchar *) "";
+    }
+
+    switch (level)
+    {
+    case GST_LEVEL_ERROR:
+        iLogMeta("GST", ILOG_ERROR, object, " ", dbg_msg);
+        break;
+    
+    case GST_LEVEL_WARNING:
+        iLogMeta("GST", ILOG_WARN, object, " ", dbg_msg);
+        break;
+
+    case GST_LEVEL_FIXME:
+        iLogMeta("GST", ILOG_NOTICE, object, " ", dbg_msg);
+        break;
+
+    case GST_LEVEL_INFO:
+        iLogMeta("GST", ILOG_INFO, object, " ", dbg_msg);
+        break;
+
+    case GST_LEVEL_DEBUG:
+    case GST_LEVEL_LOG:
+        iLogMeta("GST", ILOG_DEBUG, object, " ", dbg_msg);
+        break;
+
+    case GST_LEVEL_TRACE:
+    case GST_LEVEL_MEMDUMP:
+    default:
+        iLogMeta("GST", ILOG_VERBOSE, object, " ", dbg_msg);
+        break;
+    }
+
+    if (object != NULL)
+        g_free (obj);
+
+    /* quick hack to still get stuff to show if GST_DEBUG is set */
+    if (g_getenv ("GST_DEBUG")) {
+       gst_debug_log_default (category, level, file, function, line, object, message, unused);
+    }
+}
+
 void iGstUtils::initializeGst()
 {
     static bool initialized = false;
     if (!initialized) {
         initialized = true;
         gst_init(IX_NULLPTR, IX_NULLPTR);
+
+        /* set up our own log function to make sure the code in gstinfo is actually
+        * executed without GST_DEBUG being set or it being output to stdout */
+        gst_debug_remove_log_function (gst_debug_log_default);
+        gst_debug_add_log_function (printf_extension_log_func, NULL, NULL);
+
+        gst_debug_set_threshold_from_string("2,GST_TRACER:7", FALSE);
     }
 }
 

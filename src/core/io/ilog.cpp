@@ -25,6 +25,12 @@ static bool ilog_default_filter(void*, const char*, ilog_level_t level)
     return false;
 }
 
+static void ilog_default_set_threshold(void*, const char* patterns, bool reset)
+{
+    IX_UNUSED(patterns);
+    IX_UNUSED(reset);
+}
+
 static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t level, const char* msg, int)
 {
     static const char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
@@ -82,23 +88,32 @@ static void ilog_default_data_callback(void*, const char* tag, ilog_level_t leve
     fflush(stdout);
 }
 
-static iLogTarget s_ilog_target = {IX_NULLPTR, &ilog_default_filter, &ilog_default_meta_callback, &ilog_default_data_callback};
+static iLogTarget s_ilog_target = {IX_NULLPTR, &ilog_default_set_threshold, &ilog_default_filter, &ilog_default_meta_callback, &ilog_default_data_callback};
 
-void iLogger::setTarget(const iLogTarget& target)
+iLogTarget iLogger::setDefaultTarget(const iLogTarget& target)
 {
-    if (!target.filter || !target.meta_callback || !target.data_callback) {
+    iLogTarget oldTarget = s_ilog_target;
+    
+    if (!target.set_threshold || !target.filter || !target.meta_callback || !target.data_callback) {
         s_ilog_target.user_data = IX_NULLPTR;
         s_ilog_target.filter = &ilog_default_filter;
+        s_ilog_target.set_threshold = &ilog_default_set_threshold;
         s_ilog_target.meta_callback = &ilog_default_meta_callback;
         s_ilog_target.data_callback = &ilog_default_data_callback;
-        return;
+        return oldTarget;
     }
 
     s_ilog_target.user_data = target.user_data;
     s_ilog_target.filter = target.filter;
+    s_ilog_target.set_threshold = target.set_threshold;
     s_ilog_target.meta_callback = target.meta_callback;
     s_ilog_target.data_callback = target.data_callback;
-    return;
+    return oldTarget;
+}
+
+void iLogger::setThreshold(const char* patterns, bool reset)
+{
+    s_ilog_target.set_threshold(s_ilog_target.user_data, patterns, reset);
 }
 
 iLogger::iLogger()
