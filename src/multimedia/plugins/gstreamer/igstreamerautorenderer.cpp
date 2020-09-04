@@ -14,7 +14,7 @@
 #include "igstreamerautorenderer.h"
 #include "igstutils_p.h"
 
-#define ILOG_TAG "ix:media"
+#define ILOG_TAG "ix_media"
 
 namespace iShell {
 
@@ -33,7 +33,7 @@ iGstreamerAutoRenderer::~iGstreamerAutoRenderer()
 GstElement* iGstreamerAutoRenderer::videoSink()
 {
     if (!m_videoSink) {
-        ilog_debug(__FUNCTION__, ": using mirsink, (this: ", this, ")");
+        ilog_debug("using mirsink, (this: ", this, ")");
 
         m_videoSink = gst_element_factory_make("autovideosink", "video-output");
 
@@ -62,7 +62,7 @@ void iGstreamerAutoRenderer::renderFrame()
                                                      &pendingState, 0);
     if (ret == GST_STATE_CHANGE_FAILURE || newState == GST_STATE_NULL||
             pendingState == GST_STATE_NULL) {
-        ilog_warn(__FUNCTION__, ": Invalid state change for renderer, aborting");
+        ilog_warn("Invalid state change for renderer, aborting");
         stopRenderer();
         return;
     }

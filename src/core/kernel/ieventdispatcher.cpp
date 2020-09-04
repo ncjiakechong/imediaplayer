@@ -15,7 +15,7 @@
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -89,10 +89,10 @@ iEventDispatcher::~iEventDispatcher()
 int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *object)
 {
     if (interval < 0 || !object) {
-        ilog_warn(__FUNCTION__, ": invalid arguments");
+        ilog_warn("invalid arguments");
         return -1;
     } else if ((thread() != object->thread()) || (thread() != iThread::currentThread())) {
-        ilog_warn(__FUNCTION__, ": timers cannot be started from another thread");
+        ilog_warn("timers cannot be started from another thread");
         return -1;
     }
 

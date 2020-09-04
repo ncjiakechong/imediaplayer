@@ -17,7 +17,7 @@
 #include "core/global/iglobalstatic.h"
 #include "utils/ibasicatomicbitfield.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -75,7 +75,7 @@ int iVariant::iRegisterMetaType(const char *type, const iTypeHandler& handler, i
         _iMetaType::initSystemConvert();
 
     if (hint < 0)
-        ilog_warn(__FUNCTION__, ": ", type, " regist fail!!!, container(", iTypeIdContainer::NumBits,") maybe full");
+        ilog_warn(type, " regist fail!!!, container(", iTypeIdContainer::NumBits,") maybe full");
 
     return hint;
 }

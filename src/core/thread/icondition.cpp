@@ -24,7 +24,7 @@
 #include "core/thread/icondition.h"
 #include "core/io/ilog.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -194,7 +194,7 @@ iCondition::~iCondition()
 int iCondition::wait(iMutex &mutex, long milliseconds)
 {
     if (mutex.isRecursive())
-        ilog_error(__FUNCTION__, ": mute is recursive");
+        ilog_error("mute is recursive");
 
     if (milliseconds < 0)
         return m_cond->wait(mutex);

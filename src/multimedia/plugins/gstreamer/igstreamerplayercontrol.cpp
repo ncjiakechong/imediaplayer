@@ -19,7 +19,7 @@
 #include "igstreamerplayersession_p.h"
 #include "igstreamervideorendererinterface_p.h"
 
-#define ILOG_TAG "ix:media"
+#define ILOG_TAG "ix_media"
 
 //#define DEBUG_PLAYBIN
 
@@ -131,7 +131,7 @@ void iGstreamerPlayerControl::setPlaybackRate(xreal rate)
 
 void iGstreamerPlayerControl::setPosition(xint64 pos)
 {
-    ilog_debug(__FUNCTION__, ": ", pos/1000.0);
+    ilog_debug(pos/1000.0);
 
     pushState();
 
@@ -159,7 +159,7 @@ void iGstreamerPlayerControl::setPosition(xint64 pos)
 
 void iGstreamerPlayerControl::play()
 {
-    ilog_debug(__FUNCTION__);
+    ilog_debug("enter");
 
     //m_userRequestedState is needed to know that we need to resume playback when resource-policy
     //regranted the resources after lost, since m_currentState will become paused when resources are
@@ -170,7 +170,7 @@ void iGstreamerPlayerControl::play()
 
 void iGstreamerPlayerControl::pause()
 {
-    ilog_debug(__FUNCTION__);
+    ilog_debug("enter");
     m_userRequestedState = iMediaPlayer::PausedState;
 
     playOrPause(iMediaPlayer::PausedState);
@@ -239,7 +239,7 @@ void iGstreamerPlayerControl::playOrPause(iMediaPlayer::State newState)
 
 void iGstreamerPlayerControl::stop()
 {
-    ilog_debug(__FUNCTION__);
+    ilog_debug("enter");
     m_userRequestedState = iMediaPlayer::StoppedState;
 
     pushState();
@@ -286,7 +286,7 @@ const iIODevice *iGstreamerPlayerControl::mediaStream() const
 
 void iGstreamerPlayerControl::setMedia(const iUrl &content, iIODevice *stream)
 {
-    ilog_debug(__FUNCTION__);
+    ilog_debug("enter");
 
     pushState();
 
@@ -342,7 +342,7 @@ void iGstreamerPlayerControl::setVideoOutput(iObject *output)
 {
     iGstreamerVideoRendererInterface* renderer = iobject_cast<iGstreamerVideoRendererInterface*>(output);
     if (output && !renderer) {
-        ilog_warn(__FUNCTION__, ": invalid argument!!!", output);
+        ilog_warn("invalid argument!!!", output);
         return;
     }
 
@@ -440,7 +440,7 @@ void iGstreamerPlayerControl::setBufferProgress(int progress)
     if (m_bufferProgress == progress || m_mediaStatus == iMediaPlayer::NoMedia)
         return;
 
-    ilog_debug(__FUNCTION__, ": ", progress);
+    ilog_debug(progress);
     m_bufferProgress = progress;
 
     if (m_currentState == iMediaPlayer::PlayingState &&

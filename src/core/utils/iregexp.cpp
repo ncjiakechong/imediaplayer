@@ -26,7 +26,7 @@
 
 #include "utils/istringmatcher.h"
 
-#define ILOG_TAG "ix:utils"
+#define ILOG_TAG "ix_utils"
 
 namespace iShell {
 

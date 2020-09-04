@@ -30,7 +30,7 @@
 #endif
 
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -308,7 +308,7 @@ static inline int ipoll_mark_bad_fds(iPollFD *fds, xuint32 nfds)
 int iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
 {
     if (!fds && nfds) {
-        ilog_warn(__FUNCTION__, " invalid argument");
+        ilog_warn("invalid argument");
         return -1;
     }
 
@@ -336,7 +336,7 @@ int iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
             // Mark bad file descriptors that have no event flags set
             // here, as we won't be passing them to select below and therefore
             // need to do the check ourselves
-            ilog_warn(__FUNCTION__, " fd(", fds[i].fd, ") is bad");
+            ilog_warn("fd(", fds[i].fd, ") is bad");
             fds[i].revents = IX_IO_NVAL;
             n_bad_fds++;
         }

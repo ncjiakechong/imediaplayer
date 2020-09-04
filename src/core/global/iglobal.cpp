@@ -14,19 +14,19 @@
 #include "core/global/iglobal.h"
 #include "core/io/ilog.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
-void ix_assert(const char *assertion, const char *, int)
+void ix_assert(const char *assertion, const char* file, const char* function, int line)
 {
-    iLogMeta(ILOG_TAG, ILOG_ERROR, assertion);
+    iLogMeta(ILOG_TAG, ILOG_ERROR, file, function, line, assertion);
     std::abort();
 }
 
-void ix_assert_x(const char *what, const char *, int )
+void ix_assert_x(const char *what, const char* file, const char* function, int line)
 {
-    iLogMeta(ILOG_TAG, ILOG_ERROR, what);
+    iLogMeta(ILOG_TAG, ILOG_ERROR, file, function, line, what);
     std::abort();
 }
 

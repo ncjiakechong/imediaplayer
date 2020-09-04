@@ -15,7 +15,7 @@
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -36,7 +36,7 @@ iEventSource::~iEventSource()
 void iEventSource::ref()
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn(__FUNCTION__, ": in diffrent thread");
+        ilog_warn("in diffrent thread");
     }
 
     ++m_refCount;
@@ -45,7 +45,7 @@ void iEventSource::ref()
 void iEventSource::deref()
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn(__FUNCTION__, ": in diffrent thread");
+        ilog_warn("in diffrent thread");
     }
 
     --m_refCount;
@@ -56,12 +56,12 @@ void iEventSource::deref()
 int iEventSource::attach(iEventDispatcher* dispatcher)
 {
     if (IX_NULLPTR == dispatcher) {
-        ilog_warn(__FUNCTION__, ": to invalid dispatcher");
+        ilog_warn("to invalid dispatcher");
         return -1;
     }
 
     if (IX_NULLPTR != m_dispatcher) {
-        ilog_warn(__FUNCTION__, ": has attached to ", m_dispatcher->objectName());
+        ilog_warn("has attached to ", m_dispatcher->objectName());
         return -1;
     }
 
@@ -80,7 +80,7 @@ int iEventSource::attach(iEventDispatcher* dispatcher)
 int iEventSource::detach()
 {
     if (IX_NULLPTR == m_dispatcher) {
-        ilog_warn(__FUNCTION__, ": invalid");
+        ilog_warn("invalid");
         return -1;
     }
 

@@ -17,6 +17,29 @@
 
 namespace iShell {
 
+static inline const char* ilog_path_basename (const char* file_name)
+{
+    const char* index_slash = 0;
+    const char* index_backlash = 0;
+    register const char* base = file_name;
+    do {
+        if( *base == '/' )
+            index_slash = base;
+
+        if( *base == '\\' )
+            index_backlash = base;
+    } while(*base++);
+
+    base = index_slash;
+    if (index_backlash > base)
+        base = index_backlash;
+
+    if (base)
+        return base + 1;
+
+    return file_name;
+}
+
 static bool ilog_default_filter(void*, const char*, ilog_level_t level)
 {
     if (level <= ILOG_DEBUG)
@@ -31,7 +54,7 @@ static void ilog_default_set_threshold(void*, const char* patterns, bool reset)
     IX_UNUSED(reset);
 }
 
-static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t level, const char* msg, int)
+static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t level, const char* file, const char* function, int line, const char* msg, int)
 {
     static const char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
     char cur_level = '-';
@@ -40,24 +63,40 @@ static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t leve
         cur_level = log_level_arr[level];
     }
 
+    /* __FILE__ might be a file name or an absolute path or a
+     * relative path, irrespective of the exact compiler used,
+     * in which case we want to shorten it to the filename for
+     * readability. */
+    if (file[0] == '.' || file[0] == '/' || file[0] == '\\' || (file[0] != '\0' && file[1] == ':')) {
+        file = ilog_path_basename (file);
+    }
+
     int  meta_len = 0;
-    char meta_buf[128] = {0};
+    char meta_buf[256] = {0};
     iTime current = iDateTime::currentDateTime().time();
-    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c",
+    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c %s:%d:%s",
                     current.hour(), current.minute(), current.second(), current.msec(),
-                    iThread::currentThreadId(), tag, cur_level);
+                    iThread::currentThreadId(), tag, cur_level, file, line, function);
 
     fprintf(stdout, "%s %s\n", meta_buf, msg);
     fflush(stdout);
 }
 
-static void ilog_default_data_callback(void*, const char* tag, ilog_level_t level, const void* msg, int size)
+static void ilog_default_data_callback(void*, const char* tag, ilog_level_t level, const char* file, const char* function, int line, const void* msg, int size)
 {
     static const char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
     char cur_level = '-';
 
     if ((0 <= level) && (level < ILOG_LEVEL_MAX)) {
         cur_level = log_level_arr[level];
+    }
+
+    /* __FILE__ might be a file name or an absolute path or a
+     * relative path, irrespective of the exact compiler used,
+     * in which case we want to shorten it to the filename for
+     * readability. */
+    if (file[0] == '.' || file[0] == '/' || file[0] == '\\' || (file[0] != '\0' && file[1] == ':')) {
+        file = ilog_path_basename (file);
     }
 
     int  meta_len = 0;
@@ -65,9 +104,9 @@ static void ilog_default_data_callback(void*, const char* tag, ilog_level_t leve
     iString log_buf(1024, Uninitialized);
     const uchar* data = static_cast<const uchar*>(msg);
     iTime current = iDateTime::currentDateTime().time();
-    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c ",
+    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c %s:%d:%s ",
                     current.hour(), current.minute(), current.second(), current.msec(),
-                    iThread::currentThreadId(), tag, cur_level);
+                    iThread::currentThreadId(), tag, cur_level, file, line, function);
 
     int limit_len = std::min(4, size);
     for (int idx = 0; idx < limit_len && (meta_len < sizeof(meta_buf)); ++idx) {
@@ -118,7 +157,10 @@ void iLogger::setThreshold(const char* patterns, bool reset)
 
 iLogger::iLogger()
     : m_tags(IX_NULLPTR)
+    , m_file(IX_NULLPTR)
+    , m_function(IX_NULLPTR)
     , m_level(ILOG_VERBOSE)
+    , m_line(0)
 {
 }
 
@@ -126,28 +168,31 @@ iLogger::~iLogger()
 {
 }
 
-bool iLogger::start(const char *tag, ilog_level_t level)
+bool iLogger::start(const char *tag, ilog_level_t level, const char* file, const char* function, int line)
 {
     if (!s_ilog_target.filter(s_ilog_target.user_data, tag, level))
         return false;
 
     m_tags = tag;
+    m_file = file;
+    m_function = function;
     m_level = level;
+    m_line = line;
     m_buff.reserve(128);
     return true;
 }
 
 void iLogger::end()
 {
-    s_ilog_target.meta_callback(s_ilog_target.user_data, m_tags, m_level, m_buff.data(), m_buff.size());
+    s_ilog_target.meta_callback(s_ilog_target.user_data, m_tags, m_level, m_file, m_function, m_line, m_buff.data(), m_buff.size());
 }
 
-void iLogData(const char* tag, ilog_level_t level, const void* data, int size)
+void iLogData(const char* tag, ilog_level_t level, const char* file, const char* function, int line, const void* data, int size)
 {
     if (!s_ilog_target.filter(s_ilog_target.user_data, tag, level))
         return;
 
-    s_ilog_target.data_callback(s_ilog_target.user_data, tag, level, data, size);
+    s_ilog_target.data_callback(s_ilog_target.user_data, tag, level, file, function, line, data, size);
 }
 
 void iLogger::append(bool value)

@@ -26,7 +26,7 @@
 #error "What system is this?"
 #endif
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -150,7 +150,7 @@ iEventDispatcher* iCoreApplication::createEventDispatcher()
 {
     iCoreApplication* app = instance();
     if (!app) {
-        ilog_warn(__FUNCTION__, ": no application");
+        ilog_warn("no application");
         return IX_NULLPTR;
     }
 
@@ -161,11 +161,11 @@ int iCoreApplication::exec()
 {
     iThreadData *threadData = self->m_threadData;
     if (threadData != iThreadData::current()) {
-        ilog_warn(self->objectName(), __FUNCTION__, ": Must be called from the main thread");
+        ilog_warn(self->objectName(), ": Must be called from the main thread");
         return -1;
     }
     if (!threadData->eventLoops.empty()) {
-        ilog_warn(self->objectName(), __FUNCTION__, ": The event loop is already running");
+        ilog_warn(self->objectName(), ": The event loop is already running");
         return -1;
     }
 
@@ -225,7 +225,7 @@ bool iCoreApplication::threadRequiresCoreApplication()
 bool iCoreApplication::doNotify(iObject *receiver, iEvent *event)
 {
     if (IX_NULLPTR == receiver) {                        // serious error
-        ilog_warn(__FUNCTION__, ": Unexpected null receiver");
+        ilog_warn("Unexpected null receiver");
         return true;
     }
 
@@ -249,7 +249,7 @@ bool iCoreApplication::sendEvent(iObject *receiver, iEvent *event)
 void iCoreApplication::postEvent(iObject *receiver, iEvent *event)
 {
     if (IX_NULLPTR == receiver) {
-        ilog_warn(__FUNCTION__, ": Unexpected null receiver");
+        ilog_warn("Unexpected null receiver");
         delete event;
         return;
     }

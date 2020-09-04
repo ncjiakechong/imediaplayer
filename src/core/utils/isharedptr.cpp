@@ -12,7 +12,7 @@
 #include "core/kernel/iobject.h"
 #include "core/io/ilog.h"
 
-#define ILOG_TAG "ix:utils"
+#define ILOG_TAG "ix_utils"
 
 namespace iShell {
 

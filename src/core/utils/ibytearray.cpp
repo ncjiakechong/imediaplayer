@@ -23,7 +23,7 @@
 
 #define IS_RAW_DATA(d) ((d)->offset != sizeof(iByteArrayData))
 
-#define ILOG_TAG "ix:utils"
+#define ILOG_TAG "ix_utils"
 
 namespace iShell {
 
@@ -3501,7 +3501,7 @@ T toIntegral_helper(const char *data, bool *ok, int base)
     using Int64 = typename std::conditional<std::is_unsigned<T>::value, xuint64, xint64>::type;
 
     if (base != 0 && (base < 2 || base > 36)) {
-        ilog_warn(__FUNCTION__, ": Invalid base ", base);
+        ilog_warn("Invalid base ", base);
         base = 10;
     }
 
@@ -3895,7 +3895,7 @@ iByteArray iByteArray::toBase64(Base64Options options) const
 static char *xulltoa2(char *p, xuint64 n, int base)
 {
     if (base < 2 || base > 36) {
-        ilog_warn(__FUNCTION__, ": Invalid base ", base);
+        ilog_warn("Invalid base ", base);
         base = 10;
     }
 
@@ -3998,7 +3998,7 @@ iByteArray &iByteArray::setNum(double n, char f, int prec)
             form = iLocaleData::DFSignificantDigits;
             break;
         default:
-            ilog_warn(__FUNCTION__, ": Invalid format char ", f);
+            ilog_warn("Invalid format char ", f);
             break;
     }
 

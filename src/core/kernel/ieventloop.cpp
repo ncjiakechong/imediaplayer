@@ -17,7 +17,7 @@
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -26,7 +26,7 @@ iEventLoop::iEventLoop(iObject* parent)
     , m_inExec(false)
 {
     if (!iCoreApplication::instance() && iCoreApplication::threadRequiresCoreApplication()) {
-        ilog_warn(__FUNCTION__, ": Cannot be used without iApplication");
+        ilog_warn("Cannot be used without iApplication");
     }
 }
 
@@ -52,7 +52,7 @@ int iEventLoop::exec(ProcessEventsFlags flags)
         return -1;
 
     if (m_inExec) {
-        ilog_warn(__FUNCTION__, ": instance ", this, " has already called exec()");
+        ilog_warn("instance ", this, " has already called exec()");
         return -1;
     }
 

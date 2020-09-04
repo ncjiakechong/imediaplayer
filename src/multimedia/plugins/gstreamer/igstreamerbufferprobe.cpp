@@ -47,11 +47,11 @@ void iGstreamerBufferProbe::addProbeToPad(GstPad *pad, bool downstream)
                         : GST_PAD_PROBE_TYPE_EVENT_UPSTREAM,
                     capsProbe,
                     this,
-                    NULL);
+                    IX_NULLPTR);
     }
     if (m_flags & ProbeBuffers) {
         m_bufferProbeId = gst_pad_add_probe(
-                    pad, GST_PAD_PROBE_TYPE_BUFFER, bufferProbe, this, NULL);
+                    pad, GST_PAD_PROBE_TYPE_BUFFER, bufferProbe, this, IX_NULLPTR);
     }
     #else
     m_bufferProbeId = gst_pad_add_buffer_probe(pad, G_CALLBACK(bufferProbe), this);

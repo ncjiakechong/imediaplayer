@@ -407,67 +407,13 @@ GstCaps *iGstUtils::capsForAudioFormat(const iAudioFormat &format)
     #endif
 }
 
-
-#define MAX_BUFFER_DUMP_STRING_LEN  100
-
 static inline gchar * _gst_info_structure_to_string (const GstStructure * s)
 {
   if (G_LIKELY (s)) {
     gchar *str = gst_structure_to_string (s);
     return str;
   }
-  return NULL;
-}
-
-static inline gchar * _gst_info_describe_buffer (GstBuffer * buffer)
-{
-  const gchar *offset_str = "none";
-  const gchar *offset_end_str = "none";
-  gchar offset_buf[32], offset_end_buf[32];
-
-  if (GST_BUFFER_OFFSET_IS_VALID (buffer)) {
-    g_snprintf (offset_buf, sizeof (offset_buf), "%" G_GUINT64_FORMAT,
-        GST_BUFFER_OFFSET (buffer));
-    offset_str = offset_buf;
-  }
-  if (GST_BUFFER_OFFSET_END_IS_VALID (buffer)) {
-    g_snprintf (offset_end_buf, sizeof (offset_end_buf), "%" G_GUINT64_FORMAT,
-        GST_BUFFER_OFFSET_END (buffer));
-    offset_end_str = offset_end_buf;
-  }
-
-  return g_strdup_printf ("buffer: %p, pts %" GST_TIME_FORMAT ", dts %"
-      GST_TIME_FORMAT ", dur %" GST_TIME_FORMAT ", size %" G_GSIZE_FORMAT
-      ", offset %s, offset_end %s, flags 0x%x", buffer,
-      GST_TIME_ARGS (GST_BUFFER_PTS (buffer)),
-      GST_TIME_ARGS (GST_BUFFER_DTS (buffer)),
-      GST_TIME_ARGS (GST_BUFFER_DURATION (buffer)),
-      gst_buffer_get_size (buffer), offset_str, offset_end_str,
-      GST_BUFFER_FLAGS (buffer));
-}
-
-static inline gchar * _gst_info_describe_buffer_list (GstBufferList * list)
-{
-  GstClockTime pts = GST_CLOCK_TIME_NONE;
-  GstClockTime dts = GST_CLOCK_TIME_NONE;
-  gsize total_size = 0;
-  guint n, i;
-
-  n = gst_buffer_list_length (list);
-  for (i = 0; i < n; ++i) {
-    GstBuffer *buf = gst_buffer_list_get (list, i);
-
-    if (i == 0) {
-      pts = GST_BUFFER_PTS (buf);
-      dts = GST_BUFFER_DTS (buf);
-    }
-
-    total_size += gst_buffer_get_size (buf);
-  }
-
-  return g_strdup_printf ("bufferlist: %p, %u buffers, pts %" GST_TIME_FORMAT
-      ", dts %" GST_TIME_FORMAT ", size %" G_GSIZE_FORMAT, list, n,
-      GST_TIME_ARGS (pts), GST_TIME_ARGS (dts), total_size);
+  return IX_NULLPTR;
 }
 
 static inline gchar * _gst_info_describe_event (GstEvent * event)
@@ -511,7 +457,7 @@ static inline gchar * _gst_info_describe_query (GstQuery * query)
 
 static inline gchar * _gst_info_describe_stream (GstStream * stream)
 {
-  gchar *ret, *caps_str = NULL, *tags_str = NULL;
+  gchar *ret, *caps_str = IX_NULLPTR, *tags_str = IX_NULLPTR;
   GstCaps *caps;
   GstTagList *tags;
 
@@ -566,27 +512,8 @@ static inline gchar * _gst_info_describe_stream_collection (GstStreamCollection 
 static gchar * _gst_debug_print_object (GObject* object)
 {
   /* nicely printed object */
-  if (object == NULL) {
+  if (object == IX_NULLPTR) {
     return g_strdup ("(NULL)");
-  }
-  if (GST_IS_CAPS (object)) {
-    return gst_caps_to_string ((const GstCaps *) object);
-  }
-  if (GST_IS_STRUCTURE (object)) {
-    return _gst_info_structure_to_string ((const GstStructure *) object);
-  }
-  if (*(GType *) object == GST_TYPE_CAPS_FEATURES) {
-    return gst_caps_features_to_string ((const GstCapsFeatures *) object);
-  }
-  if (GST_IS_TAG_LIST (object)) {
-    gchar *str = gst_tag_list_to_string ((GstTagList *) object);
-    return str;
-  }
-  if (GST_IS_BUFFER (object)) {
-    return _gst_info_describe_buffer (GST_BUFFER_CAST (object));
-  }
-  if (GST_IS_BUFFER_LIST (object)) {
-    return _gst_info_describe_buffer_list (GST_BUFFER_LIST_CAST (object));
   }
   if (GST_IS_MESSAGE (object)) {
     return _gst_info_describe_message (GST_MESSAGE_CAST (object));
@@ -633,59 +560,32 @@ static gchar * _gst_debug_print_object (GObject* object)
   return g_strdup_printf ("%p", object);
 }
 
-static void printf_extension_log_func (GstDebugCategory* category,
+static void _printf_extension_log_func (GstDebugCategory* category,
             GstDebugLevel level, const gchar* file, const gchar* function, gint line, 
             GObject* object, GstDebugMessage* message, gpointer unused)
 {
     const gchar *dbg_msg;
     gchar *obj = IX_NULLPTR;
+    static const ilog_level_t ll_GST2iLog[GST_LEVEL_COUNT + 1] = {ILOG_VERBOSE, ILOG_ERROR, ILOG_WARN, ILOG_NOTICE, ILOG_INFO, ILOG_DEBUG,
+                                                                 ILOG_VERBOSE, ILOG_VERBOSE, ILOG_VERBOSE, ILOG_VERBOSE, ILOG_VERBOSE};
 
     dbg_msg = gst_debug_message_get (message);
     IX_ASSERT (dbg_msg != IX_NULLPTR);
 
-    if (object) {
+    if (level < GST_LEVEL_NONE || level > GST_LEVEL_COUNT) {
+        level = GST_LEVEL_NONE;
+    }
+
+    if (object != IX_NULLPTR) {
         obj = _gst_debug_print_object (object);
     } else {
         obj = (gchar *) "";
     }
 
-    switch (level)
-    {
-    case GST_LEVEL_ERROR:
-        iLogMeta("GST", ILOG_ERROR, object, " ", dbg_msg);
-        break;
-    
-    case GST_LEVEL_WARNING:
-        iLogMeta("GST", ILOG_WARN, object, " ", dbg_msg);
-        break;
+    iLogMeta(gst_debug_category_get_name (category), ll_GST2iLog[level], (const char*)file, (const char*)function, (int)line, object, " ", dbg_msg);
 
-    case GST_LEVEL_FIXME:
-        iLogMeta("GST", ILOG_NOTICE, object, " ", dbg_msg);
-        break;
-
-    case GST_LEVEL_INFO:
-        iLogMeta("GST", ILOG_INFO, object, " ", dbg_msg);
-        break;
-
-    case GST_LEVEL_DEBUG:
-    case GST_LEVEL_LOG:
-        iLogMeta("GST", ILOG_DEBUG, object, " ", dbg_msg);
-        break;
-
-    case GST_LEVEL_TRACE:
-    case GST_LEVEL_MEMDUMP:
-    default:
-        iLogMeta("GST", ILOG_VERBOSE, object, " ", dbg_msg);
-        break;
-    }
-
-    if (object != NULL)
+    if (object != IX_NULLPTR)
         g_free (obj);
-
-    /* quick hack to still get stuff to show if GST_DEBUG is set */
-    if (g_getenv ("GST_DEBUG")) {
-       gst_debug_log_default (category, level, file, function, line, object, message, unused);
-    }
 }
 
 void iGstUtils::initializeGst()
@@ -697,8 +597,10 @@ void iGstUtils::initializeGst()
 
         /* set up our own log function to make sure the code in gstinfo is actually
         * executed without GST_DEBUG being set or it being output to stdout */
-        gst_debug_remove_log_function (gst_debug_log_default);
-        gst_debug_add_log_function (printf_extension_log_func, NULL, NULL);
+        if (!g_getenv ("GST_DEBUG")) {
+            gst_debug_remove_log_function (gst_debug_log_default);
+        }
+        gst_debug_add_log_function (_printf_extension_log_func, IX_NULLPTR, IX_NULLPTR);
 
         gst_debug_set_threshold_from_string("2,GST_TRACER:7", FALSE);
     }

@@ -18,7 +18,7 @@
 
 #include "kernel/itimerinfo.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -251,7 +251,7 @@ int iTimerInfoList::timerRemainingTime(int timerId)
         }
     }
 
-    ilog_warn(__FUNCTION__, ": timer id %i not found", timerId);
+    ilog_warn("timer id %i not found", timerId);
     return -1;
 }
 

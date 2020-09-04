@@ -19,7 +19,7 @@
 #include <windows.h>
 #include <process.h>
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -67,7 +67,7 @@ public:
 protected:
     void run() {
         // this function should never be called
-        ilog_error(__FUNCTION__, ": Internal error, this implementation should never be called.");
+        ilog_error("Internal error, this implementation should never be called.");
     }
 };
 
@@ -285,7 +285,7 @@ void iThreadImpl::setPriority()
     }
 
     if (!SetThreadPriority(m_platform, prio)) {
-        ilog_warn(__FUNCTION__, ": Failed to set thread priority");
+        ilog_warn("Failed to set thread priority");
     }
 }
 
@@ -354,12 +354,12 @@ bool iThreadImpl::start()
     m_thread->m_data->threadHd = (xintptr)m_platform;
 
     if (!m_platform) {
-        ilog_warn(__FUNCTION__, ": Failed to create thread");
+        ilog_warn("Failed to create thread");
         return false;
     }
 
     if (ResumeThread(m_platform) == (DWORD) -1) {
-        ilog_warn(__FUNCTION__, ":: Failed to resume new thread");
+        ilog_warn("Failed to resume new thread");
     }
 
     return true;

@@ -20,7 +20,7 @@
 #include "core/io/ilog.h"
 #include "core/global/iglobalstatic.h"
 
-#define ILOG_TAG "ix:utils"
+#define ILOG_TAG "ix_utils"
 
 namespace iShell {
 
@@ -435,7 +435,7 @@ bool ix_splitLocaleName(const iString &name, iString &lang, iString &script, iSt
             break;
         case NoState:
             // shouldn't happen
-            ilog_warn(__FUNCTION__, ": This should never happen");
+            ilog_warn("This should never happen");
             break;
         }
         ++i;

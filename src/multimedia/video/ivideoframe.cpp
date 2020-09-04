@@ -14,7 +14,7 @@
 
 #include "core/io/ilog.h"
 
-#define ILOG_TAG "ix:media"
+#define ILOG_TAG "ix_media"
 
 namespace iShell {
 
@@ -637,7 +637,7 @@ void iVideoFrame::unmap()
         return;
 
     if (d->mappedCount == 0) {
-        ilog_warn(__FUNCTION__, ": was called more times then iVideoFrame::map()");
+        ilog_warn("was called more times then iVideoFrame::map()");
         return;
     }
 
