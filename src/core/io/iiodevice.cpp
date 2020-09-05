@@ -10,16 +10,19 @@
 /////////////////////////////////////////////////////////////////
 
 #include "core/io/iiodevice.h"
-#include "io/iiodevice_p.h"
 #include "utils/itools_p.h"
+#include "utils/iringbuffer.h"
 #include "core/io/ilog.h"
 
 #define ILOG_TAG "ix_io"
 
 namespace iShell {
 
-
 #define IX_VOID
+
+#ifndef IIODEVICE_BUFFERSIZE
+#define IIODEVICE_BUFFERSIZE 16384
+#endif
 
 #define CHECK_MAXLEN(function, returnType) \
     do { \
@@ -39,8 +42,8 @@ namespace iShell {
 
 #define CHECK_WRITABLE(function, returnType) \
    do { \
-       if ((d_ptr->openMode & WriteOnly) == 0) { \
-           if (d_ptr->openMode == NotOpen) { \
+       if ((m_openMode & WriteOnly) == 0) { \
+           if (m_openMode == NotOpen) { \
                ilog_warn(#function, "device not open"); \
                return returnType; \
            } \
@@ -51,8 +54,8 @@ namespace iShell {
 
 #define CHECK_READABLE(function, returnType) \
    do { \
-       if ((d_ptr->openMode & ReadOnly) == 0) { \
-           if (d_ptr->openMode == NotOpen) { \
+       if ((m_openMode & ReadOnly) == 0) { \
+           if (m_openMode == NotOpen) { \
                ilog_warn(#function, "device not open"); \
                return returnType; \
            } \
@@ -60,33 +63,6 @@ namespace iShell {
            return returnType; \
        } \
    } while (0)
-
-/*!
-    \internal
- */
-iIODevicePrivate::iIODevicePrivate()
-    : openMode(iIODevice::NotOpen),
-      pos(0), devicePos(0),
-      readChannelCount(0),
-      writeChannelCount(0),
-      currentReadChannel(0),
-      currentWriteChannel(0),
-      readBufferChunkSize(IIODEVICE_BUFFERSIZE),
-      writeBufferChunkSize(0),
-      transactionPos(0),
-      transactionStarted(false),
-      baseReadLineDataCalled(false),
-      accessMode(Unset),
-      q_ptr(IX_NULLPTR)
-{
-}
-
-/*!
-    \internal
- */
-iIODevicePrivate::~iIODevicePrivate()
-{
-}
 
 /*!
     \class iIODevice
@@ -344,15 +320,109 @@ iIODevicePrivate::~iIODevicePrivate()
 
     \sa atEnd(), read()
 */
+iIODevice::iRingBufferRef::iRingBufferRef() : m_buf(IX_NULLPTR) 
+{}
 
+iIODevice::iRingBufferRef::~iRingBufferRef() 
+{}
+
+void iIODevice::iRingBufferRef::setChunkSize(int size) 
+{ IX_ASSERT(m_buf); m_buf->setChunkSize(size); }
+
+int iIODevice::iRingBufferRef::chunkSize() const 
+{ IX_ASSERT(m_buf); return m_buf->chunkSize(); }
+
+xint64 iIODevice::iRingBufferRef::nextDataBlockSize() const 
+{ return (m_buf ? m_buf->nextDataBlockSize() : IX_INT64_C(0)); }
+
+const char * iIODevice::iRingBufferRef::readPointer() const 
+{ return (m_buf ? m_buf->readPointer() : IX_NULLPTR); }
+
+const char * iIODevice::iRingBufferRef::readPointerAtPosition(xint64 pos, xint64 &length) const 
+{ IX_ASSERT(m_buf); return m_buf->readPointerAtPosition(pos, length); }
+
+void iIODevice::iRingBufferRef::free(xint64 bytes) 
+{ IX_ASSERT(m_buf); m_buf->free(bytes); }
+
+char * iIODevice::iRingBufferRef::reserve(xint64 bytes) 
+{ IX_ASSERT(m_buf); return m_buf->reserve(bytes); }
+
+char * iIODevice::iRingBufferRef::reserveFront(xint64 bytes) 
+{ IX_ASSERT(m_buf); return m_buf->reserveFront(bytes); }
+
+void iIODevice::iRingBufferRef::truncate(xint64 pos) 
+{ IX_ASSERT(m_buf); m_buf->truncate(pos); }
+
+void iIODevice::iRingBufferRef::chop(xint64 bytes) 
+{ IX_ASSERT(m_buf); m_buf->chop(bytes); }
+
+bool iIODevice::iRingBufferRef::isEmpty() const 
+{ return !m_buf || m_buf->isEmpty(); }
+
+int iIODevice::iRingBufferRef::getChar() 
+{ return (m_buf ? m_buf->getChar() : -1); }
+
+void iIODevice::iRingBufferRef::putChar(char c) 
+{ IX_ASSERT(m_buf); m_buf->putChar(c); }
+
+void iIODevice::iRingBufferRef::ungetChar(char c) 
+{ IX_ASSERT(m_buf); m_buf->ungetChar(c); }
+
+xint64 iIODevice::iRingBufferRef::size() const 
+{ return (m_buf ? m_buf->size() : IX_INT64_C(0)); }
+
+void iIODevice::iRingBufferRef::clear() 
+{ if (m_buf) m_buf->clear(); }
+
+xint64 iIODevice::iRingBufferRef::indexOf(char c) const 
+{ return (m_buf ? m_buf->indexOf(c, m_buf->size()) : IX_INT64_C(-1)); }
+
+xint64 iIODevice::iRingBufferRef::indexOf(char c, xint64 maxLength, xint64 pos) const 
+{ return (m_buf ? m_buf->indexOf(c, maxLength, pos) : IX_INT64_C(-1)); }
+
+xint64 iIODevice::iRingBufferRef::read(char *data, xint64 maxLength) 
+{ return (m_buf ? m_buf->read(data, maxLength) : IX_INT64_C(0)); }
+
+iByteArray iIODevice::iRingBufferRef::read() 
+{ return (m_buf ? m_buf->read() : iByteArray()); }
+
+xint64 iIODevice::iRingBufferRef::peek(char *data, xint64 maxLength, xint64 pos) const 
+{ return (m_buf ? m_buf->peek(data, maxLength, pos) : IX_INT64_C(0)); }
+
+void iIODevice::iRingBufferRef::append(const char *data, xint64 size) 
+{ IX_ASSERT(m_buf); m_buf->append(data, size); }
+
+void iIODevice::iRingBufferRef::append(const iByteArray &qba) 
+{ IX_ASSERT(m_buf); m_buf->append(qba); }
+
+xint64 iIODevice::iRingBufferRef::skip(xint64 length) 
+{ return (m_buf ? m_buf->skip(length) : IX_INT64_C(0)); }
+
+xint64 iIODevice::iRingBufferRef::readLine(char *data, xint64 maxLength) 
+{ return (m_buf ? m_buf->readLine(data, maxLength) : IX_INT64_C(-1)); }
+
+bool iIODevice::iRingBufferRef::canReadLine() const 
+{ return m_buf && m_buf->canReadLine(); }
+        
 /*!
     Constructs a iIODevice object.
 */
 
 iIODevice::iIODevice()
-    : d_ptr(new iIODevicePrivate)
+    : m_openMode(iIODevice::NotOpen)
+    , m_pos(0)
+    , m_devicePos(0)
+    , m_readChannelCount(0)
+    , m_writeChannelCount(0)
+    , m_currentReadChannel(0)
+    , m_currentWriteChannel(0)
+    , m_readBufferChunkSize(IIODEVICE_BUFFERSIZE)
+    , m_writeBufferChunkSize(0)
+    , m_transactionPos(0)
+    , m_transactionStarted(false)
+    , m_baseReadLineDataCalled(false)
+    , m_accessMode(Unset)
 {
-    d_ptr->q_ptr = this;
 }
 
 /*!
@@ -361,9 +431,20 @@ iIODevice::iIODevice()
 
 iIODevice::iIODevice(iObject *parent)
     : iObject(parent)
-    , d_ptr(new iIODevicePrivate)
+    , m_openMode(iIODevice::NotOpen)
+    , m_pos(0)
+    , m_devicePos(0)
+    , m_readChannelCount(0)
+    , m_writeChannelCount(0)
+    , m_currentReadChannel(0)
+    , m_currentWriteChannel(0)
+    , m_readBufferChunkSize(IIODEVICE_BUFFERSIZE)
+    , m_writeBufferChunkSize(0)
+    , m_transactionPos(0)
+    , m_transactionStarted(false)
+    , m_baseReadLineDataCalled(false)
+    , m_accessMode(Unset)
 {
-    d_ptr->q_ptr = this;
 }
 
 
@@ -408,7 +489,7 @@ bool iIODevice::isSequential() const
 */
 iIODevice::OpenMode iIODevice::openMode() const
 {
-    return d_ptr->openMode;
+    return m_openMode;
 }
 
 /*!
@@ -420,10 +501,10 @@ iIODevice::OpenMode iIODevice::openMode() const
 */
 void iIODevice::setOpenMode(OpenMode openMode)
 {
-    d_ptr->openMode = openMode;
-    d_ptr->accessMode = iIODevicePrivate::Unset;
-    d_ptr->setReadChannelCount(isReadable() ? std::max(d_ptr->readChannelCount, 1) : 0);
-    d_ptr->setWriteChannelCount(isWritable() ? std::max(d_ptr->writeChannelCount, 1) : 0);
+    m_openMode = openMode;
+    m_accessMode = iIODevice::Unset;
+    setReadChannelCount(isReadable() ? std::max(m_readChannelCount, 1) : 0);
+    setWriteChannelCount(isWritable() ? std::max(m_writeChannelCount, 1) : 0);
 }
 
 /*!
@@ -442,9 +523,9 @@ void iIODevice::setTextModeEnabled(bool enabled)
         return;
     }
     if (enabled)
-        d_ptr->openMode |= Text;
+        m_openMode |= Text;
     else
-        d_ptr->openMode &= ~Text;
+        m_openMode &= ~Text;
 }
 
 /*!
@@ -454,7 +535,7 @@ void iIODevice::setTextModeEnabled(bool enabled)
 */
 bool iIODevice::isTextModeEnabled() const
 {
-    return d_ptr->openMode & Text;
+    return m_openMode & Text;
 }
 
 /*!
@@ -467,7 +548,7 @@ bool iIODevice::isTextModeEnabled() const
 */
 bool iIODevice::isOpen() const
 {
-    return d_ptr->openMode != NotOpen;
+    return m_openMode != NotOpen;
 }
 
 /*!
@@ -508,7 +589,7 @@ bool iIODevice::isWritable() const
 */
 int iIODevice::readChannelCount() const
 {
-    return d_ptr->readChannelCount;
+    return m_readChannelCount;
 }
 
 /*!
@@ -521,7 +602,7 @@ int iIODevice::readChannelCount() const
 */
 int iIODevice::writeChannelCount() const
 {
-    return d_ptr->writeChannelCount;
+    return m_writeChannelCount;
 }
 
 /*!
@@ -533,7 +614,7 @@ int iIODevice::writeChannelCount() const
 */
 int iIODevice::currentReadChannel() const
 {
-    return d_ptr->currentReadChannel;
+    return m_currentReadChannel;
 }
 
 /*!
@@ -548,27 +629,28 @@ int iIODevice::currentReadChannel() const
 */
 void iIODevice::setCurrentReadChannel(int channel)
 {
-    if (d_ptr->transactionStarted) {
+    if (m_transactionStarted) {
         ilog_warn(this, " Failed due to read transaction being in progress");
         return;
     }
 
-    d_ptr->setCurrentReadChannel(channel);
+    m_buffer.m_buf = (channel < int(m_readBuffers.size()) ? &m_readBuffers[size_t(channel)] : IX_NULLPTR);
+    m_currentReadChannel = channel;
 }
 
 /*!
     \internal
 */
-void iIODevicePrivate::setReadChannelCount(int count)
+void iIODevice::setReadChannelCount(int count)
 {
-    if (count > readBuffers.size()) {
-        readBuffers.insert(readBuffers.end(), count - readBuffers.size(),
-                           IRingBuffer(readBufferChunkSize));
+    if (count > m_readBuffers.size()) {
+        m_readBuffers.insert(m_readBuffers.end(), count - m_readBuffers.size(),
+                           IRingBuffer(m_readBufferChunkSize));
     } else {
-        readBuffers.resize(count);
+        m_readBuffers.resize(count);
     }
-    readChannelCount = count;
-    setCurrentReadChannel(currentReadChannel);
+    m_readChannelCount = count;
+    setCurrentReadChannel(m_currentReadChannel);
 }
 
 /*!
@@ -580,7 +662,7 @@ void iIODevicePrivate::setReadChannelCount(int count)
 */
 int iIODevice::currentWriteChannel() const
 {
-    return d_ptr->currentWriteChannel;
+    return m_currentWriteChannel;
 }
 
 /*!
@@ -595,34 +677,41 @@ int iIODevice::currentWriteChannel() const
 */
 void iIODevice::setCurrentWriteChannel(int channel)
 {
-    d_ptr->setCurrentWriteChannel(channel);
+    m_writeBuffer.m_buf = (channel < int(m_writeBuffers.size()) ? &m_writeBuffers[size_t(channel)] : IX_NULLPTR);
+    m_currentWriteChannel = channel;
 }
 
 /*!
     \internal
 */
-void iIODevicePrivate::setWriteChannelCount(int count)
+void iIODevice::setWriteChannelCount(int count)
 {
-    if (count > writeBuffers.size()) {
+    if (count > m_writeBuffers.size()) {
         // If writeBufferChunkSize is zero (default value), we don't use
         // iIODevice's write buffers.
-        if (writeBufferChunkSize != 0) {
-            writeBuffers.insert(writeBuffers.end(), count - writeBuffers.size(),
-                                IRingBuffer(writeBufferChunkSize));
+        if (m_writeBufferChunkSize != 0) {
+            m_writeBuffers.insert(m_writeBuffers.end(), count - m_writeBuffers.size(),
+                                IRingBuffer(m_writeBufferChunkSize));
         }
     } else {
-        writeBuffers.resize(count);
+        m_writeBuffers.resize(count);
     }
-    writeChannelCount = count;
-    setCurrentWriteChannel(currentWriteChannel);
+    m_writeChannelCount = count;
+    setCurrentWriteChannel(m_currentWriteChannel);
+}
+
+bool iIODevice::isBufferEmpty() const
+{
+    return m_buffer.isEmpty() || (m_transactionStarted && isSequential4Mode()
+                                && m_transactionPos == m_buffer.size());
 }
 
 /*!
     \internal
 */
-bool iIODevicePrivate::allWriteBuffersEmpty() const
+bool iIODevice::allWriteBuffersEmpty() const
 {
-    for (const IRingBuffer &ringBuffer : writeBuffers) {
+    for (const IRingBuffer &ringBuffer : m_writeBuffers) {
         if (!ringBuffer.isEmpty())
             return false;
     }
@@ -638,14 +727,14 @@ bool iIODevicePrivate::allWriteBuffersEmpty() const
 */
 bool iIODevice::open(OpenMode mode)
 {
-    d_ptr->openMode = mode;
-    d_ptr->pos = (mode & Append) ? size() : xint64(0);
-    d_ptr->accessMode = iIODevicePrivate::Unset;
-    d_ptr->readBuffers.clear();
-    d_ptr->writeBuffers.clear();
-    d_ptr->setReadChannelCount(isReadable() ? 1 : 0);
-    d_ptr->setWriteChannelCount(isWritable() ? 1 : 0);
-    d_ptr->errorString.clear();
+    m_openMode = mode;
+    m_pos = (mode & Append) ? size() : xint64(0);
+    m_accessMode = iIODevice::Unset;
+    m_readBuffers.clear();
+    m_writeBuffers.clear();
+    setReadChannelCount(isReadable() ? 1 : 0);
+    setWriteChannelCount(isWritable() ? 1 : 0);
+    m_errorString.clear();
 
     return true;
 }
@@ -658,18 +747,18 @@ bool iIODevice::open(OpenMode mode)
 */
 void iIODevice::close()
 {
-    if (d_ptr->openMode == NotOpen)
+    if (m_openMode == NotOpen)
         return;
 
     IEMIT aboutToClose();
 
-    d_ptr->openMode = NotOpen;
-    d_ptr->pos = 0;
-    d_ptr->transactionStarted = false;
-    d_ptr->transactionPos = 0;
-    d_ptr->setReadChannelCount(0);
+    m_openMode = NotOpen;
+    m_pos = 0;
+    m_transactionStarted = false;
+    m_transactionPos = 0;
+    setReadChannelCount(0);
     // Do not clear write buffers to allow delayed close in sockets
-    d_ptr->writeChannelCount = 0;
+    m_writeChannelCount = 0;
 }
 
 /*!
@@ -687,7 +776,7 @@ void iIODevice::close()
 */
 xint64 iIODevice::pos() const
 {
-    return d_ptr->pos;
+    return m_pos;
 }
 
 /*!
@@ -701,7 +790,7 @@ xint64 iIODevice::pos() const
 */
 xint64 iIODevice::size() const
 {
-    return d_ptr->isSequential() ?  bytesAvailable() : xint64(0);
+    return isSequential4Mode() ?  bytesAvailable() : xint64(0);
 }
 
 /*!
@@ -718,11 +807,11 @@ xint64 iIODevice::size() const
 */
 bool iIODevice::seek(xint64 pos)
 {
-    if (d_ptr->isSequential()) {
+    if (isSequential4Mode()) {
         ilog_warn("Cannot call seek on a sequential device");
         return false;
     }
-    if (d_ptr->openMode == NotOpen) {
+    if (m_openMode == NotOpen) {
         ilog_warn("The device is not open");
         return false;
     }
@@ -731,8 +820,8 @@ bool iIODevice::seek(xint64 pos)
         return false;
     }
 
-    d_ptr->devicePos = pos;
-    d_ptr->seekBuffer(pos);
+    m_devicePos = pos;
+    seekBuffer(pos);
 
     return true;
 }
@@ -740,18 +829,18 @@ bool iIODevice::seek(xint64 pos)
 /*!
     \internal
 */
-void iIODevicePrivate::seekBuffer(xint64 newPos)
+void iIODevice::seekBuffer(xint64 newPos)
 {
-    const xint64 offset = newPos - pos;
-    pos = newPos;
+    const xint64 offset = newPos - m_pos;
+    m_pos = newPos;
 
-    if (offset < 0 || offset >= buffer.size()) {
+    if (offset < 0 || offset >= m_buffer.size()) {
         // When seeking backwards, an operation that is only allowed for
         // random-access devices, the buffer is cleared. The next read
         // operation will then refill the buffer.
-        buffer.clear();
+        m_buffer.clear();
     } else {
-        buffer.free(offset);
+        m_buffer.free(offset);
     }
 }
 
@@ -769,7 +858,7 @@ void iIODevicePrivate::seekBuffer(xint64 newPos)
 */
 bool iIODevice::atEnd() const
 {
-    const bool result = (d_ptr->openMode == NotOpen || (d_ptr->isBufferEmpty()
+    const bool result = (m_openMode == NotOpen || (isBufferEmpty()
                                                     && bytesAvailable() == 0));
     return result;
 }
@@ -804,9 +893,9 @@ bool iIODevice::reset()
 */
 xint64 iIODevice::bytesAvailable() const
 {
-    if (!d_ptr->isSequential())
-        return std::max(size() - d_ptr->pos, xint64(0));
-    return d_ptr->buffer.size() - d_ptr->transactionPos;
+    if (!isSequential4Mode())
+        return std::max(size() - m_pos, xint64(0));
+    return m_buffer.size() - m_transactionPos;
 }
 
 /*!  For buffered devices, this function returns the number of bytes
@@ -820,7 +909,7 @@ xint64 iIODevice::bytesAvailable() const
 */
 xint64 iIODevice::bytesToWrite() const
 {
-    return d_ptr->writeBuffer.size();
+    return m_writeBuffer.size();
 }
 
 /*!
@@ -838,21 +927,21 @@ xint64 iIODevice::bytesToWrite() const
 */
 xint64 iIODevice::read(char *data, xint64 maxSize)
 {
-    const bool sequential = d_ptr->isSequential();
+    const bool sequential = isSequential4Mode();
 
     // Short-cut for getChar(), unless we need to keep the data in the buffer.
-    if (maxSize == 1 && !(sequential && d_ptr->transactionStarted)) {
+    if (maxSize == 1 && !(sequential && m_transactionStarted)) {
         int chint;
-        while ((chint = d_ptr->buffer.getChar()) != -1) {
+        while ((chint = m_buffer.getChar()) != -1) {
             if (!sequential)
-                ++d_ptr->pos;
+                ++m_pos;
 
             char c = char(uchar(chint));
-            if (c == '\r' && (d_ptr->openMode & Text))
+            if (c == '\r' && (m_openMode & Text))
                 continue;
             *data = c;
 
-            if (d_ptr->buffer.isEmpty())
+            if (m_buffer.isEmpty())
                 readData(data, 0);
             return xint64(1);
         }
@@ -861,7 +950,7 @@ xint64 iIODevice::read(char *data, xint64 maxSize)
     CHECK_MAXLEN(read, xint64(-1));
     CHECK_READABLE(read, xint64(-1));
 
-    const xint64 readBytes = d_ptr->read(data, maxSize);
+    const xint64 readBytes = readImpl(data, maxSize);
 
     return readBytes;
 }
@@ -869,28 +958,28 @@ xint64 iIODevice::read(char *data, xint64 maxSize)
 /*!
     \internal
 */
-xint64 iIODevicePrivate::read(char *data, xint64 maxSize, bool peeking)
+xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
 {
-    const bool buffered = (openMode & iIODevice::Unbuffered) == 0;
-    const bool sequential = isSequential();
+    const bool buffered = (m_openMode & iIODevice::Unbuffered) == 0;
+    const bool sequential = isSequential4Mode();
     const bool keepDataInBuffer = sequential
-                                  ? peeking || transactionStarted
+                                  ? peeking || m_transactionStarted
                                   : peeking && buffered;
-    const xint64 savedPos = pos;
+    const xint64 savedPos = m_pos;
     xint64 readSoFar = 0;
     bool madeBufferReadsOnly = true;
     bool deviceAtEof = false;
     char *readPtr = data;
-    xint64 bufferPos = (sequential && transactionStarted) ? transactionPos : IX_INT64_C(0);
+    xint64 bufferPos = (sequential && m_transactionStarted) ? m_transactionPos : IX_INT64_C(0);
     while (true) {
         // Try reading from the buffer.
         xint64 bufferReadChunkSize = keepDataInBuffer
-                                     ? buffer.peek(data, maxSize, bufferPos)
-                                     : buffer.read(data, maxSize);
+                                     ? m_buffer.peek(data, maxSize, bufferPos)
+                                     : m_buffer.read(data, maxSize);
         if (bufferReadChunkSize > 0) {
             bufferPos += bufferReadChunkSize;
             if (!sequential)
-                pos += bufferReadChunkSize;
+                m_pos += bufferReadChunkSize;
 
             readSoFar += bufferReadChunkSize;
             data += bufferReadChunkSize;
@@ -900,11 +989,11 @@ xint64 iIODevicePrivate::read(char *data, xint64 maxSize, bool peeking)
         if (maxSize > 0 && !deviceAtEof) {
             xint64 readFromDevice = 0;
             // Make sure the device is positioned correctly.
-            if (sequential || pos == devicePos || q_ptr->seek(pos)) {
+            if (sequential || m_pos == m_devicePos || seek(m_pos)) {
                 madeBufferReadsOnly = false; // fix readData attempt
-                if ((!buffered || maxSize >= readBufferChunkSize) && !keepDataInBuffer) {
+                if ((!buffered || maxSize >= m_readBufferChunkSize) && !keepDataInBuffer) {
                     // Read big chunk directly to output buffer
-                    readFromDevice = q_ptr->readData(data, maxSize);
+                    readFromDevice = readData(data, maxSize);
                     deviceAtEof = (readFromDevice != maxSize);
 
                     if (readFromDevice > 0) {
@@ -912,22 +1001,22 @@ xint64 iIODevicePrivate::read(char *data, xint64 maxSize, bool peeking)
                         data += readFromDevice;
                         maxSize -= readFromDevice;
                         if (!sequential) {
-                            pos += readFromDevice;
-                            devicePos += readFromDevice;
+                            m_pos += readFromDevice;
+                            m_devicePos += readFromDevice;
                         }
                     }
                 } else {
                     // Do not read more than maxSize on unbuffered devices
-                    const xint64 bytesToBuffer = (buffered || readBufferChunkSize < maxSize)
-                            ? xint64(readBufferChunkSize)
+                    const xint64 bytesToBuffer = (buffered || m_readBufferChunkSize < maxSize)
+                            ? xint64(m_readBufferChunkSize)
                             : maxSize;
                     // Try to fill iIODevice buffer by single read
-                    readFromDevice = q_ptr->readData(buffer.reserve(bytesToBuffer), bytesToBuffer);
+                    readFromDevice = readData(m_buffer.reserve(bytesToBuffer), bytesToBuffer);
                     deviceAtEof = (readFromDevice != bytesToBuffer);
-                    buffer.chop(bytesToBuffer - std::max(IX_INT64_C(0), readFromDevice));
+                    m_buffer.chop(bytesToBuffer - std::max(IX_INT64_C(0), readFromDevice));
                     if (readFromDevice > 0) {
                         if (!sequential)
-                            devicePos += readFromDevice;
+                            m_devicePos += readFromDevice;
 
                         continue;
                     }
@@ -942,7 +1031,7 @@ xint64 iIODevicePrivate::read(char *data, xint64 maxSize, bool peeking)
             }
         }
 
-        if ((openMode & iIODevice::Text) && readPtr < data) {
+        if ((m_openMode & iIODevice::Text) && readPtr < data) {
             const char *endPtr = data;
 
             // optimization to avoid initial self-assignment
@@ -977,15 +1066,15 @@ xint64 iIODevicePrivate::read(char *data, xint64 maxSize, bool peeking)
     // Restore positions after reading
     if (keepDataInBuffer) {
         if (peeking)
-            pos = savedPos; // does nothing on sequential devices
+            m_pos = savedPos; // does nothing on sequential devices
         else
-            transactionPos = bufferPos;
+            m_transactionPos = bufferPos;
     } else if (peeking) {
         seekBuffer(savedPos); // unbuffered random-access device
     }
 
     if (madeBufferReadsOnly && isBufferEmpty())
-        q_ptr->readData(data, 0);
+        readData(data, 0);
 
     return readSoFar;
 }
@@ -1007,12 +1096,12 @@ iByteArray iIODevice::read(xint64 maxSize)
 
     // Try to prevent the data from being copied, if we have a chunk
     // with the same size in the read buffer.
-    if (maxSize == d_ptr->buffer.nextDataBlockSize() && !d_ptr->transactionStarted
-        && (d_ptr->openMode & (iIODevice::ReadOnly | iIODevice::Text)) == iIODevice::ReadOnly) {
-        result = d_ptr->buffer.read();
-        if (!d_ptr->isSequential())
-            d_ptr->pos += maxSize;
-        if (d_ptr->buffer.isEmpty())
+    if (maxSize == m_buffer.nextDataBlockSize() && !m_transactionStarted
+        && (m_openMode & (iIODevice::ReadOnly | iIODevice::Text)) == iIODevice::ReadOnly) {
+        result = m_buffer.read();
+        if (!isSequential4Mode())
+            m_pos += maxSize;
+        if (m_buffer.isEmpty())
             readData(IX_NULLPTR, 0);
         return result;
     }
@@ -1042,12 +1131,12 @@ iByteArray iIODevice::read(xint64 maxSize)
 iByteArray iIODevice::readAll()
 {
     iByteArray result;
-    xint64 readBytes = (d_ptr->isSequential() ? IX_INT64_C(0) : size());
+    xint64 readBytes = (isSequential4Mode() ? IX_INT64_C(0) : size());
     if (readBytes == 0) {
         // Size is unknown, read incrementally.
-        xint64 readChunkSize = std::max(xint64(d_ptr->readBufferChunkSize),
-                                    d_ptr->isSequential() ? (d_ptr->buffer.size() - d_ptr->transactionPos)
-                                                      : d_ptr->buffer.size());
+        xint64 readChunkSize = std::max(xint64(m_readBufferChunkSize),
+                                    isSequential4Mode() ? (m_buffer.size() - m_transactionPos)
+                                                      : m_buffer.size());
         xint64 readResult;
         do {
             if (readBytes + readChunkSize >= MaxByteArraySize) {
@@ -1058,13 +1147,13 @@ iByteArray iIODevice::readAll()
             readResult = read(result.data() + readBytes, readChunkSize);
             if (readResult > 0 || readBytes == 0) {
                 readBytes += readResult;
-                readChunkSize = d_ptr->readBufferChunkSize;
+                readChunkSize = m_readBufferChunkSize;
             }
         } while (readResult > 0);
     } else {
         // Read it all in one go.
         // If resize fails, don't read anything.
-        readBytes -= d_ptr->pos;
+        readBytes -= m_pos;
         if (readBytes >= MaxByteArraySize)
             return iByteArray();
         result.resize(readBytes);
@@ -1125,32 +1214,32 @@ xint64 iIODevice::readLine(char *data, xint64 maxSize)
     // Leave room for a '\0'
     --maxSize;
 
-    const bool sequential = d_ptr->isSequential();
-    const bool keepDataInBuffer = sequential && d_ptr->transactionStarted;
+    const bool sequential = isSequential4Mode();
+    const bool keepDataInBuffer = sequential && m_transactionStarted;
 
     xint64 readSoFar = 0;
     if (keepDataInBuffer) {
-        if (d_ptr->transactionPos < d_ptr->buffer.size()) {
+        if (m_transactionPos < m_buffer.size()) {
             // Peek line from the specified position
-            const xint64 i = d_ptr->buffer.indexOf('\n', maxSize, d_ptr->transactionPos);
-            readSoFar = d_ptr->buffer.peek(data, i >= 0 ? (i - d_ptr->transactionPos + 1) : maxSize,
-                                       d_ptr->transactionPos);
-            d_ptr->transactionPos += readSoFar;
-            if (d_ptr->transactionPos == d_ptr->buffer.size())
+            const xint64 i = m_buffer.indexOf('\n', maxSize, m_transactionPos);
+            readSoFar = m_buffer.peek(data, i >= 0 ? (i - m_transactionPos + 1) : maxSize,
+                                       m_transactionPos);
+            m_transactionPos += readSoFar;
+            if (m_transactionPos == m_buffer.size())
                 readData(data, 0);
         }
-    } else if (!d_ptr->buffer.isEmpty()) {
+    } else if (!m_buffer.isEmpty()) {
         // IRingBuffer::readLine() terminates the line with '\0'
-        readSoFar = d_ptr->buffer.readLine(data, maxSize + 1);
-        if (d_ptr->buffer.isEmpty())
+        readSoFar = m_buffer.readLine(data, maxSize + 1);
+        if (m_buffer.isEmpty())
             readData(data,0);
         if (!sequential)
-            d_ptr->pos += readSoFar;
+            m_pos += readSoFar;
     }
 
     if (readSoFar) {
         if (data[readSoFar - 1] == '\n') {
-            if (d_ptr->openMode & Text) {
+            if (m_openMode & Text) {
                 // IRingBuffer::readLine() isn't Text aware.
                 if (readSoFar > 1 && data[readSoFar - 2] == '\r') {
                     --readSoFar;
@@ -1162,9 +1251,9 @@ xint64 iIODevice::readLine(char *data, xint64 maxSize)
         }
     }
 
-    if (d_ptr->pos != d_ptr->devicePos && !sequential && !seek(d_ptr->pos))
+    if (m_pos != m_devicePos && !sequential && !seek(m_pos))
         return xint64(-1);
-    d_ptr->baseReadLineDataCalled = false;
+    m_baseReadLineDataCalled = false;
     // Force base implementation for transaction on sequential device
     // as it stores the data in internal buffer automatically.
     xint64 readBytes = keepDataInBuffer
@@ -1176,15 +1265,15 @@ xint64 iIODevice::readLine(char *data, xint64 maxSize)
         return readSoFar ? readSoFar : -1;
     }
     readSoFar += readBytes;
-    if (!d_ptr->baseReadLineDataCalled && !sequential) {
-        d_ptr->pos += readBytes;
+    if (!m_baseReadLineDataCalled && !sequential) {
+        m_pos += readBytes;
         // If the base implementation was not called, then we must
         // assume the device position is invalid and force a seek.
-        d_ptr->devicePos = xint64(-1);
+        m_devicePos = xint64(-1);
     }
     data[readSoFar] = '\0';
 
-    if (d_ptr->openMode & Text) {
+    if (m_openMode & Text) {
         if (readSoFar > 1 && data[readSoFar - 1] == '\n' && data[readSoFar - 2] == '\r') {
             data[readSoFar - 2] = '\n';
             data[readSoFar - 1] = '\0';
@@ -1224,11 +1313,11 @@ iByteArray iIODevice::readLine(xint64 maxSize)
 
         xint64 readResult;
         do {
-            result.resize(int(std::min(maxSize, xint64(result.size() + d_ptr->readBufferChunkSize))));
+            result.resize(int(std::min(maxSize, xint64(result.size() + m_readBufferChunkSize))));
             readResult = readLine(result.data() + readBytes, result.size() - readBytes);
             if (readResult > 0 || readBytes == 0)
                 readBytes += readResult;
-        } while (readResult == d_ptr->readBufferChunkSize
+        } while (readResult == m_readBufferChunkSize
                 && result[int(readBytes - 1)] != '\n');
     } else
         readBytes = readLine(result.data(), result.size());
@@ -1263,7 +1352,7 @@ xint64 iIODevice::readLineData(char *data, xint64 maxSize)
     xint64 readSoFar = 0;
     char c;
     int lastReadReturn = 0;
-    d_ptr->baseReadLineDataCalled = true;
+    m_baseReadLineDataCalled = true;
 
     while (readSoFar < maxSize && (lastReadReturn = read(&c, 1)) == 1) {
         *data++ = c;
@@ -1296,8 +1385,7 @@ xint64 iIODevice::readLineData(char *data, xint64 maxSize)
 */
 bool iIODevice::canReadLine() const
 {
-    return d_ptr->buffer.indexOf('\n', d_ptr->buffer.size(),
-                             d_ptr->isSequential() ? d_ptr->transactionPos : IX_INT64_C(0)) >= 0;
+    return m_buffer.indexOf('\n', m_buffer.size(), isSequential4Mode() ? m_transactionPos : IX_INT64_C(0)) >= 0;
 }
 
 /*!
@@ -1317,12 +1405,12 @@ bool iIODevice::canReadLine() const
 */
 void iIODevice::startTransaction()
 {
-    if (d_ptr->transactionStarted) {
+    if (m_transactionStarted) {
         ilog_warn("Called while transaction already in progress");
         return;
     }
-    d_ptr->transactionPos = d_ptr->pos;
-    d_ptr->transactionStarted = true;
+    m_transactionPos = m_pos;
+    m_transactionStarted = true;
 }
 
 /*!
@@ -1337,14 +1425,14 @@ void iIODevice::startTransaction()
 */
 void iIODevice::commitTransaction()
 {
-    if (!d_ptr->transactionStarted) {
+    if (!m_transactionStarted) {
         ilog_warn("Called while no transaction in progress");
         return;
     }
-    if (d_ptr->isSequential())
-        d_ptr->buffer.free(d_ptr->transactionPos);
-    d_ptr->transactionStarted = false;
-    d_ptr->transactionPos = 0;
+    if (isSequential4Mode())
+        m_buffer.free(m_transactionPos);
+    m_transactionStarted = false;
+    m_transactionPos = 0;
 }
 
 /*!
@@ -1360,14 +1448,14 @@ void iIODevice::commitTransaction()
 */
 void iIODevice::rollbackTransaction()
 {
-    if (!d_ptr->transactionStarted) {
+    if (!m_transactionStarted) {
         ilog_warn("Called while no transaction in progress");
         return;
     }
-    if (!d_ptr->isSequential())
-        d_ptr->seekBuffer(d_ptr->transactionPos);
-    d_ptr->transactionStarted = false;
-    d_ptr->transactionPos = 0;
+    if (!isSequential4Mode())
+        seekBuffer(m_transactionPos);
+    m_transactionStarted = false;
+    m_transactionPos = 0;
 }
 
 /*!
@@ -1380,7 +1468,7 @@ void iIODevice::rollbackTransaction()
 */
 bool iIODevice::isTransactionStarted() const
 {
-    return d_ptr->transactionStarted;
+    return m_transactionStarted;
 }
 
 /*!
@@ -1395,16 +1483,16 @@ xint64 iIODevice::write(const char *data, xint64 maxSize)
     CHECK_WRITABLE(write, xint64(-1));
     CHECK_MAXLEN(write, xint64(-1));
 
-    const bool sequential = d_ptr->isSequential();
+    const bool sequential = isSequential4Mode();
     // Make sure the device is positioned correctly.
-    if (d_ptr->pos != d_ptr->devicePos && !sequential && !seek(d_ptr->pos))
+    if (m_pos != m_devicePos && !sequential && !seek(m_pos))
         return xint64(-1);
 
     xint64 written = writeData(data, maxSize);
     if (!sequential && written > 0) {
-        d_ptr->pos += written;
-        d_ptr->devicePos += written;
-        d_ptr->buffer.skip(written);
+        m_pos += written;
+        m_devicePos += written;
+        m_buffer.skip(written);
     }
     return written;
 }
@@ -1455,15 +1543,15 @@ void iIODevice::ungetChar(char c)
 {
     CHECK_READABLE(read, IX_VOID);
 
-    if (d_ptr->transactionStarted) {
+    if (m_transactionStarted) {
         ilog_warn("Called while transaction is in progress");
         return;
     }
 
 
-    d_ptr->buffer.ungetChar(c);
-    if (!d_ptr->isSequential())
-        --d_ptr->pos;
+    m_buffer.ungetChar(c);
+    if (!isSequential4Mode())
+        --m_pos;
 }
 
 /*! \fn bool iIODevice::putChar(char c)
@@ -1515,7 +1603,7 @@ xint64 iIODevice::peek(char *data, xint64 maxSize)
     CHECK_MAXLEN(peek, xint64(-1));
     CHECK_READABLE(peek, xint64(-1));
 
-    return d_ptr->read(data, maxSize, true);
+    return readImpl(data, maxSize, true);
 }
 
 /*!
@@ -1581,19 +1669,19 @@ xint64 iIODevice::skip(xint64 maxSize)
     CHECK_MAXLEN(skip, xint64(-1));
     CHECK_READABLE(skip, xint64(-1));
 
-    const bool sequential = d_ptr->isSequential();
+    const bool sequential = isSequential4Mode();
 
-    if ((sequential && d_ptr->transactionStarted) || (d_ptr->openMode & iIODevice::Text) != 0)
-        return d_ptr->skipByReading(maxSize);
+    if ((sequential && m_transactionStarted) || (m_openMode & iIODevice::Text) != 0)
+        return skipByReading(maxSize);
 
     // First, skip over any data in the internal buffer.
     xint64 skippedSoFar = 0;
-    if (!d_ptr->buffer.isEmpty()) {
-        skippedSoFar = d_ptr->buffer.skip(maxSize);
+    if (!m_buffer.isEmpty()) {
+        skippedSoFar = m_buffer.skip(maxSize);
 
         if (!sequential)
-            d_ptr->pos += skippedSoFar;
-        if (d_ptr->buffer.isEmpty())
+            m_pos += skippedSoFar;
+        if (m_buffer.isEmpty())
             readData(IX_NULLPTR, 0);
         if (skippedSoFar == maxSize)
             return skippedSoFar;
@@ -1604,12 +1692,12 @@ xint64 iIODevice::skip(xint64 maxSize)
     // Try to seek on random-access device. At this point,
     // the internal read buffer is empty.
     if (!sequential) {
-        const xint64 bytesToSkip = std::min(size() - d_ptr->pos, maxSize);
+        const xint64 bytesToSkip = std::min(size() - m_pos, maxSize);
 
         // If the size is unknown or file position is at the end,
         // fall back to reading below.
         if (bytesToSkip > 0) {
-            if (!seek(d_ptr->pos + bytesToSkip))
+            if (!seek(m_pos + bytesToSkip))
                 return skippedSoFar ? skippedSoFar : IX_INT64_C(-1);
             if (bytesToSkip == maxSize)
                 return skippedSoFar + bytesToSkip;
@@ -1632,7 +1720,7 @@ xint64 iIODevice::skip(xint64 maxSize)
 /*!
     \internal
 */
-xint64 iIODevicePrivate::skipByReading(xint64 maxSize)
+xint64 iIODevice::skipByReading(xint64 maxSize)
 {
     xint64 readSoFar = 0;
     do {
@@ -1666,7 +1754,7 @@ xint64 iIODevice::skipData(xint64 maxSize)
     // Base implementation discards the data by reading into the dummy buffer.
     // It's slow, but this works for all types of devices. Subclasses can
     // reimplement this function to improve on that.
-    return d_ptr->skipByReading(maxSize);
+    return skipByReading(maxSize);
 }
 
 /*!
@@ -1736,7 +1824,7 @@ bool iIODevice::waitForBytesWritten(int)
 */
 void iIODevice::setErrorString(const iString &str)
 {
-    d_ptr->errorString = str;
+    m_errorString = str;
 }
 
 /*!
@@ -1747,10 +1835,10 @@ void iIODevice::setErrorString(const iString &str)
 */
 iString iIODevice::errorString() const
 {
-    if (d_ptr->errorString.isEmpty()) {
+    if (m_errorString.isEmpty()) {
         return iLatin1String("Unknown error");
     }
-    return d_ptr->errorString;
+    return m_errorString;
 }
 
 /*!

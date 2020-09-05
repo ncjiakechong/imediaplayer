@@ -18,7 +18,7 @@
 namespace iShell {
 
 class iByteArray;
-class iIODevicePrivate;
+class IRingBuffer;
 
 class IX_CORE_EXPORT iIODevice : public iObject
 {
@@ -110,19 +110,99 @@ public:
     void readChannelFinished() ISIGNAL(readChannelFinished)
 
 protected:
+
+    enum AccessMode {
+        Unset,
+        Sequential,
+        RandomAccess
+    };
+
+    class iRingBufferRef {
+        IRingBuffer *m_buf;
+
+        iRingBufferRef();
+        ~iRingBufferRef();
+        friend class iIODevice;
+
+    public:
+        // wrap functions from IRingBuffer
+        void setChunkSize(int size);
+        int chunkSize() const;
+        xint64 nextDataBlockSize() const;
+        const char *readPointer() const;
+        const char *readPointerAtPosition(xint64 pos, xint64 &length) const;
+        void free(xint64 bytes);
+        char *reserve(xint64 bytes);
+        char *reserveFront(xint64 bytes);
+        void truncate(xint64 pos);
+        void chop(xint64 bytes);
+        bool isEmpty() const;
+        int getChar();
+        void putChar(char c);
+        void ungetChar(char c);
+        xint64 size() const;
+        void clear();
+        xint64 indexOf(char c) const;
+        xint64 indexOf(char c, xint64 maxLength, xint64 pos = 0) const;
+        xint64 read(char *data, xint64 maxLength);
+        iByteArray read();
+        xint64 peek(char *data, xint64 maxLength, xint64 pos = 0) const;
+        void append(const char *data, xint64 size);
+        void append(const iByteArray &qba);
+        xint64 skip(xint64 length);
+        xint64 readLine(char *data, xint64 maxLength);
+        bool canReadLine() const;
+    };
+
     virtual xint64 readData(char *data, xint64 maxlen) = 0;
     virtual xint64 readLineData(char *data, xint64 maxlen);
     virtual xint64 writeData(const char *data, xint64 len) = 0;
     virtual xint64 skipData(xint64 maxSize);
 
     void setOpenMode(OpenMode openMode);
-
     void setErrorString(const iString &errorString);
 
-    std::unique_ptr<iIODevicePrivate> d_ptr;
+    inline bool isSequential4Mode() const
+    {
+        if (m_accessMode == Unset)
+            m_accessMode = isSequential() ? Sequential : RandomAccess;
+        return m_accessMode == Sequential;
+    }
+
+    bool isBufferEmpty() const;
+    bool allWriteBuffersEmpty() const;
+
+    void seekBuffer(xint64 newPos);
+
+    void setReadChannelCount(int count);
+    void setWriteChannelCount(int count);
+
+    xint64 readImpl(char *data, xint64 maxSize, bool peeking = false);
+    xint64 skipByReading(xint64 maxSize);
+
+    iIODevice::OpenMode m_openMode;
+    iString m_errorString;
+
+    std::vector<IRingBuffer> m_readBuffers;
+    std::vector<IRingBuffer> m_writeBuffers;
+
+    iRingBufferRef m_buffer;
+    iRingBufferRef m_writeBuffer;
+    xint64 m_pos;
+    xint64 m_devicePos;
+    int m_readChannelCount;
+    int m_writeChannelCount;
+    int m_currentReadChannel;
+    int m_currentWriteChannel;
+    int m_readBufferChunkSize;
+    int m_writeBufferChunkSize;
+    xint64 m_transactionPos;
+    bool m_transactionStarted;
+    bool m_baseReadLineDataCalled;
+
+    mutable AccessMode m_accessMode;
 
 private:
-    friend class iIODevicePrivate;
     IX_DISABLE_COPY(iIODevice)
 };
 
