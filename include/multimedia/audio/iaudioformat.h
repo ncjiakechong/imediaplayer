@@ -18,8 +18,6 @@
 
 namespace iShell {
 
-class iAudioFormatPrivate;
-
 class IX_MULTIMEDIA_EXPORT iAudioFormat
 {
 public:
@@ -36,23 +34,23 @@ public:
 
     bool isValid() const;
 
-    void setSampleRate(int sampleRate);
-    int sampleRate() const;
+    inline void setSampleRate(int sampleRate) {m_sampleRate = sampleRate;}
+    inline int sampleRate() const {return m_sampleRate;}
 
-    void setChannelCount(int channelCount);
-    int channelCount() const;
+    inline void setChannelCount(int channelCount) {m_channels = channelCount;}
+    inline int channelCount() const {return m_channels;}
 
-    void setSampleSize(int sampleSize);
-    int sampleSize() const;
+    inline void setSampleSize(int sampleSize) {m_sampleSize = sampleSize;}
+    inline int sampleSize() const {return m_sampleSize;}
 
-    void setCodec(const iString &codec);
-    iString codec() const;
+    inline void setCodec(const iString &codec) {m_codec = codec;}
+    inline iString codec() const {return m_codec;}
 
-    void setByteOrder(iAudioFormat::Endian byteOrder);
-    iAudioFormat::Endian byteOrder() const;
+    inline void setByteOrder(iAudioFormat::Endian byteOrder) {m_byteOrder = byteOrder;}
+    inline iAudioFormat::Endian byteOrder() const {return m_byteOrder;}
 
-    void setSampleType(iAudioFormat::SampleType sampleType);
-    iAudioFormat::SampleType sampleType() const;
+    inline void setSampleType(iAudioFormat::SampleType sampleType) {m_sampleType = sampleType;}
+    inline iAudioFormat::SampleType sampleType() const {return m_sampleType;}
 
     // Helper functions
     xint32 bytesForDuration(xint64 duration) const;
@@ -67,7 +65,12 @@ public:
     int bytesPerFrame() const;
 
 private:
-    iSharedDataPointer<iAudioFormatPrivate> d;
+    iString m_codec;
+    iAudioFormat::Endian m_byteOrder;
+    iAudioFormat::SampleType m_sampleType;
+    int m_sampleRate;
+    int m_channels;
+    int m_sampleSize;
 };
 
 } // namespace iShell

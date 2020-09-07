@@ -13,49 +13,6 @@
 
 namespace iShell {
 
-class iAudioFormatPrivate : public iSharedData
-{
-public:
-    iAudioFormatPrivate()
-    {
-        sampleRate = -1;
-        channels = -1;
-        sampleSize = -1;
-        byteOrder = iAudioFormat::Endian(is_little_endian());
-        sampleType = iAudioFormat::Unknown;
-    }
-
-    iAudioFormatPrivate(const iAudioFormatPrivate &other):
-        iSharedData(other),
-        codec(other.codec),
-        byteOrder(other.byteOrder),
-        sampleType(other.sampleType),
-        sampleRate(other.sampleRate),
-        channels(other.channels),
-        sampleSize(other.sampleSize)
-    {
-    }
-
-    iAudioFormatPrivate& operator=(const iAudioFormatPrivate &other)
-    {
-        codec = other.codec;
-        byteOrder = other.byteOrder;
-        sampleType = other.sampleType;
-        sampleRate = other.sampleRate;
-        channels = other.channels;
-        sampleSize = other.sampleSize;
-
-        return *this;
-    }
-
-    iString codec;
-    iAudioFormat::Endian byteOrder;
-    iAudioFormat::SampleType sampleType;
-    int sampleRate;
-    int channels;
-    int sampleSize;
-};
-
 /*!
     \class iAudioFormat
     \brief The iAudioFormat class stores audio stream parameter information.
@@ -128,16 +85,25 @@ public:
     \c codec()      = ""
     \endlist
 */
-iAudioFormat::iAudioFormat():
-    d(new iAudioFormatPrivate)
+iAudioFormat::iAudioFormat()
+    : m_byteOrder(iAudioFormat::Endian(is_little_endian()))
+    , m_sampleType(Unknown)
+    , m_sampleRate(-1)
+    , m_channels(-1)
+    , m_sampleSize(-1)
 {
 }
 
 /*!
     Construct a new audio format using \a other.
 */
-iAudioFormat::iAudioFormat(const iAudioFormat &other):
-    d(other.d)
+iAudioFormat::iAudioFormat(const iAudioFormat &other)
+    : m_codec(other.m_codec)
+    , m_byteOrder(other.m_byteOrder)
+    , m_sampleType(other.m_sampleType)
+    , m_sampleRate(other.m_sampleRate)
+    , m_channels(other.m_channels)
+    , m_sampleSize(other.m_sampleSize)
 {
 }
 
@@ -153,7 +119,13 @@ iAudioFormat::~iAudioFormat()
 */
 iAudioFormat& iAudioFormat::operator=(const iAudioFormat &other)
 {
-    d = other.d;
+    m_codec = other.m_codec;
+    m_byteOrder = other.m_byteOrder;
+    m_sampleType = other.m_sampleType;
+    m_sampleRate = other.m_sampleRate;
+    m_channels = other.m_channels;
+    m_sampleSize = other.m_sampleSize;
+    
     return *this;
 }
 
@@ -165,12 +137,12 @@ iAudioFormat& iAudioFormat::operator=(const iAudioFormat &other)
 */
 bool iAudioFormat::operator==(const iAudioFormat &other) const
 {
-    return d->sampleRate == other.d->sampleRate &&
-            d->channels == other.d->channels &&
-            d->sampleSize == other.d->sampleSize &&
-            d->byteOrder == other.d->byteOrder &&
-            d->codec == other.d->codec &&
-            d->sampleType == other.d->sampleType;
+    return m_sampleRate == other.m_sampleRate &&
+            m_channels == other.m_channels &&
+            m_sampleSize == other.m_sampleSize &&
+            m_byteOrder == other.m_byteOrder &&
+            m_codec == other.m_codec &&
+            m_sampleType == other.m_sampleType;
 }
 
 /*!
@@ -189,65 +161,42 @@ bool iAudioFormat::operator!=(const iAudioFormat& other) const
 */
 bool iAudioFormat::isValid() const
 {
-    return d->sampleRate != -1 && d->channels != -1 && d->sampleSize != -1 &&
-            d->sampleType != iAudioFormat::Unknown && !d->codec.isEmpty();
+    return m_sampleRate != -1 && m_channels != -1 && m_sampleSize != -1 &&
+            m_sampleType != iAudioFormat::Unknown && !m_codec.isEmpty();
 }
 
 /*!
    Sets the sample rate to \a samplerate Hertz.
 
 */
-void iAudioFormat::setSampleRate(int samplerate)
-{
-    d->sampleRate = samplerate;
-}
 
 /*!
     Returns the current sample rate in Hertz.
 
 */
-int iAudioFormat::sampleRate() const
-{
-    return d->sampleRate;
-}
+
 
 /*!
    Sets the channel count to \a channels.
 
 */
-void iAudioFormat::setChannelCount(int channels)
-{
-    d->channels = channels;
-}
 
 /*!
     Returns the current channel count value.
 
 */
-int iAudioFormat::channelCount() const
-{
-    return d->channels;
-}
 
 /*!
    Sets the sample size to the \a sampleSize specified, in bits.
 
    This is typically 8 or 16, but some systems may support higher sample sizes.
 */
-void iAudioFormat::setSampleSize(int sampleSize)
-{
-    d->sampleSize = sampleSize;
-}
 
 /*!
     Returns the current sample size value, in bits.
 
     \sa bytesPerFrame()
 */
-int iAudioFormat::sampleSize() const
-{
-    return d->sampleSize;
-}
 
 /*!
    Sets the codec to \a codec.
@@ -258,52 +207,28 @@ int iAudioFormat::sampleSize() const
 
    \sa iAudioDeviceInfo::supportedCodecs()
 */
-void iAudioFormat::setCodec(const iString &codec)
-{
-    d->codec = codec;
-}
 
 /*!
     Returns the current codec identifier.
 
    \sa iAudioDeviceInfo::supportedCodecs()
 */
-iString iAudioFormat::codec() const
-{
-    return d->codec;
-}
 
 /*!
    Sets the byteOrder to \a byteOrder.
 */
-void iAudioFormat::setByteOrder(iAudioFormat::Endian byteOrder)
-{
-    d->byteOrder = byteOrder;
-}
 
 /*!
     Returns the current byteOrder value.
 */
-iAudioFormat::Endian iAudioFormat::byteOrder() const
-{
-    return d->byteOrder;
-}
 
 /*!
    Sets the sampleType to \a sampleType.
 */
-void iAudioFormat::setSampleType(iAudioFormat::SampleType sampleType)
-{
-    d->sampleType = sampleType;
-}
 
 /*!
     Returns the current SampleType value.
 */
-iAudioFormat::SampleType iAudioFormat::sampleType() const
-{
-    return d->sampleType;
-}
 
 /*!
     Returns the number of bytes required for this audio format for \a duration microseconds.

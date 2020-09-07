@@ -27,12 +27,8 @@
 
 namespace iShell {
 
-
-class iMemoryVideoBufferPrivate;
-
 class iMemoryVideoBuffer : public iAbstractVideoBuffer
 {
-    friend class iMemoryVideoBufferPrivate;
 public:
     iMemoryVideoBuffer(const iByteArray &data, int bytesPerLine);
     ~iMemoryVideoBuffer();
@@ -41,6 +37,11 @@ public:
 
     uchar *map(MapMode mode, int *numBytes, int *bytesPerLine) override;
     void unmap() override;
+
+protected:
+    int m_bytesPerLine;
+    MapMode m_mapMode;
+    iByteArray m_data;
 };
 
 } // namespace iShell
