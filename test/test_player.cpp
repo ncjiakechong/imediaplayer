@@ -29,10 +29,9 @@ class TestStreamDevice : public iIODevice
 public:
     iString m_filePath;
     int m_fd;
-    int m_currentTimerID;
     xint64 m_currPos;
 
-    TestStreamDevice(const iString& path, iObject *parent = IX_NULLPTR) : iIODevice(parent), m_filePath(path), m_fd(0), m_currentTimerID(0), m_currPos(0) {}
+    TestStreamDevice(const iString& path, iObject *parent = IX_NULLPTR) : iIODevice(parent), m_filePath(path), m_fd(0), m_currPos(0) {}
     virtual ~TestStreamDevice() 
     {
         close();
@@ -52,9 +51,6 @@ public:
         iUrl filename(m_filePath);
         m_currPos = 0;
         m_fd = ::open(filename.toLocalFile().toUtf8().data(), O_RDONLY);
-        if (-1 != m_fd) {
-            m_currentTimerID = startTimer(1000);
-        }
 
         return (-1 != m_fd);
     }
@@ -65,21 +61,17 @@ public:
             return;
         
         ::close(m_fd);
+        m_fd = -1;
+
         iIODevice::close();
     }
 
-    virtual bool event(iEvent *e)
-    {
-        iTimerEvent* event = static_cast<iTimerEvent*>(e);
-        if (e->type() == iEvent::Timer && event->timerId() == m_currentTimerID) {
-            IEMIT readyRead();
-            if (bytesAvailable() <= 0) {
-                killTimer(m_currentTimerID);
-                m_currentTimerID = 0;
-            }
-        }
+    virtual xint64 size() const {
+        struct stat stat_results;
+        if (fstat (m_fd, &stat_results) < 0)
+            return 0;
 
-        return iIODevice::event(e);
+        return stat_results.st_size;
     }
 
     virtual xint64 bytesAvailable() const
@@ -89,7 +81,7 @@ public:
             return 0;
 
         xint64 remainSize = stat_results.st_size - m_currPos;
-        return std::max((xint64)0, std::min(remainSize, (xint64)4096));
+        return remainSize;
     }
 
     virtual xint64 readData(char *data, xint64 maxlen)
@@ -149,6 +141,7 @@ public:
     int play(const iString& path) {
         streamDevice = new TestStreamDevice(path, this);
         streamDevice->open(iIODevice::ReadOnly);
+        // player->setMedia(iUrl(path));
         player->setMedia(iUrl("appsrc://"), streamDevice);
         player->play();
 
@@ -159,7 +152,11 @@ public:
     }
 
     void rePlay() {
-        player->setMedia(iUrl(streamDevice->m_filePath));
+        iString path = streamDevice->m_filePath;
+        streamDevice->close();
+        // streamDevice->open(iIODevice::ReadOnly);
+        // player->setMedia(iUrl("appsrc://"), streamDevice);
+        player->setMedia(iUrl(path));
         player->play();
     }
 

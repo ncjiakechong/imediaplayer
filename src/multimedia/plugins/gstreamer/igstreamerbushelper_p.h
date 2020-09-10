@@ -72,9 +72,9 @@ private:
     GstBus* m_bus;
     iTimer* m_intervalTimer;
 
-    iMutex filterMutex;
-    std::list<iObject*> syncFilters;
-    std::list<iObject*> busFilters;
+    iMutex m_filterMutex;
+    std::list<iObject*> m_syncFilters;
+    std::list<iObject*> m_busFilters;
 };
 
 } // namespace iShell

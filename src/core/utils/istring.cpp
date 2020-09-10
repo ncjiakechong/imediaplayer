@@ -4363,7 +4363,7 @@ iString iString::fromLocal8Bit_helper(const char *str, int size)
         return iString(empty);
     }
 
-    return fromLatin1(str, size);
+    return fromUtf8(str, size);
 }
 
 /*! \fn iString iString::fromAscii(const char *, int size);
