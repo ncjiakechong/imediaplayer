@@ -15,33 +15,33 @@
 
 namespace iShell {
 
-iGstreamerMsgEvent::iGstreamerMsgEvent(GstMessage *message)
+iGstBusMsgEvent::iGstBusMsgEvent(GstMessage *message)
     : iEvent(eventType())
     , m_message(message)
 {
 }
 
-iGstreamerMsgEvent::~iGstreamerMsgEvent()
+iGstBusMsgEvent::~iGstBusMsgEvent()
 {
 }
 
-int iGstreamerMsgEvent::eventType()
+int iGstBusMsgEvent::eventType()
 {
     static int s_eventType = registerEventType();
     return s_eventType;
 }
 
-iGstreamerSyncMsgEvent::iGstreamerSyncMsgEvent(GstMessage *message)
+iGstSyncMsgEvent::iGstSyncMsgEvent(GstMessage *message)
     : iEvent(eventType())
     , m_message(message)
 {
 }
 
-iGstreamerSyncMsgEvent::~iGstreamerSyncMsgEvent()
+iGstSyncMsgEvent::~iGstSyncMsgEvent()
 {
 }
 
-int iGstreamerSyncMsgEvent::eventType()
+int iGstSyncMsgEvent::eventType()
 {
     static int s_eventType = registerEventType();
     return s_eventType;
@@ -53,9 +53,9 @@ GstBusSyncReply iGstreamerBusHelper::syncGstBusFilter(GstBus* , GstMessage* mess
     for (std::list<iObject*>::iterator it = d->m_syncFilters.begin();
          it != d->m_syncFilters.end(); ++it) {
         iObject *filter = *it;
-        iGstreamerSyncMsgEvent evt(message);
-        // TODO
-        if (iCoreApplication::sendEvent(filter, &evt)) {
+        iGstSyncMsgEvent evt(message);
+        // hack code to invoke event
+        if (static_cast<iGstreamerBusHelper*>(filter)->event(&evt)) {
             gst_message_unref(message);
             return GST_BUS_DROP;
         }
@@ -163,9 +163,9 @@ void iGstreamerBusHelper::doProcessMessage(const iGstreamerMessage& msg)
     for (std::list<iObject*>::iterator it = m_busFilters.begin();
          it != m_busFilters.end(); ++it) {
         iObject *filter = *it;
-        iGstreamerMsgEvent evt(msg.rawMessage());
-        // TODO
-        if (iCoreApplication::sendEvent(filter, &evt))
+        iGstBusMsgEvent evt(msg.rawMessage());
+        // hack code to invoke event
+        if (static_cast<iGstreamerBusHelper*>(filter)->event(&evt))
             break;
     }
 

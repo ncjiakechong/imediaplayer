@@ -141,8 +141,8 @@ public:
     int play(const iString& path) {
         streamDevice = new TestStreamDevice(path, this);
         streamDevice->open(iIODevice::ReadOnly);
-        // player->setMedia(iUrl(path));
-        player->setMedia(iUrl("appsrc://"), streamDevice);
+        player->setMedia(iUrl(path));
+        // player->setMedia(iUrl("appsrc://"), streamDevice);
         player->play();
 
         if (iMediaPlayer::StoppedState != player->state())
@@ -154,9 +154,9 @@ public:
     void rePlay() {
         iString path = streamDevice->m_filePath;
         streamDevice->close();
-        // streamDevice->open(iIODevice::ReadOnly);
-        // player->setMedia(iUrl("appsrc://"), streamDevice);
-        player->setMedia(iUrl(path));
+        streamDevice->open(iIODevice::ReadOnly);
+        player->setMedia(iUrl("appsrc://"), streamDevice);
+        // player->setMedia(iUrl(path));
         player->play();
     }
 
