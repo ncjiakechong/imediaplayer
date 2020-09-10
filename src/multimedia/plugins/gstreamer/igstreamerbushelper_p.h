@@ -33,11 +33,24 @@ namespace iShell {
 
 class iTimer;
 
+// invoke from ix work thread
 class iGstreamerMsgEvent : public iEvent
 {
 public:
     explicit iGstreamerMsgEvent(GstMessage* message);
     ~iGstreamerMsgEvent();
+
+    static int eventType();
+
+    iGstreamerMessage m_message;
+};
+
+// invoke from gstreamer work thread
+class iGstreamerSyncMsgEvent : public iEvent
+{
+public:
+    explicit iGstreamerSyncMsgEvent(GstMessage* message);
+    ~iGstreamerSyncMsgEvent();
 
     static int eventType();
 
