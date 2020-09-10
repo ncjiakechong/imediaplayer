@@ -171,7 +171,11 @@ private:
     void addAudioBufferProbe();
     void flushVideoProbes();
     void resumeVideoProbes();
-    void setPipeline(GstElement *pipeline);
+    bool parsePipeline();
+    bool setPipeline(GstElement *pipeline);
+    void resetElements();
+    void initPlaybin();
+    void setBus(GstBus *bus);
 
     iUrl m_request;
     iMediaPlayer::State m_state;

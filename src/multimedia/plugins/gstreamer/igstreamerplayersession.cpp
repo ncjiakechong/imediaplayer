@@ -101,6 +101,11 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
      m_everPlayed(false),
      m_isLiveSource(false)
 {
+    initPlaybin();
+}
+
+void iGstreamerPlayerSession::initPlaybin()
+{
     m_playbin = gst_element_factory_make(IX_GSTREAMER_PLAYBIN_ELEMENT_NAME, IX_NULLPTR);
     if (m_playbin) {
         //GST_PLAY_FLAG_NATIVE_VIDEO omits configuration of ffmpegcolorspace and videoscale,
@@ -168,9 +173,7 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
 
     if (m_playbin != IX_NULLPTR) {
         // Sort out messages
-        m_bus = gst_element_get_bus(m_playbin);
-        m_busHelper = new iGstreamerBusHelper(m_bus, this);
-        m_busHelper->installMessageFilter(this);
+        setBus(gst_element_get_bus(m_playbin));
 
         g_object_set(G_OBJECT(m_playbin), "video-sink", m_videoOutputBin, IX_NULLPTR);
 
@@ -204,16 +207,36 @@ iGstreamerPlayerSession::~iGstreamerPlayerSession()
         removeAudioBufferProbe();
 
         delete m_busHelper;
-        gst_object_unref(GST_OBJECT(m_bus));
-        if (m_playbin)
-            gst_object_unref(GST_OBJECT(m_playbin));
-        gst_object_unref(GST_OBJECT(m_pipeline));
-        #if !GST_CHECK_VERSION(1,0,0)
-        gst_object_unref(GST_OBJECT(m_colorSpace));
-        #endif
-        gst_object_unref(GST_OBJECT(m_nullVideoSink));
-        gst_object_unref(GST_OBJECT(m_videoOutputBin));
+        m_busHelper = IX_NULLPTR;
+        resetElements();
     }
+}
+
+template <class T>
+static inline void resetGstObject(T *&obj, T *v = IX_NULLPTR)
+{
+    if (obj)
+        gst_object_unref(GST_OBJECT(obj));
+
+    obj = v;
+}
+
+void iGstreamerPlayerSession::resetElements()
+{
+    setBus(IX_NULLPTR);
+    resetGstObject(m_playbin);
+    resetGstObject(m_pipeline);
+#if !GST_CHECK_VERSION(1,0,0)
+    resetGstObject(m_colorSpace);
+#endif
+    resetGstObject(m_nullVideoSink);
+    resetGstObject(m_videoOutputBin);
+
+    m_audioSink = IX_NULLPTR;
+    m_volumeElement = IX_NULLPTR;
+    m_videoIdentity = IX_NULLPTR;
+    m_pendingVideoSink = IX_NULLPTR;
+    m_videoSink = IX_NULLPTR;
 }
 
 GstElement *iGstreamerPlayerSession::playbin() const
@@ -247,7 +270,7 @@ void iGstreamerPlayerSession::loadFromStream(const iUrl &url, iIODevice *appSrcS
         m_appSrc = new iGstAppSrc(this);
     m_appSrc->setStream(appSrcStream);
 
-    if (m_playbin) {
+    if (!parsePipeline() && m_playbin) {
         m_tags.clear();
         IEMIT tagsChanged();
 
@@ -274,24 +297,7 @@ void iGstreamerPlayerSession::loadFromUri(const iUrl& url)
         m_appSrc = IX_NULLPTR;
     }
 
-    if (m_request.scheme() == iLatin1String("gst-pipeline")) {
-        // Set current surface to video sink before creating a pipeline.
-        iString url = m_request.toString(iUrl::RemoveScheme);
-        iString pipeline = iUrl::fromPercentEncoding(url.toLatin1().constData());
-        GError *err = IX_NULLPTR;
-        GstElement *element = gst_parse_launch(pipeline.toUtf8().constData(), &err);
-        if (err) {
-            auto errstr = iLatin1String(err->message);
-            ilog_warn("Error:", pipeline, ":", errstr);
-            IEMIT error(iMediaPlayer::FormatError, errstr);
-            g_clear_error(&err);
-        }
-
-        setPipeline(element);
-        return;
-    }
-
-    if (m_playbin) {
+    if (!parsePipeline() && m_playbin) {
         m_tags.clear();
         IEMIT tagsChanged();
 
@@ -306,31 +312,44 @@ void iGstreamerPlayerSession::loadFromUri(const iUrl& url)
     }
 }
 
-void iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
+bool iGstreamerPlayerSession::parsePipeline()
+{
+    if (m_request.scheme() != iLatin1String("gst-pipeline")) {
+        if (!m_playbin) {
+            resetElements();
+            initPlaybin();
+            updateVideoRenderer();
+        }
+        return false;
+    }
+
+    // Set current surface to video sink before creating a pipeline.
+    iString url = m_request.toString(iUrl::RemoveScheme);
+    iString desc = iUrl::fromPercentEncoding(url.toLatin1().constData());
+    GError *err = IX_NULLPTR;
+    GstElement *pipeline = gst_parse_launch(desc.toLatin1().constData(), &err);
+    if (err) {
+        auto errstr = iLatin1String(err->message);
+        ilog_warn("Error:", desc, ":", errstr);
+        IEMIT error(iMediaPlayer::FormatError, errstr);
+        g_clear_error(&err);
+    }
+
+    return setPipeline(pipeline);
+}
+
+bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
 {
     GstBus *bus = pipeline ? gst_element_get_bus(pipeline) : IX_NULLPTR;
     if (!bus)
-        return;
+        return false;
 
-    gst_object_unref(GST_OBJECT(m_pipeline));
-    m_pipeline = pipeline;
-    gst_object_unref(GST_OBJECT(m_bus));
-    m_bus = bus;
-    delete m_busHelper;
-    m_busHelper = new iGstreamerBusHelper(m_bus, this);
-    m_busHelper->installMessageFilter(this);
-
-    if (m_renderer)
-        m_busHelper->installMessageFilter(m_renderer);
-
-    if (m_playbin) {
+    if (m_playbin)
         gst_element_set_state(m_playbin, GST_STATE_NULL);
-        gst_object_unref(GST_OBJECT(m_playbin));
-    }
 
-    m_playbin = IX_NULLPTR;
-    m_volumeElement = IX_NULLPTR;
-    m_videoIdentity = IX_NULLPTR;
+    resetElements();
+    setBus(bus);
+    m_pipeline = pipeline;
 
     if (m_renderer) {
         auto it = gst_bin_iterate_sinks(GST_BIN(pipeline));
@@ -342,15 +361,56 @@ void iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
         GstElement *child = IX_NULLPTR;
         while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
         #endif
-            if (iLatin1String(GST_OBJECT_NAME(child)) == iLatin1String("qtvideosink")) {
+            if (iLatin1String(GST_OBJECT_NAME(child)) == iLatin1String("ixvideosink")) {
                 m_renderer->setVideoSink(child);
                 break;
             }
         }
         gst_iterator_free(it);
+        #if GST_CHECK_VERSION(1,0,0)
+        g_value_unset(&data);
+        #endif
+    }
+
+    if (m_appSrc) {
+        auto it = gst_bin_iterate_sinks(GST_BIN(pipeline));
+        #if GST_CHECK_VERSION(1,0,0)
+        GValue data = { 0, 0 };
+        while (gst_iterator_next (it, &data) == GST_ITERATOR_OK) {
+            auto child = static_cast<GstElement*>(g_value_get_object(&data));
+        #else
+        GstElement *child = IX_NULLPTR;
+        while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
+        #endif
+            if (iLatin1String(GST_OBJECT_NAME(child)) == iLatin1String("appsrc")) {
+                m_appSrc->setup(child);
+                break;
+            }
+        }
+        gst_iterator_free(it);
+        #if GST_CHECK_VERSION(1,0,0)
+        g_value_unset(&data);
+        #endif
     }
 
     IEMIT pipelineChanged();
+    return true;
+}
+
+void iGstreamerPlayerSession::setBus(GstBus *bus)
+{
+    resetGstObject(m_bus, bus);
+
+    // It might still accept gst messages.
+    if (m_busHelper)
+        m_busHelper->deleteLater();
+    m_busHelper = nullptr;
+
+    if (!m_bus)
+        return;
+
+    m_busHelper = new iGstreamerBusHelper(m_bus, this);
+    m_busHelper->installMessageFilter(this);
 }
 
 xint64 iGstreamerPlayerSession::duration() const
@@ -378,10 +438,12 @@ void iGstreamerPlayerSession::setPlaybackRate(xreal rate)
     if (!iFuzzyCompare(m_playbackRate, rate)) {
         m_playbackRate = rate;
         if (m_pipeline && m_seekable) {
+            gint64 from = rate > 0 ? position() : 0;
+            gint64 to = rate > 0 ? duration() : position();
             gst_element_seek(m_pipeline, rate, GST_FORMAT_TIME,
                              GstSeekFlags(GST_SEEK_FLAG_FLUSH),
-                             GST_SEEK_TYPE_NONE,0,
-                             GST_SEEK_TYPE_NONE,0 );
+                             GST_SEEK_TYPE_SET, from * 1000000,
+                             GST_SEEK_TYPE_SET, to * 1000000);
         }
         IEMIT playbackRateChanged(m_playbackRate);
     }
@@ -566,10 +628,6 @@ void iGstreamerPlayerSession::setVideoRenderer(iGstreamerVideoRendererInterface 
     // No sense to continue if custom pipeline requested.
     if (!m_playbin)
         return;
-
-    gst_debug_bin_to_dot_file_with_ts(GST_BIN(m_playbin),
-                                  GstDebugGraphDetails(GST_DEBUG_GRAPH_SHOW_ALL /* GST_DEBUG_GRAPH_SHOW_MEDIA_TYPE | GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS | GST_DEBUG_GRAPH_SHOW_STATES*/),
-                                  "playbin_set");
 
     GstElement *videoSink = IX_NULLPTR;
     if (m_renderer && m_renderer->isReady())
@@ -944,15 +1002,12 @@ bool iGstreamerPlayerSession::seek(xint64 ms)
     //seek locks when the video output sink is changing and pad is blocked
     if (m_pipeline && !m_pendingVideoSink && m_state != iMediaPlayer::StoppedState && m_seekable) {
         ms = std::max(ms, xint64(0));
-        gint64  position = ms * 1000000;
-        bool isSeeking = gst_element_seek(m_pipeline,
-                                          m_playbackRate,
-                                          GST_FORMAT_TIME,
+        gint64 from = m_playbackRate > 0 ? ms : 0;
+        gint64 to = m_playbackRate > 0 ? duration() : ms;
+        bool isSeeking = gst_element_seek(m_pipeline, m_playbackRate, GST_FORMAT_TIME,
                                           GstSeekFlags(GST_SEEK_FLAG_FLUSH),
-                                          GST_SEEK_TYPE_SET,
-                                          position,
-                                          GST_SEEK_TYPE_NONE,
-                                          0);
+                                          GST_SEEK_TYPE_SET, from * 1000000,
+                                          GST_SEEK_TYPE_SET, to * 1000000);
         if (isSeeking)
             m_lastPosition = ms;
 
