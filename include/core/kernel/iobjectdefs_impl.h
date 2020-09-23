@@ -1462,7 +1462,7 @@ private:
     _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor); \
     \
     Arguments args = Arguments(__VA_ARGS__); \
-    return emitHelper< typename ThisFuncitonPointer::ReturnType >(tSignal, &args); \
+    return const_cast<IX_ThisType*>(this)->emitHelper< typename ThisFuncitonPointer::ReturnType >(tSignal, &args); \
     }
 
 #define IEMIT
