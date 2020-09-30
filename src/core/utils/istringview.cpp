@@ -38,7 +38,7 @@ namespace iShell {
 
     When used as an interface type, iStringView allows a single function to accept
     a wide variety of UTF-16 string data sources. One function accepting iStringView
-    thus replaces three function overloads (taking iString, iStringRef, and
+    thus replaces three function overloads (taking iString, and
     \c{(const iChar*, int)}), while at the same time enabling even more string data
     sources to be passed to the function, such as \c{u"Hello World"}, a \c char16_t
     string literal.
@@ -70,15 +70,15 @@ namespace iShell {
     the iStringView into a iString.
 
     iStringView is a \e{Literal Type}, but since it stores data as \c{char16_t}, iteration
-    is not \c constexpr (casts from \c{const char16_t*} to \c{const iChar*}, which is not
-    allowed in \c constexpr functions). You can use an indexed loop and/or utf16() in
-    \c constexpr contexts instead.
+    is not \c (casts from \c{const char16_t*} to \c{const iChar*}, which is not
+    allowed in \c functions). You can use an indexed loop and/or utf16() in
+    \c contexts instead.
 
     \note We strongly discourage the use of std::list<iStringView>,
     because std::list is a very inefficient container for iStringViews (it would heap-allocate
     every element). Use std::vector (or std::vector) to hold iStringViews instead.
 
-    \sa iString, iStringRef
+    \sa iString
 */
 
 /*!
@@ -279,16 +279,6 @@ namespace iShell {
 */
 
 /*!
-    \fn iStringView::iStringView(const iStringRef &str)
-
-    Constructs a string view on \a str.
-
-    \c{str.data()} must remain valid for the lifetime of this string view object.
-
-    The string view will be null if and only if \c{str.isNull()}.
-*/
-
-/*!
     \fn template <typename StdBasicString> iStringView::iStringView(const StdBasicString &str)
 
     Constructs a string view on \a str. The length is taken from \c{str.size()}.
@@ -459,7 +449,7 @@ namespace iShell {
 
     Returns the size of this string view, in UTF-16 code points (that is,
     surrogate pairs count as two for the purposes of this function, the same
-    as in iString and iStringRef).
+    as in iString).
 
     \sa empty(), isEmpty(), isNull(), length()
 */
@@ -747,10 +737,10 @@ namespace iShell {
 
     Returns a string-view that references \a{s}' data, but is never null.
 
-    This is a faster way to convert a iString or iStringRef to a iStringView,
+    This is a faster way to convert a iString to a iStringView,
     if null iStrings can legitimately be treated as empty ones.
 
-    \sa iString::isNull(), iStringRef::isNull(), iStringView
+    \sa iString::isNull(), iStringView
 */
 
 /*!

@@ -22,7 +22,6 @@ class iLocalePrivate;
 class IX_CORE_EXPORT iLocale
 {
     friend class iString;
-    friend class iStringRef;
     friend class iByteArray;
     friend class iIntValidator;
 
@@ -910,17 +909,6 @@ public:
     xulonglong toULongLong(const iString &s, bool *ok = IX_NULLPTR) const;
     float toFloat(const iString &s, bool *ok = IX_NULLPTR) const;
     double toDouble(const iString &s, bool *ok = IX_NULLPTR) const;
-
-    short toShort(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    ushort toUShort(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    int toInt(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    uint toUInt(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    long toLong(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    ulong toULong(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    xlonglong toLongLong(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    xulonglong toULongLong(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    float toFloat(const iStringRef &s, bool *ok = IX_NULLPTR) const;
-    double toDouble(const iStringRef &s, bool *ok = IX_NULLPTR) const;
 
     short toShort(iStringView s, bool *ok = IX_NULLPTR) const;
     ushort toUShort(iStringView s, bool *ok = IX_NULLPTR) const;

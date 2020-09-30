@@ -17,7 +17,7 @@
 #include <cwchar>
 
 #include "core/utils/istring.h"
-#include "core/utils/iregexp.h"
+#include "core/utils/iregularexpression.h"
 #include "core/global/inumeric.h"
 #include "core/global/iendian.h"
 #include "core/utils/ialgorithms.h"
@@ -46,6 +46,14 @@
 #define ILOG_TAG "ix_utils"
 
 namespace iShell {
+
+template <typename T, typename Cmp = std::less<const T *>>
+static bool points_into_range(const T *p, const T *b, const T *e, Cmp less = {})
+{
+    return !less(p, b) && less(p, e);
+}
+
+const ushort iString::_empty = 0;
 
 /*
  * Note on the use of SIMD in istring.cpp:
@@ -78,19 +86,14 @@ namespace iShell {
  */
 
 // internal
-int iFindString(const iChar *haystack, int haystackLen, int from,
-    const iChar *needle, int needleLen, iShell::CaseSensitivity cs);
-int iFindStringBoyerMoore(const iChar *haystack, int haystackLen, int from,
-    const iChar *needle, int needleLen, iShell::CaseSensitivity cs);
-static inline int ix_last_index_of(const iChar *haystack, int haystackLen, iChar needle,
-                                   int from, iShell::CaseSensitivity cs);
-static inline int ix_string_count(const iChar *haystack, int haystackLen,
-                                  const iChar *needle, int needleLen,
-                                  iShell::CaseSensitivity cs);
-static inline int ix_string_count(const iChar *haystack, int haystackLen,
-                                  iChar needle, iShell::CaseSensitivity cs);
-static inline int ix_find_latin1_string(const iChar *hay, int size, iLatin1String needle,
-                                        int from, iShell::CaseSensitivity cs);
+xsizetype iFindStringBoyerMoore(iStringView haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs);
+static inline xsizetype qFindChar(iStringView str, iChar ch, xsizetype from, iShell::CaseSensitivity cs);
+template <typename Haystack>
+static inline xsizetype qLastIndexOf(Haystack haystack, iChar needle, xsizetype from, iShell::CaseSensitivity cs);
+template <>
+inline xsizetype qLastIndexOf(iString haystack, iChar needle,
+                              xsizetype from, iShell::CaseSensitivity cs) = delete; // unwanted, would detach
+
 static inline bool ix_starts_with(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs);
 static inline bool ix_starts_with(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs);
 static inline bool ix_starts_with(iStringView haystack, iChar needle, iShell::CaseSensitivity cs);
@@ -120,8 +123,8 @@ xsizetype iPrivate::xustrlen(const ushort *str)
  */
 const ushort *iPrivate::xustrchr(iStringView str, ushort c)
 {
-    const ushort *n = reinterpret_cast<const ushort *>(str.begin());
-    const ushort *e = reinterpret_cast<const ushort *>(str.end());
+    const ushort *n = str.utf16();
+    const ushort *e = n + str.size();
 
     --n;
     while (++n != e)
@@ -261,7 +264,7 @@ static int ucstricmp(const iChar *a, const iChar *ae, const char *b, const char 
         e = a + (be - b);
 
     while (a < e) {
-        int diff = foldCase(a->unicode()) - foldCase(uchar(*b));
+        int diff = foldCase(a->unicode()) - foldCase(ushort{uchar(*b)});
         if ((diff))
             return diff;
         ++a;
@@ -273,6 +276,35 @@ static int ucstricmp(const iChar *a, const iChar *ae, const char *b, const char 
         return -1;
     }
     return 1;
+}
+
+// Case-insensitive comparison between a Unicode string and a UTF-8 string
+static int ucstricmp8(const char *utf8, const char *utf8end, const iChar *utf16, const iChar *utf16end)
+{
+    auto src1 = reinterpret_cast<const uchar *>(utf8);
+    auto end1 = reinterpret_cast<const uchar *>(utf8end);
+    iStringIterator src2(utf16, utf16end);
+
+    while (src1 < end1 && src2.hasNext()) {
+        uint uc1;
+        uint *output = &uc1;
+        uchar b = *src1++;
+        int res = iUtf8Functions::fromUtf8<iUtf8BaseTraits>(b, output, src1, end1);
+        if (res < 0) {
+            // decoding error
+            uc1 = iChar::ReplacementCharacter;
+        } else {
+            uc1 = iChar::toCaseFolded(uc1);
+        }
+
+        uint uc2 = iChar::toCaseFolded(src2.next());
+        int diff = uc1 - uc2;   // can't underflow
+        if (diff)
+            return diff;
+    }
+
+    // the shorter string sorts first
+    return (end1 > src1) - int(src2.hasNext());
 }
 
 // Unicode case-sensitive compare two same-sized strings
@@ -342,8 +374,7 @@ static int ucstrncmp(const iChar *a, const uchar *c, size_t l)
     return 0;
 }
 
-template <typename Number>
-int lencmp(Number lhs, Number rhs)
+int lencmp(xsizetype lhs, xsizetype rhs)
 {
     return lhs == rhs ? 0 :
            lhs >  rhs ? 1 :
@@ -365,6 +396,46 @@ static int ucstrcmp(const iChar *a, size_t alen, const char *b, size_t blen)
     const size_t l = std::min(alen, blen);
     const int cmp = ucstrncmp(a, reinterpret_cast<const uchar*>(b), l);
     return cmp ? cmp : lencmp(alen, blen);
+}
+
+static int latin1nicmp(const char *lhsChar, xsizetype lSize, const char *rhsChar, xsizetype rSize)
+{
+    uchar latin1Lower[256] = {
+        0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
+        0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f,
+        0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2a,0x2b,0x2c,0x2d,0x2e,0x2f,
+        0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x3a,0x3b,0x3c,0x3d,0x3e,0x3f,
+        0x40,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6a,0x6b,0x6c,0x6d,0x6e,0x6f,
+        0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7a,0x5b,0x5c,0x5d,0x5e,0x5f,
+        0x60,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6a,0x6b,0x6c,0x6d,0x6e,0x6f,
+        0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7a,0x7b,0x7c,0x7d,0x7e,0x7f,
+        0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0x8c,0x8d,0x8e,0x8f,
+        0x90,0x91,0x92,0x93,0x94,0x95,0x96,0x97,0x98,0x99,0x9a,0x9b,0x9c,0x9d,0x9e,0x9f,
+        0xa0,0xa1,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,0xa8,0xa9,0xaa,0xab,0xac,0xad,0xae,0xaf,
+        0xb0,0xb1,0xb2,0xb3,0xb4,0xb5,0xb6,0xb7,0xb8,0xb9,0xba,0xbb,0xbc,0xbd,0xbe,0xbf,
+        // 0xd7 (multiplication sign) and 0xdf (sz ligature) complicate life
+        0xe0,0xe1,0xe2,0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xeb,0xec,0xed,0xee,0xef,
+        0xf0,0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xd7,0xf8,0xf9,0xfa,0xfb,0xfc,0xfd,0xfe,0xdf,
+        0xe0,0xe1,0xe2,0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xeb,0xec,0xed,0xee,0xef,
+        0xf0,0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,0xf8,0xf9,0xfa,0xfb,0xfc,0xfd,0xfe,0xff
+    };
+    // We're called with iLatin1String's .data() and .size():
+    IX_ASSERT(lSize >= 0 && rSize >= 0);
+    if (!lSize)
+        return rSize ? -1 : 0;
+    if (!rSize)
+        return 1;
+    const xsizetype size = std::min(lSize, rSize);
+
+    const uchar *lhs = reinterpret_cast<const uchar *>(lhsChar);
+    const uchar *rhs = reinterpret_cast<const uchar *>(rhsChar);
+    IX_ASSERT(lhs && rhs); // since both lSize and rSize are positive
+    for (xsizetype i = 0; i < size; i++) {
+        IX_ASSERT(lhs[i] && rhs[i]);
+        if (int res = latin1Lower[lhs[i]] - latin1Lower[rhs[i]])
+            return res;
+    }
+    return lencmp(lSize, rSize);
 }
 
 static int ix_compare_strings(iStringView lhs, iStringView rhs, iShell::CaseSensitivity cs)
@@ -390,10 +461,10 @@ static int ix_compare_strings(iLatin1String lhs, iStringView rhs, iShell::CaseSe
 
 static int ix_compare_strings(iLatin1String lhs, iLatin1String rhs, iShell::CaseSensitivity cs)
 {
-    if (cs == iShell::CaseInsensitive)
-        return istrnicmp(lhs.data(), lhs.size(), rhs.data(), rhs.size());
     if (lhs.isEmpty())
-        return lencmp(0, rhs.size());
+        return lencmp(xsizetype(0), rhs.size());
+    if (cs == iShell::CaseInsensitive)
+        return latin1nicmp(lhs.data(), lhs.size(), rhs.data(), rhs.size());
     const auto l = std::min(lhs.size(), rhs.size());
     int r = istrncmp(lhs.data(), rhs.data(), l);
     return r ? r : lencmp(lhs.size(), rhs.size());
@@ -478,42 +549,9 @@ int iPrivate::compareStrings(iLatin1String lhs, iLatin1String rhs, iShell::CaseS
     return ix_compare_strings(lhs, rhs, cs);
 }
 
-/*!
-    \internal
-
-    Returns the index position of the first occurrence of the
-    character \a ch in the string given by \a str and \a len,
-    searching forward from index
-    position \a from. Returns -1 if \a ch could not be found.
-*/
-static int findChar(const iChar *str, int len, iChar ch, int from,
-    iShell::CaseSensitivity cs)
-{
-    const ushort *s = (const ushort *)str;
-    ushort c = ch.unicode();
-    if (from < 0)
-        from = std::max(from + len, 0);
-    if (from < len) {
-        const ushort *n = s + from;
-        const ushort *e = s + len;
-        if (cs == iShell::CaseSensitive) {
-            n = iPrivate::xustrchr(iStringView(n, e), c);
-            if (n != e)
-                return n - s;
-        } else {
-            c = foldCase(c);
-            --n;
-            while (++n != e)
-                if (foldCase(*n) == c)
-                    return  n - s;
-        }
-    }
-    return -1;
-}
-
 #define REHASH(a) \
-    if (sl_minus_1 < sizeof(uint) * CHAR_BIT)  \
-        hashHaystack -= uint(a) << sl_minus_1; \
+    if (sl_minus_1 < sizeof(std::size_t) * CHAR_BIT)  \
+        hashHaystack -= std::size_t(a) << sl_minus_1; \
     hashHaystack <<= 1
 
 inline bool iIsUpper(char ch)
@@ -585,28 +623,8 @@ inline char iToLower(char ch)
 */
 
 /*!
-    \class iCharRef
-    \reentrant
-    \brief The iCharRef class is a helper class for iString.
-
-    \internal
-
-    \ingroup string-processing
-
-    When you get an object of type iCharRef, if you can assign to it,
-    the assignment will apply to the character in the string from
-    which you got the reference. That is its whole purpose in life.
-    The iCharRef becomes invalid once modifications are made to the
-    string: if you want to keep the character, copy it into a iChar.
-
-    Most of the iChar member functions also exist in iCharRef.
-    However, they are not explicitly documented here.
-
-    \sa iString::operator[](), iString::at(), iChar
-*/
-
-/*!
-    \class iString
+    \class QString
+    \inmodule QtCore
     \reentrant
 
     \brief The iString class provides a Unicode character string.
@@ -770,17 +788,28 @@ inline char iToLower(char ch)
     how many times a particular character or substring occurs in the
     string, use count().
 
-    iStrings can be compared using overloaded operators such as \l
+    To obtain a pointer to the actual character data, call data() or
+    constData(). These functions return a pointer to the beginning of
+    the QChar data. The pointer is guaranteed to remain valid until a
+    non-const function is called on the QString.
+
+    \section2 Comparing Strings
+
+    QStrings can be compared using overloaded operators such as \l
     operator<(), \l operator<=(), \l operator==(), \l operator>=(),
     and so on.  Note that the comparison is based exclusively on the
     numeric Unicode values of the characters. It is very fast, but is
-    not what a human would expect; the iString::localeAwareCompare()
-    function is a better choice for sorting user-interface strings.
+    not what a human would expect; the QString::localeAwareCompare()
+    function is usually a better choice for sorting user-interface
+    strings, when such a comparison is available.
 
-    To obtain a pointer to the actual character data, call data() or
-    constData(). These functions return a pointer to the beginning of
-    the iChar data. The pointer is guaranteed to remain valid until a
-    non-const function is called on the iString.
+    On Unix-like platforms (including Linux, \macos and iOS), when Qt
+    is linked with the ICU library (which it usually is), its
+    locale-aware sorting is used.  Otherwise, on \macos and iOS, \l
+    localeAwareCompare() compares according the "Order for sorted
+    lists" setting in the International preferences panel. On other
+    Unix-like systems without ICU, the comparison falls back to the
+    system library's \c strcoll(),
 
     \section1 Converting Between 8-Bit Strings and Unicode Strings
 
@@ -961,17 +990,16 @@ inline char iToLower(char ch)
     and the \c{'+'} will automatically be performed as the
     \c{iStringBuilder} \c{'%'} everywhere.
 
-    \sa fromRawData(), iChar, iLatin1String, iByteArray, iStringRef
-*/
+    \section1 Maximum size and out-of-memory conditions
 
-/*!
-    \enum iString::SplitBehavior
+    In case memory allocation fails, QString will throw a \c std::bad_alloc
+    exception. Out of memory conditions in the Qt containers are the only case
+    where Qt will throw exceptions.
 
-    This enum specifies how the split() function should behave with
-    respect to empty strings.
-
-    \value KeepEmptyParts  If a field is empty, keep it in the result.
-    \value SkipEmptyParts  If a field is empty, don't include it in the result.
+    Note that the operating system may impose further limits on applications
+    holding a lot of allocated memory, especially large, contiguous blocks.
+    Such considerations, the configuration of such behavior or any mitigation
+    are outside the scope of the Qt API.
 
     \sa split()
 */
@@ -1246,9 +1274,9 @@ inline char iToLower(char ch)
     \sa utf16(), toLatin1(), toUtf8(), toLocal8Bit(), toStdU16String(), toStdU32String()
 */
 
-int iString::toUcs4_helper(const ushort *uc, int length, uint *out)
+xsizetype iString::toUcs4_helper(const ushort *uc, xsizetype length, uint *out)
 {
-    int count = 0;
+    xsizetype count = 0;
 
     iStringIterator i(iStringView(uc, length));
     while (i.hasNext())
@@ -1303,10 +1331,10 @@ int iString::toUcs4_helper(const ushort *uc, int length, uint *out)
 
     \sa fromRawData()
 */
-iString::iString(const iChar *unicode, int size)
+iString::iString(const iChar *unicode, xsizetype size)
 {
-   if (!unicode) {
-        d = Data::sharedNull();
+    if (!unicode) {
+        d.clear();
     } else {
         if (size < 0) {
             size = 0;
@@ -1314,13 +1342,11 @@ iString::iString(const iChar *unicode, int size)
                 ++size;
         }
         if (!size) {
-            d = Data::allocate(0);
+            d = DataPointer::fromRawData(&_empty, 0);
         } else {
-            d = Data::allocate(size + 1);
-            IX_CHECK_PTR(d);
-            d->size = size;
-            memcpy(d->data(), unicode, size * sizeof(iChar));
-            d->data()[size] = '\0';
+            d = DataPointer(Data::allocate(size), size);
+            memcpy(d.data(), unicode, size * sizeof(iChar));
+            d.data()[size] = '\0';
         }
     }
 }
@@ -1331,17 +1357,15 @@ iString::iString(const iChar *unicode, int size)
 
     \sa fill()
 */
-iString::iString(int size, iChar ch)
+iString::iString(xsizetype size, iChar ch)
 {
-   if (size <= 0) {
-        d = Data::allocate(0);
+    if (size <= 0) {
+        d = DataPointer::fromRawData(&_empty, 0);
     } else {
-        d = Data::allocate(size + 1);
-        IX_CHECK_PTR(d);
-        d->size = size;
-        d->data()[size] = '\0';
-        ushort *i = d->data() + size;
-        ushort *b = d->data();
+        d = DataPointer(Data::allocate(size), size);
+        d.data()[size] = '\0';
+        ushort *i = d.data() + size;
+        ushort *b = d.data();
         const ushort value = ch.unicode();
         while (i != b)
            *--i = value;
@@ -1354,12 +1378,14 @@ iString::iString(int size, iChar ch)
   Constructs a string of the given \a size without initializing the
   characters. This is only used in \c iStringBuilder::toString().
 */
-iString::iString(int size, iShell::Initialization)
+iString::iString(xsizetype size, iShell::Initialization)
 {
-    d = Data::allocate(size + 1);
-    IX_CHECK_PTR(d);
-    d->size = size;
-    d->data()[size] = '\0';
+    if (size <= 0) {
+        d = DataPointer::fromRawData(&_empty, 0);
+    } else {
+        d = DataPointer(Data::allocate(size), size);
+        d.data()[size] = '\0';
+    }
 }
 
 /*! \fn iString::iString(iLatin1String str)
@@ -1374,11 +1400,9 @@ iString::iString(int size, iShell::Initialization)
 */
 iString::iString(iChar ch)
 {
-    d = Data::allocate(2);
-    IX_CHECK_PTR(d);
-    d->size = 1;
-    d->data()[0] = ch.unicode();
-    d->data()[1] = '\0';
+    d = DataPointer(Data::allocate(1), 1);
+    d.data()[0] = ch.unicode();
+    d.data()[1] = '\0';
 }
 
 /*! \fn iString::iString(const iByteArray &ba)
@@ -1465,22 +1489,17 @@ iString::iString(iChar ch)
     \sa truncate(), reserve()
 */
 
-void iString::resize(int size)
+void iString::resize(xsizetype size)
 {
     if (size < 0)
         size = 0;
 
-    if (IS_RAW_DATA(d) && !d->ref.isShared() && size < d->size) {
-        d->size = size;
-        return;
-    }
-
-    if (d->ref.isShared() || uint(size) + 1u > d->alloc)
-        reallocData(uint(size) + 1u, true);
-    if (d->alloc) {
-        d->size = size;
-        d->data()[size] = '\0';
-    }
+    const auto capacityAtEnd = capacity() - d.freeSpaceAtBegin();
+    if (d.needsDetach() || size > capacityAtEnd)
+        reallocData(size, d.detachFlags() | Data::GrowsForward);
+    d.size = size;
+    if (d.allocatedCapacity())
+        d.data()[size] = 0;
 }
 
 /*!
@@ -1493,13 +1512,13 @@ void iString::resize(int size)
     \snippet istring/main.cpp 46
 */
 
-void iString::resize(int size, iChar fillChar)
+void iString::resize(xsizetype size, iChar fillChar)
 {
-    const int oldSize = length();
+    const xsizetype oldSize = length();
     resize(size);
-    const int difference = length() - oldSize;
+    const xsizetype difference = length() - oldSize;
     if (difference > 0)
-        std::fill_n(d->begin() + oldSize, difference, fillChar.unicode());
+        std::fill_n(d.data() + oldSize, difference, fillChar.unicode());
 }
 
 /*! \fn int iString::capacity() const
@@ -1552,25 +1571,42 @@ void iString::resize(int size, iChar fillChar)
     \sa reserve(), capacity()
 */
 
-void iString::reallocData(uint alloc, bool grow)
+void iString::reallocData(xsizetype alloc, Data::ArrayOptions allocOptions)
 {
-    auto allocOptions = d->detachFlags();
-    if (grow)
-        allocOptions |= iArrayData::Grow;
+    if (!alloc) {
+        d = DataPointer::fromRawData(&_empty, 0);
+        return;
+    }
 
-    if (d->ref.isShared() || IS_RAW_DATA(d)) {
-        Data *x = Data::allocate(alloc, allocOptions);
-        IX_CHECK_PTR(x);
-        x->size = std::min(int(alloc) - 1, d->size);
-        ::memcpy(x->data(), d->data(), x->size * sizeof(iChar));
-        x->data()[x->size] = 0;
-        if (!d->ref.deref())
-            Data::deallocate(d);
-        d = x;
+    // there's a case of slow reallocate path where we need to memmove the data
+    // before a call to ::realloc(), meaning that there's an extra "heavy"
+    // operation. just prefer ::malloc() branch in this case
+    const bool slowReallocatePath = d.freeSpaceAtBegin() > 0;
+
+    if (d.needsDetach() || slowReallocatePath) {
+        DataPointer dd(Data::allocate(alloc, allocOptions), std::min(alloc, d.size));
+        if (dd.size > 0)
+            ::memcpy(dd.data(), d.data(), dd.size * sizeof(iChar));
+        dd.data()[dd.size] = 0;
+        d = dd;
     } else {
-        Data *p = Data::reallocateUnaligned(d, alloc, allocOptions);
-        IX_CHECK_PTR(p);
-        d = p;
+        d.reallocate(alloc, allocOptions);
+    }
+}
+
+void iString::reallocGrowData(xsizetype alloc, Data::ArrayOptions options)
+{
+    if (!alloc)  // expected to always allocate
+        alloc = 1;
+
+    if (d.needsDetach()) {
+        const auto newSize = std::min(alloc, d.size);
+        DataPointer dd(DataPointer::allocateGrow(d, alloc, newSize, options));
+        dd->copyAppend(d.data(), d.data() + newSize);
+        dd.data()[dd.size] = 0;
+        d = dd;
+    } else {
+        d.reallocate(alloc, options);
     }
 }
 
@@ -1589,9 +1625,6 @@ void iString::reallocData(uint alloc, bool grow)
 
 iString &iString::operator=(const iString &other)
 {
-    other.d->ref.ref();
-    if ((IX_NULLPTR != d) && !d->ref.deref())
-        Data::deallocate(d);
     d = other.d;
     return *this;
 }
@@ -1612,10 +1645,11 @@ iString &iString::operator=(const iString &other)
 */
 iString &iString::operator=(iLatin1String other)
 {
-    if (isDetached() && other.size() <= capacity()) { // assumes d->alloc == 0 -> !isDetached() (sharedNull)
-        d->size = other.size();
-        d->data()[other.size()] = 0;
-        ix_from_latin1(d->data(), other.latin1(), other.size());
+    const xsizetype capacityAtEnd = capacity() - d.freeSpaceAtBegin();
+    if (isDetached() && other.size() <= capacityAtEnd) { // assumes d.alloc == 0 -> !isDetached() (sharedNull)
+        d.size = other.size();
+        d.data()[other.size()] = 0;
+        ix_from_latin1(d.data(), other.latin1(), other.size());
     } else {
         *this = fromLatin1(other.latin1(), other.size());
     }
@@ -1676,12 +1710,12 @@ iString &iString::operator=(iLatin1String other)
 */
 iString &iString::operator=(iChar ch)
 {
-    if (isDetached() && capacity() >= 1) { // assumes d->alloc == 0 -> !isDetached() (sharedNull)
+    const xsizetype capacityAtEnd = capacity() - d.freeSpaceAtBegin();
+    if (isDetached() && capacityAtEnd >= 1) { // assumes d->alloc == 0 -> !isDetached() (sharedNull)
         // re-use existing capacity:
-        ushort *dat = d->data();
-        dat[0] = ch.unicode();
-        dat[1] = 0;
-        d->size = 1;
+        d.data()[0] = ch.unicode();
+        d.data()[1] = 0;
+        d.size = 1;
     } else {
         operator=(iString(ch));
     }
@@ -1704,18 +1738,6 @@ iString &iString::operator=(iChar ch)
     \sa append(), prepend(), replace(), remove()
 */
 
-
-/*!
-    \fn iString& iString::insert(int position, const iStringRef &str)
-
-    \overload insert()
-
-    Inserts the string reference \a str at the given index \a position and
-    returns a reference to this string.
-
-    If the given \a position is greater than size(), the array is
-    first extended using resize().
-*/
 
 
 /*!
@@ -1760,20 +1782,20 @@ iString &iString::operator=(iChar ch)
 
     Inserts the Latin-1 string \a str at the given index \a position.
 */
-iString &iString::insert(int i, iLatin1String str)
+iString &iString::insert(xsizetype i, iLatin1String str)
 {
     const char *s = str.latin1();
     if (i < 0 || !s || !(*s))
         return *this;
 
-    int len = str.size();
-    if (i > d->size)
+    xsizetype len = str.size();
+    if (i > d.size)
         resize(i + len, iLatin1Char(' '));
     else
-        resize(d->size + len);
+        resize(size() + len);
 
-    ::memmove(d->data() + i + len, d->data() + i, (d->size - i - len) * sizeof(iChar));
-    ix_from_latin1(d->data() + i, s, uint(len));
+    ::memmove(d.data() + i + len, d.data() + i, (d.size - i - len) * sizeof(iChar));
+    ix_from_latin1(d.data() + i, s, size_t(len));
     return *this;
 }
 
@@ -1784,29 +1806,35 @@ iString &iString::insert(int i, iLatin1String str)
     Inserts the first \a size characters of the iChar array \a unicode
     at the given index \a position in the string.
 */
-iString& iString::insert(int i, const iChar *unicode, int size)
+iString& iString::insert(xsizetype i, const iChar *unicode, xsizetype size)
 {
     if (i < 0 || size <= 0)
         return *this;
 
-    const ushort *s = (const ushort *)unicode;
-    if (s >= d->data() && s < d->data() + d->alloc) {
-        // Part of me - take a copy
-        ushort *tmp = static_cast<ushort *>(::malloc(size * sizeof(iChar)));
-        IX_CHECK_PTR(tmp);
-        memcpy(tmp, s, size * sizeof(iChar));
-        insert(i, reinterpret_cast<const iChar *>(tmp), size);
-        ::free(tmp);
-        return *this;
+    const auto s = reinterpret_cast<const ushort *>(unicode);
+    if (points_into_range<ushort>(s, d.data(), d.data() + d.size)) {
+        iVarLengthArray<ushort> arry(size);
+        memcpy(arry.data(), s, size * sizeof(ushort));
+        return insert(i, iStringView(arry.data(), arry.size()));
     }
 
-    if (i > d->size)
-        resize(i + size, iLatin1Char(' '));
-    else
-        resize(d->size + size);
+    const auto oldSize = this->size();
+    const auto newSize = std::max(i, oldSize) + size;
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.begin() + std::min(i, oldSize), size);
 
-    ::memmove(d->data() + i + size, d->data() + i, (d->size - i - size) * sizeof(iChar));
-    memcpy(d->data() + i, s, size * sizeof(iChar));
+    auto flags = d.detachFlags() | Data::GrowsForward;
+    if (oldSize != 0 && i <= oldSize / 4)
+        flags |= Data::GrowsBackwards;
+
+    // ### optimize me
+    if (d.needsDetach() || newSize > capacity() || shouldGrow)
+        reallocGrowData(newSize, flags);
+
+    if (i > oldSize)  // set spaces in the uninitialized gap
+        d.copyAppend(i - oldSize, u' ');
+
+    d.insert(d.begin() + i, s, s + size);
+    d.data()[d.size] = '\0';
     return *this;
 }
 
@@ -1817,18 +1845,30 @@ iString& iString::insert(int i, const iChar *unicode, int size)
     Inserts \a ch at the given index \a position in the string.
 */
 
-iString& iString::insert(int i, iChar ch)
+iString& iString::insert(xsizetype i, iChar ch)
 {
     if (i < 0)
-        i += d->size;
+        i += d.size;
     if (i < 0)
         return *this;
-    if (i > d->size)
-        resize(i + 1, iLatin1Char(' '));
-    else
-        resize(d->size + 1);
-    ::memmove(d->data() + i + 1, d->data() + i, (d->size - i - 1) * sizeof(iChar));
-    d->data()[i] = ch.unicode();
+
+    const auto oldSize = size();
+    const auto newSize = std::max(i, oldSize) + 1;
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.begin() + std::min(i, oldSize), 1);
+
+    auto flags = d.detachFlags() | Data::GrowsForward;
+    if (oldSize != 0 && i <= oldSize / 4)
+        flags |= Data::GrowsBackwards;
+
+    // ### optimize me
+    if (d.needsDetach() || newSize > capacity() || shouldGrow)
+        reallocGrowData(newSize, flags);
+
+    if (i > oldSize)  // set spaces in the uninitialized gap
+        d.copyAppend(i - oldSize, u' ');
+
+    d.insert(d.begin() + i, 1, ch.unicode());
+    d.data()[d.size] = '\0';
     return *this;
 }
 
@@ -1852,15 +1892,16 @@ iString& iString::insert(int i, iChar ch)
 */
 iString &iString::append(const iString &str)
 {
-    if (str.d != Data::sharedNull()) {
-        if (d == Data::sharedNull()) {
+    if (!str.isNull()) {
+        if (isNull()) {
             operator=(str);
         } else {
-            if (d->ref.isShared() || uint(d->size + str.d->size) + 1u > d->alloc)
-                reallocData(uint(d->size + str.d->size) + 1u, true);
-            memcpy(d->data() + d->size, str.d->data(), str.d->size * sizeof(iChar));
-            d->size += str.d->size;
-            d->data()[d->size] = '\0';
+            const bool shouldGrow = d.shouldGrowBeforeInsert(d.end(), str.d.size);
+            if (d.needsDetach() || size() + str.size() > capacity() || shouldGrow)
+                reallocGrowData(size() + str.size(),
+                                d.detachFlags() | Data::GrowsForward);
+            d.copyAppend(str.d.data(), str.d.data() + str.d.size);
+            d.data()[d.size] = '\0';
         }
     }
     return *this;
@@ -1872,14 +1913,17 @@ iString &iString::append(const iString &str)
 
   Appends \a len characters from the iChar array \a str to this string.
 */
-iString &iString::append(const iChar *str, int len)
+iString &iString::append(const iChar *str, xsizetype len)
 {
     if (str && len > 0) {
-        if (d->ref.isShared() || uint(d->size + len) + 1u > d->alloc)
-            reallocData(uint(d->size + len) + 1u, true);
-        memcpy(d->data() + d->size, str, len * sizeof(iChar));
-        d->size += len;
-        d->data()[d->size] = '\0';
+        const bool shouldGrow = d.shouldGrowBeforeInsert(d.end(), len);
+        if (d.needsDetach() || size() + len > capacity() || shouldGrow)
+            reallocGrowData(size() + len, d.detachFlags() | Data::GrowsForward);
+        IX_COMPILER_VERIFY(sizeof(iChar) == sizeof(ushort));
+        // the following should be safe as iChar uses ushort as underlying data
+        const ushort *char16String = reinterpret_cast<const ushort *>(str);
+        d.copyAppend(char16String, char16String + len);
+        d.data()[d.size] = '\0';
     }
     return *this;
 }
@@ -1893,13 +1937,19 @@ iString &iString::append(iLatin1String str)
 {
     const char *s = str.latin1();
     if (s) {
-        int len = str.size();
-        if (d->ref.isShared() || uint(d->size + len) + 1u > d->alloc)
-            reallocData(uint(d->size + len) + 1u, true);
-        ushort *i = d->data() + d->size;
-        ix_from_latin1(i, s, uint(len));
-        i[len] = '\0';
-        d->size += len;
+        xsizetype len = str.size();
+        const bool shouldGrow = d.shouldGrowBeforeInsert(d.end(), len);
+        if (d.needsDetach() || size() + len > capacity() || shouldGrow)
+            reallocGrowData(size() + len, d.detachFlags() | Data::GrowsForward);
+
+        if (d.freeSpaceAtBegin() == 0) {  // fast path
+            ushort *i = d.data() + d.size;
+            ix_from_latin1(i, s, size_t(len));
+            d.size += len;
+        } else {  // slow path
+            d.copyAppend(s, s + len);
+        }
+        d.data()[d.size] = '\0';
     }
     return *this;
 }
@@ -1941,10 +1991,11 @@ iString &iString::append(iLatin1String str)
 */
 iString &iString::append(iChar ch)
 {
-    if (d->ref.isShared() || uint(d->size) + 2u > d->alloc)
-        reallocData(uint(d->size) + 2u, true);
-    d->data()[d->size++] = ch.unicode();
-    d->data()[d->size] = '\0';
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.end(), 1);
+    if (d.needsDetach() || size() + 1 > capacity() || shouldGrow)
+        reallocGrowData(d.size + 1u, d.detachFlags() | Data::GrowsForward);
+    d.copyAppend(1, ch.unicode());
+    d.data()[d.size] = '\0';
     return *this;
 }
 
@@ -1972,14 +2023,6 @@ iString &iString::append(iChar ch)
     \overload prepend()
 
     Prepends \a len characters from the iChar array \a str to this string and
-    returns a reference to this string.
-*/
-
-/*! \fn iString &iString::prepend(const iStringRef &str)
-
-    \overload prepend()
-
-    Prepends the string reference \a str to the beginning of this string and
     returns a reference to this string.
 */
 
@@ -2034,19 +2077,18 @@ iString &iString::append(iChar ch)
 
   \sa insert(), replace()
 */
-iString &iString::remove(int pos, int len)
+iString &iString::remove(xsizetype pos, xsizetype len)
 {
     if (pos < 0)  // count from end of string
-        pos += d->size;
-    if (uint(pos) >= uint(d->size)) {
+        pos += size();
+    if (size_t(pos) >= size_t(size())) {
         // range problems
-    } else if (len >= d->size - pos) {
+    } else if (len >= size() - pos) {
         resize(pos); // truncate
     } else if (len > 0) {
         detach();
-        memmove(d->data() + pos, d->data() + pos + len,
-                (d->size - pos - len + 1) * sizeof(ushort));
-        d->size -= len;
+        d.erase(d.begin() + pos, d.begin() + pos + len);
+        d.data()[d.size] = u'\0';
     }
     return *this;
 }
@@ -2054,16 +2096,30 @@ iString &iString::remove(int pos, int len)
 template<typename T>
 static void removeStringImpl(iString &s, const T &needle, iShell::CaseSensitivity cs)
 {
-    const int needleSize = needle.size();
-    if (needleSize) {
-        if (needleSize == 1) {
-            s.remove(needle.front(), cs);
-        } else {
-            int i = 0;
-            while ((i = s.indexOf(needle, i, cs)) != -1)
-                s.remove(i, needleSize);
-        }
+    const auto needleSize = needle.size();
+    if (!needleSize)
+        return;
+
+    // avoid detach if nothing to do:
+    xsizetype idx = s.indexOf(needle, 0, cs);
+    if (idx < 0)
+        return;
+
+    const auto beg = s.begin(); // detaches
+    auto dst = beg + idx;
+    auto src = beg + idx + needleSize;
+    const auto end = s.end();
+    // loop invariant: [beg, dst[ is partial result
+    //                 [src, end[ still to be checked for needles
+    while (src < end) {
+        const auto i = s.indexOf(needle, src - beg, cs);
+        const auto hit = i == -1 ? end : beg + i;
+        const auto skipped = hit - src;
+        memmove(dst, src, skipped * sizeof(iChar));
+        dst += skipped;
+        src = hit + needleSize;
     }
+    s.truncate(dst - beg);
 }
 
 /*!
@@ -2079,7 +2135,13 @@ static void removeStringImpl(iString &s, const T &needle, iShell::CaseSensitivit
 */
 iString &iString::remove(const iString &str, iShell::CaseSensitivity cs)
 {
-    removeStringImpl(*this, str, cs);
+    const auto s = str.d.data();
+    if (points_into_range(s, d.data(), d.data() + d.size)) {
+        iVarLengthArray<ushort> arry(str.size());
+        memcpy(arry.data(), s, str.size()* sizeof(ushort));
+        removeStringImpl(*this, iStringView(arry.data(), arry.size()), cs);
+    } else
+        removeStringImpl(*this, iToStringViewIgnoringNull(str), cs);
     return *this;
 }
 
@@ -2120,7 +2182,7 @@ iString &iString::remove(iLatin1String str, iShell::CaseSensitivity cs)
 */
 iString &iString::remove(iChar ch, iShell::CaseSensitivity cs)
 {
-    const int idx = indexOf(ch, 0, cs);
+    const xsizetype idx = indexOf(ch, 0, cs);
     if (idx != -1) {
         const auto first = begin(); // implicit detach()
         auto last = end();
@@ -2177,7 +2239,7 @@ iString &iString::remove(iChar ch, iShell::CaseSensitivity cs)
 
   \sa insert(), remove()
 */
-iString &iString::replace(int pos, int len, const iString &after)
+iString &iString::replace(xsizetype pos, xsizetype len, const iString &after)
 {
     return replace(pos, len, after.constData(), after.length());
 }
@@ -2189,14 +2251,14 @@ iString &iString::replace(int pos, int len, const iString &after)
   first \a size characters of the iChar array \a unicode and returns a
   reference to this string.
 */
-iString &iString::replace(int pos, int len, const iChar *unicode, int size)
+iString &iString::replace(xsizetype pos, xsizetype len, const iChar *unicode, int size)
 {
-    if (uint(pos) > uint(d->size))
+    if (size_t(pos) > size_t(this->size()))
         return *this;
-    if (len > d->size - pos)
-        len = d->size - pos;
+    if (len > this->size() - pos)
+        len = this->size() - pos;
 
-    uint index = pos;
+    size_t index = pos;
     replace_helper(&index, 1, len, unicode, size);
     return *this;
 }
@@ -2208,7 +2270,7 @@ iString &iString::replace(int pos, int len, const iChar *unicode, int size)
   Replaces \a n characters beginning at index \a position with the
   character \a after and returns a reference to this string.
 */
-iString &iString::replace(int pos, int len, iChar after)
+iString &iString::replace(xsizetype pos, xsizetype len, iChar after)
 {
     return replace(pos, len, &after, 1);
 }
@@ -2237,7 +2299,7 @@ iString &iString::replace(const iString &before, const iString &after, iShell::C
 }
 
 namespace { // helpers for replace and its helper:
-iChar *textCopy(const iChar *start, int len)
+iChar *textCopy(const iChar *start, xsizetype len)
 {
     const size_t size = len * sizeof(iChar);
     iChar *const copy = static_cast<iChar *>(::malloc(size));
@@ -2249,65 +2311,66 @@ iChar *textCopy(const iChar *start, int len)
 bool pointsIntoRange(const iChar *ptr, const ushort *base, int len)
 {
     const iChar *const start = reinterpret_cast<const iChar *>(base);
-    return start <= ptr && ptr < start + len;
+    const std::less<const iChar *> less;
+    return !less(ptr, start) && less(ptr, start + len);
 }
 } // end namespace
 
 /*!
   \internal
  */
-void iString::replace_helper(uint *indices, int nIndices, int blen, const iChar *after, int alen)
+void iString::replace_helper(size_t *indices, xsizetype nIndices, xsizetype blen, const iChar *after, xsizetype alen)
 {
-    // Copy after if it lies inside our own d->data() area (which we could
+    // Copy after if it lies inside our own d.b area (which we could
     // possibly invalidate via a realloc or modify by replacement).
-    iChar *afterBuffer = 0;
-    if (pointsIntoRange(after, d->data(), d->size)) // Use copy in place of vulnerable original:
+    iChar *afterBuffer = nullptr;
+    if (pointsIntoRange(after, d.data(), d.size)) // Use copy in place of vulnerable original:
         after = afterBuffer = textCopy(after, alen);
 
     if (blen == alen) {
         // replace in place
         detach();
-        for (int i = 0; i < nIndices; ++i)
-            memcpy(d->data() + indices[i], after, alen * sizeof(iChar));
+        for (xsizetype i = 0; i < nIndices; ++i)
+            memcpy(d.data() + indices[i], after, alen * sizeof(iChar));
     } else if (alen < blen) {
         // replace from front
         detach();
-        uint to = indices[0];
+        size_t to = indices[0];
         if (alen)
-            memcpy(d->data()+to, after, alen*sizeof(iChar));
+            memcpy(d.data()+to, after, alen*sizeof(iChar));
         to += alen;
-        uint movestart = indices[0] + blen;
-        for (int i = 1; i < nIndices; ++i) {
-            int msize = indices[i] - movestart;
+        size_t movestart = indices[0] + blen;
+        for (xsizetype i = 1; i < nIndices; ++i) {
+            xsizetype msize = indices[i] - movestart;
             if (msize > 0) {
-                memmove(d->data() + to, d->data() + movestart, msize * sizeof(iChar));
+                memmove(d.data() + to, d.data() + movestart, msize * sizeof(iChar));
                 to += msize;
             }
             if (alen) {
-                memcpy(d->data() + to, after, alen * sizeof(iChar));
+                memcpy(d.data() + to, after, alen * sizeof(iChar));
                 to += alen;
             }
             movestart = indices[i] + blen;
         }
-        int msize = d->size - movestart;
+        xsizetype msize = d.size - movestart;
         if (msize > 0)
-            memmove(d->data() + to, d->data() + movestart, msize * sizeof(iChar));
-        resize(d->size - nIndices*(blen-alen));
+            memmove(d.data() + to, d.data() + movestart, msize * sizeof(iChar));
+        resize(d.size - nIndices*(blen-alen));
     } else {
         // replace from back
-        int adjust = nIndices*(alen-blen);
-        int newLen = d->size + adjust;
-        int moveend = d->size;
+        xsizetype adjust = nIndices*(alen-blen);
+        xsizetype newLen = d.size + adjust;
+        xsizetype moveend = d.size;
         resize(newLen);
 
         while (nIndices) {
             --nIndices;
-            int movestart = indices[nIndices] + blen;
-            int insertstart = indices[nIndices] + nIndices*(alen-blen);
-            int moveto = insertstart + alen;
-            memmove(d->data() + moveto, d->data() + movestart,
+            xsizetype movestart = indices[nIndices] + blen;
+            xsizetype insertstart = indices[nIndices] + nIndices*(alen-blen);
+            xsizetype moveto = insertstart + alen;
+            memmove(d.data() + moveto, d.data() + movestart,
                     (moveend - movestart)*sizeof(iChar));
-            memcpy(d->data() + insertstart, after, alen * sizeof(iChar));
+            memcpy(d.data() + insertstart, after, alen * sizeof(iChar));
             moveend = movestart-blen;
         }
     }
@@ -2325,11 +2388,11 @@ void iString::replace_helper(uint *indices, int nIndices, int blen, const iChar 
   If \a cs is iShell::CaseSensitive (default), the search is case
   sensitive; otherwise the search is case insensitive.
 */
-iString &iString::replace(const iChar *before, int blen,
-                          const iChar *after, int alen,
+iString &iString::replace(const iChar *before, xsizetype blen,
+                          const iChar *after, xsizetype alen,
                           iShell::CaseSensitivity cs)
 {
-    if (d->size == 0) {
+    if (d.size == 0) {
         if (blen)
             return *this;
     } else {
@@ -2340,12 +2403,12 @@ iString &iString::replace(const iChar *before, int blen,
         return *this;
 
     iStringMatcher matcher(before, blen, cs);
-    iChar *beforeBuffer = 0, *afterBuffer = 0;
+    iChar *beforeBuffer = nullptr, *afterBuffer = nullptr;
 
-    int index = 0;
+    xsizetype index = 0;
     while (1) {
-        uint indices[1024];
-        uint pos = 0;
+        size_t indices[1024];
+        size_t pos = 0;
         while (pos < 1024) {
             index = matcher.indexIn(*this, index);
             if (index == -1)
@@ -2364,10 +2427,10 @@ iString &iString::replace(const iChar *before, int blen,
               We're about to change data, that before and after might point
               into, and we'll need that data for our next batch of indices.
             */
-            if (!afterBuffer && pointsIntoRange(after, d->data(), d->size))
+            if (!afterBuffer && pointsIntoRange(after, d.data(), d.size))
                 after = afterBuffer = textCopy(after, alen);
 
-            if (!beforeBuffer && pointsIntoRange(before, d->data(), d->size)) {
+            if (!beforeBuffer && pointsIntoRange(before, d.data(), d.size)) {
                 beforeBuffer = textCopy(before, blen);
                 matcher = iStringMatcher(beforeBuffer, blen, cs);
             }
@@ -2396,30 +2459,30 @@ iString &iString::replace(const iChar *before, int blen,
 */
 iString& iString::replace(iChar ch, const iString &after, iShell::CaseSensitivity cs)
 {
-    if (after.d->size == 0)
+    if (after.size() == 0)
         return remove(ch, cs);
 
-    if (after.d->size == 1)
-        return replace(ch, after.d->data()[0], cs);
+    if (after.size() == 1)
+        return replace(ch, after.front(), cs);
 
-    if (d->size == 0)
+    if (size() == 0)
         return *this;
 
     ushort cc = (cs == iShell::CaseSensitive ? ch.unicode() : ch.toCaseFolded().unicode());
 
-    int index = 0;
+    xsizetype index = 0;
     while (1) {
-        uint indices[1024];
-        uint pos = 0;
+        size_t indices[1024];
+        size_t pos = 0;
         if (cs == iShell::CaseSensitive) {
-            while (pos < 1024 && index < d->size) {
-                if (d->data()[index] == cc)
+            while (pos < 1024 && index < size()) {
+                if (d.data()[index] == cc)
                     indices[pos++] = index;
                 index++;
             }
         } else {
-            while (pos < 1024 && index < d->size) {
-                if (iChar::toCaseFolded(d->data()[index]) == cc)
+            while (pos < 1024 && index < size()) {
+                if (iChar::toCaseFolded(d.data()[index]) == cc)
                     indices[pos++] = index;
                 index++;
             }
@@ -2427,12 +2490,12 @@ iString& iString::replace(iChar ch, const iString &after, iShell::CaseSensitivit
         if (!pos) // Nothing to replace
             break;
 
-        replace_helper(indices, pos, 1, after.constData(), after.d->size);
+        replace_helper(indices, pos, 1, after.constData(), after.size());
 
         if (index == -1) // Nothing left to replace
             break;
         // The call to replace_helper just moved what index points at:
-        index += pos*(after.d->size - 1);
+        index += pos*(after.size() - 1);
     }
     return *this;
 }
@@ -2447,13 +2510,13 @@ iString& iString::replace(iChar ch, const iString &after, iShell::CaseSensitivit
 */
 iString& iString::replace(iChar before, iChar after, iShell::CaseSensitivity cs)
 {
-    if (d->size) {
-        const int idx = indexOf(before, 0, cs);
+    if (d.size) {
+        const xsizetype idx = indexOf(before, 0, cs);
         if (idx != -1) {
             detach();
             const ushort a = after.unicode();
-            ushort *i = d->data();
-            const ushort *e = i + d->size;
+            ushort *i = d.data();
+            ushort *const e = i + d.size;
             i += idx;
             *i = a;
             if (cs == iShell::CaseSensitive) {
@@ -2488,8 +2551,8 @@ iString& iString::replace(iChar before, iChar after, iShell::CaseSensitivity cs)
 */
 iString &iString::replace(iLatin1String before, iLatin1String after, iShell::CaseSensitivity cs)
 {
-    int alen = after.size();
-    int blen = before.size();
+    xsizetype alen = after.size();
+    xsizetype blen = before.size();
     iVarLengthArray<ushort> a(alen);
     iVarLengthArray<ushort> b(blen);
     ix_from_latin1(a.data(), after.latin1(), alen);
@@ -2511,10 +2574,10 @@ iString &iString::replace(iLatin1String before, iLatin1String after, iShell::Cas
 */
 iString &iString::replace(iLatin1String before, const iString &after, iShell::CaseSensitivity cs)
 {
-    int blen = before.size();
+    xsizetype blen = before.size();
     iVarLengthArray<ushort> b(blen);
     ix_from_latin1(b.data(), before.latin1(), blen);
-    return replace((const iChar *)b.data(), blen, after.constData(), after.d->size, cs);
+    return replace((const iChar *)b.data(), blen, after.constData(), after.d.size, cs);
 }
 
 /*!
@@ -2531,10 +2594,10 @@ iString &iString::replace(iLatin1String before, const iString &after, iShell::Ca
 */
 iString &iString::replace(const iString &before, iLatin1String after, iShell::CaseSensitivity cs)
 {
-    int alen = after.size();
+    xsizetype alen = after.size();
     iVarLengthArray<ushort> a(alen);
     ix_from_latin1(a.data(), after.latin1(), alen);
-    return replace(before.constData(), before.d->size, (const iChar *)a.data(), alen, cs);
+    return replace(before.constData(), before.d.size, (const iChar *)a.data(), alen, cs);
 }
 
 /*!
@@ -2551,7 +2614,7 @@ iString &iString::replace(const iString &before, iLatin1String after, iShell::Ca
 */
 iString &iString::replace(iChar c, iLatin1String after, iShell::CaseSensitivity cs)
 {
-    int alen = after.size();
+    xsizetype alen = after.size();
     iVarLengthArray<ushort> a(alen);
     ix_from_latin1(a.data(), after.latin1(), alen);
     return replace(&c, 1, (const iChar *)a.data(), alen, cs);
@@ -2570,7 +2633,7 @@ iString &iString::replace(iChar c, iLatin1String after, iShell::CaseSensitivity 
 */
 bool operator==(const iString &s1, const iString &s2)
 {
-    if (s1.d->size != s2.d->size)
+    if (s1.d.size != s2.d.size)
         return false;
 
     return ix_compare_strings(s1, s2, iShell::CaseSensitive) == 0;
@@ -2583,7 +2646,7 @@ bool operator==(const iString &s1, const iString &s2)
 */
 bool iString::operator==(iLatin1String other) const
 {
-    if (d->size != other.size())
+    if (size() != other.size())
         return false;
 
     return ix_compare_strings(*this, other, iShell::CaseSensitive) == 0;
@@ -2908,11 +2971,15 @@ bool iString::operator>(iLatin1String other) const
 
   \sa lastIndexOf(), contains(), count()
 */
-int iString::indexOf(const iString &str, int from, iShell::CaseSensitivity cs) const
+xsizetype iString::indexOf(const iString &str, xsizetype from, iShell::CaseSensitivity cs) const
 {
-    return iFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
+    return iPrivate::findString(iStringView(unicode(), length()), from, iStringView(str.unicode(), str.length()), cs);
 }
 
+xsizetype iString::indexOf(iStringView s, xsizetype from, iShell::CaseSensitivity cs) const
+{ 
+    return iPrivate::findString(*this, from, s, cs); 
+}
 /*!
 
   Returns the index position of the first occurrence of the string \a
@@ -2932,87 +2999,9 @@ int iString::indexOf(const iString &str, int from, iShell::CaseSensitivity cs) c
   \sa lastIndexOf(), contains(), count()
 */
 
-int iString::indexOf(iLatin1String str, int from, iShell::CaseSensitivity cs) const
+xsizetype iString::indexOf(iLatin1String str, xsizetype from, iShell::CaseSensitivity cs) const
 {
-    return ix_find_latin1_string(unicode(), size(), str, from, cs);
-}
-
-int iFindString(
-    const iChar *haystack0, int haystackLen, int from,
-    const iChar *needle0, int needleLen, iShell::CaseSensitivity cs)
-{
-    const int l = haystackLen;
-    const int sl = needleLen;
-    if (from < 0)
-        from += l;
-    if (uint(sl + from) > (uint)l)
-        return -1;
-    if (!sl)
-        return from;
-    if (!l)
-        return -1;
-
-    if (sl == 1)
-        return findChar(haystack0, haystackLen, needle0[0], from, cs);
-
-    /*
-        We use the Boyer-Moore algorithm in cases where the overhead
-        for the skip table should pay off, otherwise we use a simple
-        hash function.
-    */
-    if (l > 500 && sl > 5)
-        return iFindStringBoyerMoore(haystack0, haystackLen, from,
-            needle0, needleLen, cs);
-
-    auto sv = [sl](const ushort *v) { return iStringView(v, sl); };
-    /*
-        We use some hashing for efficiency's sake. Instead of
-        comparing strings, we compare the hash value of str with that
-        of a part of this iString. Only if that matches, we call
-        ix_string_compare().
-    */
-    const ushort *needle = (const ushort *)needle0;
-    const ushort *haystack = (const ushort *)haystack0 + from;
-    const ushort *end = (const ushort *)haystack0 + (l-sl);
-    const uint sl_minus_1 = sl - 1;
-    uint hashNeedle = 0, hashHaystack = 0;
-    int idx;
-
-    if (cs == iShell::CaseSensitive) {
-        for (idx = 0; idx < sl; ++idx) {
-            hashNeedle = ((hashNeedle<<1) + needle[idx]);
-            hashHaystack = ((hashHaystack<<1) + haystack[idx]);
-        }
-        hashHaystack -= haystack[sl_minus_1];
-
-        while (haystack <= end) {
-            hashHaystack += haystack[sl_minus_1];
-            if (hashHaystack == hashNeedle
-                 && ix_compare_strings(sv(needle), sv(haystack), iShell::CaseSensitive) == 0)
-                return haystack - (const ushort *)haystack0;
-
-            REHASH(*haystack);
-            ++haystack;
-        }
-    } else {
-        const ushort *haystack_start = (const ushort *)haystack0;
-        for (idx = 0; idx < sl; ++idx) {
-            hashNeedle = (hashNeedle<<1) + foldCase(needle + idx, needle);
-            hashHaystack = (hashHaystack<<1) + foldCase(haystack + idx, haystack_start);
-        }
-        hashHaystack -= foldCase(haystack + sl_minus_1, haystack_start);
-
-        while (haystack <= end) {
-            hashHaystack += foldCase(haystack + sl_minus_1, haystack_start);
-            if (hashHaystack == hashNeedle
-                 && ix_compare_strings(sv(needle), sv(haystack), iShell::CaseInsensitive) == 0)
-                return haystack - (const ushort *)haystack0;
-
-            REHASH(foldCase(haystack, haystack_start));
-            ++haystack;
-        }
-    }
-    return -1;
+    return iPrivate::findString(iStringView(unicode(), size()), from, str, cs);
 }
 
 /*!
@@ -3022,93 +3011,9 @@ int iFindString(
     character \a ch in the string, searching forward from index
     position \a from. Returns -1 if \a ch could not be found.
 */
-int iString::indexOf(iChar ch, int from, iShell::CaseSensitivity cs) const
+xsizetype iString::indexOf(iChar ch, xsizetype from, iShell::CaseSensitivity cs) const
 {
-    return findChar(unicode(), length(), ch, from, cs);
-}
-
-/*!
-
-
-    \overload indexOf()
-
-    Returns the index position of the first occurrence of the string
-    reference \a str in this string, searching forward from index
-    position \a from. Returns -1 if \a str is not found.
-
-    If \a cs is iShell::CaseSensitive (default), the search is case
-    sensitive; otherwise the search is case insensitive.
-*/
-int iString::indexOf(const iStringRef &str, int from, iShell::CaseSensitivity cs) const
-{
-    return iFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
-}
-
-static int lastIndexOfHelper(const ushort *haystack, int from, const ushort *needle, int sl, iShell::CaseSensitivity cs)
-{
-    /*
-        See indexOf() for explanations.
-    */
-
-    auto sv = [sl](const ushort *v) { return iStringView(v, sl); };
-
-    const ushort *end = haystack;
-    haystack += from;
-    const uint sl_minus_1 = sl - 1;
-    const ushort *n = needle+sl_minus_1;
-    const ushort *h = haystack+sl_minus_1;
-    uint hashNeedle = 0, hashHaystack = 0;
-    int idx;
-
-    if (cs == iShell::CaseSensitive) {
-        for (idx = 0; idx < sl; ++idx) {
-            hashNeedle = ((hashNeedle<<1) + *(n-idx));
-            hashHaystack = ((hashHaystack<<1) + *(h-idx));
-        }
-        hashHaystack -= *haystack;
-
-        while (haystack >= end) {
-            hashHaystack += *haystack;
-            if (hashHaystack == hashNeedle
-                 && ix_compare_strings(sv(needle), sv(haystack), iShell::CaseSensitive) == 0)
-                return haystack - end;
-            --haystack;
-            REHASH(haystack[sl]);
-        }
-    } else {
-        for (idx = 0; idx < sl; ++idx) {
-            hashNeedle = ((hashNeedle<<1) + foldCase(n-idx, needle));
-            hashHaystack = ((hashHaystack<<1) + foldCase(h-idx, end));
-        }
-        hashHaystack -= foldCase(haystack, end);
-
-        while (haystack >= end) {
-            hashHaystack += foldCase(haystack, end);
-            if (hashHaystack == hashNeedle
-                 && ix_compare_strings(sv(haystack), sv(needle), iShell::CaseInsensitive) == 0)
-                return haystack - end;
-            --haystack;
-            REHASH(foldCase(haystack + sl, end));
-        }
-    }
-    return -1;
-}
-
-static inline int lastIndexOfHelper(
-        const iStringRef &haystack, int from, const iStringRef &needle, iShell::CaseSensitivity cs)
-{
-    return lastIndexOfHelper(reinterpret_cast<const ushort*>(haystack.unicode()), from,
-                             reinterpret_cast<const ushort*>(needle.unicode()), needle.size(), cs);
-}
-
-static inline int lastIndexOfHelper(
-        const iStringRef &haystack, int from, iLatin1String needle, iShell::CaseSensitivity cs)
-{
-    const int size = needle.size();
-    iVarLengthArray<ushort> s(size);
-    ix_from_latin1(s.data(), needle.latin1(), size);
-    return lastIndexOfHelper(reinterpret_cast<const ushort*>(haystack.unicode()), from,
-                             s.data(), size, cs);
+    return qFindChar(iStringView(unicode(), length()), ch, from, cs);
 }
 
 /*!
@@ -3127,9 +3032,9 @@ static inline int lastIndexOfHelper(
 
   \sa indexOf(), contains(), count()
 */
-int iString::lastIndexOf(const iString &str, int from, iShell::CaseSensitivity cs) const
+xsizetype iString::lastIndexOf(const iString &str, xsizetype from, iShell::CaseSensitivity cs) const
 {
-    return iStringRef(this).lastIndexOf(iStringRef(&str), from, cs);
+    return iPrivate::lastIndexOf(iStringView(*this), from, str, cs);
 }
 
 /*!
@@ -3151,9 +3056,9 @@ int iString::lastIndexOf(const iString &str, int from, iShell::CaseSensitivity c
 
   \sa indexOf(), contains(), count()
 */
-int iString::lastIndexOf(iLatin1String str, int from, iShell::CaseSensitivity cs) const
+xsizetype iString::lastIndexOf(iLatin1String str, xsizetype from, iShell::CaseSensitivity cs) const
 {
-    return iStringRef(this).lastIndexOf(str, from, cs);
+    return iPrivate::lastIndexOf(*this, from, str, cs);
 }
 
 /*!
@@ -3162,35 +3067,15 @@ int iString::lastIndexOf(iLatin1String str, int from, iShell::CaseSensitivity cs
   Returns the index position of the last occurrence of the character
   \a ch, searching backward from position \a from.
 */
-int iString::lastIndexOf(iChar ch, int from, iShell::CaseSensitivity cs) const
+xsizetype iString::lastIndexOf(iChar ch, xsizetype from, iShell::CaseSensitivity cs) const
 {
-    return ix_last_index_of(unicode(), size(), ch, from, cs);
-}
-
-/*!
-
-  \overload lastIndexOf()
-
-  Returns the index position of the last occurrence of the string
-  reference \a str in this string, searching backward from index
-  position \a from. If \a from is -1 (default), the search starts at
-  the last character; if \a from is -2, at the next to last character
-  and so on. Returns -1 if \a str is not found.
-
-  If \a cs is iShell::CaseSensitive (default), the search is case
-  sensitive; otherwise the search is case insensitive.
-
-  \sa indexOf(), contains(), count()
-*/
-int iString::lastIndexOf(const iStringRef &str, int from, iShell::CaseSensitivity cs) const
-{
-    return iStringRef(this).lastIndexOf(str, from, cs);
+    return qLastIndexOf(iStringView(*this), ch, from, cs);
 }
 
 struct iStringCapture
 {
-    int pos;
-    int len;
+    xsizetype pos;
+    xsizetype len;
     int no;
 };
 IX_DECLARE_TYPEINFO(iStringCapture, IX_PRIMITIVE_TYPE);
@@ -3212,140 +3097,115 @@ IX_DECLARE_TYPEINFO(iStringCapture, IX_PRIMITIVE_TYPE);
 
   \sa indexOf(), lastIndexOf(), remove(), iRegExp::cap()
 */
-iString& iString::replace(const iRegExp &rx, const iString &after)
+iString &iString::replace(const iRegularExpression &re, const iString &after)
 {
-    iRegExp rx2(rx);
+    if (!re.isValid()) {
+        ilog_warn("invalid iRegularExpression object");
+        return *this;
+    }
 
-    if (isEmpty() && rx2.indexIn(*this) == -1)
+    const iString copy(*this);
+    iRegularExpressionMatchIterator iterator = re.globalMatch(copy);
+    if (!iterator.hasNext()) // no matches at all
         return *this;
 
-    reallocData(uint(d->size) + 1u);
+    reallocData(d.size, d.detachFlags());
 
-    int index = 0;
-    int numCaptures = rx2.captureCount();
-    int al = after.length();
-    iRegExp::CaretMode caretMode = iRegExp::CaretAtZero;
+    xsizetype numCaptures = re.captureCount();
 
-    if (numCaptures > 0) {
-        const iChar *uc = after.unicode();
-        int numBackRefs = 0;
+    // 1. build the backreferences list, holding where the backreferences
+    // are in the replacement string
+    std::list<iStringCapture> backReferences;
+    const xsizetype al = after.length();
+    const iChar *ac = after.unicode();
 
-        for (int i = 0; i < al - 1; i++) {
-            if (uc[i] == iLatin1Char('\\')) {
-                int no = uc[i + 1].digitValue();
-                if (no > 0 && no <= numCaptures)
-                    numBackRefs++;
-            }
-        }
+    for (xsizetype i = 0; i < al - 1; i++) {
+        if (ac[i] == iLatin1Char('\\')) {
+            int no = ac[i + 1].digitValue();
+            if (no > 0 && no <= numCaptures) {
+                iStringCapture backReference;
+                backReference.pos = i;
+                backReference.len = 2;
 
-        /*
-            This is the harder case where we have back-references.
-        */
-        if (numBackRefs > 0) {
-            iVarLengthArray<iStringCapture, 16> captures(numBackRefs);
-            int j = 0;
-
-            for (int i = 0; i < al - 1; i++) {
-                if (uc[i] == iLatin1Char('\\')) {
-                    int no = uc[i + 1].digitValue();
-                    if (no > 0 && no <= numCaptures) {
-                        iStringCapture capture;
-                        capture.pos = i;
-                        capture.len = 2;
-
-                        if (i < al - 2) {
-                            int secondDigit = uc[i + 2].digitValue();
-                            if (secondDigit != -1 && ((no * 10) + secondDigit) <= numCaptures) {
-                                no = (no * 10) + secondDigit;
-                                ++capture.len;
-                            }
-                        }
-
-                        capture.no = no;
-                        captures[j++] = capture;
+                if (i < al - 2) {
+                    int secondDigit = ac[i + 2].digitValue();
+                    if (secondDigit != -1 && ((no * 10) + secondDigit) <= numCaptures) {
+                        no = (no * 10) + secondDigit;
+                        ++backReference.len;
                     }
                 }
+
+                backReference.no = no;
+                backReferences.push_back(backReference);
             }
-
-            while (index <= length()) {
-                index = rx2.indexIn(*this, index, caretMode);
-                if (index == -1)
-                    break;
-
-                iString after2(after);
-                for (j = numBackRefs - 1; j >= 0; j--) {
-                    const iStringCapture &capture = captures[j];
-                    after2.replace(capture.pos, capture.len, rx2.cap(capture.no));
-                }
-
-                replace(index, rx2.matchedLength(), after2);
-                index += after2.length();
-
-                // avoid infinite loop on 0-length matches (e.g., iRegExp("[a-z]*"))
-                if (rx2.matchedLength() == 0)
-                    ++index;
-
-                caretMode = iRegExp::CaretWontMatch;
-            }
-            return *this;
         }
     }
 
-    /*
-        This is the simple and optimized case where we don't have
-        back-references.
-    */
-    while (index != -1) {
-        struct {
-            int pos;
-            int length;
-        } replacements[2048];
+    // 2. iterate on the matches. For every match, copy in chunks
+    // - the part before the match
+    // - the after string, with the proper replacements for the backreferences
 
-        int pos = 0;
-        int adjust = 0;
-        while (pos < 2047) {
-            index = rx2.indexIn(*this, index, caretMode);
-            if (index == -1)
-                break;
-            int ml = rx2.matchedLength();
-            replacements[pos].pos = index;
-            replacements[pos++].length = ml;
-            index += ml;
-            adjust += al - ml;
-            // avoid infinite loop
-            if (!ml)
-                index++;
+    xsizetype newLength = 0; // length of the new string, with all the replacements
+    xsizetype lastEnd = 0;
+    std::list<iStringView> chunks;
+    const iStringView copyView{ copy }, afterView{ after };
+    while (iterator.hasNext()) {
+        iRegularExpressionMatch match = iterator.next();
+        xsizetype len;
+        // add the part before the match
+        len = match.capturedStart() - lastEnd;
+        if (len > 0) {
+            chunks.push_back(copyView.mid(lastEnd, len));
+            newLength += len;
         }
-        if (!pos)
-            break;
-        replacements[pos].pos = d->size;
-        int newlen = d->size + adjust;
 
-        // to continue searching at the right position after we did
-        // the first round of replacements
-        if (index != -1)
-            index += adjust;
-        iString newstring;
-        newstring.reserve(newlen + 1);
-        iChar *newuc = newstring.data();
-        iChar *uc = newuc;
-        int copystart = 0;
-        int i = 0;
-        while (i < pos) {
-            int copyend = replacements[i].pos;
-            int size = copyend - copystart;
-            memcpy(static_cast<void*>(uc), static_cast<const void *>(d->data() + copystart), size * sizeof(iChar));
-            uc += size;
-            memcpy(static_cast<void *>(uc), static_cast<const void *>(after.d->data()), al * sizeof(iChar));
-            uc += al;
-            copystart = copyend + replacements[i].length;
-            i++;
+        lastEnd = 0;
+        // add the after string, with replacements for the backreferences
+        for (const iStringCapture &backReference : backReferences) {
+            // part of "after" before the backreference
+            len = backReference.pos - lastEnd;
+            if (len > 0) {
+                chunks.push_back(afterView.mid(lastEnd, len));
+                newLength += len;
+            }
+
+            // backreference itself
+            len = match.capturedLength(backReference.no);
+            if (len > 0) {
+                chunks.push_back(copyView.mid(match.capturedStart(backReference.no), len));
+                newLength += len;
+            }
+
+            lastEnd = backReference.pos + backReference.len;
         }
-        memcpy(static_cast<void *>(uc), static_cast<const void *>(d->data() + copystart), (d->size - copystart) * sizeof(iChar));
-        newstring.resize(newlen);
-        *this = newstring;
-        caretMode = iRegExp::CaretWontMatch;
+
+        // add the last part of the after string
+        len = afterView.length() - lastEnd;
+        if (len > 0) {
+            chunks.push_back(afterView.mid(lastEnd, len));
+            newLength += len;
+        }
+
+        lastEnd = match.capturedEnd();
     }
+
+    // 3. trailing string after the last match
+    if (copyView.length() > lastEnd) {
+        chunks.push_back(copyView.mid(lastEnd));
+        newLength += copyView.length() - lastEnd;
+    }
+
+    // 4. assemble the chunks together
+    resize(newLength);
+    xsizetype i = 0;
+    iChar *uc = data();
+    for (std::list<iStringView>::const_iterator it = chunks.cbegin(); it != chunks.cend(); ++it) {
+        const iStringView &chunk = *it;
+        xsizetype len = chunk.length();
+        memcpy(uc + i, chunk.data(), len * sizeof(iChar));
+        i += len;
+    }
+
     return *this;
 }
 /*!
@@ -3358,9 +3218,9 @@ iString& iString::replace(const iRegExp &rx, const iString &after)
     \sa contains(), indexOf()
 */
 
-int iString::count(const iString &str, iShell::CaseSensitivity cs) const
+xsizetype iString::count(const iString &str, iShell::CaseSensitivity cs) const
 {
-    return ix_string_count(unicode(), size(), str.unicode(), str.size(), cs);
+    return iPrivate::count(iStringView(unicode(), size()), iStringView(str.unicode(), str.size()), cs);
 }
 
 /*!
@@ -3374,13 +3234,13 @@ int iString::count(const iString &str, iShell::CaseSensitivity cs) const
     \sa contains(), indexOf()
 */
 
-int iString::count(iChar ch, iShell::CaseSensitivity cs) const
+xsizetype iString::count(iChar ch, iShell::CaseSensitivity cs) const
 {
-    return ix_string_count(unicode(), size(), ch, cs);
-    }
+    return iPrivate::count(iStringView(unicode(), size()), ch, cs);
+}
 
 /*!
-
+    \since 6.0
     \overload count()
     Returns the number of (potentially overlapping) occurrences of the
     string reference \a str in this string.
@@ -3390,12 +3250,10 @@ int iString::count(iChar ch, iShell::CaseSensitivity cs) const
 
     \sa contains(), indexOf()
 */
-int iString::count(const iStringRef &str, iShell::CaseSensitivity cs) const
+xsizetype iString::count(iStringView str, iShell::CaseSensitivity cs) const
 {
-    return ix_string_count(unicode(), size(), str.unicode(), str.size(), cs);
+    return iPrivate::count(*this, str, cs);
 }
-
-
 /*! \fn bool iString::contains(const iString &str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
 
     Returns \c true if this string contains an occurrence of the string
@@ -3427,17 +3285,6 @@ int iString::count(const iStringRef &str, iShell::CaseSensitivity cs) const
     character \a ch; otherwise returns \c false.
 */
 
-/*! \fn bool iString::contains(const iStringRef &str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-
-
-    Returns \c true if this string contains an occurrence of the string
-    reference \a str; otherwise returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-    \sa indexOf(), count()
-*/
 
 /*! \fn bool iString::contains(const iRegExp &rx) const
 
@@ -3469,10 +3316,22 @@ int iString::count(const iStringRef &str, iShell::CaseSensitivity cs) const
 
     \snippet istring/main.cpp 25
 */
-int iString::indexOf(const iRegExp& rx, int from) const
+xsizetype iString::indexOf(const iRegularExpression &re, xsizetype from, iRegularExpressionMatch *rmatch) const
 {
-    iRegExp rx2(rx);
-    return rx2.indexIn(*this, from);
+    if (!re.isValid()) {
+        ilog_warn("invalid iRegularExpression object");
+        return -1;
+    }
+
+    iRegularExpressionMatch match = re.match(*this, from);
+    if (match.hasMatch()) {
+        const xsizetype ret = match.capturedStart();
+        if (rmatch)
+            *rmatch = std::move(match);
+        return ret;
+    }
+
+    return -1;
 }
 
 /*!
@@ -3490,26 +3349,29 @@ int iString::indexOf(const iRegExp& rx, int from) const
 
     \snippet istring/main.cpp 25
 */
-int iString::indexOf(iRegExp& rx, int from) const
+xsizetype iString::lastIndexOf(const iRegularExpression &re, xsizetype from, iRegularExpressionMatch *rmatch) const
 {
-    return rx.indexIn(*this, from);
-}
+    if (!re.isValid()) {
+        ilog_warn("invalid iRegularExpression object");
+        return -1;
+    }
 
-/*!
-    \overload lastIndexOf()
+    xsizetype endpos = (from < 0) ? (size() + from + 1) : (from + 1);
+    iRegularExpressionMatchIterator iterator = re.globalMatch(*this);
+    xsizetype lastIndex = -1;
+    while (iterator.hasNext()) {
+        iRegularExpressionMatch match = iterator.next();
+        xsizetype start = match.capturedStart();
+        if (start < endpos) {
+            lastIndex = start;
+            if (rmatch)
+                *rmatch = std::move(match);
+        } else {
+            break;
+        }
+    }
 
-    Returns the index position of the last match of the regular
-    expression \a rx in the string, searching backward from index
-    position \a from. Returns -1 if \a rx didn't match anywhere.
-
-    Example:
-
-    \snippet istring/main.cpp 30
-*/
-int iString::lastIndexOf(const iRegExp& rx, int from) const
-{
-    iRegExp rx2(rx);
-    return rx2.lastIndexIn(*this, from);
+    return lastIndex;
 }
 
 /*!
@@ -3527,9 +3389,18 @@ int iString::lastIndexOf(const iRegExp& rx, int from) const
 
     \snippet istring/main.cpp 30
 */
-int iString::lastIndexOf(iRegExp& rx, int from) const
+
+bool iString::contains(const iRegularExpression &re, iRegularExpressionMatch *rmatch) const
 {
-    return rx.lastIndexIn(*this, from);
+    if (!re.isValid()) {
+        ilog_warn("invalid iRegularExpression object");
+        return false;
+    }
+    iRegularExpressionMatch m = re.match(*this);
+    bool hasMatch = m.hasMatch();
+    if (hasMatch && rmatch)
+        *rmatch = std::move(m);
+    return hasMatch;
 }
 
 /*!
@@ -3544,16 +3415,20 @@ int iString::lastIndexOf(iRegExp& rx, int from) const
     \snippet istring/main.cpp 18
 
 */
-int iString::count(const iRegExp& rx) const
+xsizetype iString::count(const iRegularExpression &re) const
 {
-    iRegExp rx2(rx);
-    int count = 0;
-    int index = -1;
-    int len = length();
-    while (index < len - 1) {                 // count overlapping matches
-        index = rx2.indexIn(*this, index + 1);
-        if (index == -1)
+    if (!re.isValid()) {
+        ilog_warn("invalid iRegularExpression object");
+        return 0;
+    }
+    xsizetype count = 0;
+    xsizetype index = -1;
+    xsizetype len = length();
+    while (index < len - 1) {
+        iRegularExpressionMatch match = re.match(*this, index + 1);
+        if (!match.hasMatch())
             break;
+        index = match.capturedStart();
         count++;
     }
     return count;
@@ -3631,20 +3506,20 @@ int iString::count(const iRegExp& rx) const
     \sa split()
 */
 
-iString iString::section(const iString &sep, int start, int end, SectionFlags flags) const
+iString iString::section(const iString &sep, xsizetype start, xsizetype end, SectionFlags flags) const
 {
-    const std::vector<iStringRef> sections = splitRef(sep, KeepEmptyParts,
-                                                  (flags & SectionCaseInsensitiveSeps) ? iShell::CaseInsensitive : iShell::CaseSensitive);
-    const int sectionsSize = sections.size();
+    const std::list<iStringView> sections = iStringView(*this).split(
+            sep, iShell::KeepEmptyParts, (flags & SectionCaseInsensitiveSeps) ? iShell::CaseInsensitive : iShell::CaseSensitive);
+    const xsizetype sectionsSize = sections.size();
     if (!(flags & SectionSkipEmpty)) {
         if (start < 0)
             start += sectionsSize;
         if (end < 0)
             end += sectionsSize;
     } else {
-        int skip = 0;
-        for (int k = 0; k < sectionsSize; ++k) {
-            if (sections.at(k).isEmpty())
+        xsizetype skip = 0;
+        for (std::list<iStringView>::const_iterator it = sections.cbegin(); it != sections.cend(); ++it) {
+            if (it->isEmpty())
                 skip++;
         }
         if (start < 0)
@@ -3656,9 +3531,10 @@ iString iString::section(const iString &sep, int start, int end, SectionFlags fl
         return iString();
 
     iString ret;
-    int first_i = start, last_i = end;
-    for (int x = 0, i = 0; x <= end && i < sectionsSize; ++i) {
-        const iStringRef &section = sections.at(i);
+    xsizetype first_i = start, last_i = end;
+    std::list<iStringView>::const_iterator it = sections.cbegin();
+    for (xsizetype x = 0, i = 0; x <= end && it != sections.cend(); ++it, ++i) {
+        const iStringView &section = *it;
         const bool empty = section.isEmpty();
         if (x >= start) {
             if(x == start)
@@ -3682,18 +3558,16 @@ iString iString::section(const iString &sep, int start, int end, SectionFlags fl
 class ix_section_chunk {
 public:
     ix_section_chunk() {}
-    ix_section_chunk(int l, iStringRef s) : length(l), string(std::move(s)) {}
-    int length;
-    iStringRef string;
+    ix_section_chunk(xsizetype l, iStringView s) : length(l), string(std::move(s)) {}
+    xsizetype length;
+    iStringView string;
 };
 IX_DECLARE_TYPEINFO(ix_section_chunk, IX_MOVABLE_TYPE);
 
-static iString extractSections(const std::vector<ix_section_chunk> &sections,
-                               int start,
-                               int end,
+static iString extractSections(const std::list<ix_section_chunk> &sections, xsizetype start, xsizetype end,
                                iString::SectionFlags flags)
 {
-    const int sectionsSize = sections.size();
+    const xsizetype sectionsSize = sections.size();
 
     if (!(flags & iString::SectionSkipEmpty)) {
         if (start < 0)
@@ -3701,9 +3575,9 @@ static iString extractSections(const std::vector<ix_section_chunk> &sections,
         if (end < 0)
             end += sectionsSize;
     } else {
-        int skip = 0;
-        for (int k = 0; k < sectionsSize; ++k) {
-            const ix_section_chunk &section = sections.at(k);
+        xsizetype skip = 0;
+        for (std::list<ix_section_chunk>::const_iterator it = sections.cbegin(); it != sections.cend(); ++it) {
+            const ix_section_chunk &section = *it;
             if (section.length == section.string.length())
                 skip++;
         }
@@ -3716,10 +3590,11 @@ static iString extractSections(const std::vector<ix_section_chunk> &sections,
         return iString();
 
     iString ret;
-    int x = 0;
-    int first_i = start, last_i = end;
-    for (int i = 0; x <= end && i < sectionsSize; ++i) {
-        const ix_section_chunk &section = sections.at(i);
+    xsizetype x = 0;
+    xsizetype first_i = start, last_i = end;
+    std::list<ix_section_chunk>::const_iterator it = sections.cbegin();
+    for (xsizetype i = 0; x <= end && i < sectionsSize && it != sections.cend(); ++i, ++it) {
+        const ix_section_chunk &section = *it;
         const bool empty = (section.length == section.string.length());
         if (x >= start) {
             if (x == start)
@@ -3736,13 +3611,17 @@ static iString extractSections(const std::vector<ix_section_chunk> &sections,
     }
 
     if ((flags & iString::SectionIncludeLeadingSep) && first_i >= 0) {
-        const ix_section_chunk &section = sections.at(first_i);
+        it = sections.cbegin();
+        std::advance(it, first_i);
+        const ix_section_chunk &section = *it;
         ret.prepend(section.string.left(section.length));
     }
 
     if ((flags & iString::SectionIncludeTrailingSep)
         && last_i < sectionsSize - 1) {
-        const ix_section_chunk &section = sections.at(last_i+1);
+        it = sections.cbegin();
+        std::advance(it, last_i+1);
+        const ix_section_chunk &section = *it;
         ret += section.string.left(section.length);
     }
 
@@ -3762,25 +3641,32 @@ static iString extractSections(const std::vector<ix_section_chunk> &sections,
 
     \sa split(), simplified()
 */
-iString iString::section(const iRegExp &reg, int start, int end, SectionFlags flags) const
+iString iString::section(const iRegularExpression &re, xsizetype start, xsizetype end, SectionFlags flags) const
 {
+    if (!re.isValid()) {
+        ilog_warn("invalid iRegularExpression object");
+        return iString();
+    }
+
     const iChar *uc = unicode();
-    if(!uc)
+    if (!uc)
         return iString();
 
-    iRegExp sep(reg);
-    sep.setCaseSensitivity((flags & SectionCaseInsensitiveSeps) ? iShell::CaseInsensitive
-                                                                : iShell::CaseSensitive);
+    iRegularExpression sep(re);
+    if (flags & SectionCaseInsensitiveSeps)
+        sep.setPatternOptions(sep.patternOptions() | iRegularExpression::CaseInsensitiveOption);
 
-    std::vector<ix_section_chunk> sections;
-    int n = length(), m = 0, last_m = 0, last_len = 0;
-    while ((m = sep.indexIn(*this, m)) != -1) {
-        sections.push_back(ix_section_chunk(last_len, iStringRef(this, last_m, m - last_m)));
+    std::list<ix_section_chunk> sections;
+    xsizetype n = length(), m = 0, last_m = 0, last_len = 0;
+    iRegularExpressionMatchIterator iterator = sep.globalMatch(*this);
+    while (iterator.hasNext()) {
+        iRegularExpressionMatch match = iterator.next();
+        m = match.capturedStart();
+        sections.push_back(ix_section_chunk(last_len, iStringView(*this).mid(last_m, m - last_m)));
         last_m = m;
-        last_len = sep.matchedLength();
-        m += std::max(sep.matchedLength(), 1);
+        last_len = match.capturedLength();
     }
-    sections.push_back(ix_section_chunk(last_len, iStringRef(this, last_m, n - last_m)));
+    sections.push_back(ix_section_chunk(last_len, iStringView(*this).mid(last_m, n - last_m)));
 
     return extractSections(sections, start, end, flags);
 }
@@ -3795,11 +3681,11 @@ iString iString::section(const iRegExp &reg, int start, int end, SectionFlags fl
 
     \sa right(), mid(), startsWith(), chopped(), chop(), truncate()
 */
-iString iString::left(int n)  const
+iString iString::left(xsizetype n)  const
 {
-    if (uint(n) >= uint(d->size))
+    if (size_t(n) >= size_t(size()))
         return *this;
-    return iString((const iChar*) d->data(), n);
+    return iString((const iChar*) d.data(), n);
 }
 
 /*!
@@ -3813,11 +3699,11 @@ iString iString::left(int n)  const
 
     \sa left(), mid(), endsWith(), chopped(), chop(), truncate()
 */
-iString iString::right(int n) const
+iString iString::right(xsizetype n) const
 {
-    if (uint(n) >= uint(d->size))
+    if (size_t(n) >= size_t(size()))
         return *this;
-    return iString((const iChar*) d->data() + d->size - n, n);
+    return iString(constData() + size() - n, n);
 }
 
 /*!
@@ -3837,21 +3723,20 @@ iString iString::right(int n) const
     \sa left(), right(), chopped(), chop(), truncate()
 */
 
-iString iString::mid(int position, int n) const
+iString iString::mid(xsizetype position, xsizetype n) const
 {
+    xsizetype p = position;
+    xsizetype l = n;
     using namespace iPrivate;
-    switch (iContainerImplHelper::mid(d->size, &position, &n)) {
+    switch (iContainerImplHelper::mid(size(), &p, &l)) {
     case iContainerImplHelper::Null:
         return iString();
     case iContainerImplHelper::Empty:
-    {
-        iStringDataPtr empty = { Data::allocate(0) };
-        return iString(empty);
-    }
+        return iString(DataPointer::fromRawData(&_empty, 0));
     case iContainerImplHelper::Full:
         return *this;
     case iContainerImplHelper::Subset:
-        return iString((const iChar*)d->data() + position, n);
+        return iString(constData() + p, l);
     }
 
     return iString();
@@ -3906,22 +3791,6 @@ bool iString::startsWith(iChar c, iShell::CaseSensitivity cs) const
 }
 
 /*!
-
-    \overload
-    Returns \c true if the string starts with the string reference \a s;
-    otherwise returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is case
-    sensitive; otherwise the search is case insensitive.
-
-    \sa endsWith()
-*/
-bool iString::startsWith(const iStringRef &s, iShell::CaseSensitivity cs) const
-{
-    return ix_starts_with(*this, s, cs);
-}
-
-/*!
     \fn bool iString::startsWith(iStringView str, iShell::CaseSensitivity cs) const
 
     \overload
@@ -3947,22 +3816,6 @@ bool iString::startsWith(const iStringRef &s, iShell::CaseSensitivity cs) const
     \sa startsWith()
 */
 bool iString::endsWith(const iString &s, iShell::CaseSensitivity cs) const
-{
-    return ix_ends_with(*this, s, cs);
-}
-
-/*!
-
-    \overload endsWith()
-    Returns \c true if the string ends with the string reference \a s;
-    otherwise returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is case
-    sensitive; otherwise the search is case insensitive.
-
-    \sa startsWith()
-*/
-bool iString::endsWith(const iStringRef &s, iShell::CaseSensitivity cs) const
 {
     return ix_ends_with(*this, s, cs);
 }
@@ -4077,7 +3930,7 @@ static iByteArray ix_convert_to_latin1(iStringView string)
     // since we own the only copy, we're going to const_cast the constData;
     // that avoids an unnecessary call to detach() and expansion code that will never get used
     ix_to_latin1(reinterpret_cast<uchar *>(const_cast<char *>(ba.constData())),
-                 reinterpret_cast<const ushort *>(string.data()), string.length());
+                 string.utf16(), string.size());
     return ba;
 }
 
@@ -4088,26 +3941,27 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
 
     // We can return our own buffer to the caller.
     // Conversion to Latin-1 always shrinks the buffer by half.
-    const ushort *data = reinterpret_cast<const ushort *>(s.constData());
-    uint length = s.size();
+    const ushort *data = s.d.data();
+    xsizetype length = s.d.size;
 
     // Swap the d pointers.
     // Kids, avert your eyes. Don't try this at home.
-    iArrayData *ba_d = s.d;
+
+    // this relies on the fact that we use iArrayData for everything behind the scenes which has the same layout
+    IX_COMPILER_VERIFY(sizeof(iByteArray::DataPointer) == sizeof(iString::DataPointer));
+    iByteArray::DataPointer ba_d(reinterpret_cast<iByteArray::Data *>(s.d.d_ptr()), reinterpret_cast<char *>(s.d.data()), length);
+    ba_d.ref();
+    s.clear();
+
+    char *ddata = ba_d.data();
 
     // multiply the allocated capacity by sizeof(ushort)
-    ba_d->alloc *= sizeof(ushort);
-
-    // reset ourselves to iString()
-    s.d = iString().d;
+    ba_d.d_ptr()->alloc *= sizeof(ushort);
 
     // do the in-place conversion
-    uchar *dst = reinterpret_cast<uchar *>(ba_d->data());
-    ix_to_latin1(dst, data, length);
-    dst[length] = '\0';
-
-    iByteArrayDataPtr badptr = { ba_d };
-    return iByteArray(badptr);
+    ix_to_latin1(reinterpret_cast<uchar *>(ddata), data, length);
+    ddata[length] = '\0';
+    return iByteArray(ba_d);
 }
 
 
@@ -4156,7 +4010,7 @@ static iByteArray ix_convert_to_local_8bit(iStringView string);
     \sa fromLocal8Bit(), toLatin1(), toUtf8(), iTextCodec
 */
 
-iByteArray iString::toLocal8Bit_helper(const iChar *data, int size)
+iByteArray iString::toLocal8Bit_helper(const iChar *data, xsizetype size)
 {
     return ix_convert_to_local_8bit(iStringView(data, size));
 }
@@ -4232,7 +4086,7 @@ iByteArray iPrivate::convertToUtf8(iStringView string)
     return ix_convert_to_utf8(string);
 }
 
-static std::vector<uint> ix_convert_to_ucs4(iStringView string);
+static std::list<uint> ix_convert_to_ucs4(iStringView string);
 
 /*!
 
@@ -4248,15 +4102,15 @@ static std::vector<uint> ix_convert_to_ucs4(iStringView string);
 
     \sa fromUtf8(), toUtf8(), toLatin1(), toLocal8Bit(), iTextCodec, fromUcs4(), toWCharArray()
 */
-std::vector<uint> iString::toUcs4() const
+std::list<uint> iString::toUcs4() const
 {
     return ix_convert_to_ucs4(*this);
 }
 
-static std::vector<uint> ix_convert_to_ucs4(iStringView string)
+static std::list<uint> ix_convert_to_ucs4(iStringView string)
 {
-    std::vector<uint> v(string.length());
-    std::vector<uint>::iterator vit = v.begin();
+    std::list<uint> v(string.length());
+    std::list<uint>::iterator vit = v.begin();
     iStringIterator it(string);
     while (it.hasNext()) {
         *vit = it.next();
@@ -4284,37 +4138,27 @@ static std::vector<uint> ix_convert_to_ucs4(iStringView string)
     \sa iString::toUcs4(), iStringView::toUcs4(), iPrivate::convertToLatin1(),
     iPrivate::convertToLocal8Bit(), iPrivate::convertToUtf8()
 */
-std::vector<uint> iPrivate::convertToUcs4(iStringView string)
+std::list<uint> iPrivate::convertToUcs4(iStringView string)
 {
     return ix_convert_to_ucs4(string);
 }
 
-iString::Data *iString::fromLatin1_helper(const char *str, int size)
+iString::DataPointer iString::fromLatin1_helper(const char *str, xsizetype size)
 {
-    Data *d;
+    DataPointer d;
     if (!str) {
-        d = Data::sharedNull();
+        // nothing to do
     } else if (size == 0 || (!*str && size < 0)) {
-        d = Data::allocate(0);
+        d = DataPointer::fromRawData(&_empty, 0);
     } else {
         if (size < 0)
             size = istrlen(str);
-        d = Data::allocate(size + 1);
-        IX_CHECK_PTR(d);
-        d->size = size;
-        d->data()[size] = '\0';
-        ushort *dst = d->data();
-
-        ix_from_latin1(dst, str, uint(size));
+        d = DataPointer(Data::allocate(size), size);
+        d.data()[size] = '\0';
+        ushort *dst = d.data();
+        ix_from_latin1(dst, str, size_t(size));
     }
     return d;
-}
-
-iString::Data *iString::fromAscii_helper(const char *str, int size)
-{
-    iString s = fromUtf8(str, size);
-    s.d->ref.ref();
-    return s.d;
 }
 
 /*! \fn iString iString::fromLatin1(const char *str, int size)
@@ -4354,13 +4198,12 @@ iString::Data *iString::fromAscii_helper(const char *str, int size)
 
     Returns a iString initialized with the 8-bit string \a str.
 */
-iString iString::fromLocal8Bit_helper(const char *str, int size)
+iString iString::fromLocal8Bit_helper(const char *str, xsizetype size)
 {
     if (!str)
         return iString();
     if (size == 0 || (!*str && size < 0)) {
-        iStringDataPtr empty = { Data::allocate(0) };
-        return iString(empty);
+        return iString(DataPointer::fromRawData(&_empty, 0));
     }
 
     return fromUtf8(str, size);
@@ -4418,7 +4261,7 @@ iString iString::fromLocal8Bit_helper(const char *str, int size)
 
     Returns a iString initialized with the UTF-8 string \a str.
 */
-iString iString::fromUtf8_helper(const char *str, int size)
+iString iString::fromUtf8_helper(const char *str, xsizetype size)
 {
     if (!str)
         return iString();
@@ -4443,7 +4286,7 @@ iString iString::fromUtf8_helper(const char *str, int size)
 
     \sa utf16(), setUtf16(), fromStdU16String()
 */
-iString iString::fromUtf16(const ushort *unicode, int size)
+iString iString::fromUtf16(const ushort *unicode, xsizetype size)
 {
     if (!unicode)
         return iString();
@@ -4456,7 +4299,7 @@ iString iString::fromUtf16(const ushort *unicode, int size)
 }
 
 /*!
-   \fn iString iString::fromUtf16(const char16_t *str, int size)
+   \fn iString iString::fromUtf16(const ushort *str, int size)
 
 
     Returns a iString initialized with the first \a size characters
@@ -4476,7 +4319,7 @@ iString iString::fromUtf16(const ushort *unicode, int size)
 */
 
 /*!
-    \fn iString iString::fromUcs4(const char32_t *str, int size)
+    \fn iString iString::fromUcs4(const uint *str, int size)
 
 
     Returns a iString initialized with the first \a size characters
@@ -4497,7 +4340,7 @@ iString iString::fromUtf16(const ushort *unicode, int size)
 
     \sa toUcs4(), fromUtf16(), utf16(), setUtf16(), fromWCharArray(), fromStdU32String()
 */
-iString iString::fromUcs4(const uint *unicode, int size)
+iString iString::fromUcs4(const uint *unicode, xsizetype size)
 {
     if (!unicode)
         return iString();
@@ -4519,11 +4362,11 @@ iString iString::fromUcs4(const uint *unicode, int size)
 
     \sa unicode(), setUtf16()
 */
-iString& iString::setUnicode(const iChar *unicode, int size)
+iString& iString::setUnicode(const iChar *unicode, xsizetype size)
 {
      resize(size);
      if (unicode && size)
-         memcpy(d->data(), unicode, size * sizeof(iChar));
+         memcpy(d.data(), unicode, size * sizeof(iChar));
      return *this;
 }
 
@@ -4755,12 +4598,12 @@ modifiable reference.
 
     If \a position is negative, it is equivalent to passing zero.
 
-    \sa chop(), resize(), left(), iStringRef::truncate()
+    \sa chop(), resize(), left()
 */
 
-void iString::truncate(int pos)
+void iString::truncate(xsizetype pos)
 {
-    if (pos < d->size)
+    if (pos < size())
         resize(pos);
 }
 
@@ -4777,12 +4620,12 @@ void iString::truncate(int pos)
     If you want to remove characters from the \e beginning of the
     string, use remove() instead.
 
-    \sa truncate(), resize(), remove(), iStringRef::chop()
+    \sa truncate(), resize(), remove()
 */
-void iString::chop(int n)
+void iString::chop(xsizetype n)
 {
     if (n > 0)
-        resize(d->size - n);
+        resize(d.size - n);
 }
 
 /*!
@@ -4797,12 +4640,12 @@ void iString::chop(int n)
     \sa resize()
 */
 
-iString& iString::fill(iChar ch, int size)
+iString& iString::fill(iChar ch, xsizetype size)
 {
-    resize(size < 0 ? d->size : size);
-    if (d->size) {
-        iChar *i = (iChar*)d->data() + d->size;
-        iChar *b = (iChar*)d->data();
+    resize(size < 0 ? d.size : size);
+    if (d.size) {
+        iChar *i = (iChar*)d.data() + d.size;
+        iChar *b = (iChar*)d.data();
         while (i != b)
            *--i = ch;
     }
@@ -4913,13 +4756,6 @@ iString& iString::fill(iChar ch, int size)
     for example.
 
     \sa IX_NO_CAST_FROM_ASCII
-*/
-
-/*! \fn iString &iString::operator+=(const iStringRef &str)
-
-    \overload operator+=()
-
-    Appends the string section referenced by \a str to this string.
 */
 
 /*! \fn iString &iString::operator+=(char ch)
@@ -5147,7 +4983,7 @@ int iString::compare(const iString &other, iShell::CaseSensitivity cs) const
     \internal
 
 */
-int iString::compare_helper(const iChar *data1, int length1, const iChar *data2, int length2,
+int iString::compare_helper(const iChar *data1, xsizetype length1, const iChar *data2, xsizetype length2,
                             iShell::CaseSensitivity cs)
 {
     IX_ASSERT(length1 >= 0);
@@ -5172,7 +5008,7 @@ int iString::compare(iLatin1String other, iShell::CaseSensitivity cs) const
     \internal
 
 */
-int iString::compare_helper(const iChar *data1, int length1, const char *data2, int length2,
+int iString::compare_helper(const iChar *data1, xsizetype length1, const char *data2, xsizetype length2,
                             iShell::CaseSensitivity cs)
 {
     IX_ASSERT(length1 >= 0);
@@ -5180,7 +5016,7 @@ int iString::compare_helper(const iChar *data1, int length1, const char *data2, 
     if (!data2)
         return length1;
     if (length2 < 0)
-        length2 = int(strlen(data2));
+        length2 = xsizetype(strlen(data2));
     // ### make me nothrow in all cases
     iVarLengthArray<ushort> s2(length2);
     const auto beg = reinterpret_cast<iChar *>(s2.data());
@@ -5189,69 +5025,16 @@ int iString::compare_helper(const iChar *data1, int length1, const char *data2, 
 }
 
 /*!
-  \fn int iString::compare(const iString &s1, const iStringRef &s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
-  \overload compare()
-*/
-
-/*!
     \internal
 
 */
-int iString::compare_helper(const iChar *data1, int length1, iLatin1String s2,
+int iString::compare_helper(const iChar *data1, xsizetype length1, iLatin1String s2,
                             iShell::CaseSensitivity cs)
 {
     IX_ASSERT(length1 >= 0);
     IX_ASSERT(data1 || length1 == 0);
     return ix_compare_strings(iStringView(data1, length1), s2, cs);
 }
-
-/*!
-    \fn int iString::localeAwareCompare(const iString & s1, const iString & s2)
-
-    Compares \a s1 with \a s2 and returns an integer less than, equal
-    to, or greater than zero if \a s1 is less than, equal to, or
-    greater than \a s2.
-
-    The comparison is performed in a locale- and also
-    platform-dependent manner. Use this function to present sorted
-    lists of strings to the user.
-
-    On \macos and iOS this function compares according the
-    "Order for sorted lists" setting in the International preferences panel.
-
-    \sa compare(), iLocale
-*/
-
-/*!
-    \fn int iString::localeAwareCompare(const iStringRef &other) const
-
-    \overload localeAwareCompare()
-
-    Compares this string with the \a other string and returns an
-    integer less than, equal to, or greater than zero if this string
-    is less than, equal to, or greater than the \a other string.
-
-    The comparison is performed in a locale- and also
-    platform-dependent manner. Use this function to present sorted
-    lists of strings to the user.
-
-    Same as \c {localeAwareCompare(*this, other)}.
-*/
-
-/*!
-    \fn int iString::localeAwareCompare(const iString &s1, const iStringRef &s2)
-
-    \overload localeAwareCompare()
-
-    Compares \a s1 with \a s2 and returns an integer less than, equal
-    to, or greater than zero if \a s1 is less than, equal to, or
-    greater than \a s2.
-
-    The comparison is performed in a locale- and also
-    platform-dependent manner. Use this function to present sorted
-    lists of strings to the user.
-*/
-
 
 #if !defined(CSTR_LESS_THAN)
 #define CSTR_LESS_THAN    1
@@ -5281,8 +5064,8 @@ int iString::localeAwareCompare(const iString &other) const
     \internal
 
 */
-int iString::localeAwareCompare_helper(const iChar *data1, int length1,
-                                       const iChar *data2, int length2)
+int iString::localeAwareCompare_helper(const iChar *data1, xsizetype length1,
+                                       const iChar *data2, xsizetype length2)
 {
     IX_ASSERT(length1 >= 0);
     IX_ASSERT(data1 || length1 == 0);
@@ -5326,11 +5109,11 @@ int iString::localeAwareCompare_helper(const iChar *data1, int length1,
 
 const ushort *iString::utf16() const
 {
-    if (IS_RAW_DATA(d)) {
+    if (!d.isMutable()) {
         // ensure '\0'-termination for ::fromRawData strings
-        const_cast<iString*>(this)->reallocData(uint(d->size) + 1u);
+        const_cast<iString*>(this)->reallocData(d.size, d.detachFlags());
     }
-    return d->data();
+    return reinterpret_cast<const ushort *>(d.data());
 }
 
 /*!
@@ -5351,16 +5134,16 @@ const ushort *iString::utf16() const
     \sa rightJustified()
 */
 
-iString iString::leftJustified(int width, iChar fill, bool truncate) const
+iString iString::leftJustified(xsizetype width, iChar fill, bool truncate) const
 {
     iString result;
-    int len = length();
-    int padlen = width - len;
+    xsizetype len = length();
+    xsizetype padlen = width - len;
     if (padlen > 0) {
         result.resize(len+padlen);
         if (len)
-            memcpy(result.d->data(), d->data(), sizeof(iChar)*len);
-        iChar *uc = (iChar*)result.d->data() + len;
+            memcpy(result.d.data(), d.data(), sizeof(iChar)*len);
+        iChar *uc = (iChar*)result.d.data() + len;
         while (padlen--)
            * uc++ = fill;
     } else {
@@ -5390,18 +5173,18 @@ iString iString::leftJustified(int width, iChar fill, bool truncate) const
     \sa leftJustified()
 */
 
-iString iString::rightJustified(int width, iChar fill, bool truncate) const
+iString iString::rightJustified(xsizetype width, iChar fill, bool truncate) const
 {
     iString result;
-    int len = length();
-    int padlen = width - len;
+    xsizetype len = length();
+    xsizetype padlen = width - len;
     if (padlen > 0) {
         result.resize(len+padlen);
-        iChar *uc = (iChar*)result.d->data();
+        iChar *uc = (iChar*)result.d.data();
         while (padlen--)
            * uc++ = fill;
         if (len)
-          memcpy(static_cast<void *>(uc), static_cast<const void *>(d->data()), sizeof(iChar)*len);
+          memcpy(static_cast<void *>(uc), static_cast<const void *>(d.data()), sizeof(iChar)*len);
     } else {
         if (truncate)
             result = left(width);
@@ -5512,7 +5295,7 @@ static iString convertCase(T &str)
             return detachAndConvertCase<Traits>(str, it);
         }
     }
-    return std::move(str);
+    return str;
 }
 } // namespace iUnicodeTables
 
@@ -5591,9 +5374,9 @@ iString &iString::sprintf(const char *cformat, ...)
     string and \c{%s} arguments must be UTF-8 encoded.
 
     \note The \c{%lc} escape sequence expects a unicode character of type
-    \c char16_t, or \c ushort (as returned by iChar::unicode()).
+    \c ushort, or \c ushort (as returned by iChar::unicode()).
     The \c{%ls} escape sequence expects a pointer to a zero-terminated array
-    of unicode characters of type \c char16_t, or ushort (as returned by
+    of unicode characters of type \c ushort, or ushort (as returned by
     iString::utf16()). This is at odds with the printf() in the standard C++
     library, which defines \c {%lc} to print a wchar_t and \c{%ls} to print
     a \c{wchar_t*}, and might also produce compiler warnings on platforms
@@ -5730,7 +5513,7 @@ iString iString::vasprintf(const char *cformat, va_list ap)
         const char *cb = c;
         while (*c != '\0' && *c != '%')
             c++;
-        append_utf8(result, cb, int(c - cb));
+        append_utf8(result, cb, xsizetype(c - cb));
 
         if (*c == '\0')
             break;
@@ -5811,8 +5594,10 @@ iString iString::vasprintf(const char *cformat, va_list ap)
                     case lm_l: i = va_arg(ap, long int); break;
                     case lm_ll: i = va_arg(ap, xint64); break;
                     case lm_j: i = va_arg(ap, long int); break;
-                    case lm_z: i = va_arg(ap, size_t); break;
-                    case lm_t: i = va_arg(ap, int); break;
+
+                    /* ptrdiff_t actually, but it should be the same for us */
+                    case lm_z: i = va_arg(ap, xsizetype); break;
+                    case lm_t: i = va_arg(ap, xsizetype); break;
                     default: i = 0; break;
                 }
                 subst = iLocaleData::c()->longLongToString(i, precision, 10, width, flags);
@@ -5830,6 +5615,7 @@ iString iString::vasprintf(const char *cformat, va_list ap)
                     case lm_h: u = va_arg(ap, uint); break;
                     case lm_l: u = va_arg(ap, ulong); break;
                     case lm_ll: u = va_arg(ap, xuint64); break;
+                    case lm_t: u = va_arg(ap, size_t); break;
                     case lm_z: u = va_arg(ap, size_t); break;
                     default: u = 0; break;
                 }
@@ -5982,17 +5768,17 @@ iString iString::vasprintf(const char *cformat, va_list ap)
 
 xint64 iString::toLongLong(bool *ok, int base) const
 {
-    return toIntegral_helper<xlonglong>(constData(), size(), ok, base);
+    return toIntegral_helper<xlonglong>(*this, ok, base);
 }
 
-xlonglong iString::toIntegral_helper(const iChar *data, int len, bool *ok, int base)
+xlonglong iString::toIntegral_helper(iStringView string, bool *ok, int base)
 {
     if (base != 0 && (base < 2 || base > 36)) {
         ilog_warn("Invalid base ", base);
         base = 10;
     }
 
-    return iLocaleData::c()->stringToLongLong(iStringView(data, len), base, ok, iLocale::RejectGroupSeparator);
+    return iLocaleData::c()->stringToLongLong(string, base, ok, iLocale::RejectGroupSeparator);
 }
 
 
@@ -6022,18 +5808,17 @@ xlonglong iString::toIntegral_helper(const iChar *data, int len, bool *ok, int b
 
 xuint64 iString::toULongLong(bool *ok, int base) const
 {
-    return toIntegral_helper<xulonglong>(constData(), size(), ok, base);
+    return toIntegral_helper<xulonglong>(*this, ok, base);
 }
 
-xulonglong iString::toIntegral_helper(const iChar *data, uint len, bool *ok, int base)
+xulonglong iString::toIntegral_helper(iStringView string, bool *ok, uint base)
 {
     if (base != 0 && (base < 2 || base > 36)) {
         ilog_warn("Invalid base ", base);
         base = 10;
     }
 
-    return iLocaleData::c()->stringToUnsLongLong(iStringView(data, len), base, ok,
-                                                 iLocale::RejectGroupSeparator);
+    return iLocaleData::c()->stringToUnsLongLong(string, base, ok, iLocale::RejectGroupSeparator);
 }
 
 /*!
@@ -6064,7 +5849,7 @@ xulonglong iString::toIntegral_helper(const iChar *data, uint len, bool *ok, int
 
 long iString::toLong(bool *ok, int base) const
 {
-    return toIntegral_helper<long>(constData(), size(), ok, base);
+    return toIntegral_helper<long>(*this, ok, base);
 }
 
 /*!
@@ -6095,7 +5880,7 @@ long iString::toLong(bool *ok, int base) const
 
 ulong iString::toULong(bool *ok, int base) const
 {
-    return toIntegral_helper<ulong>(constData(), size(), ok, base);
+    return toIntegral_helper<ulong>(*this, ok, base);
 }
 
 
@@ -6125,7 +5910,7 @@ ulong iString::toULong(bool *ok, int base) const
 
 int iString::toInt(bool *ok, int base) const
 {
-    return toIntegral_helper<int>(constData(), size(), ok, base);
+    return toIntegral_helper<int>(*this, ok, base);
 }
 
 /*!
@@ -6154,7 +5939,7 @@ int iString::toInt(bool *ok, int base) const
 
 uint iString::toUInt(bool *ok, int base) const
 {
-    return toIntegral_helper<uint>(constData(), size(), ok, base);
+    return toIntegral_helper<uint>(*this, ok, base);
 }
 
 /*!
@@ -6183,7 +5968,7 @@ uint iString::toUInt(bool *ok, int base) const
 
 short iString::toShort(bool *ok, int base) const
 {
-    return toIntegral_helper<short>(constData(), size(), ok, base);
+    return toIntegral_helper<short>(*this, ok, base);
 }
 
 /*!
@@ -6212,7 +5997,7 @@ short iString::toShort(bool *ok, int base) const
 
 ushort iString::toUShort(bool *ok, int base) const
 {
-    return toIntegral_helper<ushort>(constData(), size(), ok, base);
+    return toIntegral_helper<ushort>(*this, ok, base);
 }
 
 
@@ -6463,21 +6248,21 @@ iString iString::number(double n, char f, int prec)
 
 namespace {
 template<class ResultList, class StringSource>
-static ResultList splitString(const StringSource &source, const iChar *sep,
-                              iString::SplitBehavior behavior, iShell::CaseSensitivity cs, const int separatorSize)
+static ResultList splitString(const StringSource &source, iStringView sep,
+                              iShell::SplitBehavior behavior, iShell::CaseSensitivity cs)
 {
     ResultList list;
-    int start = 0;
-    int end;
-    int extra = 0;
-    while ((end = iFindString(source.constData(), source.size(), start + extra, sep, separatorSize, cs)) != -1) {
-        if (start != end || behavior == iString::KeepEmptyParts)
+    typename StringSource::size_type start = 0;
+    typename StringSource::size_type end;
+    typename StringSource::size_type extra = 0;
+    while ((end = iPrivate::findString(iStringView(source.data(), source.size()), start + extra, sep, cs)) != -1) {
+        if (start != end || behavior == iShell::KeepEmptyParts)
             list.push_back(source.mid(start, end - start));
-        start = end + separatorSize;
-        extra = (separatorSize == 0 ? 1 : 0);
+        start = end + sep.size();
+        extra = (sep.size() == 0 ? 1 : 0);
     }
-    if (start != source.size() || behavior == iString::KeepEmptyParts)
-        list.push_back(source.mid(start, -1));
+    if (start != source.size() || behavior == iShell::KeepEmptyParts)
+        list.push_back(source.mid(start));
     return list;
 }
 
@@ -6492,7 +6277,7 @@ static ResultList splitString(const StringSource &source, const iChar *sep,
     \a cs specifies whether \a sep should be matched case
     sensitively or case insensitively.
 
-    If \a behavior is iString::SkipEmptyParts, empty entries don't
+    If \a behavior is iShell::SkipEmptyParts, empty entries don't
     appear in the result. By default, empty entries are kept.
 
     Example:
@@ -6511,89 +6296,54 @@ static ResultList splitString(const StringSource &source, const iChar *sep,
 
     \sa std::list<iString>::join(), section()
 */
-std::list<iString> iString::split(const iString &sep, SplitBehavior behavior, iShell::CaseSensitivity cs) const
+std::list<iString> iString::split(const iString &sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
-    return splitString< std::list<iString> >(*this, sep.constData(), behavior, cs, sep.size());
-}
-
-/*!
-    Splits the string into substring references wherever \a sep occurs, and
-    returns the list of those strings.
-
-    See iString::split() for how \a sep, \a behavior and \a cs interact to form
-    the result.
-
-    \note All references are valid as long this string is alive. Destroying this
-    string will cause all references to be dangling pointers.
-
-
-    \sa iStringRef split()
-*/
-std::vector<iStringRef> iString::splitRef(const iString &sep, SplitBehavior behavior, iShell::CaseSensitivity cs) const
-{
-    return splitString<std::vector<iStringRef> >(iStringRef(this), sep.constData(), behavior, cs, sep.size());
-}
-/*!
-    \overload
-*/
-std::list<iString> iString::split(iChar sep, SplitBehavior behavior, iShell::CaseSensitivity cs) const
-{
-    return splitString< std::list<iString> >(*this, &sep, behavior, cs, 1);
+    return splitString< std::list<iString> >(*this, sep, behavior, cs);
 }
 
 /*!
     \overload
-
 */
-std::vector<iStringRef> iString::splitRef(iChar sep, SplitBehavior behavior, iShell::CaseSensitivity cs) const
+std::list<iString> iString::split(iChar sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
-    return splitString<std::vector<iStringRef> >(iStringRef(this), &sep, behavior, cs, 1);
+    return splitString< std::list<iString> >(*this, iStringView(&sep, 1), behavior, cs);
 }
 
-/*!
-    Splits the string into substrings references wherever \a sep occurs, and
-    returns the list of those strings.
-
-    See iString::split() for how \a sep, \a behavior and \a cs interact to form
-    the result.
-
-    \note All references are valid as long this string is alive. Destroying this
-    string will cause all references to be dangling pointers.
-
-
-*/
-std::vector<iStringRef> iStringRef::split(const iString &sep, iString::SplitBehavior behavior, iShell::CaseSensitivity cs) const
+std::list<iStringView> iStringView::split(iStringView sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
-    return splitString<std::vector<iStringRef> >(*this, sep.constData(), behavior, cs, sep.size());
+    return splitString< std::list<iStringView> >(iStringView(*this), sep, behavior, cs);
 }
 
-/*!
-    \overload
-
-*/
-std::vector<iStringRef> iStringRef::split(iChar sep, iString::SplitBehavior behavior, iShell::CaseSensitivity cs) const
+std::list<iStringView> iStringView::split(iChar sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
-    return splitString<std::vector<iStringRef> >(*this, &sep, behavior, cs, 1);
+    return split(iStringView(&sep, 1), behavior, cs);
 }
 
 namespace {
-template<class ResultList, typename MidMethod>
-static ResultList splitString(const iString &source, MidMethod mid, const iRegExp &rx, iString::SplitBehavior behavior)
+template<class ResultList, typename String>
+static ResultList splitString(const String &source, const iRegularExpression &re,
+                              iShell::SplitBehavior behavior)
 {
-    iRegExp rx2(rx);
     ResultList list;
-    int start = 0;
-    int extra = 0;
-    int end;
-    while ((end = rx2.indexIn(source, start + extra)) != -1) {
-        int matchedLen = rx2.matchedLength();
-        if (start != end || behavior == iString::KeepEmptyParts)
-            list.push_back((source.*mid)(start, end - start));
-        start = end + matchedLen;
-        extra = (matchedLen == 0) ? 1 : 0;
+    if (!re.isValid()) {
+        ilog_warn("invalid iRegularExpression object");
+        return list;
     }
-    if (start != source.size() || behavior == iString::KeepEmptyParts)
-        list.push_back((source.*mid)(start, -1));
+
+    xsizetype start = 0;
+    xsizetype end = 0;
+    iRegularExpressionMatchIterator iterator = re.globalMatch(source);
+    while (iterator.hasNext()) {
+        iRegularExpressionMatch match = iterator.next();
+        end = match.capturedStart();
+        if (start != end || behavior == iShell::KeepEmptyParts)
+            list.push_back(source.mid(start, end - start));
+        start = match.capturedEnd();
+    }
+
+    if (start != source.size() || behavior == iShell::KeepEmptyParts)
+        list.push_back(source.mid(start));
+
     return list;
 }
 } // namespace
@@ -6624,28 +6374,9 @@ static ResultList splitString(const iString &source, MidMethod mid, const iRegEx
 
     \sa std::list<iString>::join(), section()
 */
-std::list<iString> iString::split(const iRegExp &rx, SplitBehavior behavior) const
+std::list<iString> iString::split(const iRegularExpression &re, iShell::SplitBehavior behavior) const
 {
-    return splitString< std::list<iString> >(*this, &iString::mid, rx, behavior);
-}
-
-/*!
-    \overload
-
-
-    Splits the string into substring references wherever the regular expression
-    \a rx matches, and returns the list of those strings. If \a rx
-    does not match anywhere in the string, splitRef() returns a
-    single-element vector containing this string reference.
-
-    \note All references are valid as long this string is alive. Destroying this
-    string will cause all references to be dangling pointers.
-
-    \sa iStringRef split()
-*/
-std::vector<iStringRef> iString::splitRef(const iRegExp &rx, SplitBehavior behavior) const
-{
-    return splitString<std::vector<iStringRef> >(*this, &iString::midRef, rx, behavior);
+    return splitString< std::list<iString> >(*this, re, behavior);
 }
 
 /*!
@@ -6673,9 +6404,9 @@ std::vector<iStringRef> iString::splitRef(const iRegExp &rx, SplitBehavior behav
 
     \snippet code/src_corelib_tools_qstring.cpp 8
 */
-iString iString::repeated(int times) const
+iString iString::repeated(xsizetype times) const
 {
-    if (d->size == 0)
+    if (d.size == 0)
         return *this;
 
     if (times <= 1) {
@@ -6684,34 +6415,34 @@ iString iString::repeated(int times) const
         return iString();
     }
 
-    const int resultSize = times * d->size;
+    const xsizetype resultSize = times * d.size;
 
     iString result;
     result.reserve(resultSize);
-    if (result.d->alloc != uint(resultSize) + 1u)
+    if (result.capacity() != resultSize)
         return iString(); // not enough memory
 
-    memcpy(result.d->data(), d->data(), d->size * sizeof(ushort));
+    memcpy(result.d.data(), d.data(), d.size * sizeof(iChar));
 
-    int sizeSoFar = d->size;
-    ushort *end = result.d->data() + sizeSoFar;
+    xsizetype sizeSoFar = d.size;
+    ushort *end = result.d.data() + sizeSoFar;
 
-    const int halfResultSize = resultSize >> 1;
+    const xsizetype halfResultSize = resultSize >> 1;
     while (sizeSoFar <= halfResultSize) {
-        memcpy(end, result.d->data(), sizeSoFar * sizeof(ushort));
+        memcpy(end, result.d.data(), sizeSoFar * sizeof(iChar));
         end += sizeSoFar;
         sizeSoFar <<= 1;
     }
-    memcpy(end, result.d->data(), (resultSize - sizeSoFar) * sizeof(ushort));
-    result.d->data()[resultSize] = '\0';
-    result.d->size = resultSize;
+    memcpy(end, result.d.data(), (resultSize - sizeSoFar) * sizeof(iChar));
+    result.d.data()[resultSize] = '\0';
+    result.d.size = resultSize;
     return result;
 }
 
-void ix_string_normalize(iString *data, iString::NormalizationForm mode, iChar::UnicodeVersion version, int from)
+void ix_string_normalize(iString *data, iString::NormalizationForm mode, iChar::UnicodeVersion version, xsizetype from)
 {
     using namespace iUnicodeTables;
-
+    
     const iChar *p = data->constData() + from;
     if (isAscii(p, p + data->length() - from))
         return;
@@ -6726,7 +6457,7 @@ void ix_string_normalize(iString *data, iString::NormalizationForm mode, iChar::
         for (int i = 0; i < NumNormalizationCorrections; ++i) {
             const NormalizationCorrection &n = uc_normalization_corrections[i];
             if (n.version > version) {
-                int pos = from;
+                xsizetype pos = from;
                 if (iChar::requiresSurrogates(n.ucs4)) {
                     ushort ucs4High = iChar::highSurrogate(n.ucs4);
                     ushort ucs4Low = iChar::lowSurrogate(n.ucs4);
@@ -6858,7 +6589,7 @@ static iString replaceArgEscapes(iStringView s, const ArgEscapeData &d, int fiel
     const iChar *uc_end = s.end();
 
     int abs_field_width = std::abs(field_width);
-    int result_len = s.length()
+    xsizetype result_len = s.length()
                      - d.escape_len
                      + (d.occurrences - d.locale_occurrences)
                      *std::max(abs_field_width, arg.length())
@@ -6929,7 +6660,7 @@ static iString replaceArgEscapes(iStringView s, const ArgEscapeData &d, int fiel
 
             if (field_width < 0) { // right padded
                 for (uint i = 0; i < pad_chars; ++i)
-                    (rc++)->unicode() = fillChar.unicode();
+                    *rc++ = fillChar;
             }
 
             if (++repl_cnt == d.occurrences) {
@@ -7372,9 +7103,7 @@ iString iString::arg(iChar a, int fieldWidth, iChar fillChar) const
 */
 iString iString::arg(char a, int fieldWidth, iChar fillChar) const
 {
-    iString c;
-    c += iLatin1Char(a);
-    return arg(c, fieldWidth, fillChar);
+    return arg(iLatin1Char(a), fieldWidth, fillChar);
 }
 
 /*!
@@ -7455,19 +7184,23 @@ iString iString::arg(double a, int fieldWidth, char fmt, int prec, iChar fillCha
     return replaceArgEscapes(*this, d, fieldWidth, arg, locale_arg, fillChar);
 }
 
-static int getEscape(const iChar *uc, int *pos, int len, int maxNumber = 999)
+static inline ushort to_unicode(const iChar c) { return c.unicode(); }
+static inline ushort to_unicode(const char c) { return iLatin1Char{c}.unicode(); }
+
+template <typename Char>
+static int getEscape(const Char *uc, xsizetype *pos, xsizetype len, int maxNumber = 999)
 {
     int i = *pos;
     ++i;
     if (i < len && uc[i] == iLatin1Char('L'))
         ++i;
     if (i < len) {
-        int escape = uc[i].unicode() - '0';
+        int escape = to_unicode(uc[i]) - '0';
         if (uint(escape) >= 10U)
             return -1;
         ++i;
         while (i < len) {
-            int digit = uc[i].unicode() - '0';
+            int digit = to_unicode(uc[i]) - '0';
             if (uint(digit) >= 10U)
                 break;
             escape = (escape * 10) + digit;
@@ -7480,6 +7213,7 @@ static int getEscape(const iChar *uc, int *pos, int len, int maxNumber = 999)
     }
     return -1;
 }
+
 
 /*
     Algorithm for multiArg:
@@ -7514,22 +7248,20 @@ static int getEscape(const iChar *uc, int *pos, int len, int maxNumber = 999)
        5c. Otherwise, do nothing.
     6. Concatenate all string refs into a single result string.
 */
-
 namespace {
 struct Part
 {
-    Part() : stringRef(), number(0) {}
-    Part(const iString &s, int pos, int len, int num = -1)
-        : stringRef(&s, pos, len), number(num) {}
+    Part(); // for iVarLengthArray; do not use
+    Part(iStringView s, int num = -1)
+        : number(num), data(s.utf16()), size(s.size()) {}
 
-    iStringRef stringRef;
+    void reset(iStringView s) { data = s.utf16(); size = s.size(); }
+
     int number;
+    const void *data;
+    xsizetype size;
 };
 } // unnamed namespace
-
-template <>
-class iTypeInfo<Part> : public iTypeInfoMerger<Part, iStringRef, int> {}; // IX_DECLARE_METATYPE
-
 
 namespace {
 
@@ -7538,24 +7270,25 @@ enum { ExpectedParts = 32 };
 typedef iVarLengthArray<Part, ExpectedParts> ParseResult;
 typedef iVarLengthArray<int, ExpectedParts/2> ArgIndexToPlaceholderMap;
 
-static ParseResult parseMultiArgFormatString(const iString &s)
+template <typename StringView>
+static ParseResult parseMultiArgFormatString(StringView s)
 {
     ParseResult result;
 
-    const iChar *uc = s.constData();
-    const int len = s.size();
-    const int end = len - 1;
-    int i = 0;
-    int last = 0;
+    const auto uc = s.data();
+    const auto len = s.size();
+    const auto end = len - 1;
+    xsizetype i = 0;
+    xsizetype last = 0;
 
     while (i < end) {
         if (uc[i] == iLatin1Char('%')) {
-            int percent = i;
+            xsizetype percent = i;
             int number = getEscape(uc, &i, len);
             if (number != -1) {
                 if (last != percent)
-                    result.push_back(Part(s, last, percent - last)); // literal text (incl. failed placeholders)
-                result.push_back(Part(s, percent, i - percent, number));  // parsed placeholder
+                    result.push_back(Part{s.mid(last, percent - last)}); // literal text (incl. failed placeholders)
+                result.push_back(Part{s.mid(percent, i - percent), number});  // parsed placeholder
                 last = i;
                 continue;
             }
@@ -7564,7 +7297,7 @@ static ParseResult parseMultiArgFormatString(const iString &s)
     }
 
     if (last < len)
-        result.push_back(Part(s, last, len - last)); // trailing literal text
+        result.push_back(Part{s.mid(last, len - last)}); // trailing literal text
 
     return result;
 }
@@ -7573,9 +7306,9 @@ static ArgIndexToPlaceholderMap makeArgIndexToPlaceholderMap(const ParseResult &
 {
     ArgIndexToPlaceholderMap result;
 
-    for (ParseResult::const_iterator it = parts.begin(), end = parts.end(); it != end; ++it) {
-        if (it->number >= 0)
-            result.push_back(it->number);
+    for (Part part : parts) {
+        if (part.number >= 0)
+            result.push_back(part.number);
     }
 
     std::sort(result.begin(), result.end());
@@ -7585,24 +7318,25 @@ static ArgIndexToPlaceholderMap makeArgIndexToPlaceholderMap(const ParseResult &
     return result;
 }
 
-static int resolveStringRefsAndReturnTotalSize(ParseResult &parts, const ArgIndexToPlaceholderMap &argIndexToPlaceholderMap, const iString *args[])
+static xsizetype resolveStringRefsAndReturnTotalSize(ParseResult &parts, const ArgIndexToPlaceholderMap &argIndexToPlaceholderMap, const iString *args[])
 {
-    int totalSize = 0;
-    for (ParseResult::iterator pit = parts.begin(), end = parts.end(); pit != end; ++pit) {
-        if (pit->number != -1) {
-            const ArgIndexToPlaceholderMap::const_iterator ait
-                    = std::find(argIndexToPlaceholderMap.begin(), argIndexToPlaceholderMap.end(), pit->number);
-            if (ait != argIndexToPlaceholderMap.end())
-                pit->stringRef = iStringRef(args[ait - argIndexToPlaceholderMap.begin()]);
+    xsizetype totalSize = 0;
+    for (Part &part : parts) {
+        if (part.number != -1) {
+            const auto it = std::find(argIndexToPlaceholderMap.begin(), argIndexToPlaceholderMap.end(), part.number);
+            if (it != argIndexToPlaceholderMap.end()) {
+                const auto &arg = *args[it - argIndexToPlaceholderMap.begin()];
+                part.reset(arg);
+            }
         }
-        totalSize += pit->stringRef.size();
+        totalSize += part.size;
     }
     return totalSize;
 }
 
 } // unnamed namespace
 
-iString iString::multiArg(int numArgs, const iString **args) const
+iString iString::multiArg(xsizetype numArgs, const iString **args) const
 {
     // Step 1-2 above
     ParseResult parts = parseMultiArgFormatString(*this);
@@ -7617,17 +7351,16 @@ iString iString::multiArg(int numArgs, const iString **args) const
                   " argument(s) missing in ", toLocal8Bit().data());
 
     // 5
-    const int totalSize = resolveStringRefsAndReturnTotalSize(parts, argIndexToPlaceholderMap, args);
+    const xsizetype totalSize = resolveStringRefsAndReturnTotalSize(parts, argIndexToPlaceholderMap, args);
 
     // 6:
     iString result(totalSize, iShell::Uninitialized);
     iChar *out = result.data();
 
     for (ParseResult::const_iterator it = parts.begin(), end = parts.end(); it != end; ++it) {
-        if (const int sz = it->stringRef.size()) {
-            memcpy(out, it->stringRef.constData(), sz * sizeof(iChar));
-            out += sz;
-        }
+        const Part& part = *it;
+        if (part.size)
+            memcpy(out, part.data, part.size * sizeof(iChar));
     }
 
     return result;
@@ -7639,8 +7372,8 @@ iString iString::multiArg(int numArgs, const iString **args) const
 */
 bool iString::isSimpleText() const
 {
-    const ushort *p = d->data();
-    const ushort * const end = p + d->size;
+    const ushort *p = d.data();
+    const ushort * const end = p + d.size;
     while (p < end) {
         ushort uc = *p;
         // sort out regions of complex text formatting
@@ -7656,8 +7389,6 @@ bool iString::isSimpleText() const
 /*! \fn bool iString::isRightToLeft() const
 
     Returns \c true if the string is read right to left.
-
-    \sa iStringRef::isRightToLeft()
 */
 bool iString::isRightToLeft() const
 {
@@ -7787,19 +7518,9 @@ bool iString::isRightToLeft() const
 
     \sa fromUtf16(), setRawData()
 */
-iString iString::fromRawData(const iChar *unicode, int size)
+iString iString::fromRawData(const iChar *unicode, xsizetype size)
 {
-    Data *x;
-    if (!unicode) {
-        x = Data::sharedNull();
-    } else if (!size) {
-        x = Data::allocate(0);
-    } else {
-        x = Data::fromRawData(reinterpret_cast<const ushort *>(unicode), size);
-        IX_CHECK_PTR(x);
-    }
-    iStringDataPtr dataPtr = { x };
-    return iString(dataPtr);
+    return iString(DataPointer::fromRawData(const_cast<ushort *>(reinterpret_cast<const ushort *>(unicode)), size));
 }
 
 /*!
@@ -7816,19 +7537,12 @@ iString iString::fromRawData(const iChar *unicode, int size)
 
     \sa fromRawData()
 */
-iString &iString::setRawData(const iChar *unicode, int size)
+iString &iString::setRawData(const iChar *unicode, xsizetype size)
 {
-    if (d->ref.isShared() || d->alloc) {
-        *this = fromRawData(unicode, size);
-    } else {
-        if (unicode) {
-            d->size = size;
-            d->offset = reinterpret_cast<const char *>(unicode) - reinterpret_cast<char *>(d);
-        } else {
-            d->offset = sizeof(iStringData);
-            d->size = 0;
-        }
+    if (!unicode || !size) {
+        clear();
     }
+    *this = fromRawData(unicode, size);
     return *this;
 }
 
@@ -8675,1192 +8389,6 @@ iString &iString::setRawData(const iChar *unicode, int size)
    string \a s2; otherwise returns \c false.
 */
 
-
-/*!
-    \class iStringRef
-
-    \brief The iStringRef class provides a thin wrapper around iString substrings.
-    \reentrant
-    \ingroup tools
-    \ingroup string-processing
-
-    iStringRef provides a read-only subset of the iString API.
-
-    A string reference explicitly references a portion of a string()
-    with a given size(), starting at a specific position(). Calling
-    toString() returns a copy of the data as a real iString instance.
-
-    This class is designed to improve the performance of substring
-    handling when manipulating substrings obtained from existing iString
-    instances. iStringRef avoids the memory allocation and reference
-    counting overhead of a standard iString by simply referencing a
-    part of the original string. This can prove to be advantageous in
-    low level code, such as that used in a parser, at the expense of
-    potentially more complex code.
-
-    For most users, there are no semantic benefits to using iStringRef
-    instead of iString since iStringRef requires attention to be paid
-    to memory management issues, potentially making code more complex
-    to write and maintain.
-
-    \warning A iStringRef is only valid as long as the referenced
-    string exists. If the original string is deleted, the string
-    reference points to an invalid memory location.
-
-    We suggest that you only use this class in stable code where profiling
-    has clearly identified that performance improvements can be made by
-    replacing standard string operations with the optimized substring
-    handling provided by this class.
-
-    \sa {Implicitly Shared Classes}
-*/
-
-/*!
-    \typedef iStringRef::size_type
-    \internal
-*/
-
-/*!
-    \typedef iStringRef::value_type
-    \internal
-*/
-
-/*!
-    \typedef iStringRef::const_pointer
-    \internal
-*/
-
-/*!
-    \typedef iStringRef::const_reference
-    \internal
-*/
-
-/*!
-    \typedef iStringRef::const_iterator
-
-
-    This typedef provides an STL-style const iterator for iStringRef.
-
-    \sa iStringRef::const_reverse_iterator
-*/
-
-/*!
-    \typedef iStringRef::const_reverse_iterator
-
-
-    This typedef provides an STL-style const reverse iterator for iStringRef.
-
-    \sa iStringRef::const_iterator
-*/
-
-/*!
- \fn iStringRef::iStringRef()
-
- Constructs an empty string reference.
-*/
-
-/*! \fn iStringRef::iStringRef(const iString *string, int position, int length)
-
-Constructs a string reference to the range of characters in the given
-\a string specified by the starting \a position and \a length in characters.
-
-\warning This function exists to improve performance as much as possible,
-and performs no bounds checking. For program correctness, \a position and
-\a length must describe a valid substring of \a string.
-
-This means that the starting \a position must be positive or 0 and smaller
-than \a string's length, and \a length must be positive or 0 but smaller than
-the string's length minus the starting \a position;
-i.e, 0 <= position < string->length() and
-0 <= length <= string->length() - position must both be satisfied.
-*/
-
-/*! \fn iStringRef::iStringRef(const iString *string)
-
-Constructs a string reference to the given \a string.
-*/
-
-/*! \fn iStringRef::iStringRef(const iStringRef &other)
-
-Constructs a copy of the \a other string reference.
- */
-/*!
-\fn iStringRef::~iStringRef()
-
-Destroys the string reference.
-
-Since this class is only used to refer to string data, and does not take
-ownership of it, no memory is freed when instances are destroyed.
-*/
-
-/*!
-    \fn int iStringRef::position() const
-
-    Returns the starting position in the referenced string that is referred to
-    by the string reference.
-
-    \sa size(), string()
-*/
-
-/*!
-    \fn int iStringRef::size() const
-
-    Returns the number of characters referred to by the string reference.
-    Equivalent to length() and count().
-
-    \sa position(), string()
-*/
-/*!
-    \fn int iStringRef::count() const
-    Returns the number of characters referred to by the string reference.
-    Equivalent to size() and length().
-
-    \sa position(), string()
-*/
-/*!
-    \fn int iStringRef::length() const
-    Returns the number of characters referred to by the string reference.
-    Equivalent to size() and count().
-
-    \sa position(), string()
-*/
-
-
-/*!
-    \fn bool iStringRef::isEmpty() const
-
-    Returns \c true if the string reference has no characters; otherwise returns
-    \c false.
-
-    A string reference is empty if its size is zero.
-
-    \sa size()
-*/
-
-/*!
-    \fn bool iStringRef::isNull() const
-
-    Returns \c true if string() returns a null pointer or a pointer to a
-    null string; otherwise returns \c true.
-
-    \sa size()
-*/
-
-/*!
-    \fn const iString *iStringRef::string() const
-
-    Returns a pointer to the string referred to by the string reference, or
-    0 if it does not reference a string.
-
-    \sa unicode()
-*/
-
-
-/*!
-    \fn const iChar *iStringRef::unicode() const
-
-    Returns a Unicode representation of the string reference. Since
-    the data stems directly from the referenced string, it is not
-    \\0'-terminated unless the string reference includes the string's
-    null terminator.
-
-    \sa string()
-*/
-
-/*!
-    \fn const iChar *iStringRef::data() const
-
-    Same as unicode().
-*/
-
-/*!
-    \fn const iChar *iStringRef::constData() const
-
-    Same as unicode().
-*/
-
-/*!
-    \fn iStringRef::const_iterator iStringRef::begin() const
-
-
-    Returns a const \l{STL-style iterators}{STL-style iterator} pointing to the first character in
-    the string.
-
-    \sa cbegin(), constBegin(), end(), constEnd(), rbegin(), rend()
-*/
-
-/*!
-    \fn iStringRef::const_iterator iStringRef::cbegin() const
-
-
-    Same as begin().
-
-    \sa begin(), constBegin(), cend(), constEnd(), rbegin(), rend()
-*/
-
-/*!
-    \fn iStringRef::const_iterator iStringRef::constBegin() const
-
-
-    Same as begin().
-
-    \sa begin(), cend(), constEnd(), rbegin(), rend()
-*/
-
-/*!
-    \fn iStringRef::const_iterator iStringRef::end() const
-
-
-    Returns a const \l{STL-style iterators}{STL-style iterator} pointing to the imaginary
-    character after the last character in the list.
-
-    \sa cbegin(), constBegin(), end(), constEnd(), rbegin(), rend()
-*/
-
-/*! \fn iStringRef::const_iterator iStringRef::cend() const
-
-
-    Same as end().
-
-    \sa end(), constEnd(), cbegin(), constBegin(), rbegin(), rend()
-*/
-
-/*! \fn iStringRef::const_iterator iStringRef::constEnd() const
-
-
-    Same as end().
-
-    \sa end(), cend(), cbegin(), constBegin(), rbegin(), rend()
-*/
-
-/*!
-    \fn iStringRef::const_reverse_iterator iStringRef::rbegin() const
-
-
-    Returns a const \l{STL-style iterators}{STL-style} reverse iterator pointing to the first
-    character in the string, in reverse order.
-
-    \sa begin(), crbegin(), rend()
-*/
-
-/*!
-    \fn iStringRef::const_reverse_iterator iStringRef::crbegin() const
-
-
-    Same as rbegin().
-
-    \sa begin(), rbegin(), rend()
-*/
-
-/*!
-    \fn iStringRef::const_reverse_iterator iStringRef::rend() const
-
-
-    Returns a \l{STL-style iterators}{STL-style} reverse iterator pointing to one past
-    the last character in the string, in reverse order.
-
-    \sa end(), crend(), rbegin()
-*/
-
-
-/*!
-    \fn iStringRef::const_reverse_iterator iStringRef::crend() const
-
-
-    Same as rend().
-
-    \sa end(), rend(), rbegin()
-*/
-
-/*!
-    Returns a copy of the string reference as a iString object.
-
-    If the string reference is not a complete reference of the string
-    (meaning that position() is 0 and size() equals string()->size()),
-    this function will allocate a new string to return.
-
-    \sa string()
-*/
-
-iString iStringRef::toString() const {
-    if (!m_string)
-        return iString();
-    if (m_size && m_position == 0 && m_size == m_string->size())
-        return *m_string;
-    return iString(m_string->unicode() + m_position, m_size);
-}
-
-
-/*! \relates iStringRef
-
-   Returns \c true if string reference \a s1 is lexically equal to string reference \a s2; otherwise
-   returns \c false.
-*/
-bool operator==(const iStringRef &s1,const iStringRef &s2)
-{
-    return s1.size() == s2.size() && ix_compare_strings(s1, s2, iShell::CaseSensitive) == 0;
-}
-
-/*! \relates iStringRef
-
-   Returns \c true if string \a s1 is lexically equal to string reference \a s2; otherwise
-   returns \c false.
-*/
-bool operator==(const iString &s1,const iStringRef &s2)
-{
-    return s1.size() == s2.size() && ix_compare_strings(s1, s2, iShell::CaseSensitive) == 0;
-}
-
-/*! \relates iStringRef
-
-   Returns \c true if string  \a s1 is lexically equal to string reference \a s2; otherwise
-   returns \c false.
-*/
-bool operator==(iLatin1String s1, const iStringRef &s2)
-{
-    if (s1.size() != s2.size())
-        return false;
-
-    return ix_compare_strings(s2, s1, iShell::CaseSensitive) == 0;
-}
-
-/*!
-   \relates iStringRef
-
-    Returns \c true if string reference \a s1 is lexically less than
-    string reference \a s2; otherwise returns \c false.
-
-    The comparison is based exclusively on the numeric Unicode values
-    of the characters and is very fast, but is not what a human would
-    expect. Consider sorting user-interface strings using the
-    iString::localeAwareCompare() function.
-*/
-bool operator<(const iStringRef &s1,const iStringRef &s2)
-{
-    return ix_compare_strings(s1, s2, iShell::CaseSensitive) < 0;
-}
-
-/*!\fn bool operator<=(const iStringRef &s1,const iStringRef &s2)
-
-   \relates iStringRef
-
-    Returns \c true if string reference \a s1 is lexically less than
-    or equal to string reference \a s2; otherwise returns \c false.
-
-    The comparison is based exclusively on the numeric Unicode values
-    of the characters and is very fast, but is not what a human would
-    expect. Consider sorting user-interface strings using the
-    iString::localeAwareCompare() function.
-*/
-
-/*!\fn bool operator>=(const iStringRef &s1,const iStringRef &s2)
-
-   \relates iStringRef
-
-    Returns \c true if string reference \a s1 is lexically greater than
-    or equal to string reference \a s2; otherwise returns \c false.
-
-    The comparison is based exclusively on the numeric Unicode values
-    of the characters and is very fast, but is not what a human would
-    expect. Consider sorting user-interface strings using the
-    iString::localeAwareCompare() function.
-*/
-
-/*!\fn bool operator>(const iStringRef &s1,const iStringRef &s2)
-
-   \relates iStringRef
-
-    Returns \c true if string reference \a s1 is lexically greater than
-    string reference \a s2; otherwise returns \c false.
-
-    The comparison is based exclusively on the numeric Unicode values
-    of the characters and is very fast, but is not what a human would
-    expect. Consider sorting user-interface strings using the
-    iString::localeAwareCompare() function.
-*/
-
-
-/*!
-    \fn const iChar iStringRef::at(int position) const
-
-    Returns the character at the given index \a position in the
-    string reference.
-
-    The \a position must be a valid index position in the string
-    (i.e., 0 <= \a position < size()).
-*/
-
-/*!
-    \fn iChar iStringRef::operator[](int position) const
-
-
-    Returns the character at the given index \a position in the
-    string reference.
-
-    The \a position must be a valid index position in the string
-    reference (i.e., 0 <= \a position < size()).
-
-    \sa at()
-*/
-
-/*!
-    \fn iChar iStringRef::front() const
-
-
-    Returns the first character in the string.
-    Same as \c{at(0)}.
-
-    This function is provided for STL compatibility.
-
-    \warning Calling this function on an empty string constitutes
-    undefined behavior.
-
-    \sa back(), at(), operator[]()
-*/
-
-/*!
-    \fn iChar iStringRef::back() const
-
-
-    Returns the last character in the string.
-    Same as \c{at(size() - 1)}.
-
-    This function is provided for STL compatibility.
-
-    \warning Calling this function on an empty string constitutes
-    undefined behavior.
-
-    \sa front(), at(), operator[]()
-*/
-
-/*!
-    \fn void iStringRef::clear()
-
-    Clears the contents of the string reference by making it null and empty.
-
-    \sa isEmpty(), isNull()
-*/
-
-/*!
-    \fn iStringRef &iStringRef::operator=(const iStringRef &other)
-
-    Assigns the \a other string reference to this string reference, and
-    returns the result.
-*/
-
-/*!
-    \fn iStringRef &iStringRef::operator=(const iString *string)
-
-    Constructs a string reference to the given \a string and assigns it to
-    this string reference, returning the result.
-*/
-
-/*!
-    \fn bool iStringRef::operator==(const char * s) const
-
-    \overload operator==()
-
-    The \a s byte array is converted to a iStringRef using the
-    fromUtf8() function. This function stops conversion at the
-    first NUL character found, or the end of the byte array.
-
-    You can disable this operator by defining \c
-    IX_NO_CAST_FROM_ASCII when you compile your applications. This
-    can be useful if you want to ensure that all user-visible strings
-    go through iObject::tr(), for example.
-
-    Returns \c true if this string is lexically equal to the parameter
-    string \a s. Otherwise returns \c false.
-
-    \sa IX_NO_CAST_FROM_ASCII
-*/
-
-/*!
-    \fn bool iStringRef::operator!=(const char * s) const
-
-    \overload operator!=()
-
-    The \a s const char pointer is converted to a iStringRef using
-    the fromUtf8() function.
-
-    You can disable this operator by defining \c
-    IX_NO_CAST_FROM_ASCII when you compile your applications. This
-    can be useful if you want to ensure that all user-visible strings
-    go through iObject::tr(), for example.
-
-    Returns \c true if this string is not lexically equal to the parameter
-    string \a s. Otherwise returns \c false.
-
-    \sa IX_NO_CAST_FROM_ASCII
-*/
-
-/*!
-    \fn bool iStringRef::operator<(const char * s) const
-
-    \overload operator<()
-
-    The \a s const char pointer is converted to a iStringRef using
-    the fromUtf8() function.
-
-    You can disable this operator by defining \c
-    IX_NO_CAST_FROM_ASCII when you compile your applications. This
-    can be useful if you want to ensure that all user-visible strings
-    go through iObject::tr(), for example.
-
-    Returns \c true if this string is lexically smaller than the parameter
-    string \a s. Otherwise returns \c false.
-
-    \sa IX_NO_CAST_FROM_ASCII
-*/
-
-/*!
-    \fn bool iStringRef::operator<=(const char * s) const
-
-    \overload operator<=()
-
-    The \a s const char pointer is converted to a iStringRef using
-    the fromUtf8() function.
-
-    You can disable this operator by defining \c
-    IX_NO_CAST_FROM_ASCII when you compile your applications. This
-    can be useful if you want to ensure that all user-visible strings
-    go through iObject::tr(), for example.
-
-    Returns \c true if this string is lexically smaller than or equal to the parameter
-    string \a s. Otherwise returns \c false.
-
-    \sa IX_NO_CAST_FROM_ASCII
-*/
-
-/*!
-    \fn bool iStringRef::operator>(const char * s) const
-
-
-    \overload operator>()
-
-    The \a s const char pointer is converted to a iStringRef using
-    the fromUtf8() function.
-
-    You can disable this operator by defining \c
-    IX_NO_CAST_FROM_ASCII when you compile your applications. This
-    can be useful if you want to ensure that all user-visible strings
-    go through iObject::tr(), for example.
-
-    Returns \c true if this string is lexically greater than the parameter
-    string \a s. Otherwise returns \c false.
-
-    \sa IX_NO_CAST_FROM_ASCII
-*/
-
-/*!
-    \fn bool iStringRef::operator>= (const char * s) const
-
-    \overload operator>=()
-
-    The \a s const char pointer is converted to a iStringRef using
-    the fromUtf8() function.
-
-    You can disable this operator by defining \c
-    IX_NO_CAST_FROM_ASCII when you compile your applications. This
-    can be useful if you want to ensure that all user-visible strings
-    go through iObject::tr(), for example.
-
-    Returns \c true if this string is lexically greater than or equal to the
-    parameter string \a s. Otherwise returns \c false.
-
-    \sa IX_NO_CAST_FROM_ASCII
-*/
-/*!
-    \typedef iString::Data
-    \internal
-*/
-
-/*!
-    \typedef iString::DataPtr
-    \internal
-*/
-
-/*!
-    \fn DataPtr & iString::data_ptr()
-    \internal
-*/
-
-
-
-/*!  Appends the string reference to \a string, and returns a new
-reference to the combined string data.
- */
-iStringRef iStringRef::appendTo(iString *string) const
-{
-    if (!string)
-        return iStringRef();
-    int pos = string->size();
-    string->insert(pos, unicode(), size());
-    return iStringRef(string, pos, size());
-}
-
-/*!
-    \fn int iStringRef::compare(const iStringRef &s1, const iString &s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
-
-
-    Compares the string \a s1 with the string \a s2 and returns an
-    integer less than, equal to, or greater than zero if \a s1
-    is less than, equal to, or greater than \a s2.
-
-    If \a cs is iShell::CaseSensitive, the comparison is case sensitive;
-    otherwise the comparison is case insensitive.
-*/
-
-/*!
-    \fn int iStringRef::compare(const iStringRef &s1, const iStringRef &s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
-
-    \overload
-
-    Compares the string \a s1 with the string \a s2 and returns an
-    integer less than, equal to, or greater than zero if \a s1
-    is less than, equal to, or greater than \a s2.
-
-    If \a cs is iShell::CaseSensitive, the comparison is case sensitive;
-    otherwise the comparison is case insensitive.
-*/
-
-/*!
-    \fn int iStringRef::compare(const iStringRef &s1, iLatin1String s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
-
-    \overload
-
-    Compares the string \a s1 with the string \a s2 and returns an
-    integer less than, equal to, or greater than zero if \a s1
-    is less than, equal to, or greater than \a s2.
-
-    If \a cs is iShell::CaseSensitive, the comparison is case sensitive;
-    otherwise the comparison is case insensitive.
-*/
-
-/*!
-    \overload
-    \fn int iStringRef::compare(const iString &other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-
-
-    Compares this string with the \a other string and returns an
-    integer less than, equal to, or greater than zero if this string
-    is less than, equal to, or greater than the \a other string.
-
-    If \a cs is iShell::CaseSensitive, the comparison is case sensitive;
-    otherwise the comparison is case insensitive.
-
-    Equivalent to \c {compare(*this, other, cs)}.
-*/
-
-/*!
-    \overload
-    \fn int iStringRef::compare(const iStringRef &other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-
-
-    Compares this string with the \a other string and returns an
-    integer less than, equal to, or greater than zero if this string
-    is less than, equal to, or greater than the \a other string.
-
-    If \a cs is iShell::CaseSensitive, the comparison is case sensitive;
-    otherwise the comparison is case insensitive.
-
-    Equivalent to \c {compare(*this, other, cs)}.
-*/
-
-/*!
-    \overload
-    \fn int iStringRef::compare(iLatin1String other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-
-
-    Compares this string with the \a other string and returns an
-    integer less than, equal to, or greater than zero if this string
-    is less than, equal to, or greater than the \a other string.
-
-    If \a cs is iShell::CaseSensitive, the comparison is case sensitive;
-    otherwise the comparison is case insensitive.
-
-    Equivalent to \c {compare(*this, other, cs)}.
-*/
-
-/*!
-    \overload
-    \fn int iStringRef::compare(const iByteArray &other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-
-
-    Compares this string with \a other and returns an
-    integer less than, equal to, or greater than zero if this string
-    is less than, equal to, or greater than the \a other byte array,
-    interpreted as a UTF-8 sequence.
-
-    If \a cs is iShell::CaseSensitive, the comparison is case sensitive;
-    otherwise the comparison is case insensitive.
-
-    Equivalent to \c {compare(*this, other, cs)}.
-*/
-
-/*!
-    \fn int iStringRef::localeAwareCompare(const iStringRef &s1, const iString & s2)
-
-
-    Compares \a s1 with \a s2 and returns an integer less than, equal
-    to, or greater than zero if \a s1 is less than, equal to, or
-    greater than \a s2.
-
-    The comparison is performed in a locale- and also
-    platform-dependent manner. Use this function to present sorted
-    lists of strings to the user.
-
-    On \macos and iOS, this function compares according the
-    "Order for sorted lists" setting in the International prefereces panel.
-
-    \sa compare(), iLocale
-*/
-
-/*!
-    \fn int iStringRef::localeAwareCompare(const iStringRef &s1, const iStringRef & s2)
-
-    \overload
-
-    Compares \a s1 with \a s2 and returns an integer less than, equal
-    to, or greater than zero if \a s1 is less than, equal to, or
-    greater than \a s2.
-
-    The comparison is performed in a locale- and also
-    platform-dependent manner. Use this function to present sorted
-    lists of strings to the user.
-
-*/
-
-/*!
-    \fn int iStringRef::localeAwareCompare(const iString &other) const
-
-    \overload
-
-    Compares this string with the \a other string and returns an
-    integer less than, equal to, or greater than zero if this string
-    is less than, equal to, or greater than the \a other string.
-
-    The comparison is performed in a locale- and also
-    platform-dependent manner. Use this function to present sorted
-    lists of strings to the user.
-*/
-
-/*!
-    \fn int iStringRef::localeAwareCompare(const iStringRef &other) const
-
-    \overload
-
-    Compares this string with the \a other string and returns an
-    integer less than, equal to, or greater than zero if this string
-    is less than, equal to, or greater than the \a other string.
-
-    The comparison is performed in a locale- and also
-    platform-dependent manner. Use this function to present sorted
-    lists of strings to the user.
-*/
-
-/*!
-    \fn iString &iString::append(const iStringRef &reference)
-
-
-    Appends the given string \a reference to this string and returns the result.
- */
-iString &iString::append(const iStringRef &str)
-{
-    if (str.string() == this) {
-        str.appendTo(this);
-    } else if (!str.isNull()) {
-        int oldSize = size();
-        resize(oldSize + str.size());
-        memcpy(data() + oldSize, str.unicode(), str.size() * sizeof(iChar));
-    }
-    return *this;
-}
-
-/*!
-    \fn iStringRef::left(int n) const
-
-
-    Returns a substring reference to the \a n leftmost characters
-    of the string.
-
-    If \a n is greater than or equal to size(), or less than zero,
-    a reference to the entire string is returned.
-
-    \sa right(), mid(), startsWith(), chopped(), chop(), truncate()
-*/
-iStringRef iStringRef::left(int n) const
-{
-    if (uint(n) >= uint(m_size))
-        return *this;
-    return iStringRef(m_string, m_position, n);
-}
-
-/*!
-
-
-    Returns a substring reference to the \a n leftmost characters
-    of the string.
-
-    If \a n is greater than or equal to size(), or less than zero,
-    a reference to the entire string is returned.
-
-    \snippet istring/main.cpp leftRef
-
-    \sa left(), rightRef(), midRef(), startsWith()
-*/
-iStringRef iString::leftRef(int n)  const
-{
-    return iStringRef(this).left(n);
-}
-
-/*!
-    \fn iStringRef::right(int n) const
-
-
-    Returns a substring reference to the \a n rightmost characters
-    of the string.
-
-    If \a n is greater than or equal to size(), or less than zero,
-    a reference to the entire string is returned.
-
-    \sa left(), mid(), endsWith(), chopped(), chop(), truncate()
-*/
-iStringRef iStringRef::right(int n) const
-{
-    if (uint(n) >= uint(m_size))
-        return *this;
-    return iStringRef(m_string, m_size - n + m_position, n);
-}
-
-/*!
-
-
-    Returns a substring reference to the \a n rightmost characters
-    of the string.
-
-    If \a n is greater than or equal to size(), or less than zero,
-    a reference to the entire string is returned.
-
-    \snippet istring/main.cpp rightRef
-
-    \sa right(), leftRef(), midRef(), endsWith()
-*/
-iStringRef iString::rightRef(int n) const
-{
-    return iStringRef(this).right(n);
-}
-
-/*!
-    \fn iStringRef iStringRef::mid(int position, int n = -1) const
-
-
-    Returns a substring reference to \a n characters of this string,
-    starting at the specified \a position.
-
-    If the \a position exceeds the length of the string, a null
-    reference is returned.
-
-    If there are less than \a n characters available in the string,
-    starting at the given \a position, or if \a n is -1 (default), the
-    function returns all characters from the specified \a position
-    onwards.
-
-    \sa left(), right(), chopped(), chop(), truncate()
-*/
-iStringRef iStringRef::mid(int pos, int n) const
-{
-    using namespace iPrivate;
-    switch (iContainerImplHelper::mid(m_size, &pos, &n)) {
-    case iContainerImplHelper::Null:
-        return iStringRef();
-    case iContainerImplHelper::Empty:
-        return iStringRef(m_string, 0, 0);
-    case iContainerImplHelper::Full:
-        return *this;
-    case iContainerImplHelper::Subset:
-        return iStringRef(m_string, pos + m_position, n);
-    }
-
-    return iStringRef();
-}
-
-/*!
-    \fn iStringRef iStringRef::chopped(int len) const
-
-
-    Returns a substring reference to the size() - \a len leftmost characters
-    of this string.
-
-    \note The behavior is undefined if \a len is negative or greater than size().
-
-    \sa endsWith(), left(), right(), mid(), chop(), truncate()
-*/
-
-/*!
-
-
-    Returns a substring reference to \a n characters of this string,
-    starting at the specified \a position.
-
-    If the \a position exceeds the length of the string, a null
-    reference is returned.
-
-    If there are less than \a n characters available in the string,
-    starting at the given \a position, or if \a n is -1 (default), the
-    function returns all characters from the specified \a position
-    onwards.
-
-    Example:
-
-    \snippet istring/main.cpp midRef
-
-    \sa mid(), leftRef(), rightRef()
-*/
-iStringRef iString::midRef(int position, int n) const
-{
-    return iStringRef(this).mid(position, n);
-}
-
-/*!
-    \fn void iStringRef::truncate(int position)
-
-
-    Truncates the string at the given \a position index.
-
-    If the specified \a position index is beyond the end of the
-    string, nothing happens.
-
-    If \a position is negative, it is equivalent to passing zero.
-
-    \sa iString::truncate()
-*/
-
-/*!
-    \fn void iStringRef::chop(int n)
-
-
-    Removes \a n characters from the end of the string.
-
-    If \a n is greater than or equal to size(), the result is an
-    empty string; if \a n is negative, it is equivalent to passing zero.
-
-    \sa iString::chop(), truncate()
-*/
-
-/*!
-  Returns the index position of the first occurrence of the string \a
-  str in this string reference, searching forward from index position
-  \a from. Returns -1 if \a str is not found.
-
-  If \a cs is iShell::CaseSensitive (default), the search is case
-  sensitive; otherwise the search is case insensitive.
-
-  If \a from is -1, the search starts at the last character; if it is
-  -2, at the next to last character and so on.
-
-  \sa iString::indexOf(), lastIndexOf(), contains(), count()
-*/
-int iStringRef::indexOf(const iString &str, int from, iShell::CaseSensitivity cs) const
-{
-    return iFindString(unicode(), length(), from, str.unicode(), str.length(), cs);
-}
-
-/*!
-    \overload indexOf()
-
-    Returns the index position of the first occurrence of the
-    character \a ch in the string reference, searching forward from
-    index position \a from. Returns -1 if \a ch could not be found.
-
-    \sa iString::indexOf(), lastIndexOf(), contains(), count()
-*/
-int iStringRef::indexOf(iChar ch, int from, iShell::CaseSensitivity cs) const
-{
-    return findChar(unicode(), length(), ch, from, cs);
-}
-
-/*!
-  Returns the index position of the first occurrence of the string \a
-  str in this string reference, searching forward from index position
-  \a from. Returns -1 if \a str is not found.
-
-  If \a cs is iShell::CaseSensitive (default), the search is case
-  sensitive; otherwise the search is case insensitive.
-
-  If \a from is -1, the search starts at the last character; if it is
-  -2, at the next to last character and so on.
-
-  \sa iString::indexOf(), lastIndexOf(), contains(), count()
-*/
-int iStringRef::indexOf(iLatin1String str, int from, iShell::CaseSensitivity cs) const
-{
-    return ix_find_latin1_string(unicode(), size(), str, from, cs);
-}
-
-/*!
-    \overload indexOf()
-
-    Returns the index position of the first occurrence of the string
-    reference \a str in this string reference, searching forward from
-    index position \a from. Returns -1 if \a str is not found.
-
-    If \a cs is iShell::CaseSensitive (default), the search is case
-    sensitive; otherwise the search is case insensitive.
-
-    \sa iString::indexOf(), lastIndexOf(), contains(), count()
-*/
-int iStringRef::indexOf(const iStringRef &str, int from, iShell::CaseSensitivity cs) const
-{
-    return iFindString(unicode(), size(), from, str.unicode(), str.size(), cs);
-}
-
-/*!
-  Returns the index position of the last occurrence of the string \a
-  str in this string reference, searching backward from index position
-  \a from. If \a from is -1 (default), the search starts at the last
-  character; if \a from is -2, at the next to last character and so
-  on. Returns -1 if \a str is not found.
-
-  If \a cs is iShell::CaseSensitive (default), the search is case
-  sensitive; otherwise the search is case insensitive.
-
-  \sa iString::lastIndexOf(), indexOf(), contains(), count()
-*/
-int iStringRef::lastIndexOf(const iString &str, int from, iShell::CaseSensitivity cs) const
-{
-    return lastIndexOf(iStringRef(&str), from, cs);
-}
-
-/*!
-  \overload lastIndexOf()
-
-  Returns the index position of the last occurrence of the character
-  \a ch, searching backward from position \a from.
-
-  \sa iString::lastIndexOf(), indexOf(), contains(), count()
-*/
-int iStringRef::lastIndexOf(iChar ch, int from, iShell::CaseSensitivity cs) const
-{
-    return ix_last_index_of(unicode(), size(), ch, from, cs);
-}
-
-template<typename T>
-static int last_index_of_impl(const iStringRef &haystack, int from, const T &needle, iShell::CaseSensitivity cs)
-{
-    const int sl = needle.size();
-    if (sl == 1)
-        return haystack.lastIndexOf(needle.at(0), from, cs);
-
-    const int l = haystack.size();
-    if (from < 0)
-        from += l;
-    int delta = l - sl;
-    if (from == l && sl == 0)
-        return from;
-    if (uint(from) >= uint(l) || delta < 0)
-        return -1;
-    if (from > delta)
-        from = delta;
-
-    return lastIndexOfHelper(haystack, from, needle, cs);
-}
-
-/*!
-  \overload lastIndexOf()
-
-  Returns the index position of the last occurrence of the string \a
-  str in this string reference, searching backward from index position
-  \a from. If \a from is -1 (default), the search starts at the last
-  character; if \a from is -2, at the next to last character and so
-  on. Returns -1 if \a str is not found.
-
-  If \a cs is iShell::CaseSensitive (default), the search is case
-  sensitive; otherwise the search is case insensitive.
-
-  \sa iString::lastIndexOf(), indexOf(), contains(), count()
-*/
-int iStringRef::lastIndexOf(iLatin1String str, int from, iShell::CaseSensitivity cs) const
-{
-    return last_index_of_impl(*this, from, str, cs);
-}
-
-/*!
-  \overload lastIndexOf()
-
-  Returns the index position of the last occurrence of the string
-  reference \a str in this string reference, searching backward from
-  index position \a from. If \a from is -1 (default), the search
-  starts at the last character; if \a from is -2, at the next to last
-  character and so on. Returns -1 if \a str is not found.
-
-  If \a cs is iShell::CaseSensitive (default), the search is case
-  sensitive; otherwise the search is case insensitive.
-
-  \sa iString::lastIndexOf(), indexOf(), contains(), count()
-*/
-int iStringRef::lastIndexOf(const iStringRef &str, int from, iShell::CaseSensitivity cs) const
-{
-    return last_index_of_impl(*this, from, str, cs);
-}
-
-/*!
-
-    Returns the number of (potentially overlapping) occurrences of
-    the string \a str in this string reference.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-    \sa iString::count(), contains(), indexOf()
-*/
-int iStringRef::count(const iString &str, iShell::CaseSensitivity cs) const
-{
-    return ix_string_count(unicode(), size(), str.unicode(), str.size(), cs);
-}
-
-/*!
-    \overload count()
-
-    Returns the number of occurrences of the character \a ch in the
-    string reference.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-    \sa iString::count(), contains(), indexOf()
-*/
-int iStringRef::count(iChar ch, iShell::CaseSensitivity cs) const
-{
-    return ix_string_count(unicode(), size(), ch, cs);
-}
-
-/*!
-    \overload count()
-
-    Returns the number of (potentially overlapping) occurrences of the
-    string reference \a str in this string reference.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-    \sa iString::count(), contains(), indexOf()
-*/
-int iStringRef::count(const iStringRef &str, iShell::CaseSensitivity cs) const
-{
-    return ix_string_count(unicode(), size(), str.unicode(), str.size(), cs);
-}
-
-/*!
-    Returns \c true if the string is read right to left.
-
-    \sa iString::isRightToLeft()
-*/
-bool iStringRef::isRightToLeft() const
-{
-    return iPrivate::isRightToLeft(iStringView(unicode(), size()));
-}
-
 /*!
     \internal
     \relates iStringView
@@ -9871,7 +8399,7 @@ bool iStringRef::isRightToLeft() const
 */
 bool iPrivate::isRightToLeft(iStringView string)
 {
-    const ushort *p = reinterpret_cast<const ushort*>(string.data());
+    const ushort *p = string.utf16();
     const ushort * const end = p + string.size();
     int isolateLevel = 0;
     while (p < end) {
@@ -9911,240 +8439,37 @@ bool iPrivate::isRightToLeft(iStringView string)
     return false;
 }
 
-/*!
-    Returns \c true if the string reference starts with \a str; otherwise
-    returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-    \sa iString::startsWith(), endsWith()
-*/
-bool iStringRef::startsWith(const iString &str, iShell::CaseSensitivity cs) const
+xsizetype iPrivate::count(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return ix_starts_with(*this, str, cs);
+    xsizetype num = 0;
+    xsizetype i = -1;
+    if (haystack.size() > 500 && needle.size() > 5) {
+        iStringMatcher matcher(needle, cs);
+        while ((i = matcher.indexIn(haystack, i + 1)) != -1)
+            ++num;
+    } else {
+        while ((i = iPrivate::findString(haystack, i + 1, needle, cs)) != -1)
+            ++num;
+    }
+    return num;
 }
 
-/*!
-    \overload startsWith()
-    \sa iString::startsWith(), endsWith()
-*/
-bool iStringRef::startsWith(iLatin1String str, iShell::CaseSensitivity cs) const
+xsizetype iPrivate::count(iStringView haystack, iChar ch, iShell::CaseSensitivity cs)
 {
-    return ix_starts_with(*this, str, cs);
-}
-
-/*!
-    \fn bool iStringRef::startsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \overload startsWith()
-    \sa iString::startsWith(), endsWith()
-*/
-
-/*!
-    \overload startsWith()
-    \sa iString::startsWith(), endsWith()
-*/
-bool iStringRef::startsWith(const iStringRef &str, iShell::CaseSensitivity cs) const
-{
-    return ix_starts_with(*this, str, cs);
-}
-
-/*!
-    \overload startsWith()
-
-    Returns \c true if the string reference starts with \a ch; otherwise
-    returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is case
-    sensitive; otherwise the search is case insensitive.
-
-    \sa iString::startsWith(), endsWith()
-*/
-bool iStringRef::startsWith(iChar ch, iShell::CaseSensitivity cs) const
-{
-    return ix_starts_with(*this, ch, cs);
-}
-
-/*!
-    Returns \c true if the string reference ends with \a str; otherwise
-    returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is case
-    sensitive; otherwise the search is case insensitive.
-
-    \sa iString::endsWith(), startsWith()
-*/
-bool iStringRef::endsWith(const iString &str, iShell::CaseSensitivity cs) const
-{
-    return ix_ends_with(*this, str, cs);
-}
-
-/*!
-    \overload endsWith()
-
-    Returns \c true if the string reference ends with \a ch; otherwise
-    returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is case
-    sensitive; otherwise the search is case insensitive.
-
-    \sa iString::endsWith(), endsWith()
-*/
-bool iStringRef::endsWith(iChar ch, iShell::CaseSensitivity cs) const
-{
-    return ix_ends_with(*this, ch, cs);
-}
-
-/*!
-    \overload endsWith()
-    \sa iString::endsWith(), endsWith()
-*/
-bool iStringRef::endsWith(iLatin1String str, iShell::CaseSensitivity cs) const
-{
-    return ix_ends_with(*this, str, cs);
-}
-
-/*!
-    \fn bool iStringRef::endsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \overload endsWith()
-    \sa iString::endsWith(), startsWith()
-*/
-
-/*!
-    \overload endsWith()
-    \sa iString::endsWith(), endsWith()
-*/
-bool iStringRef::endsWith(const iStringRef &str, iShell::CaseSensitivity cs) const
-{
-    return ix_ends_with(*this, str, cs);
-}
-
-
-/*! \fn bool iStringRef::contains(const iString &str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-
-    Returns \c true if this string reference contains an occurrence of
-    the string \a str; otherwise returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-    \sa indexOf(), count()
-*/
-
-/*! \fn bool iStringRef::contains(iChar ch, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-
-    \overload contains()
-
-    Returns \c true if this string contains an occurrence of the
-    character \a ch; otherwise returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-*/
-
-/*! \fn bool iStringRef::contains(const iStringRef &str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \overload contains()
-
-    Returns \c true if this string reference contains an occurrence of
-    the string reference \a str; otherwise returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-    \sa indexOf(), count()
-*/
-
-/*! \fn bool iStringRef::contains(iLatin1String str, iShell::CaseSensitivity cs) const
-    \overload contains()
-
-    Returns \c true if this string reference contains an occurrence of
-    the string \a str; otherwise returns \c false.
-
-    If \a cs is iShell::CaseSensitive (default), the search is
-    case sensitive; otherwise the search is case insensitive.
-
-    \sa indexOf(), count()
-*/
-
-static inline int ix_last_index_of(const iChar *haystack, int haystackLen, iChar needle,
-                                   int from, iShell::CaseSensitivity cs)
-{
-    ushort c = needle.unicode();
-    if (from < 0)
-        from += haystackLen;
-    if (uint(from) >= uint(haystackLen))
-        return -1;
-    if (from >= 0) {
-        const ushort *b = reinterpret_cast<const ushort*>(haystack);
-        const ushort *n = b + from;
-        if (cs == iShell::CaseSensitive) {
-            for (; n >= b; --n)
-                if (*n == c)
-                    return n - b;
-        } else {
-            c = foldCase(c);
-            for (; n >= b; --n)
-                if (foldCase(*n) == c)
-                    return n - b;
+    xsizetype num = 0;
+    if (cs == iShell::CaseSensitive) {
+        for (iChar c : haystack) {
+            if (c == ch)
+                ++num;
+        }
+    } else {
+        ch = foldCase(ch);
+        for (iChar c : haystack) {
+            if (foldCase(c) == ch)
+                ++num;
         }
     }
-    return -1;
-
-
-}
-
-static inline int ix_string_count(const iChar *haystack, int haystackLen,
-                                  const iChar *needle, int needleLen,
-                                  iShell::CaseSensitivity cs)
-{
-    int num = 0;
-    int i = -1;
-    if (haystackLen > 500 && needleLen > 5) {
-        iStringMatcher matcher(needle, needleLen, cs);
-        while ((i = matcher.indexIn(haystack, haystackLen, i + 1)) != -1)
-            ++num;
-    } else {
-        while ((i = iFindString(haystack, haystackLen, i + 1, needle, needleLen, cs)) != -1)
-            ++num;
-    }
     return num;
-}
-
-static inline int ix_string_count(const iChar *unicode, int size, iChar ch,
-                                  iShell::CaseSensitivity cs)
-{
-    ushort c = ch.unicode();
-    int num = 0;
-    const ushort *b = reinterpret_cast<const ushort*>(unicode);
-    const ushort *i = b + size;
-    if (cs == iShell::CaseSensitive) {
-        while (i != b)
-            if (*--i == c)
-                ++num;
-    } else {
-        c = foldCase(c);
-        while (i != b)
-            if (foldCase(*(--i)) == c)
-                ++num;
-    }
-    return num;
-}
-
-static inline int ix_find_latin1_string(const iChar *haystack, int size,
-                                        iLatin1String needle,
-                                        int from, iShell::CaseSensitivity cs)
-{
-    if (size < needle.size())
-        return -1;
-
-    const char *latin1 = needle.latin1();
-    int len = needle.size();
-    iVarLengthArray<ushort> s(len);
-    ix_from_latin1(s.data(), latin1, len);
-
-    return iFindString(haystack, size, from,
-                       reinterpret_cast<const iChar*>(s.constData()), len, cs);
 }
 
 template <typename Haystack, typename Needle>
@@ -10285,348 +8610,290 @@ bool iPrivate::endsWith(iLatin1String haystack, iLatin1String needle, iShell::Ca
     return ix_ends_with_impl(haystack, needle, cs);
 }
 
-/*!
+namespace {
+template <typename Pointer>
+char32_t foldCaseHelper(Pointer ch, Pointer start) = delete;
 
-    Returns a Latin-1 representation of the string as a iByteArray.
-
-    The returned byte array is undefined if the string contains non-Latin1
-    characters. Those characters may be suppressed or replaced with a
-    question mark.
-
-    \sa toUtf8(), toLocal8Bit(), iTextCodec
-*/
-iByteArray iStringRef::toLatin1() const
+template <>
+char32_t foldCaseHelper<const iChar*>(const iChar* ch, const iChar* start)
 {
-    return ix_convert_to_latin1(*this);
+    return foldCase(reinterpret_cast<const ushort*>(ch),
+                    reinterpret_cast<const ushort*>(start));
+}
+
+template <>
+char32_t foldCaseHelper<const char*>(const char* ch, const char*)
+{
+    return foldCase(ushort(uchar(*ch)));
+}
+
+template <typename T>
+ushort valueTypeToUtf16(T t) = delete;
+
+template <>
+ushort valueTypeToUtf16<iChar>(iChar t)
+{
+    return t.unicode();
+}
+
+template <>
+ushort valueTypeToUtf16<char>(char t)
+{
+    return ushort{uchar(t)};
+}
 }
 
 /*!
-    \fn iByteArray iStringRef::toAscii() const
-    \deprecated
+    \internal
 
-    Returns an 8-bit representation of the string as a iByteArray.
-
-    This function does the same as toLatin1().
-
-    Note that, despite the name, this function does not necessarily return an US-ASCII
-    (ANSI X3.4-1986) string and its result may not be US-ASCII compatible.
-
-    \sa toLatin1(), toUtf8(), toLocal8Bit(), iTextCodec
+    Returns the index position of the first occurrence of the
+    character \a ch in the string given by \a str and \a len,
+    searching forward from index
+    position \a from. Returns -1 if \a ch could not be found.
 */
 
-/*!
-    Returns the local 8-bit representation of the string as a
-    iByteArray. The returned byte array is undefined if the string
-    contains characters not supported by the local 8-bit encoding.
-
-    iTextCodec::codecForLocale() is used to perform the conversion from
-    Unicode. If the locale encoding could not be determined, this function
-    does the same as toLatin1().
-
-    If this string contains any characters that cannot be encoded in the
-    locale, the returned byte array is undefined. Those characters may be
-    suppressed or replaced by another.
-
-    \sa toLatin1(), toUtf8(), iTextCodec
-*/
-iByteArray iStringRef::toLocal8Bit() const
+static inline xsizetype qFindChar(iStringView str, iChar ch, xsizetype from, iShell::CaseSensitivity cs)
 {
-    return ix_convert_to_local_8bit(*this);
+    if (from < 0)
+        from = std::max(from + str.size(), xsizetype(0));
+    if (from < str.size()) {
+        const ushort *s = str.utf16();
+        ushort c = ch.unicode();
+        const ushort *n = s + from;
+        const ushort *e = s + str.size();
+        if (cs == iShell::CaseSensitive) {
+            n = iPrivate::xustrchr(iStringView(n, e), c);
+            if (n != e)
+                return n - s;
+        } else {
+            c = foldCase(c);
+            --n;
+            while (++n != e)
+                if (foldCase(*n) == c)
+                    return n - s;
+        }
+    }
+    return -1;
 }
 
-/*!
-    Returns a UTF-8 representation of the string as a iByteArray.
-
-    UTF-8 is a Unicode codec and can represent all characters in a Unicode
-    string like iString.
-
-    \sa toLatin1(), toLocal8Bit(), iTextCodec
-*/
-iByteArray iStringRef::toUtf8() const
+xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringView needle0, iShell::CaseSensitivity cs)
 {
-    return ix_convert_to_utf8(*this);
+    const xsizetype l = haystack0.size();
+    const xsizetype sl = needle0.size();
+    if (from < 0)
+        from += l;
+    if (std::size_t(sl + from) > std::size_t(l))
+        return -1;
+    if (!sl)
+        return from;
+    if (!l)
+        return -1;
+
+    if (sl == 1)
+        return qFindChar(haystack0, needle0[0], from, cs);
+
+    /*
+        We use the Boyer-Moore algorithm in cases where the overhead
+        for the skip table should pay off, otherwise we use a simple
+        hash function.
+    */
+    if (l > 500 && sl > 5)
+        return iFindStringBoyerMoore(haystack0, from, needle0, cs);
+
+    auto sv = [sl](const ushort *v) { return iStringView(v, sl); };
+    /*
+        We use some hashing for efficiency's sake. Instead of
+        comparing strings, we compare the hash value of str with that
+        of a part of this iString. Only if that matches, we call
+        qt_string_compare().
+    */
+    const ushort *needle = needle0.utf16();
+    const ushort *haystack = haystack0.utf16() + from;
+    const ushort *end = haystack0.utf16() + (l - sl);
+    const std::size_t sl_minus_1 = sl - 1;
+    std::size_t hashNeedle = 0, hashHaystack = 0;
+    xsizetype idx;
+
+    if (cs == iShell::CaseSensitive) {
+        for (idx = 0; idx < sl; ++idx) {
+            hashNeedle = ((hashNeedle<<1) + needle[idx]);
+            hashHaystack = ((hashHaystack<<1) + haystack[idx]);
+        }
+        hashHaystack -= haystack[sl_minus_1];
+
+        while (haystack <= end) {
+            hashHaystack += haystack[sl_minus_1];
+            if (hashHaystack == hashNeedle
+                 && ix_compare_strings(needle0, sv(haystack), iShell::CaseSensitive) == 0)
+                return haystack - haystack0.utf16();
+
+            REHASH(*haystack);
+            ++haystack;
+        }
+    } else {
+        const ushort *haystack_start = haystack0.utf16();
+        for (idx = 0; idx < sl; ++idx) {
+            hashNeedle = (hashNeedle<<1) + foldCase(needle + idx, needle);
+            hashHaystack = (hashHaystack<<1) + foldCase(haystack + idx, haystack_start);
+        }
+        hashHaystack -= foldCase(haystack + sl_minus_1, haystack_start);
+
+        while (haystack <= end) {
+            hashHaystack += foldCase(haystack + sl_minus_1, haystack_start);
+            if (hashHaystack == hashNeedle
+                 && ix_compare_strings(needle0, sv(haystack), iShell::CaseInsensitive) == 0)
+                return haystack - haystack0.utf16();
+
+            REHASH(foldCase(haystack, haystack_start));
+            ++haystack;
+        }
+    }
+    return -1;
 }
 
-/*!
-    Returns a UCS-4/UTF-32 representation of the string as a std::vector<uint>.
-
-    UCS-4 is a Unicode codec and therefore it is lossless. All characters from
-    this string will be encoded in UCS-4. Any invalid sequence of code units in
-    this string is replaced by the Unicode's replacement character
-    (iChar::ReplacementCharacter, which corresponds to \c{U+FFFD}).
-
-    The returned vector is not \\0'-terminated.
-
-    \sa toUtf8(), toLatin1(), toLocal8Bit(), iTextCodec
-*/
-std::vector<uint> iStringRef::toUcs4() const
+template <typename Haystack>
+static inline xsizetype qLastIndexOf(Haystack haystack, iChar needle,
+                                     xsizetype from, iShell::CaseSensitivity cs)
 {
-    return ix_convert_to_ucs4(*this);
+    if (from < 0)
+        from += haystack.size();
+    if (std::size_t(from) >= std::size_t(haystack.size()))
+        return -1;
+    if (from >= 0) {
+        ushort c = needle.unicode();
+        const auto b = haystack.data();
+        auto n = b + from;
+        if (cs == iShell::CaseSensitive) {
+            for (; n >= b; --n)
+                if (valueTypeToUtf16(*n) == c)
+                    return n - b;
+        } else {
+            c = foldCase(c);
+            for (; n >= b; --n)
+                if (foldCase(valueTypeToUtf16(*n)) == c)
+                    return n - b;
+        }
+    }
+    return -1;
 }
 
-/*!
-    Returns a string that has whitespace removed from the start and
-    the end.
-
-    Whitespace means any character for which iChar::isSpace() returns
-    \c true. This includes the ASCII characters '\\t', '\\n', '\\v',
-    '\\f', '\\r', and ' '.
-
-    Unlike iString::simplified(), trimmed() leaves internal whitespace alone.
-
-    \sa iString::trimmed()
-*/
-iStringRef iStringRef::trimmed() const
+template<typename Haystack, typename Needle>
+static xsizetype qLastIndexOf(Haystack haystack0, xsizetype from,
+                              Needle needle0, iShell::CaseSensitivity cs)
 {
-    const iChar *begin = cbegin();
-    const iChar *end = cend();
-    iStringAlgorithms<const iStringRef>::trimmed_helper_positions(begin, end);
-    if (begin == cbegin() && end == cend())
-        return *this;
-    int position = m_position + (begin - cbegin());
-    return iStringRef(m_string, position, end - begin);
+    const xsizetype sl = needle0.size();
+    if (sl == 1)
+        return qLastIndexOf(haystack0, needle0.front(), from, cs);
+
+    const xsizetype l = haystack0.size();
+    if (from < 0)
+        from += l;
+    if (from == l && sl == 0)
+        return from;
+    const xsizetype delta = l - sl;
+    if (std::size_t(from) >= std::size_t(l) || delta < 0)
+        return -1;
+    if (from > delta)
+        from = delta;
+
+    auto sv = [sl](const typename Haystack::value_type *v) { return Haystack(v, sl); };
+
+    auto haystack = haystack0.data();
+    const auto needle = needle0.data();
+    const auto *end = haystack;
+    haystack += from;
+    const std::size_t sl_minus_1 = sl - 1;
+    const auto *n = needle + sl_minus_1;
+    const auto *h = haystack + sl_minus_1;
+    std::size_t hashNeedle = 0, hashHaystack = 0;
+    xsizetype idx;
+
+    if (cs == iShell::CaseSensitive) {
+        for (idx = 0; idx < sl; ++idx) {
+            hashNeedle = (hashNeedle << 1) + valueTypeToUtf16(*(n - idx));
+            hashHaystack = (hashHaystack << 1) + valueTypeToUtf16(*(h - idx));
+        }
+        hashHaystack -= valueTypeToUtf16(*haystack);
+
+        while (haystack >= end) {
+            hashHaystack += valueTypeToUtf16(*haystack);
+            if (hashHaystack == hashNeedle
+                 && ix_compare_strings(needle0, sv(haystack), iShell::CaseSensitive) == 0)
+                return haystack - end;
+            --haystack;
+            REHASH(valueTypeToUtf16(haystack[sl]));
+        }
+    } else {
+        for (idx = 0; idx < sl; ++idx) {
+            hashNeedle = (hashNeedle << 1) + foldCaseHelper(n - idx, needle);
+            hashHaystack = (hashHaystack << 1) + foldCaseHelper(h - idx, end);
+        }
+        hashHaystack -= foldCaseHelper(haystack, end);
+
+        while (haystack >= end) {
+            hashHaystack += foldCaseHelper(haystack, end);
+            if (hashHaystack == hashNeedle
+                 && ix_compare_strings(sv(haystack), needle0, iShell::CaseInsensitive) == 0)
+                return haystack - end;
+            --haystack;
+            REHASH(foldCaseHelper(haystack + sl, end));
+        }
+    }
+    return -1;
 }
 
-/*!
-    Returns the string converted to a \c{long long} using base \a
-    base, which is 10 by default and must be between 2 and 36, or 0.
-    Returns 0 if the conversion fails.
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    If \a base is 0, the C language convention is used: If the string
-    begins with "0x", base 16 is used; if the string begins with "0",
-    base 8 is used; otherwise, base 10 is used.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toLongLong()
-
-    \sa iString::toLongLong()
-*/
-
-xint64 iStringRef::toLongLong(bool *ok, int base) const
+xsizetype iPrivate::findString(iStringView haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return iString::toIntegral_helper<xint64>(constData(), size(), ok, base);
+    if (haystack.size() < needle.size())
+        return -1;
+
+    iVarLengthArray<ushort> s(needle.size());
+    ix_from_latin1(s.data(), needle.latin1(), needle.size());
+    return iPrivate::findString(haystack, from, iStringView(reinterpret_cast<const iChar*>(s.constData()), s.size()), cs);
 }
 
-/*!
-    Returns the string converted to an \c{unsigned long long} using base \a
-    base, which is 10 by default and must be between 2 and 36, or 0.
-    Returns 0 if the conversion fails.
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    If \a base is 0, the C language convention is used: If the string
-    begins with "0x", base 16 is used; if the string begins with "0",
-    base 8 is used; otherwise, base 10 is used.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toULongLong()
-
-    \sa iString::toULongLong()
-*/
-
-xuint64 iStringRef::toULongLong(bool *ok, int base) const
+xsizetype iPrivate::findString(iLatin1String haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return iString::toIntegral_helper<xuint64>(constData(), size(), ok, base);
+    if (haystack.size() < needle.size())
+        return -1;
+
+    iVarLengthArray<ushort> s(haystack.size());
+    ix_from_latin1(s.data(), haystack.latin1(), haystack.size());
+    return iPrivate::findString(iStringView(reinterpret_cast<const iChar*>(s.constData()), s.size()), from, needle, cs);
 }
 
-/*!
-    \fn long iStringRef::toLong(bool *ok, int base) const
-
-    Returns the string converted to a \c long using base \a
-    base, which is 10 by default and must be between 2 and 36, or 0.
-    Returns 0 if the conversion fails.
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    If \a base is 0, the C language convention is used: If the string
-    begins with "0x", base 16 is used; if the string begins with "0",
-    base 8 is used; otherwise, base 10 is used.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toLong()
-
-    \sa iString::toLong()
-*/
-
-long iStringRef::toLong(bool *ok, int base) const
+xsizetype iPrivate::findString(iLatin1String haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return iString::toIntegral_helper<long>(constData(), size(), ok, base);
+    if (haystack.size() < needle.size())
+        return -1;
+
+    iVarLengthArray<ushort> h(haystack.size());
+    ix_from_latin1(h.data(), haystack.latin1(), haystack.size());
+    iVarLengthArray<ushort> n(needle.size());
+    ix_from_latin1(n.data(), needle.latin1(), needle.size());
+    return iPrivate::findString(iStringView(reinterpret_cast<const iChar*>(h.constData()), h.size()), from,
+                                 iStringView(reinterpret_cast<const iChar*>(n.constData()), n.size()), cs);
 }
 
-/*!
-    \fn ulong iStringRef::toULong(bool *ok, int base) const
-
-    Returns the string converted to an \c{unsigned long} using base \a
-    base, which is 10 by default and must be between 2 and 36, or 0.
-    Returns 0 if the conversion fails.
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    If \a base is 0, the C language convention is used: If the string
-    begins with "0x", base 16 is used; if the string begins with "0",
-    base 8 is used; otherwise, base 10 is used.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toULongLong()
-
-    \sa iString::toULong()
-*/
-
-ulong iStringRef::toULong(bool *ok, int base) const
+xsizetype iPrivate::lastIndexOf(iStringView haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return iString::toIntegral_helper<ulong>(constData(), size(), ok, base);
+    return qLastIndexOf(haystack, from, needle, cs);
 }
 
-
-/*!
-    Returns the string converted to an \c int using base \a
-    base, which is 10 by default and must be between 2 and 36, or 0.
-    Returns 0 if the conversion fails.
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    If \a base is 0, the C language convention is used: If the string
-    begins with "0x", base 16 is used; if the string begins with "0",
-    base 8 is used; otherwise, base 10 is used.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toInt()
-
-    \sa iString::toInt()
-*/
-
-int iStringRef::toInt(bool *ok, int base) const
+xsizetype iPrivate::lastIndexOf(iStringView haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return iString::toIntegral_helper<int>(constData(), size(), ok, base);
+    return qLastIndexOf(haystack, from, needle, cs);
 }
 
-/*!
-    Returns the string converted to an \c{unsigned int} using base \a
-    base, which is 10 by default and must be between 2 and 36, or 0.
-    Returns 0 if the conversion fails.
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    If \a base is 0, the C language convention is used: If the string
-    begins with "0x", base 16 is used; if the string begins with "0",
-    base 8 is used; otherwise, base 10 is used.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toUInt()
-
-    \sa iString::toUInt()
-*/
-
-uint iStringRef::toUInt(bool *ok, int base) const
+xsizetype iPrivate::lastIndexOf(iLatin1String haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return iString::toIntegral_helper<uint>(constData(), size(), ok, base);
+    return qLastIndexOf(haystack, from, needle, cs);
 }
 
-/*!
-    Returns the string converted to a \c short using base \a
-    base, which is 10 by default and must be between 2 and 36, or 0.
-    Returns 0 if the conversion fails.
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    If \a base is 0, the C language convention is used: If the string
-    begins with "0x", base 16 is used; if the string begins with "0",
-    base 8 is used; otherwise, base 10 is used.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toShort()
-
-    \sa iString::toShort()
-*/
-
-short iStringRef::toShort(bool *ok, int base) const
+xsizetype iPrivate::lastIndexOf(iLatin1String haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return iString::toIntegral_helper<short>(constData(), size(), ok, base);
+    return qLastIndexOf(haystack, from, needle, cs);
 }
-
-/*!
-    Returns the string converted to an \c{unsigned short} using base \a
-    base, which is 10 by default and must be between 2 and 36, or 0.
-    Returns 0 if the conversion fails.
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    If \a base is 0, the C language convention is used: If the string
-    begins with "0x", base 16 is used; if the string begins with "0",
-    base 8 is used; otherwise, base 10 is used.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toUShort()
-
-    \sa iString::toUShort()
-*/
-
-ushort iStringRef::toUShort(bool *ok, int base) const
-{
-    return iString::toIntegral_helper<ushort>(constData(), size(), ok, base);
-}
-
-
-/*!
-    Returns the string converted to a \c double value.
-
-    Returns an infinity if the conversion overflows or 0.0 if the
-    conversion fails for other reasons (e.g. underflow).
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toDouble()
-
-    For historic reasons, this function does not handle
-    thousands group separators. If you need to convert such numbers,
-    use iLocale::toDouble().
-
-    \sa iString::toDouble()
-*/
-
-double iStringRef::toDouble(bool *ok) const
-{
-    return iLocaleData::c()->stringToDouble(*this, ok, iLocale::RejectGroupSeparator);
-}
-
-/*!
-    Returns the string converted to a \c float value.
-
-    Returns an infinity if the conversion overflows or 0.0 if the
-    conversion fails for other reasons (e.g. underflow).
-
-    If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
-    to \c false, and success by setting *\a{ok} to \c true.
-
-    The string conversion will always happen in the 'C' locale. For locale
-    dependent conversion use iLocale::toFloat()
-
-    \sa iString::toFloat()
-*/
-
-float iStringRef::toFloat(bool *ok) const
-{
-    return iLocaleData::convertDoubleToFloat(toDouble(ok), ok);
-}
-
-/*!
-    \obsolete
-    \fn iString iShell::escape(const iString &plain)
-
-    Use iString::toHtmlEscaped() instead.
-*/
 
 /*!
     Converts a plain text string to an HTML string with
@@ -10641,7 +8908,7 @@ iString iString::toHtmlEscaped() const
 {
     iString rich;
     const int len = length();
-    rich.reserve(int(len * 1.1));
+    rich.reserve(xsizetype(len * 1.1));
     for (int i = 0; i < len; ++i) {
         if (at(i) == iLatin1Char('<'))
             rich += iLatin1String("&lt;");

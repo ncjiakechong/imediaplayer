@@ -55,11 +55,6 @@ size_t iKeyHashFunc::operator()(const iString& key) const
     return hash_internal(key.unicode(), size_t(key.size()), 0);
 }
 
-size_t iKeyHashFunc::operator()(const iStringRef& key) const
-{
-    return hash_internal(key.unicode(), size_t(key.size()), 0);
-}
-
 size_t iKeyHashFunc::operator()(const iStringView& key) const
 {
     return hash_internal(key.data(), size_t(key.size()), 0);

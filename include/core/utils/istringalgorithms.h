@@ -42,13 +42,26 @@ IX_CORE_EXPORT bool endsWith(iStringView   haystack, iLatin1String needle, iShel
 IX_CORE_EXPORT bool endsWith(iLatin1String haystack, iStringView   needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
 IX_CORE_EXPORT bool endsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
 
+IX_CORE_EXPORT xsizetype findString(iStringView haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT xsizetype findString(iStringView haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT xsizetype findString(iLatin1String haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT xsizetype findString(iLatin1String haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+
+IX_CORE_EXPORT xsizetype lastIndexOf(iStringView haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT xsizetype lastIndexOf(iStringView haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT xsizetype lastIndexOf(iLatin1String haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT xsizetype lastIndexOf(iLatin1String haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+
 IX_CORE_EXPORT iStringView   trimmed(iStringView   s);
 IX_CORE_EXPORT iLatin1String trimmed(iLatin1String s);
+
+IX_CORE_EXPORT xsizetype count(iStringView haystack, iChar needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+IX_CORE_EXPORT xsizetype count(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs = iShell::CaseSensitive);
 
 IX_CORE_EXPORT iByteArray convertToLatin1(iStringView str);
 IX_CORE_EXPORT iByteArray convertToUtf8(iStringView str);
 IX_CORE_EXPORT iByteArray convertToLocal8Bit(iStringView str);
-IX_CORE_EXPORT std::vector<uint> convertToUcs4(iStringView str);
+IX_CORE_EXPORT std::list<uint> convertToUcs4(iStringView str);
 IX_CORE_EXPORT bool isRightToLeft(iStringView string);
 
 IX_CORE_EXPORT bool isAscii(iLatin1String s);

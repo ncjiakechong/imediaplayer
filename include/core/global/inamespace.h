@@ -48,6 +48,11 @@ enum CaseSensitivity {
     CaseSensitive
 };
 
+enum SplitBehavior { 
+    KeepEmptyParts, 
+    SkipEmptyParts 
+};
+
 enum LayoutDirection {
     LeftToRight,
     RightToLeft,

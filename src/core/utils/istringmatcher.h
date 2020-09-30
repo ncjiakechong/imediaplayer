@@ -23,7 +23,9 @@ public:
     iStringMatcher();
     explicit iStringMatcher(const iString &pattern,
                    iShell::CaseSensitivity cs = iShell::CaseSensitive);
-    iStringMatcher(const iChar *uc, int len,
+    iStringMatcher(const iChar *uc, xsizetype len,
+                   iShell::CaseSensitivity cs = iShell::CaseSensitive);
+    iStringMatcher(iStringView str, 
                    iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iStringMatcher(const iStringMatcher &other);
     ~iStringMatcher();
@@ -33,24 +35,22 @@ public:
     void setPattern(const iString &pattern);
     void setCaseSensitivity(iShell::CaseSensitivity cs);
 
-    int indexIn(const iString &str, int from = 0) const;
-    int indexIn(const iChar *str, int length, int from = 0) const;
+    xsizetype indexIn(const iString &str, xsizetype from = 0) const
+    { return indexIn(iStringView(str), from); }
+    xsizetype indexIn(const iChar *str, xsizetype length, xsizetype from = 0) const
+    { return indexIn(iStringView(str, length), from); }
+    xsizetype indexIn(iStringView str, xsizetype from = 0) const;
     iString pattern() const;
     inline iShell::CaseSensitivity caseSensitivity() const { return ix_cs; }
 
 private:
+    void updateSkipTable();
+
     iStringMatcherPrivate *d_ptr;
     iString ix_pattern;
     iShell::CaseSensitivity ix_cs;
-    struct Data {
-        uchar ix_skiptable[256];
-        const iChar *uc;
-        int len;
-    };
-    union {
-        uint ix_data[256];
-        Data p;
-    };
+    iStringView ix_sv;
+    uchar ix_skiptable[256];
 };
 
 } // namespace iShell

@@ -39,7 +39,7 @@ inline int fromHex(uint c)
 
 inline char toOct(uint value)
 {
-    return '0' + char(value & 0x7);
+    return char('0' + (value & 0x7));
 }
 
 inline int fromOct(uint c)
@@ -55,27 +55,27 @@ enum {
 
 enum {
     // Define as enum to force inlining. Don't expose MaxAllocSize in a public header.
-    MaxByteArraySize = MaxAllocSize - sizeof(std::remove_pointer<iByteArray::DataPtr>::type)
+    MaxByteArraySize = MaxAllocSize - sizeof(std::remove_pointer<iByteArray::DataPointer>::type)
 };
 
 struct CalculateGrowingBlockSizeResult {
-    size_t size;
-    size_t elementCount;
+    xsizetype size;
+    xsizetype elementCount;
 };
 
 // implemented in ibytearray.cpp
-size_t iCalculateBlockSize(size_t elementCount, size_t elementSize, size_t headerSize = 0);
-CalculateGrowingBlockSizeResult iCalculateGrowingBlockSize(size_t elementCount, size_t elementSize, size_t headerSize = 0) ;
+xsizetype iCalculateBlockSize(xsizetype elementCount, xsizetype elementSize, xsizetype headerSize = 0);
+CalculateGrowingBlockSizeResult iCalculateGrowingBlockSize(xsizetype elementCount, xsizetype elementSize, xsizetype headerSize = 0) ;
 
 uint foldCase(const ushort *ch, const ushort *start);
 uint foldCase(uint ch, uint &last);
 ushort foldCase(ushort ch);
 iChar foldCase(iChar ch);
 
-void composeHelper(iString *str, iChar::UnicodeVersion version, int from);
-void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, int from);
-void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, int from);
-bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, int from, int *lastStable);
+void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from);
+void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype from);
+void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, xsizetype from);
+bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, xsizetype from, xsizetype *lastStable);
 
 } // namespace iShell
 

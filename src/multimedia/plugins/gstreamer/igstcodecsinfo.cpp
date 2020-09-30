@@ -169,7 +169,7 @@ void iGstCodecsInfo::updateCodecs(ElementType elementType)
 #if !GST_CHECK_VERSION(0, 10, 31)
 static gboolean element_filter(GstPluginFeature *feature, gpointer user_data)
 {
-    if (Q_UNLIKELY(!GST_IS_ELEMENT_FACTORY(feature)))
+    if (!GST_IS_ELEMENT_FACTORY(feature))
         return FALSE;
 
     const iGstCodecsInfo::ElementType type = *reinterpret_cast<iGstCodecsInfo::ElementType *>(user_data);

@@ -326,9 +326,9 @@ public:
         return pre;
     }
 
-    static constexpr iSpecialInteger max()
+    static iSpecialInteger max()
     { return iSpecialInteger(std::numeric_limits<T>::max()); }
-    static constexpr iSpecialInteger min()
+    static iSpecialInteger min()
     { return iSpecialInteger(std::numeric_limits<T>::min()); }
 };
 
