@@ -20,6 +20,15 @@ namespace iShell {
 
 namespace iUnicodeTables {
 
+enum Case {
+    LowerCase,
+    UpperCase,
+    TitleCase,
+    CaseFold,
+
+    NumCases
+};
+
 struct Properties {
     ushort category            : 8; /* 5 used */
     ushort direction           : 8; /* 5 used */
@@ -27,57 +36,21 @@ struct Properties {
     ushort joining             : 3;
     signed short digitValue    : 5;
     signed short mirrorDiff    : 16;
-    ushort lowerCaseSpecial    : 1;
-    signed short lowerCaseDiff : 15;
-    ushort upperCaseSpecial    : 1;
-    signed short upperCaseDiff : 15;
-    ushort titleCaseSpecial    : 1;
-    signed short titleCaseDiff : 15;
-    ushort caseFoldSpecial     : 1;
-    signed short caseFoldDiff  : 15;
     ushort unicodeVersion      : 8; /* 5 used */
     ushort nfQuickCheck        : 8;
+    struct {
+        ushort special    : 1;
+        signed short diff : 15;
+    } cases[NumCases];
     ushort graphemeBreakClass  : 5; /* 5 used */
     ushort wordBreakClass      : 5; /* 5 used */
-    ushort sentenceBreakClass  : 8; /* 4 used */
     ushort lineBreakClass      : 6; /* 6 used */
+    ushort sentenceBreakClass  : 8; /* 4 used */
     ushort script              : 8;
 };
 
 const Properties * properties(uint ucs4);
 const Properties * properties(ushort ucs2);
-
-struct LowercaseTraits
-{
-    static inline signed short caseDiff(const Properties *prop)
-    { return prop->lowerCaseDiff; }
-    static inline bool caseSpecial(const Properties *prop)
-    { return prop->lowerCaseSpecial; }
-};
-
-struct UppercaseTraits
-{
-    static inline signed short caseDiff(const Properties *prop)
-    { return prop->upperCaseDiff; }
-    static inline bool caseSpecial(const Properties *prop)
-    { return prop->upperCaseSpecial; }
-};
-
-struct TitlecaseTraits
-{
-    static inline signed short caseDiff(const Properties *prop)
-    { return prop->titleCaseDiff; }
-    static inline bool caseSpecial(const Properties *prop)
-    { return prop->titleCaseSpecial; }
-};
-
-struct CasefoldTraits
-{
-    static inline signed short caseDiff(const Properties *prop)
-    { return prop->caseFoldDiff; }
-    static inline bool caseSpecial(const Properties *prop)
-    { return prop->caseFoldSpecial; }
-};
 
 enum GraphemeBreakClass {
     GraphemeBreak_Any,
@@ -98,6 +71,7 @@ enum GraphemeBreakClass {
     Graphemebreak_E_Modifier,
     Graphemebreak_Glue_After_Zwj,
     Graphemebreak_E_Base_GAZ,
+
     NumGraphemeBreakClasses
 };
 
@@ -124,6 +98,8 @@ enum WordBreakClass {
     WordBreak_E_Modifier,
     WordBreak_Glue_After_Zwj,
     WordBreak_E_Base_GAZ,
+    WordBreak_WSegSpace,
+
     NumWordBreakClasses
 };
 
@@ -142,6 +118,7 @@ enum SentenceBreakClass {
     SentenceBreak_SContinue,
     SentenceBreak_STerm,
     SentenceBreak_Close,
+
     NumSentenceBreakClasses
 };
 
@@ -157,6 +134,7 @@ enum LineBreakClass {
     LineBreak_EB, LineBreak_EM, LineBreak_ZWJ,
     LineBreak_SA, LineBreak_SG, LineBreak_SP,
     LineBreak_CR, LineBreak_LF, LineBreak_BK,
+
     NumLineBreakClasses
 };
 
