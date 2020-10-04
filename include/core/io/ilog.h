@@ -131,6 +131,9 @@ class IX_CORE_EXPORT iLogger{
     // for iString
     void append(const iString& value);
 
+    // for iStringView
+    void append(const iStringView& value);
+
     // for string
     void append(const char* value);
 
@@ -169,6 +172,7 @@ IX_CORE_EXPORT iLogger& operator<<(iLogger&, const wchar_t*);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::string&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::wstring&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iString&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iStringView&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const void*);
 
 #ifdef IX_HAVE_CXX11

@@ -165,8 +165,8 @@ void *iArrayData::allocate(iArrayData **dptr, xsizetype objectSize, xsizetype al
             && !(alignment & (alignment - 1)));
 
     if (capacity == 0) {
-        *dptr = nullptr;
-        return nullptr;
+        *dptr = IX_NULLPTR;
+        return IX_NULLPTR;
     }
 
     xsizetype headerSize = sizeof(iArrayData);
@@ -183,12 +183,12 @@ void *iArrayData::allocate(iArrayData **dptr, xsizetype objectSize, xsizetype al
     xsizetype allocSize = calculateBlockSize(capacity, objectSize, headerSize, options);
     allocSize = reserveExtraBytes(allocSize);
     if (allocSize < 0) {  // handle overflow. cannot allocate reliably
-        *dptr = nullptr;
-        return nullptr;
+        *dptr = IX_NULLPTR;
+        return IX_NULLPTR;
     }
 
     iArrayData *header = allocateData(allocSize, options);
-    void *data = nullptr;
+    void *data = IX_NULLPTR;
     if (header) {
         // find where offset should point to so that data() is aligned to alignment bytes
         data = iTypedArrayData<void>::dataStart(header, alignment);

@@ -134,7 +134,7 @@ char *istrcpy(char *dst, const char *src)
     \sa istrcpy()
 */
 
-char *istrncpy(char *dst, const char *src, uint len)
+char *istrncpy(char *dst, const char *src, size_t len)
 {
     if (!src || !dst)
         return IX_NULLPTR;
@@ -1414,7 +1414,7 @@ void iByteArray::reallocGrowData(xsizetype alloc, Data::ArrayOptions options)
     if (d.needsDetach()) {
         const auto newSize = std::min(alloc, d.size);
         DataPointer dd(DataPointer::allocateGrow(d, alloc, newSize, options));
-        dd->copyAppend(d.data(), d.data() + newSize);
+        dd.copyAppend(d.data(), d.data() + newSize);
         dd.data()[dd.size] = 0;
         d = dd;
     } else {
@@ -1624,7 +1624,7 @@ iByteArray &iByteArray::insert(xsizetype i, const char *str)
 
 iByteArray &iByteArray::insert(xsizetype i, const char *str, xsizetype len)
 {
-    if (i < 0 || str == nullptr || len <= 0)
+    if (i < 0 || str == IX_NULLPTR || len <= 0)
         return *this;
 
     if (points_into_range<char>(str, d.data(), d.data() + d.size)) {
@@ -1633,15 +1633,23 @@ iByteArray &iByteArray::insert(xsizetype i, const char *str, xsizetype len)
         return insert(i, a.data(), len);
     }
 
-    xsizetype oldsize = d.size;
-    resize(std::max(i, oldsize) + len);
-    char *dst = d.data();
-    if (i > oldsize)
-        ::memset(dst + oldsize, 0x20, i - oldsize);
-    else
-        ::memmove(dst + i + len, dst + i, oldsize - i);
-    memcpy(dst + i, str, len);
-	d.data()[d.size] = '\0';
+    xsizetype oldSize = d.size;
+    const xsizetype newSize = std::max(i, oldSize) + len;
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), len);
+
+    // ### optimize me
+    if (d.needsDetach() || newSize > capacity() || shouldGrow) {
+        auto flags = d.detachFlags() | Data::GrowsForward;
+        if (oldSize != 0 && i <= oldSize / 4)  // using QList's policy
+            flags |= Data::GrowsBackwards;
+        reallocGrowData(newSize, flags);
+    }
+
+    if (i > oldSize)  // set spaces in the uninitialized gap
+        d.copyAppend(i - oldSize, 0x20);
+
+    d.insert(d.begin() + i, str, str + len);
+    d.data()[d.size] = '\0';
     return *this;
 }
 
@@ -1676,7 +1684,7 @@ iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
 
     const auto oldSize = size();
     const auto newSize = std::max(i, oldSize) + count;
-    const bool shouldGrow = d.shouldGrowBeforeInsert(d.begin() + std::min(i, oldSize), count);
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), count);
 
     // ### optimize me
     if (d.needsDetach() || newSize > capacity() || shouldGrow) {
@@ -1713,12 +1721,8 @@ iByteArray &iByteArray::remove(xsizetype pos, xsizetype len)
     if (len <= 0  || pos < 0 || size_t(pos) >= size_t(size()))
         return *this;
     detach();
-    if (len >= d.size - pos) {
-        resize(pos);
-    } else {
-        memmove(d.data() + pos, d.data() + pos + len, d.size - pos - len);
-        resize(d.size - len);
-    }
+    d.erase(d.begin() + pos, d.begin() + std::min(pos + len, size()));
+    d.data()[d.size] = '\0';
     return *this;
 }
 
@@ -4219,7 +4223,7 @@ static void ix_toPercentEncoding(iByteArray *ba, const char *dontEncode, const c
     iByteArray input = *ba;
     xsizetype len = input.count();
     const char *inputData = input.constData();
-    char *output = nullptr;
+    char *output = IX_NULLPTR;
     xsizetype length = 0;
 
     for (xsizetype i = 0; i < len; ++i) {

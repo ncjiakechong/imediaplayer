@@ -151,9 +151,9 @@ namespace iUtf8Functions
     /// returns the number of characters consumed (including \a b) in case of success;
     /// returns negative in case of error: Traits::Error or Traits::EndOfString
     template <typename Traits, typename OutputPtr, typename InputPtr> inline
-    int fromUtf8(uchar b, OutputPtr &dst, InputPtr &src, InputPtr end)
+    xsizetype fromUtf8(uchar b, OutputPtr &dst, InputPtr &src, InputPtr end)
     {
-        int charsNeeded;
+        xsizetype charsNeeded;
         uint min_uc;
         uint uc;
 
@@ -186,7 +186,7 @@ namespace iUtf8Functions
             return Traits::Error;
         }
 
-        int bytesAvailable = Traits::availableBytes(src, end);
+        xptrdiff bytesAvailable = Traits::availableBytes(src, end);
         if (bytesAvailable < charsNeeded - 1) {
             // it's possible that we have an error instead of just unfinished bytes
             if (bytesAvailable > 0 && !isContinuationByte(Traits::peekByte(src, 0)))
@@ -255,30 +255,30 @@ enum DataEndianness
 
 struct iUtf8
 {
-    static iChar *convertToUnicode(iChar *, const char *, int);
-    static iString convertToUnicode(const char *, int);
-    static iString convertToUnicode(const char *, int, iTextCodec::ConverterState *);
-    static iByteArray convertFromUnicode(const iChar *, int);
-    static iByteArray convertFromUnicode(const iChar *, int, iTextCodec::ConverterState *);
+    static iChar *convertToUnicode(iChar *, const char *, xsizetype);
+    static iString convertToUnicode(const char *, xsizetype);
+    static iString convertToUnicode(const char *, xsizetype, iTextCodec::ConverterState *);
+    static iByteArray convertFromUnicode(const iChar *, xsizetype);
+    static iByteArray convertFromUnicode(const iChar *, xsizetype, iTextCodec::ConverterState *);
     struct ValidUtf8Result {
         bool isValidUtf8;
         bool isValidAscii;
     };
     static ValidUtf8Result isValidUtf8(const char *, xsizetype);
-    static int compareUtf8(const char *, xsizetype, const iChar *, int);
+    static int compareUtf8(const char *, xsizetype, const iChar *, xsizetype);
     static int compareUtf8(const char *, xsizetype, iLatin1String s);
 };
 
 struct iUtf16
 {
-    static iString convertToUnicode(const char *, int, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
-    static iByteArray convertFromUnicode(const iChar *, int, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
+    static iString convertToUnicode(const char *, xsizetype, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
+    static iByteArray convertFromUnicode(const iChar *, xsizetype, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
 };
 
 struct iUtf32
 {
-    static iString convertToUnicode(const char *, int, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
-    static iByteArray convertFromUnicode(const iChar *, int, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
+    static iString convertToUnicode(const char *, xsizetype, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
+    static iByteArray convertFromUnicode(const iChar *, xsizetype, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
 };
 
 } // namespace iShell

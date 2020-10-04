@@ -1214,7 +1214,7 @@ static const unsigned short * decompositionHelper
     if (index == 0xffff) {
         *length = 0;
         *tag = iChar::NoDecomposition;
-        return nullptr;
+        return IX_NULLPTR;
     }
 
     const unsigned short *decomposition = uc_decomposition_map+index;
@@ -1729,10 +1729,14 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
                 stcode = ligature;
                 iChar *d = s.data();
                 // ligatureHelper() never changes planes
-                xsizetype j = 0;
-                for (iChar ch : iChar::fromUcs4(ligature))
-                    d[starter + j++] = ch;
-                s.remove(i, j);
+                if (iChar::requiresSurrogates(ligature)) {
+                    d[starter] = iChar::highSurrogate(ligature);
+                    d[starter + 1] = iChar::lowSurrogate(ligature);
+                    s.remove(i, 2);
+                } else {
+                    d[starter] = ligature;
+                    s.remove(i, 1);
+                }
                 continue;
             }
         }
@@ -1802,10 +1806,18 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype
             iChar *uc = s.data();
             xsizetype p = pos;
             // exchange characters
-            for (iChar ch : iChar::fromUcs4(u2))
-                uc[p++] = ch;
-            for (iChar ch : iChar::fromUcs4(u1))
-                uc[p++] = ch;
+            if (!iChar::requiresSurrogates(u2)) {
+                uc[p++] = u2;
+            } else {
+                uc[p++] = iChar::highSurrogate(u2);
+                uc[p++] = iChar::lowSurrogate(u2);
+            }
+            if (!iChar::requiresSurrogates(u1)) {
+                uc[p++] = u1;
+            } else {
+                uc[p++] = iChar::highSurrogate(u1);
+                uc[p++] = iChar::lowSurrogate(u1);
+            }
             if (pos > 0)
                 --pos;
             if (pos > 0 && s.at(pos).isLowSurrogate())

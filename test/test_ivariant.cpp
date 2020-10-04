@@ -96,7 +96,7 @@ int test_ivariant(void)
 
     int roff;
     iRegularExpression rx("happy");
-    roff = rx.indexIn(str1);
+    roff = str1.indexOf(rx);
     IX_ASSERT_X(roff == 11, "iRegExp indexIn error");
 
     iString r;
@@ -117,7 +117,10 @@ int test_ivariant(void)
     IX_ASSERT_X(refVar1 != refVar2, "iString ref error 2");
 
     iString chinese = iString::fromUtf8("中文输出验证");
-    ilog_debug("Chinese output: ", chinese);
+    iString chinese2 = iStringLiteral("中文输出验证");
+    ilog_debug("Chinese output: ", chinese, " output2:", chinese2);
+    IX_ASSERT_X(chinese == chinese2, "utf8 != utf16");
+
     iByteArray rawData = chinese.toUtf8();
     ilog_data_debug((const uchar*)rawData.data(), rawData.size());
 

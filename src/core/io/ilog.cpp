@@ -422,6 +422,12 @@ void iLogger::append(const iString& value)
     m_buff.append(tmpValue.data(), tmpValue.size());
 }
 
+void iLogger::append(const iStringView& value)
+{
+    iByteArray tmpValue = value.toUtf8();
+    m_buff.append(tmpValue.data(), tmpValue.size());
+}
+
 void iLogger::append(const char* value)
 {
     m_buff.append(value);
@@ -586,6 +592,12 @@ iLogger& operator<<(iLogger& logger, const std::u32string& value)
 #endif
 
 iLogger& operator<<(iLogger& logger, const iString& value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const iStringView& value)
 {
     logger.append(value);
     return logger;

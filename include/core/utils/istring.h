@@ -268,10 +268,10 @@ public:
     xsizetype count(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
     xsizetype indexOf(const iRegularExpression &re, xsizetype from = 0,
-                      iRegularExpressionMatch *rmatch = nullptr) const;
+                      iRegularExpressionMatch *rmatch = IX_NULLPTR) const;
     xsizetype lastIndexOf(const iRegularExpression &re, xsizetype from = -1,
-                          iRegularExpressionMatch *rmatch = nullptr) const;
-    bool contains(const iRegularExpression &re, iRegularExpressionMatch *rmatch = nullptr) const;
+                          iRegularExpressionMatch *rmatch = IX_NULLPTR) const;
+    bool contains(const iRegularExpression &re, iRegularExpressionMatch *rmatch = IX_NULLPTR) const;
     xsizetype count(const iRegularExpression &re) const;
 
     enum SectionFlag {
@@ -345,7 +345,7 @@ public:
     iString &remove(iLatin1String s, iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iString &remove(const iString &s, iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iString &replace(xsizetype i, xsizetype len, iChar after);
-    iString &replace(xsizetype i, xsizetype len, const iChar *s, int slen);
+    iString &replace(xsizetype i, xsizetype len, const iChar *s, xsizetype slen);
     iString &replace(xsizetype i, xsizetype len, const iString &after);
     iString &replace(iChar before, iChar after, iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iString &replace(const iChar *before, xsizetype blen, const iChar *after, xsizetype alen, iShell::CaseSensitivity cs = iShell::CaseSensitive);
@@ -408,9 +408,9 @@ public:
     static iString fromUcs4(const uint *, xsizetype size = -1);
     static iString fromRawData(const iChar *, xsizetype size);
 
-    static iString fromUtf16(const char16_t *str, int size = -1)
+    static iString fromUtf16(const char16_t *str, xsizetype size = -1)
     { return fromUtf16(reinterpret_cast<const ushort *>(str), size); }
-    static iString fromUcs4(const char32_t *str, int size = -1)
+    static iString fromUcs4(const char32_t *str, xsizetype size = -1)
     { return fromUcs4(reinterpret_cast<const uint *>(str), size); }
 
     inline xsizetype toWCharArray(wchar_t *array) const;
@@ -670,7 +670,7 @@ private:
 
 #define IX_UNICODE_LITERAL(str) u"" str
 #define iStringLiteral(str) \
-    (iString(iString::DataPointer(nullptr,  \
+    (iString(iString::DataPointer(IX_NULLPTR,  \
                             const_cast<ushort*>(reinterpret_cast<const ushort*>(IX_UNICODE_LITERAL(str))), \
                             sizeof(IX_UNICODE_LITERAL(str))/2 - 1))) \
     /**/

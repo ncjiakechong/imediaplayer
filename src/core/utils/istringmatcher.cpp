@@ -145,7 +145,7 @@ iStringMatcher::iStringMatcher()
     Call indexIn() to perform a search.
 */
 iStringMatcher::iStringMatcher(const iString &pattern, iShell::CaseSensitivity cs)
-    : d_ptr(nullptr), ix_pattern(pattern), ix_cs(cs)
+    : d_ptr(IX_NULLPTR), ix_pattern(pattern), ix_cs(cs)
 {
     ix_sv = ix_pattern;
     memset(ix_skiptable, 0, sizeof(ix_skiptable));
@@ -160,7 +160,7 @@ iStringMatcher::iStringMatcher(const iString &pattern, iShell::CaseSensitivity c
     by \a uc with the given \a length and case sensitivity specified by \a cs.
 */
 iStringMatcher::iStringMatcher(iStringView str, iShell::CaseSensitivity cs)
-    : d_ptr(nullptr), ix_cs(cs), ix_sv(str)
+    : d_ptr(IX_NULLPTR), ix_cs(cs), ix_sv(str)
 {
     memset(ix_skiptable, 0, sizeof(ix_skiptable));
     updateSkipTable();
@@ -170,7 +170,7 @@ iStringMatcher::iStringMatcher(iStringView str, iShell::CaseSensitivity cs)
     Copies the \a other string matcher to this string matcher.
 */
 iStringMatcher::iStringMatcher(const iStringMatcher &other)
-    : d_ptr(nullptr)
+    : d_ptr(IX_NULLPTR)
 {
     operator=(other);
 }

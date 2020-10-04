@@ -38,7 +38,7 @@ static inline const uchar *simdFindNonAscii(const uchar *src, const uchar *end, 
     return src;
 }
 
-iByteArray iUtf8::convertFromUnicode(const iChar *uc, int len)
+iByteArray iUtf8::convertFromUnicode(const iChar *uc, xsizetype len)
 {
     // create a iByteArray with the worst case scenario size
     iByteArray result(len * 3, iShell::Uninitialized);
@@ -65,10 +65,10 @@ iByteArray iUtf8::convertFromUnicode(const iChar *uc, int len)
     return result;
 }
 
-iByteArray iUtf8::convertFromUnicode(const iChar *uc, int len, iTextCodec::ConverterState *state)
+iByteArray iUtf8::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec::ConverterState *state)
 {
     uchar replacement = '?';
-    int rlen = 3*len;
+    xsizetype rlen = 3*len;
     int surrogate_high = -1;
     if (state) {
         if (state->flags & iTextCodec::ConvertInvalidToNull)
@@ -134,7 +134,7 @@ iByteArray iUtf8::convertFromUnicode(const iChar *uc, int len, iTextCodec::Conve
     return rstr;
 }
 
-iString iUtf8::convertToUnicode(const char *chars, int len)
+iString iUtf8::convertToUnicode(const char *chars, xsizetype len)
 {
     // UTF-8 to UTF-16 always needs the exact same number of words or less:
     //    UTF-8     UTF-16
@@ -172,7 +172,7 @@ iString iUtf8::convertToUnicode(const char *chars, int len)
     This function never throws.
 */
 
-iChar *iUtf8::convertToUnicode(iChar *buffer, const char *chars, int len)
+iChar *iUtf8::convertToUnicode(iChar *buffer, const char *chars, xsizetype len)
 {
     ushort *dst = reinterpret_cast<ushort *>(buffer);
     const uchar *src = reinterpret_cast<const uchar *>(chars);
@@ -208,7 +208,7 @@ iChar *iUtf8::convertToUnicode(iChar *buffer, const char *chars, int len)
     return reinterpret_cast<iChar *>(dst);
 }
 
-iString iUtf8::convertToUnicode(const char *chars, int len, iTextCodec::ConverterState *state)
+iString iUtf8::convertToUnicode(const char *chars, xsizetype len, iTextCodec::ConverterState *state)
 {
     bool headerdone = false;
     ushort replacement = iChar::ReplacementCharacter;
@@ -240,8 +240,8 @@ iString iUtf8::convertToUnicode(const char *chars, int len, iTextCodec::Converte
         if (state->remainingChars) {
             // handle incoming state first
             uchar remainingCharsData[4]; // longest UTF-8 sequence possible
-            int remainingCharsCount = state->remainingChars;
-            int newCharsToCopy = std::min<int>(sizeof(remainingCharsData) - remainingCharsCount, end - src);
+            xsizetype remainingCharsCount = state->remainingChars;
+            xsizetype newCharsToCopy = std::min<xsizetype>(sizeof(remainingCharsData) - remainingCharsCount, end - src);
 
             memset(remainingCharsData, 0, sizeof(remainingCharsData));
             memcpy(remainingCharsData, &state->state_data[0], remainingCharsCount);
@@ -362,7 +362,7 @@ iUtf8::ValidUtf8Result iUtf8::isValidUtf8(const char *chars, xsizetype len)
     return { true, isValidAscii };
 }
 
-int iUtf8::compareUtf8(const char *utf8, xsizetype u8len, const iChar *utf16, int u16len)
+int iUtf8::compareUtf8(const char *utf8, xsizetype u8len, const iChar *utf16, xsizetype u16len)
 {
     uint uc1, uc2;
     auto src1 = reinterpret_cast<const uchar *>(utf8);
@@ -413,7 +413,7 @@ int iUtf8::compareUtf8(const char *utf8, xsizetype u8len, iLatin1String s)
     return (end1 > src1) - (end2 > src2);
 }
 
-iByteArray iUtf16::convertFromUnicode(const iChar *uc, int len, iTextCodec::ConverterState *state, DataEndianness e)
+iByteArray iUtf16::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec::ConverterState *state, DataEndianness e)
 {
     DataEndianness endian = e;
     int length =  2*len;
@@ -447,7 +447,7 @@ iByteArray iUtf16::convertFromUnicode(const iChar *uc, int len, iTextCodec::Conv
     return d;
 }
 
-iString iUtf16::convertToUnicode(const char *chars, int len, iTextCodec::ConverterState *state, DataEndianness e)
+iString iUtf16::convertToUnicode(const char *chars, xsizetype len, iTextCodec::ConverterState *state, DataEndianness e)
 {
     DataEndianness endian = e;
     bool half = false;
@@ -522,7 +522,7 @@ iString iUtf16::convertToUnicode(const char *chars, int len, iTextCodec::Convert
     return result;
 }
 
-iByteArray iUtf32::convertFromUnicode(const iChar *uc, int len, iTextCodec::ConverterState *state, DataEndianness e)
+iByteArray iUtf32::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec::ConverterState *state, DataEndianness e)
 {
     DataEndianness endian = e;
     int length =  4*len;
@@ -572,7 +572,7 @@ iByteArray iUtf32::convertFromUnicode(const iChar *uc, int len, iTextCodec::Conv
     return d;
 }
 
-iString iUtf32::convertToUnicode(const char *chars, int len, iTextCodec::ConverterState *state, DataEndianness e)
+iString iUtf32::convertToUnicode(const char *chars, xsizetype len, iTextCodec::ConverterState *state, DataEndianness e)
 {
     DataEndianness endian = e;
     uchar tuple[4];
