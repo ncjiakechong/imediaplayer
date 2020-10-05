@@ -19,6 +19,8 @@
 
 namespace iShell {
 
+typedef void (*iDestroyNotify)(void* pointer, void* user_data);
+
 struct IX_CORE_EXPORT iArrayData
 {
     enum ArrayOption {
@@ -33,36 +35,24 @@ struct IX_CORE_EXPORT iArrayData
     iRefCount ref_; // -1 means static, (!0 && !1) means shared
     uint flags;
     xsizetype alloc;
-    inline xsizetype allocatedCapacity() const
-    {
-        return alloc;
-    }
+
+    void*      ptr_;
+    void*      user_;
+    iDestroyNotify notify_;
+
+    inline xsizetype allocatedCapacity() const { return alloc; }
 
     /// Returns true if sharing took place
-    bool ref()
-    {
-        ref_.ref();
-        return true;
-    }
+    bool ref() { ref_.ref(); return true; }
 
     /// Returns false if deallocation is necessary
-    bool deref()
-    {
-        return ref_.deref();
-    }
-
-    bool isShared() const
-    {
-        return ref_.atomic.value() != 1;
-    }
+    bool deref() { return ref_.deref(); }
+    bool isShared() const { return ref_.atomic.value() != 1; }
 
     // Returns true if a detach is necessary before modifying the data
     // This method is intentionally not const: if you want to know whether
     // detaching is necessary, you should be in a non-const function already
-    bool needsDetach() const
-    {
-        return ref_.atomic.value() > 1;
-    }
+    bool needsDetach() const { return ref_.atomic.value() > 1; }
 
     xsizetype detachCapacity(xsizetype newSize) const
     {
@@ -79,9 +69,9 @@ struct IX_CORE_EXPORT iArrayData
         return result;
     }
 
-    static void *allocate(iArrayData **pdata, xsizetype objectSize, xsizetype alignment,
+    static iArrayData* allocate(xsizetype objectSize, xsizetype alignment,
             xsizetype capacity, ArrayOptions options = DefaultAllocationFlags);
-    static std::pair<iArrayData *, void *> reallocateUnaligned(iArrayData *data, void *dataPointer,
+    static iArrayData* reallocateUnaligned(iArrayData *data, void *dataPointer,
             xsizetype objectSize, xsizetype newCapacity, ArrayOptions newOptions = DefaultAllocationFlags);
     static void deallocate(iArrayData *data, xsizetype objectSize,
             xsizetype alignment);
@@ -167,23 +157,20 @@ struct iTypedArrayData
 
     class AlignmentDummy { iArrayData header; T data; };
 
-    static std::pair<iTypedArrayData *, T *> allocate(xsizetype capacity,
+    static iTypedArrayData* allocate(xsizetype capacity,
             ArrayOptions options = DefaultAllocationFlags)
     {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
-        iArrayData *d;
-        void *result = iArrayData::allocate(&d, sizeof(T), alignof(AlignmentDummy), capacity, options);
-        return std::pair<iTypedArrayData *, T *>(static_cast<iTypedArrayData *>(d), static_cast<T *>(result));
+        iArrayData *data = iArrayData::allocate(sizeof(T), alignof(AlignmentDummy), capacity, options);
+        return static_cast<iTypedArrayData *>(data);
     }
 
-    static std::pair<iTypedArrayData *, T *>
-    reallocateUnaligned(iTypedArrayData *data, T *dataPointer, xsizetype capacity,
+    static iTypedArrayData* reallocateUnaligned(iTypedArrayData *data, T *dataPointer, xsizetype capacity,
             ArrayOptions options = DefaultAllocationFlags)
     {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
-        std::pair<iArrayData *, void *> pair =
-                iArrayData::reallocateUnaligned(data, dataPointer, sizeof(T), capacity, options);
-        return std::pair<iTypedArrayData *, T *>(static_cast<iTypedArrayData *>(pair.first), static_cast<T *>(pair.second));
+        iArrayData* d = iArrayData::reallocateUnaligned(data, dataPointer, sizeof(T), capacity, options);
+        return static_cast<iTypedArrayData *>(d);
     }
 
     static void deallocate(iArrayData *data)

@@ -41,11 +41,6 @@ public:
     {
     }
 
-    iArrayDataPointer(std::pair<iTypedArrayData<T> *, T *> adata, xsizetype n = 0) noexcept
-        : d(adata.first), ptr(adata.second), size(n)
-    {
-    }
-
     static iArrayDataPointer fromRawData(const T *rawData, xsizetype length)
     {
         IX_ASSERT(rawData || !length);
@@ -148,11 +143,11 @@ public:
     static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype capacity,
                                           xsizetype newSize, iArrayData::ArrayOptions options)
     {
-        std::pair<iArrayData *, void *> pair  = Data::allocate(capacity, options);
-        const bool valid = pair.first != IX_NULLPTR && pair.second != IX_NULLPTR;
+        Data* d = Data::allocate(capacity, options);
+        const bool valid = d != IX_NULLPTR && d->ptr_ != IX_NULLPTR;
         const bool grows = (options & (Data::GrowsForward | Data::GrowsBackwards));
         if (!valid || !grows)
-            return iArrayDataPointer(static_cast<Data*>(pair.first), static_cast<T*>(pair.second));
+            return iArrayDataPointer(d, static_cast<T*>(d->ptr_));
 
         // when growing, special rules apply to memory layout
 
@@ -163,13 +158,13 @@ public:
             // uncommon and even initial prepend will eventually be followed by
             // at least some appends.
             if (options & Data::GrowsBackwards)
-                pair.second += (pair.first->alloc - newSize) / 2;
+                d->ptr_ += (d->alloc - newSize) / 2;
         } else {
             // When not detaching: fake ::realloc() policy - preserve existing
             // free space at beginning.
-            pair.second += from.freeSpaceAtBegin();
+            d->ptr_ += from.freeSpaceAtBegin();
         }
-        return iArrayDataPointer(static_cast<Data*>(pair.first), static_cast<T*>(pair.second));
+        return iArrayDataPointer(d, static_cast<T*>(d->ptr_));
     }
 
     void reallocate(xsizetype alloc, typename Data::ArrayOptions options)
@@ -187,9 +182,9 @@ public:
                       this->size * sizeof(T));
         }
 
-        auto pair = Data::reallocateUnaligned(this->d, this->ptr, alloc, options);
-        this->d = pair.first;
-        this->ptr = pair.second;
+        Data* d = Data::reallocateUnaligned(this->d, this->ptr, alloc, options);
+        this->d = d;
+        this->ptr = static_cast<T*>(d->ptr_);
     }
 
     // Returns whether reallocation is desirable before adding more elements
@@ -391,17 +386,17 @@ public:
     }
 
 private:
-    std::pair<Data *, T *> clone(iArrayData::ArrayOptions options) const
+    Data* clone(iArrayData::ArrayOptions options) const
     {
-        std::pair<Data *, T *> pair = Data::allocate(detachCapacity(size), options);
-        iArrayDataPointer copy(pair.first, pair.second, 0);
+        Data* d = Data::allocate(detachCapacity(size), options);
+        iArrayDataPointer copy(d, static_cast<T*>(d->ptr_), 0);
         if (size)
             copy->copyAppend(begin(), end());
 
-        pair.first = copy.d;
+        d = copy.d;
         copy.d = IX_NULLPTR;
         copy.ptr = IX_NULLPTR;
-        return pair;
+        return d;
     }
 
 protected:

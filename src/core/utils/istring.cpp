@@ -1344,7 +1344,8 @@ iString::iString(const iChar *unicode, xsizetype size)
         if (!size) {
             d = DataPointer::fromRawData(&_empty, 0);
         } else {
-            d = DataPointer(Data::allocate(size), size);
+            Data* td = Data::allocate(size);
+            d = DataPointer(td, static_cast<xuint16*>(td->ptr_), size);
             memcpy(d.data(), unicode, size * sizeof(iChar));
             d.data()[size] = '\0';
         }
@@ -1362,7 +1363,8 @@ iString::iString(xsizetype size, iChar ch)
     if (size <= 0) {
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
-        d = DataPointer(Data::allocate(size), size);
+        Data* td = Data::allocate(size);
+        d = DataPointer(td, static_cast<xuint16*>(td->ptr_), size);
         d.data()[size] = '\0';
         xuint16 *i = d.data() + size;
         xuint16 *b = d.data();
@@ -1383,7 +1385,8 @@ iString::iString(xsizetype size, iShell::Initialization)
     if (size <= 0) {
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
-        d = DataPointer(Data::allocate(size), size);
+        Data* td = Data::allocate(size);
+        d = DataPointer(td, static_cast<xuint16*>(td->ptr_), size);
         d.data()[size] = '\0';
     }
 }
@@ -1400,7 +1403,8 @@ iString::iString(xsizetype size, iShell::Initialization)
 */
 iString::iString(iChar ch)
 {
-    d = DataPointer(Data::allocate(1), 1);
+    Data* td = Data::allocate(1);
+    d = DataPointer(td, static_cast<xuint16*>(td->ptr_), 1);
     d.data()[0] = ch.unicode();
     d.data()[1] = '\0';
 }
@@ -1584,7 +1588,8 @@ void iString::reallocData(xsizetype alloc, Data::ArrayOptions allocOptions)
     const bool slowReallocatePath = d.freeSpaceAtBegin() > 0;
 
     if (d.needsDetach() || slowReallocatePath) {
-        DataPointer dd(Data::allocate(alloc, allocOptions), std::min(alloc, d.size));
+        Data* td = Data::allocate(alloc, allocOptions);
+        DataPointer dd(td, static_cast<xuint16*>(td->ptr_), std::min(alloc, d.size));
         if (dd.size > 0)
             ::memcpy(dd.data(), d.data(), dd.size * sizeof(iChar));
         dd.data()[dd.size] = 0;
@@ -4153,7 +4158,9 @@ iString::DataPointer iString::fromLatin1_helper(const char *str, xsizetype size)
     } else {
         if (size < 0)
             size = istrlen(str);
-        d = DataPointer(Data::allocate(size), size);
+        
+        Data* td = Data::allocate(size);
+        d = DataPointer(td, static_cast<xuint16*>(td->ptr_), size);
         d.data()[size] = '\0';
         xuint16 *dst = d.data();
         ix_from_latin1(dst, str, size_t(size));

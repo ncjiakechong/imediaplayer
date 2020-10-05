@@ -1298,7 +1298,8 @@ iByteArray::iByteArray(const char *data, xsizetype size)
         if (!size) {
             d = DataPointer::fromRawData(&_empty, 0);
         } else {
-            d = DataPointer(Data::allocate(size), size);
+            Data* td = Data::allocate(size);
+            d = DataPointer(td, static_cast<char*>(td->ptr_), size);
             memcpy(d.data(), data, size);
             d.data()[size] = '\0';
         }
@@ -1317,7 +1318,8 @@ iByteArray::iByteArray(xsizetype size, char ch)
     if (size <= 0) {
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
-        d = DataPointer(Data::allocate(size), size);
+        Data* td = Data::allocate(size);
+        d = DataPointer(td, static_cast<char*>(td->ptr_), size);
         memset(d.data(), ch, size);
         d.data()[size] = '\0';
     }
@@ -1334,7 +1336,8 @@ iByteArray::iByteArray(xsizetype size, iShell::Initialization)
     if (size <= 0) {
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
-        d = DataPointer(Data::allocate(size), size);
+        Data* td = Data::allocate(size);
+        d = DataPointer(td, static_cast<char*>(td->ptr_), size);
         d.data()[size] = '\0';
     }
 }
@@ -1396,7 +1399,8 @@ void iByteArray::reallocData(xsizetype alloc, Data::ArrayOptions options)
     const bool slowReallocatePath = d.freeSpaceAtBegin() > 0;
 
     if (d.needsDetach() || slowReallocatePath) {
-        DataPointer dd(Data::allocate(alloc, options), std::min(alloc, d.size));
+        Data* td = Data::allocate(alloc, options);
+        DataPointer dd(td, static_cast<char*>(td->ptr_), std::min(alloc, d.size));
         if (dd.size > 0)
             ::memcpy(dd.data(), d.data(), dd.size);
         dd.data()[dd.size] = 0;
