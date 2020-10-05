@@ -730,11 +730,11 @@ inline void iUrlPrivate::setError(ErrorCode errorCode, const iString &source, in
 // the decodedXXX tables are run with the delimiters set to "decode" by default
 // (except for the query, which doesn't use these functions)
 
-#define decode(x) ushort(x)
-#define leave(x)  ushort(0x100 | (x))
-#define encode(x) ushort(0x200 | (x))
+#define decode(x) xuint16(x)
+#define leave(x)  xuint16(0x100 | (x))
+#define encode(x) xuint16(0x200 | (x))
 
-static const ushort userNameInIsolation[] = {
+static const xuint16 userNameInIsolation[] = {
     decode(':'), // 0
     decode('@'), // 1
     decode(']'), // 2
@@ -753,12 +753,12 @@ static const ushort userNameInIsolation[] = {
     decode('}'),
     0
 };
-static const ushort * const passwordInIsolation = userNameInIsolation + 1;
-static const ushort * const pathInIsolation = userNameInIsolation + 5;
-static const ushort * const queryInIsolation = userNameInIsolation + 6;
-static const ushort * const fragmentInIsolation = userNameInIsolation + 7;
+static const xuint16 * const passwordInIsolation = userNameInIsolation + 1;
+static const xuint16 * const pathInIsolation = userNameInIsolation + 5;
+static const xuint16 * const queryInIsolation = userNameInIsolation + 6;
+static const xuint16 * const fragmentInIsolation = userNameInIsolation + 7;
 
-static const ushort userNameInUserInfo[] =  {
+static const xuint16 userNameInUserInfo[] =  {
     encode(':'), // 0
     decode('@'), // 1
     decode(']'), // 2
@@ -777,9 +777,9 @@ static const ushort userNameInUserInfo[] =  {
     decode('}'),
     0
 };
-static const ushort * const passwordInUserInfo = userNameInUserInfo + 1;
+static const xuint16 * const passwordInUserInfo = userNameInUserInfo + 1;
 
-static const ushort userNameInAuthority[] = {
+static const xuint16 userNameInAuthority[] = {
     encode(':'), // 0
     encode('@'), // 1
     encode(']'), // 2
@@ -798,9 +798,9 @@ static const ushort userNameInAuthority[] = {
     decode('}'),
     0
 };
-static const ushort * const passwordInAuthority = userNameInAuthority + 1;
+static const xuint16 * const passwordInAuthority = userNameInAuthority + 1;
 
-static const ushort userNameInUrl[] = {
+static const xuint16 userNameInUrl[] = {
     encode(':'), // 0
     encode('@'), // 1
     encode(']'), // 2
@@ -812,10 +812,10 @@ static const ushort userNameInUrl[] = {
     // no need to list encode(x) for the other characters
     0
 };
-static const ushort * const passwordInUrl = userNameInUrl + 1;
-static const ushort * const pathInUrl = userNameInUrl + 5;
-static const ushort * const queryInUrl = userNameInUrl + 6;
-static const ushort * const fragmentInUrl = userNameInUrl + 6;
+static const xuint16 * const passwordInUrl = userNameInUrl + 1;
+static const xuint16 * const pathInUrl = userNameInUrl + 5;
+static const xuint16 * const queryInUrl = userNameInUrl + 6;
+static const xuint16 * const fragmentInUrl = userNameInUrl + 6;
 
 static inline void parseDecodedComponent(iString &data)
 {
@@ -823,7 +823,7 @@ static inline void parseDecodedComponent(iString &data)
 }
 
 static inline iString
-recodeFromUser(const iString &input, const ushort *actions, int from, int to)
+recodeFromUser(const iString &input, const xuint16 *actions, int from, int to)
 {
     iString output;
     const iChar *begin = input.constData() + from;
@@ -837,7 +837,7 @@ recodeFromUser(const iString &input, const ushort *actions, int from, int to)
 // appendXXXX functions: copy from the internal form to the external, user form.
 // the internal value is stored in its PrettyDecoded form, so that case is easy.
 static inline void appendToUser(iString &appendTo, const iStringView &value, iUrl::FormattingOptions options,
-                                const ushort *actions)
+                                const xuint16 *actions)
 {
     if (options == iUrl::PrettyDecoded) {
         appendTo += value;
@@ -867,8 +867,8 @@ inline void iUrlPrivate::appendUserInfo(iString &appendTo, iUrl::FormattingOptio
     if (!hasUserInfo())
         return;
 
-    const ushort *userNameActions;
-    const ushort *passwordActions;
+    const xuint16 *userNameActions;
+    const xuint16 *passwordActions;
     if (options & iUrl::EncodeDelimiters) {
         userNameActions = userNameInUrl;
         passwordActions = passwordInUrl;
@@ -971,11 +971,11 @@ iString ix_normalizePathSegments(const iString &name, PathNormalizations flags, 
         return name;
 
     int i = len - 1;
-    iVarLengthArray<ushort> outVector(len);
+    iVarLengthArray<xuint16> outVector(len);
     int used = len;
-    ushort *out = outVector.data();
-    const ushort *p = name.utf16();
-    const ushort *prefix = p;
+    xuint16 *out = outVector.data();
+    const xuint16 *p = name.utf16();
+    const xuint16 *prefix = p;
     int up = 0;
 
     const int prefixLength = rootLength(name, allowUncPaths);
@@ -989,10 +989,10 @@ iString ix_normalizePathSegments(const iString &name, PathNormalizations flags, 
         --i;
     }
 
-    auto isDot = [](const ushort *p, int i) {
+    auto isDot = [](const xuint16 *p, int i) {
         return i > 1 && p[i - 1] == '.' && p[i - 2] == '/';
     };
-    auto isDotDot = [](const ushort *p, int i) {
+    auto isDotDot = [](const xuint16 *p, int i) {
         return i > 2 && p[i - 1] == '.' && p[i - 2] == '.' && p[i - 3] == '/';
     };
 
@@ -1172,7 +1172,7 @@ inline bool iUrlPrivate::setScheme(const iString &value, int len, bool doSetErro
 
     // validate it:
     int needsLowercasing = -1;
-    const ushort *p = reinterpret_cast<const ushort *>(value.constData());
+    const xuint16 *p = reinterpret_cast<const xuint16 *>(value.constData());
     for (int i = 0; i < len; ++i) {
         if (p[i] >= 'a' && p[i] <= 'z')
             continue;
@@ -1201,7 +1201,7 @@ inline bool iUrlPrivate::setScheme(const iString &value, int len, bool doSetErro
         // schemes are ASCII only, so we don't need the full Unicode toLower
         iChar *schemeData = scheme.data(); // force detaching here
         for (int i = needsLowercasing; i >= 0; --i) {
-            ushort c = schemeData[i].unicode();
+            xuint16 c = schemeData[i].unicode();
             if (c >= 'A' && c <= 'Z')
                 schemeData[i] = c + 0x20;
         }
@@ -1253,17 +1253,17 @@ inline void iUrlPrivate::setAuthority(const iString &auth, int from, int end, iU
             // found a colon with digits after it
             unsigned long x = 0;
             for (int i = colonIndex + 1; i < end; ++i) {
-                ushort c = auth.at(i).unicode();
+                xuint16 c = auth.at(i).unicode();
                 if (c >= '0' && c <= '9') {
                     x *= 10;
                     x += c - '0';
                 } else {
-                    x = ulong(-1); // x != ushort(x)
+                    x = ulong(-1); // x != xuint16(x)
                     break;
                 }
             }
-            if (x == ushort(x)) {
-                port = ushort(x);
+            if (x == xuint16(x)) {
+                port = xuint16(x);
             } else {
                 setError(InvalidPortError, auth, colonIndex + 1);
                 if (mode == iUrl::StrictMode)
@@ -1441,7 +1441,7 @@ static const iChar *parseIp6(iString &host, const iChar *begin, const iChar *end
     iString decoded;
     if (mode == iUrl::TolerantMode) {
         // this struct is kept in automatic storage because it's only 4 bytes
-        const ushort decodeColon[] = { decode(':'), 0 };
+        const xuint16 decodeColon[] = { decode(':'), 0 };
         if (ix_urlRecode(decoded, begin, end, iUrl::ComponentFormattingOption::PrettyDecoded, decodeColon) == 0)
             decoded = iString(begin, end-begin);
     } else {
@@ -1590,10 +1590,10 @@ inline void iUrlPrivate::parse(const iString &url, iUrl::ParsingMode parsingMode
     int hash = -1;
     const int len = url.length();
     const iChar *const begin = url.constData();
-    const ushort *const data = reinterpret_cast<const ushort *>(begin);
+    const xuint16 *const data = reinterpret_cast<const xuint16 *>(begin);
 
     for (int i = 0; i < len; ++i) {
-        uint uc = data[i];
+        xuint32 uc = data[i];
         if (uc == '#' && hash == -1) {
             hash = i;
 
@@ -1860,7 +1860,7 @@ inline iUrlPrivate::ErrorCode iUrlPrivate::validityError(iString *source, int *p
 
     // check for a path of "text:text/"
     for (int i = 0; i < path.length(); ++i) {
-        ushort c = path.at(i).unicode();
+        xuint16 c = path.at(i).unicode();
         if (c == '/') {
             // found the slash before the colon
             return NoError;
@@ -1898,9 +1898,9 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
 
     IX_ASSERT(section != Authority && section != Hierarchy && section != FullUrl);
 
-    const ushort *const data = reinterpret_cast<const ushort *>(input.constData());
+    const xuint16 *const data = reinterpret_cast<const xuint16 *>(input.constData());
     for (uint i = uint(begin); i < uint(end); ++i) {
-        uint uc = data[i];
+        xuint32 uc = data[i];
         if (uc >= 0x80)
             continue;
 

@@ -30,27 +30,27 @@ enum Case {
 };
 
 struct Properties {
-    ushort category            : 8; /* 5 used */
-    ushort direction           : 8; /* 5 used */
-    ushort combiningClass      : 8;
-    ushort joining             : 3;
-    signed short digitValue    : 5;
-    signed short mirrorDiff    : 16;
-    ushort unicodeVersion      : 8; /* 5 used */
-    ushort nfQuickCheck        : 8;
+    xuint16 category            : 8; /* 5 used */
+    xuint16 direction           : 8; /* 5 used */
+    xuint16 combiningClass      : 8;
+    xuint16 joining             : 3;
+    xint16 digitValue    : 5;
+    xint16 mirrorDiff    : 16;
+    xuint16 unicodeVersion      : 8; /* 5 used */
+    xuint16 nfQuickCheck        : 8;
     struct {
-        ushort special    : 1;
-        signed short diff : 15;
+        xuint16 special    : 1;
+        xint16 diff : 15;
     } cases[NumCases];
-    ushort graphemeBreakClass  : 5; /* 5 used */
-    ushort wordBreakClass      : 5; /* 5 used */
-    ushort lineBreakClass      : 6; /* 6 used */
-    ushort sentenceBreakClass  : 8; /* 4 used */
-    ushort script              : 8;
+    xuint16 graphemeBreakClass  : 5; /* 5 used */
+    xuint16 wordBreakClass      : 5; /* 5 used */
+    xuint16 lineBreakClass      : 6; /* 6 used */
+    xuint16 sentenceBreakClass  : 8; /* 4 used */
+    xuint16 script              : 8;
 };
 
-const Properties * properties(uint ucs4);
-const Properties * properties(ushort ucs2);
+const Properties * properties(xuint32 ucs4);
+const Properties * properties(xuint16 ucs2);
 
 enum GraphemeBreakClass {
     GraphemeBreak_Any,
@@ -138,19 +138,19 @@ enum LineBreakClass {
     NumLineBreakClasses
 };
 
-GraphemeBreakClass graphemeBreakClass(uint ucs4);
+GraphemeBreakClass graphemeBreakClass(xuint32 ucs4);
 inline GraphemeBreakClass graphemeBreakClass(iChar ch)
 { return graphemeBreakClass(ch.unicode()); }
 
-WordBreakClass wordBreakClass(uint ucs4);
+WordBreakClass wordBreakClass(xuint32 ucs4);
 inline WordBreakClass wordBreakClass(iChar ch)
 { return wordBreakClass(ch.unicode()); }
 
-SentenceBreakClass sentenceBreakClass(uint ucs4);
+SentenceBreakClass sentenceBreakClass(xuint32 ucs4);
 inline SentenceBreakClass sentenceBreakClass(iChar ch)
 { return sentenceBreakClass(ch.unicode()); }
 
-LineBreakClass lineBreakClass(uint ucs4);
+LineBreakClass lineBreakClass(xuint32 ucs4);
 inline LineBreakClass lineBreakClass(iChar ch)
 { return lineBreakClass(ch.unicode()); }
 

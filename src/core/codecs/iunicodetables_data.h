@@ -19,7 +19,7 @@ namespace iShell {
 
 namespace iUnicodeTables {
 
-const unsigned short uc_property_trie[] = {
+const xuint16 uc_property_trie[] = {
     // [0x0..0x11000)
 
     6256, 6288, 6320, 6352, 6384, 6416, 6448, 6480,
@@ -9564,7 +9564,7 @@ const Properties uc_properties[] = {
     { 12, 0, 0, 0, -1, 0, 2, 0,  { {0, 0}, {0, 0}, {0, 0}, {0, 0} }, 0, 0, 12, 0, 0 }
 };
 
-const unsigned short specialCaseMap[] = {
+const xuint16 specialCaseMap[] = {
     0x0, // placeholder
     0x1, 0x2c65,
     0x1, 0x2c66,
@@ -9873,7 +9873,7 @@ const unsigned short specialCaseMap[] = {
 
 const unsigned int MaxSpecialCaseLength = 3;
 
-const unsigned short uc_decomposition_trie[] = {
+const xuint16 uc_decomposition_trie[] = {
     // 0 - 0x3400
 
     1548, 1548, 1548, 1548, 1548, 1548, 1548, 1548,
@@ -11760,7 +11760,7 @@ const unsigned short uc_decomposition_trie[] = {
         ? uc_decomposition_trie[uc_decomposition_trie[((ucs4 - 0x3400) >> 8) + 0x340] + (ucs4 & 0xff)] \
         : 0xffff)
 
-const unsigned short uc_decomposition_map[] = {
+const xuint16 uc_decomposition_map[] = {
     0x103, 0x20, 0x210, 0x20, 0x308, 0x109, 0x61, 0x210,
     0x20, 0x304, 0x109, 0x32, 0x109, 0x33, 0x210, 0x20,
     0x301, 0x110, 0x3bc, 0x210, 0x20, 0x327, 0x109, 0x31,
@@ -13569,7 +13569,7 @@ const unsigned short uc_decomposition_map[] = {
     0xd869, 0xde00
 };
 
-const unsigned short uc_ligature_trie[] = {
+const xuint16 uc_ligature_trie[] = {
     // 0 - 0x3100
 
     631, 631, 631, 631, 631, 631, 631, 631,
@@ -13999,7 +13999,7 @@ const unsigned short uc_ligature_trie[] = {
         ? uc_ligature_trie[uc_ligature_trie[((ucs4 - 0x3100) >> 8) + 0x188] + (ucs4 & 0xff)] \
         : 0xffff)
 
-const unsigned short uc_ligature_map[] = {
+const xuint16 uc_ligature_map[] = {
     0x54, 0x41, 0xc0, 0x45, 0xc8, 0x49, 0xcc, 0x4e,
     0x1f8, 0x4f, 0xd2, 0x55, 0xd9, 0x57, 0x1e80, 0x59,
     0x1ef2, 0x61, 0xe0, 0x65, 0xe8, 0x69, 0xec, 0x6e,
@@ -14250,8 +14250,8 @@ const unsigned short uc_ligature_map[] = {
 };
 
 struct NormalizationCorrection {
-    uint ucs4;
-    uint old_mapping;
+    xuint32 ucs4;
+    xuint32 old_mapping;
     int version;
 };
 

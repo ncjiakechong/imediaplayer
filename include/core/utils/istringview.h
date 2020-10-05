@@ -27,7 +27,7 @@ template <typename Char>
 struct IsCompatibleCharTypeHelper
     : std::integral_constant<bool,
                              is_same<Char, iChar>::value ||
-                             is_same<Char, ushort>::value ||
+                             is_same<Char, xuint16>::value ||
                              is_same<Char, char16_t>::value ||
                              (is_same<Char, wchar_t>::value && sizeof(wchar_t) == sizeof(iChar))> {};
 template <typename Char>
@@ -69,7 +69,7 @@ struct IsCompatibleStdBasicString
 class iStringView
 {
 public:
-    typedef ushort storage_type;
+    typedef xuint16 storage_type;
     typedef const iChar value_type;
     typedef std::ptrdiff_t difference_type;
     typedef xsizetype size_type;
@@ -108,11 +108,11 @@ private:
     template <typename Char>
     static xsizetype lengthHelperPointer(const Char *str)
     {
-        return iPrivate::xustrlen(reinterpret_cast<const ushort *>(str));
+        return iPrivate::xustrlen(reinterpret_cast<const xuint16 *>(str));
     }
     static xsizetype lengthHelperPointer(const iChar *str)
     {
-        return iPrivate::xustrlen(reinterpret_cast<const ushort *>(str));
+        return iPrivate::xustrlen(reinterpret_cast<const xuint16 *>(str));
     }
 
     template <typename Char>
@@ -168,7 +168,7 @@ public:
     iByteArray toLatin1() const { return iPrivate::convertToLatin1(*this); }
     iByteArray toUtf8() const { return iPrivate::convertToUtf8(*this); }
     iByteArray toLocal8Bit() const { return iPrivate::convertToLocal8Bit(*this); }
-    inline std::list<uint> toUcs4() const;
+    inline std::list<xuint32> toUcs4() const;
 
     iChar at(xsizetype n) const { return (*this)[n]; }
 

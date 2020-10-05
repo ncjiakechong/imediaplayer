@@ -18,23 +18,23 @@ namespace iShell {
 
 // needed by the punycode encoder/decoder
 #define IX_MAXINT ((uint)((uint)(-1)>>1))
-static const uint base = 36;
-static const uint tmin = 1;
-static const uint tmax = 26;
-static const uint skew = 38;
-static const uint damp = 700;
-static const uint initial_bias = 72;
-static const uint initial_n = 128;
+static const xuint32 base = 36;
+static const xuint32 tmin = 1;
+static const xuint32 tmax = 26;
+static const xuint32 skew = 38;
+static const xuint32 damp = 700;
+static const xuint32 initial_bias = 72;
+static const xuint32 initial_n = 128;
 
 struct NameprepCaseFoldingEntry {
-    uint uc;
-    ushort mapping[4];
+    xuint32 uc;
+    xuint16 mapping[4];
 };
 
-inline bool operator<(uint one, const NameprepCaseFoldingEntry &other)
+inline bool operator<(xuint32 one, const NameprepCaseFoldingEntry &other)
 { return one < other.uc; }
 
-inline bool operator<(const NameprepCaseFoldingEntry &one, uint other)
+inline bool operator<(const NameprepCaseFoldingEntry &one, xuint32 other)
 { return one.uc < other; }
 
 static const NameprepCaseFoldingEntry NameprepCaseFolding[] = {
@@ -1415,18 +1415,18 @@ static void mapToLowerCase(iString *str, int from)
 {
     int N = sizeof(NameprepCaseFolding) / sizeof(NameprepCaseFolding[0]);
 
-    ushort *d = IX_NULLPTR;
+    xuint16 *d = IX_NULLPTR;
     for (int i = from; i < str->size(); ++i) {
-        uint uc = str->at(i).unicode();
+        xuint32 uc = str->at(i).unicode();
         if (uc < 0x80) {
             if (uc <= 'Z' && uc >= 'A') {
                 if (!d)
-                    d = reinterpret_cast<ushort *>(str->data());
+                    d = reinterpret_cast<xuint16 *>(str->data());
                 d[i] = (uc | 0x20);
             }
         } else {
             if (iChar(uc).isHighSurrogate() && i < str->size() - 1) {
-                ushort low = str->at(i + 1).unicode();
+                xuint16 low = str->at(i + 1).unicode();
                 if (iChar(low).isLowSurrogate()) {
                     uc = iChar::surrogateToUcs4(uc, low);
                     ++i;
@@ -1448,7 +1448,7 @@ static void mapToLowerCase(iString *str, int from)
                     d = 0;
                 } else {
                     if (!d)
-                        d = reinterpret_cast<ushort *>(str->data());
+                        d = reinterpret_cast<xuint16 *>(str->data());
                     d[i] = entry->mapping[0];
                 }
             }
@@ -1456,7 +1456,7 @@ static void mapToLowerCase(iString *str, int from)
     }
 }
 
-static bool isMappedToNothing(uint uc)
+static bool isMappedToNothing(xuint32 uc)
 {
     if (uc < 0xad)
         return false;
@@ -1475,12 +1475,12 @@ static bool isMappedToNothing(uint uc)
 
 static bool containsProhibitedOuptut(const iString *str, int from)
 {
-    const ushort *in = reinterpret_cast<const ushort *>(str->begin() + from);
-    const ushort *end = (const ushort *)str->data() + str->size();
+    const xuint16 *in = reinterpret_cast<const xuint16 *>(str->begin() + from);
+    const xuint16 *end = (const xuint16 *)str->data() + str->size();
     for ( ; in < end; ++in) {
-        uint uc = *in;
+        xuint32 uc = *in;
         if (iChar(uc).isHighSurrogate() && in < end - 1) {
-            ushort low = *(in + 1);
+            xuint16 low = *(in + 1);
             if (iChar(low).isLowSurrogate()) {
                 ++in;
                 uc = iChar::surrogateToUcs4(uc, low);
@@ -1543,7 +1543,7 @@ static bool containsProhibitedOuptut(const iString *str, int from)
     return false;
 }
 
-static bool isBidirectionalRorAL(uint uc)
+static bool isBidirectionalRorAL(xuint32 uc)
 {
     if (uc < 0x5b0)
         return false;
@@ -1583,7 +1583,7 @@ static bool isBidirectionalRorAL(uint uc)
         || (uc >= 0xFE76 && uc <= 0xFEFC);
 }
 
-static bool isBidirectionalL(uint uc)
+static bool isBidirectionalL(xuint32 uc)
 {
     if (uc < 0xaa)
         return (uc >= 0x0041 && uc <= 0x005A)
@@ -1999,7 +1999,7 @@ bool ix_nameprep(iString *source, int from)
     const iChar *e = src + source->size();
 
     for ( ; out < e; ++out) {
-        ushort uc = out->unicode();
+        xuint16 uc = out->unicode();
         if (uc >= 0x80) {
             break;
         } else if (uc >= 'A' && uc <= 'Z') {
@@ -2018,9 +2018,9 @@ bool ix_nameprep(iString *source, int from)
     // (Table B.1)
     const iChar *in = out;
     for ( ; in < e; ++in) {
-        uint uc = in->unicode();
+        xuint32 uc = in->unicode();
         if (iChar(uc).isHighSurrogate() && in < e - 1) {
-            ushort low = in[1].unicode();
+            xuint16 low = in[1].unicode();
             if (iChar(low).isLowSurrogate()) {
                 ++in;
                 uc = iChar::surrogateToUcs4(uc, low);
@@ -2066,9 +2066,9 @@ bool ix_nameprep(iString *source, int from)
     src = source->data();
     e = src + source->size();
     for (in = src + from; in < e && (!containsLCat || !containsRandALCat); ++in) {
-        uint uc = in->unicode();
+        xuint32 uc = in->unicode();
         if (iChar(uc).isHighSurrogate() && in < e - 1) {
-            ushort low = in[1].unicode();
+            xuint16 low = in[1].unicode();
             if (iChar(low).isLowSurrogate()) {
                 ++in;
                 uc = iChar::surrogateToUcs4(uc, low);
@@ -2096,7 +2096,7 @@ static const iChar *ix_find_nonstd3(const iChar *uc, int len, CaseSensitivity cs
         return uc;
 
     for (int i = 0; i < len; ++i) {
-        ushort c = uc[i].unicode();
+        xuint16 c = uc[i].unicode();
         if (c == '-' && (i == 0 || i == len - 1))
             return uc + i;
 
@@ -2154,11 +2154,11 @@ static inline uint adapt(uint delta, uint numpoints, bool firsttime)
     return k + (((base - tmin + 1) * delta) / (delta + skew));
 }
 
-static inline void appendEncode(iString* output, uint& delta, uint& bias, uint& b, uint& h)
+static inline void appendEncode(iString* output, xuint32& delta, xuint32& bias, xuint32& b, xuint32& h)
 {
-    uint qq;
-    uint k;
-    uint t;
+    xuint32 qq;
+    xuint32 k;
+    xuint32 t;
 
     // insert the variable length delta integer; fail on
     // overflow.
@@ -2180,9 +2180,9 @@ static inline void appendEncode(iString* output, uint& delta, uint& bias, uint& 
 
 void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output)
 {
-    uint n = initial_n;
-    uint delta = 0;
-    uint bias = initial_bias;
+    xuint32 n = initial_n;
+    xuint32 delta = 0;
+    xuint32 bias = initial_bias;
 
     int outLen = output->length();
     output->resize(outLen + ucLength);
@@ -2191,7 +2191,7 @@ void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output)
     bool skipped = false;
     // copy all basic code points verbatim to output.
     for (uint j = 0; j < (uint) ucLength; ++j) {
-        ushort js = s[j].unicode();
+        xuint16 js = s[j].unicode();
         if (js < 0x80)
             *d++ = js;
         else
@@ -2219,11 +2219,11 @@ void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output)
     while (h < (uint) ucLength) {
         // find the character in the input string with the lowest
         // unicode value.
-        uint m = IX_MAXINT;
+        xuint32 m = IX_MAXINT;
         uint j;
         for (j = 0; j < (uint) ucLength; ++j) {
             if (s[j].unicode() >= n && s[j].unicode() < m)
-                m = (uint) s[j].unicode();
+                m = (xuint32) s[j].unicode();
         }
 
         // reject out-of-bounds unicode characters
@@ -2266,9 +2266,9 @@ void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output)
 
 iString ix_punycodeDecoder(const iString &pc)
 {
-    uint n = initial_n;
-    uint i = 0;
-    uint bias = initial_bias;
+    xuint32 n = initial_n;
+    xuint32 i = 0;
+    xuint32 bias = initial_bias;
 
     // strip any ACE prefix
     int start = pc.startsWith(iLatin1String("xn--")) ? 4 : 0;
@@ -2289,15 +2289,15 @@ iString ix_punycodeDecoder(const iString &pc)
     // loop through the rest of the input string, inserting non-basic
     // characters into output as we go.
     while (cnt < (uint) pc.size()) {
-        uint oldi = i;
-        uint w = 1;
+        xuint32 oldi = i;
+        xuint32 w = 1;
 
         // find the next index for inserting a non-basic character.
         for (uint k = base; cnt < (uint) pc.size(); k += base) {
             // grab a character from the punycode input and find its
             // delta digit (each digit code is part of the
             // variable-length integer delta)
-            uint digit = pc.at(cnt++).unicode();
+            xuint32 digit = pc.at(cnt++).unicode();
             if (digit - 48 < 10) digit -= 22;
             else if (digit - 65 < 26) digit -= 65;
             else if (digit - 97 < 26) digit -= 97;
@@ -2328,7 +2328,7 @@ iString ix_punycodeDecoder(const iString &pc)
         i %= (output.length() + 1);
 
         // insert the character n at position i
-        output.insert((uint) i, iChar((ushort) n));
+        output.insert((uint) i, iChar((xuint16) n));
         ++i;
     }
 
@@ -2379,8 +2379,8 @@ static std::list<iString> *user_idn_whitelist = IX_NULLPTR;
 
 static bool lessThan(const iChar *a, int l, const char *c)
 {
-    const ushort *uc = (const ushort *)a;
-    const ushort *e = uc + l;
+    const xuint16 *uc = (const xuint16 *)a;
+    const xuint16 *e = uc + l;
 
     if (!c || *c == 0)
         return false;
@@ -2437,7 +2437,7 @@ static bool ix_is_idn_enabled(const iString &domain)
     return equal(tld, len, idn_whitelist[i]);
 }
 
-static inline bool isDotDelimiter(ushort uc)
+static inline bool isDotDelimiter(xuint16 uc)
 {
     // IDNA / rfc3490 describes these four delimiters used for
     // separating labels in unicode international domain
@@ -2503,7 +2503,7 @@ iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot)
             const iChar *in = domain.constData() + lastIdx;
             const iChar *e = in + labelLength;
             for (; in < e; ++in, ++out) {
-                ushort uc = in->unicode();
+                xuint16 uc = in->unicode();
                 if (uc > 0x7f)
                     simple = false;
                 if (uc >= 'A' && uc <= 'Z')
@@ -2517,7 +2517,7 @@ iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot)
             // ACE form domains contain only ASCII characters, but we can't consider them simple
             // is this an ACE form?
             // the shortest valid ACE domain is 6 characters long (U+0080 would be 1, but it's not allowed)
-            static const ushort acePrefixUtf16[] = { 'x', 'n', '-', '-' };
+            static const xuint16 acePrefixUtf16[] = { 'x', 'n', '-', '-' };
             if (memcmp(result.constData() + prevLen, acePrefixUtf16, sizeof acePrefixUtf16) == 0)
                 simple = false;
         }

@@ -67,9 +67,9 @@ struct CalculateGrowingBlockSizeResult {
 xsizetype iCalculateBlockSize(xsizetype elementCount, xsizetype elementSize, xsizetype headerSize = 0);
 CalculateGrowingBlockSizeResult iCalculateGrowingBlockSize(xsizetype elementCount, xsizetype elementSize, xsizetype headerSize = 0) ;
 
-uint foldCase(const ushort *ch, const ushort *start);
-uint foldCase(uint ch, uint &last);
-ushort foldCase(ushort ch);
+xuint32 foldCase(const xuint16 *ch, const xuint16 *start);
+xuint32 foldCase(xuint32 ch, xuint32 &last);
+xuint16 foldCase(xuint16 ch);
 iChar foldCase(iChar ch);
 
 void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from);

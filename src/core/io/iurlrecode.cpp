@@ -138,25 +138,25 @@ static const uchar reservedMask[96] = {
     0xff  // BSKP
 };
 
-static inline bool isHex(ushort c)
+static inline bool isHex(xuint16 c)
 {
     return (c >= 'a' && c <= 'f') ||
             (c >= 'A' && c <= 'F') ||
             (c >= '0' && c <= '9');
 }
 
-static inline bool isUpperHex(ushort c)
+static inline bool isUpperHex(xuint16 c)
 {
     // undefined behaviour if c isn't an hex char!
     return c < 0x60;
 }
 
-static inline ushort toUpperHex(ushort c)
+static inline xuint16 toUpperHex(xuint16 c)
 {
     return isUpperHex(c) ? c : c - 0x20;
 }
 
-static inline ushort decodeNibble(ushort c)
+static inline xuint16 decodeNibble(xuint16 c)
 {
     return c >= 'a' ? c - 'a' + 0xA :
            c >= 'A' ? c - 'A' + 0xA : c - '0';
@@ -165,21 +165,21 @@ static inline ushort decodeNibble(ushort c)
 // if the sequence at input is 2*HEXDIG, returns its decoding
 // returns -1 if it isn't.
 // assumes that the range has been checked already
-static inline ushort decodePercentEncoding(const ushort *input)
+static inline xuint16 decodePercentEncoding(const xuint16 *input)
 {
-    ushort c1 = input[1];
-    ushort c2 = input[2];
+    xuint16 c1 = input[1];
+    xuint16 c2 = input[2];
     if (!isHex(c1) || !isHex(c2))
-        return ushort(-1);
+        return xuint16(-1);
     return decodeNibble(c1) << 4 | decodeNibble(c2);
 }
 
-static inline ushort encodeNibble(ushort c)
+static inline xuint16 encodeNibble(xuint16 c)
 {
-    return ushort(iMiscUtils::toHexUpper(c));
+    return xuint16(iMiscUtils::toHexUpper(c));
 }
 
-static void ensureDetached(iString &result, ushort *&output, const ushort *begin, const ushort *input, const ushort *end,
+static void ensureDetached(iString &result, xuint16 *&output, const xuint16 *begin, const xuint16 *input, const xuint16 *end,
                            int add = 0)
 {
     if (!output) {
@@ -192,7 +192,7 @@ static void ensureDetached(iString &result, ushort *&output, const ushort *begin
         result.resize(origSize + spaceNeeded);
 
         // we know that resize() above detached, so we bypass the reference count check
-        output = const_cast<ushort *>(reinterpret_cast<const ushort *>(result.constData()))
+        output = const_cast<xuint16 *>(reinterpret_cast<const xuint16 *>(result.constData()))
                  + origSize;
 
         // copy the chars we've already processed
@@ -231,7 +231,7 @@ struct iUrlUtf8Traits : public iUtf8BaseTraitsNoAscii
     static const bool allowNonCharacters = false;
 
     // override: our "bytes" are three percent-encoded UTF-16 characters
-    static void appendByte(ushort *&ptr, uchar b)
+    static void appendByte(xuint16 *&ptr, uchar b)
     {
         // b >= 0x80, by construction, so percent-encode
         *ptr++ = '%';
@@ -239,9 +239,9 @@ struct iUrlUtf8Traits : public iUtf8BaseTraitsNoAscii
         *ptr++ = encodeNibble(b & 0xf);
     }
 
-    static uchar peekByte(const ushort *ptr, int n = 0)
+    static uchar peekByte(const xuint16 *ptr, int n = 0)
     {
-        // decodePercentEncoding returns ushort(-1) if it can't decode,
+        // decodePercentEncoding returns xuint16(-1) if it can't decode,
         // which means we return 0xff, which is not a valid continuation byte.
         // If ptr[i * 3] is not '%', we'll multiply by zero and return 0,
         // also not a valid continuation byte (if it's '%', we multiply by 1).
@@ -249,12 +249,12 @@ struct iUrlUtf8Traits : public iUtf8BaseTraitsNoAscii
                 * uchar(ptr[n * 3] == '%');
     }
 
-    static xptrdiff availableBytes(const ushort *ptr, const ushort *end)
+    static xptrdiff availableBytes(const xuint16 *ptr, const xuint16 *end)
     {
         return (end - ptr) / 3;
     }
 
-    static void advanceByte(const ushort *&ptr, int n = 1)
+    static void advanceByte(const xuint16 *&ptr, int n = 1)
     {
         ptr += n * 3;
     }
@@ -262,11 +262,11 @@ struct iUrlUtf8Traits : public iUtf8BaseTraitsNoAscii
 }
 
 // returns true if we performed an UTF-8 decoding
-static bool encodedUtf8ToUtf16(iString &result, ushort *&output, const ushort *begin, const ushort *&input,
-                               const ushort *end, ushort decoded)
+static bool encodedUtf8ToUtf16(iString &result, xuint16 *&output, const xuint16 *begin, const xuint16 *&input,
+                               const xuint16 *end, xuint16 decoded)
 {
-    uint ucs4, *dst = &ucs4;
-    const ushort *src = input + 3;// skip the %XX that yielded \a decoded
+    xuint32 ucs4, *dst = &ucs4;
+    const xuint16 *src = input + 3;// skip the %XX that yielded \a decoded
     int charsNeeded = iUtf8Functions::fromUtf8<iUrlUtf8Traits>(decoded, dst, src, end);
     if (charsNeeded < 0)
         return false;
@@ -289,8 +289,8 @@ static bool encodedUtf8ToUtf16(iString &result, ushort *&output, const ushort *b
     return true;
 }
 
-static void unicodeToEncodedUtf8(iString &result, ushort *&output, const ushort *begin,
-                                 const ushort *&input, const ushort *end, ushort decoded)
+static void unicodeToEncodedUtf8(iString &result, xuint16 *&output, const xuint16 *begin,
+                                 const xuint16 *&input, const xuint16 *end, xuint16 decoded)
 {
     // calculate the utf8 length and ensure enough space is available
     int utf8len = iChar::isHighSurrogate(decoded) ? 4 : decoded >= 0x800 ? 3 : 2;
@@ -303,14 +303,14 @@ static void unicodeToEncodedUtf8(iString &result, ushort *&output, const ushort 
     } else {
         // verify that there's enough space or expand
         int charsRemaining = end - input - 1; // not including this one
-        int pos = output - reinterpret_cast<const ushort *>(result.constData());
+        int pos = output - reinterpret_cast<const xuint16 *>(result.constData());
         int spaceRemaining = result.size() - pos;
         if (spaceRemaining < 3*charsRemaining + 3*utf8len) {
             // must resize
             result.resize(result.size() + 3*utf8len);
 
             // we know that resize() above detached, so we bypass the reference count check
-            output = const_cast<ushort *>(reinterpret_cast<const ushort *>(result.constData()));
+            output = const_cast<xuint16 *>(reinterpret_cast<const xuint16 *>(result.constData()));
             output += pos;
         }
     }
@@ -343,16 +343,16 @@ static void unicodeToEncodedUtf8(iString &result, ushort *&output, const ushort 
     }
 }
 
-static int recode(iString &result, const ushort *begin, const ushort *end, iUrl::ComponentFormattingOptions encoding,
+static int recode(iString &result, const xuint16 *begin, const xuint16 *end, iUrl::ComponentFormattingOptions encoding,
                   const uchar *actionTable, bool retryBadEncoding)
 {
     const int origSize = result.size();
-    const ushort *input = begin;
-    ushort *output = IX_NULLPTR;
+    const xuint16 *input = begin;
+    xuint16 *output = IX_NULLPTR;
 
     EncodingAction action = EncodeCharacter;
     for ( ; input != end; ++input) {
-        ushort c;
+        xuint16 c;
         // try a run where no change is necessary
         for ( ; input != end; ++input) {
             c = *input;
@@ -369,7 +369,7 @@ static int recode(iString &result, const ushort *begin, const ushort *end, iUrl:
         break;
 
 non_trivial:
-        uint decoded;
+        xuint32 decoded;
         if (c == '%' && retryBadEncoding) {
             // always write "%25"
             ensureDetached(result, output, begin, input, end);
@@ -379,7 +379,7 @@ non_trivial:
             continue;
         } else if (c == '%') {
             // check if the input is valid
-            if (input + 2 >= end || (decoded = decodePercentEncoding(input)) == ushort(-1)) {
+            if (input + 2 >= end || (decoded = decodePercentEncoding(input)) == xuint16(-1)) {
                 // not valid, retry
                 result.resize(origSize);
                 return recode(result, begin, end, encoding, actionTable, true);
@@ -439,7 +439,7 @@ non_trivial:
     }
 
     if (output) {
-        int len = output - reinterpret_cast<const ushort *>(result.constData());
+        int len = output - reinterpret_cast<const xuint16 *>(result.constData());
         result.truncate(len);
         return len - origSize;
     }
@@ -477,18 +477,18 @@ static bool simdCheckNonEncoded(...)
     The input should also be a valid percent-encoded sequence (the output of
     ix_urlRecode is always valid).
 */
-static int decode(iString &appendTo, const ushort *begin, const ushort *end)
+static int decode(iString &appendTo, const xuint16 *begin, const xuint16 *end)
 {
     // fast check whether there's anything to be decoded in the first place
-    const ushort *input = iPrivate::xustrchr(iStringView(begin, end), '%');
+    const xuint16 *input = iPrivate::xustrchr(iStringView(begin, end), '%');
     if (input == end)
         return 0;           // nothing to do, it was already decoded!
 
     // detach
     const int origSize = appendTo.size();
     appendTo.resize(origSize + (end - begin));
-    ushort *output = reinterpret_cast<ushort *>(appendTo.begin()) + origSize;
-    memcpy(static_cast<void *>(output), static_cast<const void *>(begin), (input - begin) * sizeof(ushort));
+    xuint16 *output = reinterpret_cast<xuint16 *>(appendTo.begin()) + origSize;
+    memcpy(static_cast<void *>(output), static_cast<const void *>(begin), (input - begin) * sizeof(xuint16));
     output += input - begin;
 
     while (input != end) {
@@ -498,7 +498,7 @@ static int decode(iString &appendTo, const ushort *begin, const ushort *end)
         if (end - input < 3 || !isHex(input[1]) || !isHex(input[2])) {
             // badly-encoded data
             appendTo.resize(origSize + (end - begin));
-            memcpy(static_cast<void *>(appendTo.begin() + origSize), static_cast<const void *>(begin), (end - begin) * sizeof(ushort));
+            memcpy(static_cast<void *>(appendTo.begin() + origSize), static_cast<const void *>(begin), (end - begin) * sizeof(xuint16));
             return end - begin;
         }
 
@@ -511,7 +511,7 @@ static int decode(iString &appendTo, const ushort *begin, const ushort *end)
         // search for the next percent, copying from input to output
         if (simdCheckNonEncoded(output, input, end)) {
             while (input != end) {
-                ushort uc = *input;
+                xuint16 uc = *input;
                 if (uc == '%')
                     break;
                 *output++ = uc;
@@ -520,7 +520,7 @@ static int decode(iString &appendTo, const ushort *begin, const ushort *end)
         }
     }
 
-    int len = output - reinterpret_cast<ushort *>(appendTo.begin());
+    int len = output - reinterpret_cast<xuint16 *>(appendTo.begin());
     appendTo.truncate(len);
     return len - origSize;
 }
@@ -568,11 +568,11 @@ static void maskTable(uchar (&table)[N], const uchar (&mask)[N])
 
 int
 ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
-             iUrl::ComponentFormattingOptions encoding, const ushort *tableModifications)
+             iUrl::ComponentFormattingOptions encoding, const xuint16 *tableModifications)
 {
     uchar actionTable[sizeof defaultActionTable];
     if (encoding == iUrl::FullyDecoded) {
-        return decode(appendTo, reinterpret_cast<const ushort *>(begin), reinterpret_cast<const ushort *>(end));
+        return decode(appendTo, reinterpret_cast<const xuint16 *>(begin), reinterpret_cast<const xuint16 *>(end));
     }
 
     memcpy(actionTable, defaultActionTable, sizeof actionTable);
@@ -582,11 +582,11 @@ ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
         actionTable[0] = DecodeCharacter; // decode
 
     if (tableModifications) {
-        for (const ushort *p = tableModifications; *p; ++p)
+        for (const xuint16 *p = tableModifications; *p; ++p)
             actionTable[uchar(*p) - ' '] = *p >> 8;
     }
 
-    return recode(appendTo, reinterpret_cast<const ushort *>(begin), reinterpret_cast<const ushort *>(end),
+    return recode(appendTo, reinterpret_cast<const xuint16 *>(begin), reinterpret_cast<const xuint16 *>(end),
                   encoding, actionTable, false);
 }
 

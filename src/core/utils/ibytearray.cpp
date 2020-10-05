@@ -854,7 +854,7 @@ iByteArray &iByteArray::operator=(const char *str)
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
         const xsizetype len = xsizetype(strlen(str));
-        const auto capacityAtEnd = d.allocatedCapacity() - d.freeSpaceAtBegin();
+        const xsizetype capacityAtEnd = d.allocatedCapacity() - d.freeSpaceAtBegin();
         if (d.needsDetach() || size_t(len) > capacityAtEnd
                 || (len < size() && size_t(len) < (capacityAtEnd >> 1)))
             reallocData(len, d.detachFlags());
@@ -1356,7 +1356,7 @@ void iByteArray::resize(xsizetype size)
     if (size < 0)
         size = 0;
 
-    const auto capacityAtEnd = capacity() - d.freeSpaceAtBegin();
+    const xsizetype capacityAtEnd = capacity() - d.freeSpaceAtBegin();
     if (d.needsDetach() || size > capacityAtEnd)
         reallocData(size, d.detachFlags() | Data::GrowsForward);
     d.size = size;
@@ -1412,7 +1412,7 @@ void iByteArray::reallocGrowData(xsizetype alloc, Data::ArrayOptions options)
         alloc = 1;
 
     if (d.needsDetach()) {
-        const auto newSize = std::min(alloc, d.size);
+        const xsizetype newSize = std::min(alloc, d.size);
         DataPointer dd(DataPointer::allocateGrow(d, alloc, newSize, options));
         dd.copyAppend(d.data(), d.data() + newSize);
         dd.data()[dd.size] = 0;
@@ -1639,7 +1639,7 @@ iByteArray &iByteArray::insert(xsizetype i, const char *str, xsizetype len)
 
     // ### optimize me
     if (d.needsDetach() || newSize > capacity() || shouldGrow) {
-        auto flags = d.detachFlags() | Data::GrowsForward;
+        Data::ArrayOptions flags = d.detachFlags() | Data::GrowsForward;
         if (oldSize != 0 && i <= oldSize / 4)  // using QList's policy
             flags |= Data::GrowsBackwards;
         reallocGrowData(newSize, flags);
@@ -1682,13 +1682,13 @@ iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
     if (i < 0 || count <= 0)
         return *this;
 
-    const auto oldSize = size();
-    const auto newSize = std::max(i, oldSize) + count;
+    const xsizetype oldSize = size();
+    const xsizetype newSize = std::max(i, oldSize) + count;
     const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), count);
 
     // ### optimize me
     if (d.needsDetach() || newSize > capacity() || shouldGrow) {
-        auto flags = d.detachFlags() | Data::GrowsForward;
+        Data::ArrayOptions flags = d.detachFlags() | Data::GrowsForward;
         if (oldSize != 0 && i <= oldSize / 4)  // using std::list's policy
             flags |= Data::GrowsBackwards;
         reallocGrowData(newSize, flags);
@@ -3996,9 +3996,9 @@ public:
 
 static FromBase64Result fromBase64Encoding(const iByteArray &base64, iByteArray::Base64Options options)
 {
-    const auto base64Size = base64.size();
+    const xsizetype base64Size = base64.size();
     iByteArray result((base64Size * 3) / 4, iShell::Uninitialized);
-    const auto base64result = fromBase64_helper(base64.data(),
+    const fromBase64_helper_result base64result = fromBase64_helper(base64.data(),
                                                 base64Size,
                                                 const_cast<char *>(result.constData()),
                                                 options);
@@ -4036,7 +4036,7 @@ static FromBase64Result fromBase64Encoding(const iByteArray &base64, iByteArray:
 */
 iByteArray iByteArray::fromBase64(const iByteArray &base64, Base64Options options)
 {
-    if (auto result = fromBase64Encoding(base64, options))
+    if (FromBase64Result result = fromBase64Encoding(base64, options))
         return std::move(result.decoded);
     return iByteArray();
 }

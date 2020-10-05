@@ -271,7 +271,7 @@ public:
 
 inline char iLocaleData::digitToCLocale(iChar in) const
 {
-    const ushort tenUnicode = m_zero + 10;
+    const xuint16 tenUnicode = m_zero + 10;
 
     if (in.unicode() >= m_zero && in.unicode() < tenUnicode)
         return char('0' + in.unicode() - m_zero);

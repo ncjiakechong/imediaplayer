@@ -26,7 +26,7 @@ namespace iShell {
 
     The UTF-16 string may be represented as an array (or an array-compatible
     data-structure such as iString,
-    std::basic_string, etc.) of iChar, \c ushort, \c char16_t (on compilers that
+    std::basic_string, etc.) of iChar, \c xuint16, \c char16_t (on compilers that
     support C++11 Unicode strings) or (on platforms, such as Windows,
     where it is a 16-bit type) \c wchar_t.
 
@@ -207,7 +207,7 @@ namespace iShell {
     The behavior is undefined if \a len is negative or, when positive, if \a str is \IX_NULLPTR.
 
     This constructor only participates in overload resolution if \c Char is a compatible
-    character type. The compatible character types are: \c iChar, \c ushort, \c char16_t and
+    character type. The compatible character types are: \c iChar, \c xuint16, \c char16_t and
     (on platforms, such as Windows, where it is a 16-bit type) \c wchar_t.
 */
 
@@ -227,7 +227,7 @@ namespace iShell {
 
     This constructor only participates in overload resolution if \c Char
     is a compatible character type. The compatible character types
-    are: \c iChar, \c ushort, \c char16_t and (on platforms, such as
+    are: \c iChar, \c xuint16, \c char16_t and (on platforms, such as
     Windows, where it is a 16-bit type) \c wchar_t.
 */
 
@@ -243,7 +243,7 @@ namespace iShell {
 
     This constructor only participates in overload resolution if \a
     str is not an array and if \c Char is a compatible character
-    type. The compatible character types are: \c iChar, \c ushort, \c
+    type. The compatible character types are: \c iChar, \c xuint16, \c
     char16_t and (on platforms, such as Windows, where it is a 16-bit
     type) \c wchar_t.
 */
@@ -263,7 +263,7 @@ namespace iShell {
 
     This constructor only participates in overload resolution if \a
     string is an actual array and \c Char is a compatible character
-    type. The compatible character types are: \c iChar, \c ushort, \c
+    type. The compatible character types are: \c iChar, \c xuint16, \c
     char16_t and (on platforms, such as Windows, where it is a 16-bit
     type) \c wchar_t.
 */
@@ -287,7 +287,7 @@ namespace iShell {
 
     This constructor only participates in overload resolution if \c StdBasicString is an
     instantiation of \c std::basic_string with a compatible character type. The
-    compatible character types are: \c iChar, \c ushort, \c char16_t and
+    compatible character types are: \c iChar, \c xuint16, \c char16_t and
     (on platforms, such as Windows, where it is a 16-bit type) \c wchar_t.
 
     The string view will be empty if and only if \c{str.empty()}. It is unspecified
@@ -715,9 +715,9 @@ namespace iShell {
 */
 
 /*!
-    \fn std::vector<uint> iStringView::toUcs4() const
+    \fn std::vector<xuint32> iStringView::toUcs4() const
 
-    Returns a UCS-4/UTF-32 representation of the string as a std::vector<uint>.
+    Returns a UCS-4/UTF-32 representation of the string as a std::vector<xuint32>.
 
     UCS-4 is a Unicode codec and therefore it is lossless. All characters from
     this string will be encoded in UCS-4. Any invalid sequence of code units in

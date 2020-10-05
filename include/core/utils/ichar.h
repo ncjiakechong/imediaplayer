@@ -24,7 +24,7 @@ struct iLatin1Char
 public:
     inline explicit iLatin1Char(char c) : ch(c) {}
     inline char toLatin1() const { return ch; }
-    inline ushort unicode() const { return ushort(uchar(ch)); }
+    inline xuint16 unicode() const { return xuint16(uchar(ch)); }
 
 private:
     char ch;
@@ -50,14 +50,14 @@ public:
     };
 
     iChar() : ucs(0) {}
-    iChar(ushort rc) : ucs(rc) {} // implicit
-    iChar(uchar c, uchar r) : ucs(ushort((r << 8) | c)) {}
-    iChar(short rc) : ucs(ushort(rc)) {} // implicit
-    iChar(uint rc) : ucs(ushort(rc & 0xffff)) {}
-    iChar(int rc) : ucs(ushort(rc & 0xffff)) {}
-    iChar(SpecialCharacter s) : ucs(ushort(s)) {} // implicit
+    iChar(xuint16 rc) : ucs(rc) {} // implicit
+    iChar(uchar c, uchar r) : ucs(xuint16((r << 8) | c)) {}
+    iChar(xint16 rc) : ucs(xuint16(rc)) {} // implicit
+    iChar(xuint32 rc) : ucs(xuint16(rc & 0xffff)) {}
+    iChar(xint32 rc) : ucs(xuint16(rc & 0xffff)) {}
+    iChar(SpecialCharacter s) : ucs(xuint16(s)) {} // implicit
     iChar(iLatin1Char ch) : ucs(ch.unicode()) {} // implicit
-    iChar(char16_t ch) : ucs(ushort(ch)) {} // implicit
+    iChar(char16_t ch) : ucs(xuint16(ch)) {} // implicit
 
     explicit iChar(char c) : ucs(uchar(c)) { }
     explicit iChar(uchar c) : ucs(c) { }
@@ -406,10 +406,10 @@ public:
     inline UnicodeVersion unicodeVersion() const { return iChar::unicodeVersion(ucs); }
 
     inline char toLatin1() const { return ucs > 0xff ? '\0' : char(ucs); }
-    inline ushort unicode() const { return ucs; }
-    inline ushort &unicode() { return ucs; }
+    inline xuint16 unicode() const { return ucs; }
+    inline xuint16 &unicode() { return ucs; }
 
-    static inline iChar fromLatin1(char c) { return iChar(ushort(uchar(c))); }
+    static inline iChar fromLatin1(char c) { return iChar(xuint16(uchar(c))); }
 
     inline bool isNull() const { return ucs == 0; }
 
@@ -433,110 +433,110 @@ public:
 
     inline uchar cell() const { return uchar(ucs & 0xff); }
     inline uchar row() const { return uchar((ucs>>8)&0xff); }
-    inline void setCell(uchar acell) { ucs = ushort((ucs & 0xff00) + acell); }
-    inline void setRow(uchar arow) { ucs = ushort((ushort(arow)<<8) + (ucs&0xff)); }
+    inline void setCell(uchar acell) { ucs = xuint16((ucs & 0xff00) + acell); }
+    inline void setRow(uchar arow) { ucs = xuint16((xuint16(arow)<<8) + (ucs&0xff)); }
 
-    static inline bool isNonCharacter(uint ucs4)
+    static inline bool isNonCharacter(xuint32 ucs4)
     {
         return ucs4 >= 0xfdd0 && (ucs4 <= 0xfdef || (ucs4 & 0xfffe) == 0xfffe);
     }
-    static inline bool isHighSurrogate(uint ucs4)
+    static inline bool isHighSurrogate(xuint32 ucs4)
     {
         return ((ucs4 & 0xfffffc00) == 0xd800);
     }
-    static inline bool isLowSurrogate(uint ucs4)
+    static inline bool isLowSurrogate(xuint32 ucs4)
     {
         return ((ucs4 & 0xfffffc00) == 0xdc00);
     }
-    static inline bool isSurrogate(uint ucs4)
+    static inline bool isSurrogate(xuint32 ucs4)
     {
         return (ucs4 - 0xd800u < 2048u);
     }
-    static inline bool requiresSurrogates(uint ucs4)
+    static inline bool requiresSurrogates(xuint32 ucs4)
     {
         return (ucs4 >= 0x10000);
     }
-    static inline uint surrogateToUcs4(ushort high, ushort low)
+    static inline xuint32 surrogateToUcs4(xuint16 high, xuint16 low)
     {
-        return (uint(high)<<10) + low - 0x35fdc00;
+        return (xuint32(high)<<10) + low - 0x35fdc00;
     }
-    static inline uint surrogateToUcs4(iChar high, iChar low)
+    static inline xuint32 surrogateToUcs4(iChar high, iChar low)
     {
         return surrogateToUcs4(high.ucs, low.ucs);
     }
-    static inline ushort highSurrogate(uint ucs4)
+    static inline xuint16 highSurrogate(xuint32 ucs4)
     {
-        return ushort((ucs4>>10) + 0xd7c0);
+        return xuint16((ucs4>>10) + 0xd7c0);
     }
-    static inline ushort lowSurrogate(uint ucs4)
+    static inline xuint16 lowSurrogate(xuint32 ucs4)
     {
-        return ushort(ucs4%0x400 + 0xdc00);
+        return xuint16(ucs4%0x400 + 0xdc00);
     }
 
-    static Category category(uint ucs4);
-    static Direction direction(uint ucs4);
-    static JoiningType joiningType(uint ucs4);
-    static unsigned char combiningClass(uint ucs4);
+    static Category category(xuint32 ucs4);
+    static Direction direction(xuint32 ucs4);
+    static JoiningType joiningType(xuint32 ucs4);
+    static unsigned char combiningClass(xuint32 ucs4);
 
-    static uint mirroredChar(uint ucs4);
-    static bool hasMirrored(uint ucs4);
+    static xuint32 mirroredChar(xuint32 ucs4);
+    static bool hasMirrored(xuint32 ucs4);
 
-    static iString decomposition(uint ucs4);
-    static Decomposition decompositionTag(uint ucs4);
+    static iString decomposition(xuint32 ucs4);
+    static Decomposition decompositionTag(xuint32 ucs4);
 
-    static int digitValue(uint ucs4);
-    static uint toLower(uint ucs4);
-    static uint toUpper(uint ucs4);
-    static uint toTitleCase(uint ucs4);
-    static uint toCaseFolded(uint ucs4);
+    static int digitValue(xuint32 ucs4);
+    static xuint32 toLower(xuint32 ucs4);
+    static xuint32 toUpper(xuint32 ucs4);
+    static xuint32 toTitleCase(xuint32 ucs4);
+    static xuint32 toCaseFolded(xuint32 ucs4);
 
-    static Script script(uint ucs4);
+    static Script script(xuint32 ucs4);
 
-    static UnicodeVersion unicodeVersion(uint ucs4);
+    static UnicodeVersion unicodeVersion(xuint32 ucs4);
 
     static UnicodeVersion currentUnicodeVersion();
 
-    static bool isPrint(uint ucs4);
-    static inline bool isSpace(uint ucs4)
+    static bool isPrint(xuint32 ucs4);
+    static inline bool isSpace(xuint32 ucs4)
     {
         // note that [0x09..0x0d] + 0x85 are exceptional Cc-s and must be handled explicitly
         return ucs4 == 0x20 || (ucs4 <= 0x0d && ucs4 >= 0x09)
                 || (ucs4 > 127 && (ucs4 == 0x85 || ucs4 == 0xa0 || iChar::isSpace_helper(ucs4)));
     }
-    static bool isMark(uint ucs4);
-    static bool isPunct(uint ucs4);
-    static bool isSymbol(uint ucs4);
-    static inline bool isLetter(uint ucs4)
+    static bool isMark(xuint32 ucs4);
+    static bool isPunct(xuint32 ucs4);
+    static bool isSymbol(xuint32 ucs4);
+    static inline bool isLetter(xuint32 ucs4)
     {
         return (ucs4 >= 'A' && ucs4 <= 'z' && (ucs4 >= 'a' || ucs4 <= 'Z'))
                 || (ucs4 > 127 && iChar::isLetter_helper(ucs4));
     }
-    static inline bool isNumber(uint ucs4)
+    static inline bool isNumber(xuint32 ucs4)
     { return (ucs4 <= '9' && ucs4 >= '0') || (ucs4 > 127 && iChar::isNumber_helper(ucs4)); }
-    static inline bool isLetterOrNumber(uint ucs4)
+    static inline bool isLetterOrNumber(xuint32 ucs4)
     {
         return (ucs4 >= 'A' && ucs4 <= 'z' && (ucs4 >= 'a' || ucs4 <= 'Z'))
                 || (ucs4 >= '0' && ucs4 <= '9')
                 || (ucs4 > 127 && iChar::isLetterOrNumber_helper(ucs4));
     }
-    static inline bool isDigit(uint ucs4)
+    static inline bool isDigit(xuint32 ucs4)
     { return (ucs4 <= '9' && ucs4 >= '0') || (ucs4 > 127 && iChar::category(ucs4) == Number_DecimalDigit); }
-    static inline bool isLower(uint ucs4)
+    static inline bool isLower(xuint32 ucs4)
     { return (ucs4 <= 'z' && ucs4 >= 'a') || (ucs4 > 127 && iChar::category(ucs4) == Letter_Lowercase); }
-    static inline bool isUpper(uint ucs4)
+    static inline bool isUpper(xuint32 ucs4)
     { return (ucs4 <= 'Z' && ucs4 >= 'A') || (ucs4 > 127 && iChar::category(ucs4) == Letter_Uppercase); }
-    static inline bool isTitleCase(uint ucs4)
+    static inline bool isTitleCase(xuint32 ucs4)
     { return ucs4 > 127 && iChar::category(ucs4) == Letter_Titlecase; }
 
 private:
-    static bool isSpace_helper(uint ucs4);
-    static bool isLetter_helper(uint ucs4);
-    static bool isNumber_helper(uint ucs4);
-    static bool isLetterOrNumber_helper(uint ucs4);
+    static bool isSpace_helper(xuint32 ucs4);
+    static bool isLetter_helper(xuint32 ucs4);
+    static bool isNumber_helper(xuint32 ucs4);
+    static bool isLetterOrNumber_helper(xuint32 ucs4);
 
     friend bool operator==(iChar, iChar);
     friend bool operator< (iChar, iChar);
-    ushort ucs;
+    xuint16 ucs;
 };
 
 IX_DECLARE_TYPEINFO(iChar, IX_MOVABLE_TYPE);

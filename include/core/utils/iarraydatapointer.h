@@ -181,7 +181,7 @@ public:
         // ### optimize me: there may be cases when moving is not obligatory
         const xsizetype gap = this->freeSpaceAtBegin();
         if (this->d && !grows && gap) {
-            auto oldBegin = this->begin();
+            iterator oldBegin = this->begin();
             this->ptr -= gap;
             ::memmove(static_cast<void *>(this->begin()), static_cast<void *>(oldBegin),
                       this->size * sizeof(T));
@@ -232,7 +232,7 @@ public:
         IX_ASSERT(!this->isShared());
         IX_ASSERT(futureGrowth <= size_t(this->freeSpaceAtEnd()));
 
-        const auto oldBegin = this->begin();
+        const iterator oldBegin = this->begin();
         this->ptr += futureGrowth;
 
         // Note: move all elements!

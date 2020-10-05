@@ -996,7 +996,7 @@ int iRegularExpressionPrivate::captureIndexForName(iStringView name) const
     pcre2_pattern_info_16(compiledPattern, PCRE2_INFO_NAMEENTRYSIZE, &namedCapturingTableEntrySize);
 
     for (unsigned int i = 0; i < namedCapturingTableEntryCount; ++i) {
-        const auto currentNamedCapturingTableRow =
+        const char16_t* currentNamedCapturingTableRow =
                 reinterpret_cast<const char16_t *>(namedCapturingTable) + namedCapturingTableEntrySize * i;
 
         if (name == (currentNamedCapturingTableRow + 1)) {
@@ -1114,7 +1114,7 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
     pcre2_jit_stack_assign_16(matchContext, &itPcreCallback, IX_NULLPTR);
     pcre2_match_data_16 *matchData = pcre2_match_data_create_from_pattern_16(compiledPattern, IX_NULLPTR);
 
-    const ushort * const subjectUtf16 = priv->subject.utf16();
+    const xuint16 * const subjectUtf16 = priv->subject.utf16();
 
     int result;
 
@@ -1232,7 +1232,7 @@ iRegularExpressionMatch iRegularExpressionMatchPrivate::nextMatch() const
     IX_ASSERT(isValid);
     IX_ASSERT(hasMatch || hasPartialMatch);
 
-    auto nextPrivate = new iRegularExpressionMatchPrivate(regularExpression,
+    iRegularExpressionMatchPrivate* nextPrivate = new iRegularExpressionMatchPrivate(regularExpression,
                                                           subjectStorage,
                                                           subject,
                                                           matchType,
@@ -1425,8 +1425,8 @@ std::list<iString> iRegularExpression::namedCaptureGroups() const
 
     // namedCapturingTable will point to a table of
     // namedCapturingTableEntryCount entries, each one of which
-    // contains one ushort followed by the name, NUL terminated.
-    // The ushort is the numerical index of the name in the pattern.
+    // contains one xuint16 followed by the name, NUL terminated.
+    // The xuint16 is the numerical index of the name in the pattern.
     // The length of each entry is namedCapturingTableEntrySize.
     PCRE2_SPTR16 *namedCapturingTable;
     unsigned int namedCapturingTableEntryCount;
@@ -1440,7 +1440,7 @@ std::list<iString> iRegularExpression::namedCaptureGroups() const
     std::list<iString> result(d->capturingCount + 1);
 
     for (unsigned int i = 0; i < namedCapturingTableEntryCount; ++i) {
-        const auto currentNamedCapturingTableRow =
+        const char16_t* currentNamedCapturingTableRow =
                 reinterpret_cast<const char16_t *>(namedCapturingTable) + namedCapturingTableEntrySize * i;
 
         const int index = *currentNamedCapturingTableRow;
@@ -1480,7 +1480,7 @@ iString iRegularExpression::errorString() const
         do {
             errorString.resize(errorString.length() + 64);
             errorStringLength = pcre2_get_error_message_16(d->errorCode,
-                                                           reinterpret_cast<ushort *>(errorString.data()),
+                                                           reinterpret_cast<xuint16 *>(errorString.data()),
                                                            errorString.length());
         } while (errorStringLength < 0);
         errorString.resize(errorStringLength);
@@ -1519,7 +1519,7 @@ iRegularExpressionMatch iRegularExpression::match(const iString &subject,
                                                   MatchOptions matchOptions) const
 {
     d.data()->compilePattern();
-    auto priv = new iRegularExpressionMatchPrivate(*this,
+    iRegularExpressionMatchPrivate* priv = new iRegularExpressionMatchPrivate(*this,
                                                    subject,
                                                    iToStringViewIgnoringNull(subject),
                                                    matchType,
@@ -1550,7 +1550,7 @@ iRegularExpressionMatch iRegularExpression::match(iStringView subjectView,
                                                   MatchOptions matchOptions) const
 {
     d.data()->compilePattern();
-    auto priv = new iRegularExpressionMatchPrivate(*this,
+    iRegularExpressionMatchPrivate* priv = new iRegularExpressionMatchPrivate(*this,
                                                    iString(),
                                                    subjectView,
                                                    matchType,
@@ -1876,7 +1876,7 @@ iString iRegularExpression::wildcardToRegularExpression(iStringView pattern, Wil
 iRegularExpression iRegularExpression::fromWildcard(iStringView pattern, iShell::CaseSensitivity cs,
                                                     WildcardConversionOptions options)
 {
-    auto reOptions = cs == iShell::CaseSensitive ? iRegularExpression::NoPatternOption :
+    PatternOptions reOptions = cs == iShell::CaseSensitive ? iRegularExpression::NoPatternOption :
                                              iRegularExpression::CaseInsensitiveOption;
     return iRegularExpression(wildcardToRegularExpression(pattern, options), reOptions);
 }

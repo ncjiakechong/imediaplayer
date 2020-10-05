@@ -42,7 +42,7 @@ static inline size_t hash_internal(const iChar *p, size_t len, uint seed)
 
 size_t iKeyHashFunc::operator()(const iChar& key) const
 {
-    return std::hash<ushort>()(key.unicode());
+    return std::hash<xuint16>()(key.unicode());
 }
 
 size_t iKeyHashFunc::operator()(const iByteArray& key) const

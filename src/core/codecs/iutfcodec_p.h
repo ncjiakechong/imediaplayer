@@ -35,7 +35,7 @@ struct iUtf8BaseTraits
     static const int Error = -1;
     static const int EndOfString = -2;
 
-    static bool isValidCharacter(uint u)
+    static bool isValidCharacter(xuint32 u)
     { return int(u) >= 0; }
 
     static void appendByte(uchar *&ptr, uchar b)
@@ -50,29 +50,29 @@ struct iUtf8BaseTraits
     static void advanceByte(const uchar *&ptr, int n = 1)
     { ptr += n; }
 
-    static void appendUtf16(ushort *&ptr, ushort uc)
+    static void appendUtf16(xuint16 *&ptr, xuint16 uc)
     { *ptr++ = uc; }
 
-    static void appendUcs4(ushort *&ptr, uint uc)
+    static void appendUcs4(xuint16 *&ptr, xuint32 uc)
     {
         appendUtf16(ptr, iChar::highSurrogate(uc));
         appendUtf16(ptr, iChar::lowSurrogate(uc));
     }
 
-    static ushort peekUtf16(const ushort *ptr, int n = 0)
+    static xuint16 peekUtf16(const xuint16 *ptr, int n = 0)
     { return ptr[n]; }
 
-    static xptrdiff availableUtf16(const ushort *ptr, const ushort *end)
+    static xptrdiff availableUtf16(const xuint16 *ptr, const xuint16 *end)
     { return end - ptr; }
 
-    static void advanceUtf16(const ushort *&ptr, int n = 1)
+    static void advanceUtf16(const xuint16 *&ptr, int n = 1)
     { ptr += n; }
 
     // it's possible to output to UCS-4 too
-    static void appendUtf16(uint *&ptr, ushort uc)
+    static void appendUtf16(xuint32 *&ptr, xuint16 uc)
     { *ptr++ = uc; }
 
-    static void appendUcs4(uint *&ptr, uint uc)
+    static void appendUcs4(xuint32 *&ptr, xuint32 uc)
     { *ptr++ = uc; }
 };
 
@@ -88,7 +88,7 @@ namespace iUtf8Functions
     /// if \a u is a high surrogate, Error if the next isn't a low one,
     /// EndOfString if we run into the end of the string.
     template <typename Traits, typename OutputPtr, typename InputPtr> inline
-    int toUtf8(ushort u, OutputPtr &dst, InputPtr &src, InputPtr end)
+    int toUtf8(xuint16 u, OutputPtr &dst, InputPtr &src, InputPtr end)
     {
         if (!Traits::skipAsciiHandling && u < 0x80) {
             // U+0000 to U+007F (US-ASCII) - one byte
@@ -112,14 +112,14 @@ namespace iUtf8Functions
                 if (Traits::availableUtf16(src, end) == 0)
                     return Traits::EndOfString;
 
-                ushort low = Traits::peekUtf16(src);
+                xuint16 low = Traits::peekUtf16(src);
                 if (!iChar::isHighSurrogate(u))
                     return Traits::Error;
                 if (!iChar::isLowSurrogate(low))
                     return Traits::Error;
 
                 Traits::advanceUtf16(src);
-                uint ucs4 = iChar::surrogateToUcs4(u, low);
+                xuint32 ucs4 = iChar::surrogateToUcs4(u, low);
 
                 if (!Traits::allowNonCharacters && iChar::isNonCharacter(ucs4))
                     return Traits::Error;
@@ -131,7 +131,7 @@ namespace iUtf8Functions
                 Traits::appendByte(dst, 0x80 | (uchar(ucs4 >> 12) & 0x3f));
 
                 // for the rest of the bytes
-                u = ushort(ucs4);
+                u = xuint16(ucs4);
             }
 
             // second to last byte
@@ -154,8 +154,8 @@ namespace iUtf8Functions
     xsizetype fromUtf8(uchar b, OutputPtr &dst, InputPtr &src, InputPtr end)
     {
         xsizetype charsNeeded;
-        uint min_uc;
-        uint uc;
+        xuint32 min_uc;
+        xuint32 uc;
 
         if (!Traits::skipAsciiHandling && b < 0x80) {
             // US-ASCII
@@ -235,7 +235,7 @@ namespace iUtf8Functions
         if (!iChar::requiresSurrogates(uc)) {
             // UTF-8 decoded and no surrogates are required
             // detach if necessary
-            Traits::appendUtf16(dst, ushort(uc));
+            Traits::appendUtf16(dst, xuint16(uc));
         } else {
             // UTF-8 decoded to something that requires a surrogate pair
             Traits::appendUcs4(dst, uc);
