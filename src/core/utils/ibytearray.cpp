@@ -2696,10 +2696,10 @@ static iByteArray toCase_template(T &input, uchar (*lookup)(uchar))
     }
 
     if (firstBad == e)
-        return std::move(input);
+        return input;
 
     // transform the rest
-    iByteArray s = std::move(input);    // will copy if T is const iByteArray
+    iByteArray s = input;    // will copy if T is const iByteArray
     char *b = s.begin();            // will detach if necessary
     char *p = b + (firstBad - orig_begin);
     e = b + s.size();
@@ -4041,7 +4041,7 @@ static FromBase64Result fromBase64Encoding(const iByteArray &base64, iByteArray:
 iByteArray iByteArray::fromBase64(const iByteArray &base64, Base64Options options)
 {
     if (FromBase64Result result = fromBase64Encoding(base64, options))
-        return std::move(result.decoded);
+        return result.decoded;
     return iByteArray();
 }
 

@@ -2141,16 +2141,6 @@ iDateTime::iDateTime(const iDateTime &other)
 }
 
 /*!
-    \since 5.8
-    Moves the content of the temporary \a other datetime to this object and
-    leaves \a other in an unspecified (but proper) state.
-*/
-iDateTime::iDateTime(iDateTime &&other)
-    : d(std::move(other.d))
-{
-}
-
-/*!
     Destroys the datetime.
 */
 iDateTime::~iDateTime()
