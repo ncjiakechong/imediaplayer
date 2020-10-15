@@ -22,9 +22,9 @@
 
 #include "igstutils_p.h"
 
-template<typename T, int N> static int lengthOf(const T (&)[N]) { return N; }
-
 namespace iShell {
+
+template<typename T, int N> static int lengthOf(const T (&)[N]) { return N; }
 
 //internal
 static void addTagToMap(const GstTagList *list,

@@ -204,7 +204,7 @@ static gint compare_plugin_func(const void *item1, const void *item2)
 
 GList *iGstCodecsInfo::elementFactories(ElementType elementType) const
 {
-#if GST_CHECK_VERSION(0,10,31)
+    #if GST_CHECK_VERSION(0,10,31)
     GstElementFactoryListType gstElementType = 0;
     switch (elementType) {
     case AudioEncoder:
@@ -228,13 +228,13 @@ GList *iGstCodecsInfo::elementFactories(ElementType elementType) const
     }
 
     return list;
-#else
+    #else
     GList *result = gst_registry_feature_filter(gst_registry_get_default(),
                                                 element_filter,
                                                 FALSE, &elementType);
     result = g_list_sort(result, compare_plugin_func);
     return result;
-#endif
+    #endif
 }
 
 } // namespace iShell
