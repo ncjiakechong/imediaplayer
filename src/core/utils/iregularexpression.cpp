@@ -944,7 +944,13 @@ static pcre2_jit_stack_16 *ixPcreCallback(void *)
 }
 
 /*!
-    \internal
+    iRegularExpression internally uses a just in time compiler (JIT) to
+    optimize the execution of the matching algorithm. The JIT makes extensive
+    usage of self-modifying code, which can lead debugging tools such as
+    Valgrind to crash. You must enable all checks for self-modifying code if
+    you want to debug programs using iRegularExpression (for instance, Valgrind's
+    \c{--smc-check} command line option). The downside of enabling such checks
+    is that your program will run considerably slower.
 */
 static bool isJitEnabled()
 {

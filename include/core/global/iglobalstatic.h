@@ -28,23 +28,23 @@ enum GuardValues {
 // We don't know if this compiler supports thread-safe global statics
 // so use our own locked implementation
 
-#define IX_GLOBAL_STATIC_INTERNAL(ARGS)                                  \
-    inline Type *innerFunction()                          \
+#define IX_GLOBAL_STATIC_INTERNAL(ARGS)                                 \
+    inline Type *innerFunction()                                        \
     {                                                                   \
         static Type *d;                                                 \
-        static iMutex mutex;                                       \
-        int x = guard.value();                                    \
-        if (x >= IxGlobalStatic::Uninitialized) {           \
-            iScopedLock<iMutex> locker(mutex);                                \
-            if (guard.value() == IxGlobalStatic::Uninitialized) {        \
+        static iMutex mutex;                                            \
+        int x = guard.value();                                          \
+        if (x >= IxGlobalStatic::Uninitialized) {                       \
+            iScopedLock<iMutex> locker(mutex);                          \
+            if (guard.value() == IxGlobalStatic::Uninitialized) {       \
                 d = new Type ARGS;                                      \
                 static struct Cleanup {                                 \
                     ~Cleanup() {                                        \
                         delete d;                                       \
-                        guard = IxGlobalStatic::Destroyed;         \
+                        guard = IxGlobalStatic::Destroyed;              \
                     }                                                   \
                 } cleanup;                                              \
-                guard = IxGlobalStatic::Initialized;        \
+                guard = IxGlobalStatic::Initialized;                    \
             }                                                           \
         }                                                               \
         return d;                                                       \
@@ -72,17 +72,17 @@ struct iGlobalStatic
     }
 };
 
-#define IX_GLOBAL_STATIC_WITH_ARGS(TYPE, NAME, ARGS)                         \
+#define IX_GLOBAL_STATIC_WITH_ARGS(TYPE, NAME, ARGS)                        \
     namespace { namespace IX_GS_ ## NAME {                                  \
         typedef TYPE Type;                                                  \
         iAtomicCounter<int> guard = {iAtomicCounter<int>(IxGlobalStatic::Uninitialized)}; \
-        IX_GLOBAL_STATIC_INTERNAL(ARGS)                                      \
+        IX_GLOBAL_STATIC_INTERNAL(ARGS)                                     \
     } }                                                                     \
     static iGlobalStatic<TYPE,                                              \
                          IX_GS_ ## NAME::innerFunction,                     \
                          IX_GS_ ## NAME::guard> NAME;
 
-#define IX_GLOBAL_STATIC(TYPE, NAME)                                         \
+#define IX_GLOBAL_STATIC(TYPE, NAME)                                        \
     IX_GLOBAL_STATIC_WITH_ARGS(TYPE, NAME, ())
 
 } // namespace iShell

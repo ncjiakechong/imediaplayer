@@ -9,6 +9,7 @@ set (Source
     imediaobject.cpp
     imediatimerange.cpp
     playback/imediaplayer.cpp
+    plugins/imediapluginfactory.cpp
     plugins/gstreamer/igstappsrc.cpp
     plugins/gstreamer/igstcodecsinfo.cpp
     plugins/gstreamer/igstreameraudioprobecontrol.cpp

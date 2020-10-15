@@ -12,10 +12,7 @@
 #include <multimedia/playback/imediaplayer.h>
 #include <multimedia/controls/imediaplayercontrol.h>
 
-#include "plugins/gstreamer/igstutils_p.h"
-#include "plugins/gstreamer/igstreamerplayersession_p.h"
-#include "plugins/gstreamer/igstreamerplayercontrol_p.h"
-#include "plugins/gstreamer/igstreamerautorenderer.h"
+#include "plugins/imediapluginfactory.h"
 
 namespace iShell {
 
@@ -135,10 +132,10 @@ iMediaPlayer::iMediaPlayer(iObject *parent, iMediaPlayer::Flags flags)
     , m_hasStreamPlaybackFeature(false)
 {
     IX_UNUSED(flags);
-    iGstUtils::initializeGst();
 
-    m_control = new iGstreamerPlayerControl(new iGstreamerPlayerSession(this), this);
-    m_control->setVideoOutput(new iGstreamerAutoRenderer(this));
+    iMediaPluginFactory* factory = iMediaPluginFactory::instance();
+    m_control = factory->createControl(this);
+    m_control->setVideoOutput(factory->createVideoOutput(this));
 
     if (m_control != IX_NULLPTR) {
         connect(m_control, &iMediaPlayerControl::mediaChanged, this, &iMediaPlayer::currentMediaChanged);
