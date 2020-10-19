@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 project (imediaplayer)
 
 add_subdirectory(src/core)
+add_subdirectory(src/ipc)
 
 include(FindPkgConfig)
 pkg_check_modules(GST_PKG gstreamer-1.0)

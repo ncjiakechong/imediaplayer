@@ -75,7 +75,6 @@ public:
     bool testAndSet(ValueType expectedValue, ValueType newValue);
         /// Returns true if set success, false otherwise.
 
-
 private:
 #ifdef IX_HAVE_CXX11
     typedef std::atomic<ValueType> ImplType;

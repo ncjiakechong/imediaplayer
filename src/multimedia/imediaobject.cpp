@@ -119,12 +119,12 @@ iMediaObject::iMediaObject(iObject *parent)
     , m_notifyTimer(IX_NULLPTR)
 {
     m_notifyTimer.setInterval(1000);
-    connect(&m_notifyTimer, &iTimer::timeout, this, &iMediaObject::_x_notify);
+    connect(&m_notifyTimer, &iTimer::timeout, this, &iMediaObject::timeoutNotify);
 
     setupControls();
 }
 
-void iMediaObject::_x_notify()
+void iMediaObject::timeoutNotify()
 {
     for (std::unordered_set<iString, iKeyHashFunc>::const_iterator it = m_notifyProperties.cbegin(); it != m_notifyProperties.cend(); ++it) {
         const iMetaObject* mo = metaObject();

@@ -56,7 +56,7 @@ protected:
 
 private:
     void setupControls();
-    void _x_notify();
+    void timeoutNotify();
 
     iTimer m_notifyTimer;
     std::unordered_set<iString, iKeyHashFunc> m_notifyProperties;
