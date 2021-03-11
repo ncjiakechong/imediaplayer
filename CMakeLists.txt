@@ -9,7 +9,7 @@ add_subdirectory(src/ipc)
 
 include(FindPkgConfig)
 pkg_check_modules(GST_PKG gstreamer-1.0)
-if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LIBRARIES)
+if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LDFLAGS)
     add_subdirectory(src/multimedia)
 endif()
 

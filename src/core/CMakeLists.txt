@@ -56,11 +56,11 @@ set (ComSource
 find_package(PkgConfig)
 
 pkg_check_modules(PCRE2_PKG libpcre2-16)
-if (DEFINED PCRE2_PKG_INCLUDE_DIRS AND DEFINED PCRE2_PKG_LIBRARIES)
+if (DEFINED PCRE2_PKG_INCLUDE_DIRS AND DEFINED PCRE2_PKG_LDFLAGS)
 add_definitions(-DIBUILD_HAVE_PCRE2)
 endif ()
 
-set(Depend_Libs ${PCRE2_PKG_LIBRARIES})
+set(Depend_Libs ${PCRE2_PKG_LDFLAGS})
 
 if(UNIX)
 	set (OsSource
@@ -69,12 +69,12 @@ if(UNIX)
 	
 	pkg_check_modules(GLIB_PKG glib-2.0)
 
-	if (DEFINED GLIB_PKG_INCLUDE_DIRS AND DEFINED GLIB_PKG_LIBRARIES)
+	if (DEFINED GLIB_PKG_INCLUDE_DIRS AND DEFINED GLIB_PKG_LDFLAGS)
 	add_definitions(-DIBUILD_HAVE_GLIB)
 	list(APPEND OsSource thread/ieventdispatcher_glib.cpp)
 	endif ()
 
-	list(APPEND Depend_Libs ${GLIB_PKG_LIBRARIES} pthread rt)
+	list(APPEND Depend_Libs ${GLIB_PKG_LDFLAGS} pthread)
 
 elseif(WIN32)
 	set (OsSource
@@ -85,7 +85,7 @@ elseif(WIN32)
 
 endif()
 
-include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../../include ${GLIB_PKG_INCLUDE_DIRS} $(PCRE2_PKG_INCLUDE_DIRS) ${USER32_INCLUDE_DIRS})
+include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../../include ${GLIB_PKG_INCLUDE_DIRS} ${PCRE2_PKG_INCLUDE_DIRS} ${USER32_INCLUDE_DIRS})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 add_library(${PROJECT_NAME} SHARED ${ComSource} ${OsSource})

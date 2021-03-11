@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #endif
 
 
