@@ -13,13 +13,134 @@
 
 #include <algorithm>
 
-/** \file
- * GCC attribute macros */
+/*
+   The operating system, must be one of: (IX_OS_x)
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__) || defined(WIN64) || defined(_WIN64) || defined(__WIN64__)
-#  define IX_OS_WIN
+     DARWIN   - Any Darwin system (macOS, iOS, watchOS, tvOS)
+     MACOS    - macOS
+     IOS      - iOS
+     WATCHOS  - watchOS
+     TVOS     - tvOS
+     WIN32    - Win32 (Windows 2000/XP/Vista/7 and Windows Server 2003/2008)
+     CYGWIN   - Cygwin
+     SOLARIS  - Sun Solaris
+     HPUX     - HP-UX
+     LINUX    - Linux [has variants]
+     FREEBSD  - FreeBSD [has variants]
+     NETBSD   - NetBSD
+     OPENBSD  - OpenBSD
+     INTERIX  - Interix
+     AIX      - AIX
+     HURD     - GNU Hurd
+     QNX      - QNX [has variants]
+     QNX6     - QNX RTP 6.1
+     LYNX     - LynxOS
+     BSD4     - Any BSD 4.4 system
+     UNIX     - Any UNIX BSD/SYSV system
+     ANDROID  - Android platform
+     HAIKU    - Haiku
+     WEBOS    - LG WebOS
+
+   The following operating systems have variants:
+     LINUX    - both IX_OS_LINUX and IX_OS_ANDROID are defined when building for Android
+              - only IX_OS_LINUX is defined if building for other Linux systems
+     MACOS    - both IX_OS_BSD4 and IX_OS_IOS are defined when building for iOS
+              - both IX_OS_BSD4 and IX_OS_MACOS are defined when building for macOS
+     FREEBSD  - IX_OS_FREEBSD is defined only when building for FreeBSD with a BSD userland
+              - IX_OS_FREEBSD_KERNEL is always defined on FreeBSD, even if the userland is from GNU
+*/
+
+#if defined(__APPLE__) && (defined(__GNUC__) || defined(__xlC__) || defined(__xlc__))
+#  include <TargetConditionals.h>
+#  if defined(TARGET_OS_MAC) && TARGET_OS_MAC
+#    define IX_OS_DARWIN
+#    define IX_OS_BSD4
+#    ifdef __LP64__
+#      define IX_OS_DARWIN64
+#    else
+#      define IX_OS_DARWIN32
+#    endif
+#    if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+#      define IX_PLATFORM_UIKIT
+#      if defined(TARGET_OS_WATCH) && TARGET_OS_WATCH
+#        define IX_OS_WATCHOS
+#      elif defined(TARGET_OS_TV) && TARGET_OS_TV
+#        define IX_OS_TVOS
+#      else
+#        // TARGET_OS_IOS is only available in newer SDKs,
+#        // so assume any other iOS-based platform is iOS for now
+#        define IX_OS_IOS
+#      endif
+#    else
+#      // TARGET_OS_OSX is only available in newer SDKs,
+#      // so assume any non iOS-based platform is macOS for now
+#      define IX_OS_MACOS
+#    endif
+#  else
+#    error "we has not been ported to this Apple platform"
+#  endif
+#elif defined(__WEBOS__)
+#  define IX_OS_WEBOS
+#  define IX_OS_LINUX
+#elif defined(__ANDROID__) || defined(ANDROID)
+#  define IX_OS_ANDROID
+#  define IX_OS_LINUX
+#elif defined(__CYGWIN__)
+#  define IX_OS_CYGWIN
+#elif !defined(SAG_COM) && (!defined(WINAPI_FAMILY) || WINAPI_FAMILY==WINAPI_FAMILY_DESKTOP_APP) && (defined(WIN64) || defined(_WIN64) || defined(__WIN64__))
+#  define IX_OS_WIN32
+#  define IX_OS_WIN64
+#elif !defined(SAG_COM) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__))
+#    define IX_OS_WIN32
+#elif defined(__sun) || defined(sun)
+#  define IX_OS_SOLARIS
+#elif defined(hpux) || defined(__hpux)
+#  define IX_OS_HPUX
+#elif defined(__native_client__)
+#  define IX_OS_NACL
+#elif defined(__EMSCRIPTEN__)
+#  define IX_OS_WASM
 #elif defined(__linux__) || defined(__linux)
 #  define IX_OS_LINUX
+#elif defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
+#  ifndef __FreeBSD_kernel__
+#    define IX_OS_FREEBSD
+#  endif
+#  define IX_OS_FREEBSD_KERNEL
+#  define IX_OS_BSD4
+#elif defined(__NetBSD__)
+#  define IX_OS_NETBSD
+#  define IX_OS_BSD4
+#elif defined(__OpenBSD__)
+#  define IX_OS_OPENBSD
+#  define IX_OS_BSD4
+#elif defined(__INTERIX)
+#  define IX_OS_INTERIX
+#  define IX_OS_BSD4
+#elif defined(_AIX)
+#  define IX_OS_AIX
+#elif defined(__Lynx__)
+#  define IX_OS_LYNX
+#elif defined(__GNU__)
+#  define IX_OS_HURD
+#elif defined(__QNXNTO__)
+#  define IX_OS_QNX
+#elif defined(__INTEGRITY)
+#  define IX_OS_INTEGRITY
+#elif defined(__rtems__)
+#  define IX_OS_RTEMS
+#elif defined(VXWORKS) /* there is no "real" VxWorks define - this has to be set in the mkspec! */
+#  define IX_OS_VXWORKS
+#elif defined(__HAIKU__)
+#  define IX_OS_HAIKU
+#elif defined(__MAKEDEPEND__)
+#else
+#  error "we has not been ported to this OS"
+#endif
+
+#if defined(IX_OS_WIN32) || defined(IX_OS_WIN64)
+#  define IX_OS_WINDOWS
+#  define IX_OS_WIN
 #endif
 
 #if defined(IX_OS_WIN)
@@ -28,9 +149,22 @@
 #  define IX_OS_UNIX
 #endif
 
-#if defined(IX_OS_WIN)
-#define IX_HAVE_CXX11
-#elif (__cplusplus >= 201103L)
+// Compatibility synonyms
+#ifdef IX_OS_DARWIN
+#define IX_OS_MAC
+#endif
+#ifdef IX_OS_DARWIN32
+#define IX_OS_MAC32
+#endif
+#ifdef IX_OS_DARWIN64
+#define IX_OS_MAC64
+#endif
+#ifdef IX_OS_MACOS
+#define IX_OS_MACX
+#define IX_OS_OSX
+#endif
+
+#if (__cplusplus >= 201103L)
 #define IX_HAVE_CXX11
 #endif
 

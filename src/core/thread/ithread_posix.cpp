@@ -138,11 +138,14 @@ void iThreadData::clearCurrentThreadData()
 // sched_priority is OUT only
 static bool calculateUnixPriority(int priority, int *sched_policy, int *sched_priority)
 {
+#ifdef SCHED_IDLE
     if (priority == iThread::IdlePriority) {
         *sched_policy = SCHED_IDLE;
         *sched_priority = 0;
         return true;
     }
+#endif
+
     const int lowestPriority = iThread::LowestPriority;
     const int highestPriority = iThread::TimeCriticalPriority;
 
@@ -192,6 +195,7 @@ void iThreadImpl::setPriority()
     param.sched_priority = prio;
     int status = pthread_setschedparam((pthread_t)m_thread->m_data->threadHd.value(), sched_policy, &param);
 
+#ifdef SCHED_IDLE
     // were we trying to set to idle priority and failed?
     if (status == -1 && sched_policy == SCHED_IDLE && errno == EINVAL) {
         // reset to lowest priority possible
@@ -199,6 +203,7 @@ void iThreadImpl::setPriority()
         param.sched_priority = sched_get_priority_min(sched_policy);
         pthread_setschedparam((pthread_t)m_thread->m_data->threadHd.value(), sched_policy, &param);
     }
+#endif
 }
 
 void iThreadImpl::internalThreadFunc()
@@ -221,7 +226,11 @@ void iThreadImpl::internalThreadFunc()
         data->dispatcher.load()->startingUp();
 
     if (!thread->objectName().isEmpty()) {
+        #if defined(IX_OS_MAC)
+        pthread_setname_np(thread->objectName().toUtf8().data());
+        #else
         pthread_setname_np(pthread_self(), thread->objectName().toUtf8().data());
+        #endif
     }
 
     thread->run();
@@ -341,16 +350,28 @@ xintptr iThread::currentThreadHd()
 
 int iThread::currentThreadId()
 {
-#ifdef IX_OS_WIN
-    return (int)GetCurrentThreadId();
-#else
-    return (int)syscall(__NR_gettid);
-#endif
+    static __thread uint64_t id = 0;
+    if (id != 0) 
+        return id;
+
+    #ifdef IX_OS_WIN
+    id = (int)GetCurrentThreadId();
+    #elif defined(IX_OS_MAC)
+    pthread_threadid_np(NULL, &id);
+    #else
+    id = (int)syscall(SYS_gettid, NULL);
+    #endif
+
+    return id;
 }
 
 void iThread::yieldCurrentThread()
 {
+    #if defined(IX_OS_MAC)
+    pthread_yield_np();
+    #else
     pthread_yield();
+    #endif
 }
 
 } // namespace iShell

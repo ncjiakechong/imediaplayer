@@ -14,7 +14,7 @@ set (Depend_Libs icore)
 
 include(FindPkgConfig)
 pkg_check_modules(GST_PKG gstreamer-1.0)
-if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LIBRARIES)
+if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LDFLAGS)
     add_definitions(-DITEST_PLAYER)
     list(APPEND Source test_player.cpp)
     list(APPEND Depend_Libs imultimedia)
