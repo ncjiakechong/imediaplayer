@@ -373,7 +373,7 @@ bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
     }
 
     if (m_appSrc) {
-        auto it = gst_bin_iterate_sinks(GST_BIN(pipeline));
+        auto it = gst_bin_iterate_sources(GST_BIN(pipeline));
         #if GST_CHECK_VERSION(1,0,0)
         GValue data = { 0, 0 };
         while (gst_iterator_next (it, &data) == GST_ITERATOR_OK) {
@@ -382,7 +382,7 @@ bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
         GstElement *child = IX_NULLPTR;
         while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
         #endif
-            if (iLatin1String(GST_OBJECT_NAME(child)) == iLatin1String("appsrc")) {
+            if (iLatin1String(ix_gst_element_get_factory_name(child)) == iLatin1String("appsrc")) {
                 m_appSrc->setup(child);
                 break;
             }
@@ -1619,6 +1619,11 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
         self->m_sourceType = RTSPSrc;
         self->m_isLiveSource = true;
         g_object_set(G_OBJECT(source), "buffer-mode", 1, IX_NULLPTR);
+    } else if (istrcmp(G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)), "GstAppSrc") == 0 
+                && self->m_appSrc != IX_NULLPTR
+                && self->m_appSrc->stream() != IX_NULLPTR) {
+        self->m_sourceType = APPSrc;
+        self->m_isLiveSource = self->m_appSrc->stream()->isSequential();
     } else {
         self->m_sourceType = UnknownSrc;
         self->m_isLiveSource = gst_base_src_is_live(GST_BASE_SRC(source));
