@@ -625,8 +625,7 @@ bool iObject::disconnectHelper(const _iConnection &conn)
 
 bool iObject::disconnectImpl(const _iConnection& conn)
 {
-    if ((IX_NULLPTR == conn._sender)
-        || ((IX_NULLPTR == conn._receiver) && (IX_NULLPTR != conn._slot))) {
+    if (IX_NULLPTR == conn._sender) {
         ilog_warn("invalid null parameter");
         return false;
     }
