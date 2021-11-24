@@ -113,11 +113,10 @@ public:
     }
 
     /// Disconnect signal/slot link
-    template <typename Func1, typename Func2>
-    static inline bool disconnect(const typename FunctionPointer<typename FunctionHelper<Func1>::Function>::Object *sender, Func1 signal,
-                                  const typename FunctionPointer<typename FunctionHelper<Func2>::Function>::Object *receiver, Func2 slot) {
-        typedef FunctionPointer<typename FunctionHelper<Func1>::Function> SignalType;
-        typedef FunctionPointer<typename FunctionHelper<Func2>::Function> SlotType;
+    template <typename Obj1, typename Func1, typename Obj2, typename Func2>
+    static inline bool disconnect(Obj1 sender, Func1 signal, Obj2 receiver, Func2 slot) {
+        typedef FunctionPointer<typename FunctionHelper<Obj1, Func1>::Function> SignalType;
+        typedef FunctionPointer<typename FunctionHelper<Obj2, Func2>::Function> SlotType;
 
         // compilation error if the arguments does not match.
         // The slot requires more arguments than the signal provides.
@@ -127,8 +126,8 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iConnectionHelper<typename SignalType::Function, typename SlotType::Function> conn(sender, FunctionHelper<Func1>::safeFunc(signal),
-                                                                                            receiver, FunctionHelper<Func2>::safeFunc(slot),
+        _iConnectionHelper<typename SignalType::Function, typename SlotType::Function> conn(sender, FunctionHelper<Obj1, Func1>::safeFunc(signal),
+                                                                                            receiver, FunctionHelper<Obj2, Func2>::safeFunc(slot),
                                                                                             AutoConnection);
         return disconnectImpl(conn);
     }

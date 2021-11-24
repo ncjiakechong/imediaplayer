@@ -1091,12 +1091,19 @@ struct _iFuncRequiresRet<void>
 
 typedef void (iObject::*_iMemberFunction)();
 
-template<typename Func> struct FunctionHelper
+template<typename Obj, typename Func> struct FunctionHelper
 {
     typedef Func Function;
     static Function safeFunc(Function f) { return f; }
 };
-template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR) >
+template<typename Obj> struct FunctionHelper<Obj, IX_TYPEOF(IX_NULLPTR) >
+{
+    typedef typename class_wrapper<Obj>::CLASSTYPE _Object;
+    typedef void (_Object::*_memberfunction)();
+    typedef _memberfunction Function;
+    static Function safeFunc(IX_TYPEOF(IX_NULLPTR)) { return IX_NULLPTR; }
+};
+template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR), IX_TYPEOF(IX_NULLPTR)>
 {
     typedef _iMemberFunction Function;
     static Function safeFunc(IX_TYPEOF(IX_NULLPTR)) { return IX_NULLPTR; }
@@ -1142,7 +1149,7 @@ protected:
 
     // The next pointer for the singly-linked ConnectionList
     _iConnection* _nextConnectionList;
-    //senders linked list
+    // senders linked list
     _iConnection* _next;
     _iConnection** _prev;
 
@@ -1153,7 +1160,8 @@ protected:
     ArgumentWraper _argWraper;
     ArgumentDeleter _argDeleter;
     _iMemberFunction _signal;
-    void* const * _slot;
+    // Point to _func of subclass, NULL indicate invalid value
+    void* const* _slot;
     const void* _slotObj;
 
     _iConnection();
@@ -1173,12 +1181,10 @@ class _iConnectionHelper : public _iConnection
     typedef FunctionPointer<SignalFunc> SignalFuncType;
     typedef FunctionPointer<SlotFunc> SlotFuncType;
     typedef typename SlotFuncType::Object SlotObject;
+    const SlotObject* _funcObj;
     SlotFunc _func;
-    const SlotObject* _func_obj;
 
     static _iConnection* impl(int which, const _iConnection* _this, const _iConnection* _other, void* args, void* ret) {
-
-
         switch (which) {
         case Destroy:
             delete static_cast<const _iConnectionHelper*>(_this);
@@ -1188,26 +1194,27 @@ class _iConnectionHelper : public _iConnection
             {
             const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
             const _iConnectionHelper* _otherObj = static_cast<const _iConnectionHelper*>(_other);
-            // hack for campare conn valid
+            // hack code to campare connection valid
             if (_this == _other) {
                 void* const * _signalFunc = reinterpret_cast<void* const *>(&_thisObj->_signal);
                 if (*reinterpret_cast<const SlotFunc *>(_signalFunc) == _thisObj->_func) {
                     return const_cast<_iConnection*>(_this);
                 }
-            } else if ((_otherObj->_slotObj == _thisObj->_slotObj) && (_otherObj->_slot == _thisObj->_slot) 
-                && (*reinterpret_cast<const SlotFunc *>(_otherObj->_slot) == _thisObj->_func)) {
-               return const_cast<_iConnection*>(_this);
-            } else if (((IX_NULLPTR == _otherObj->_slotObj) || (IX_NULLPTR == _thisObj->_slotObj))
-                && (_otherObj->_slot == _thisObj->_slot) 
-                && (*reinterpret_cast<const SlotFunc *>(_otherObj->_slot) == _thisObj->_func)) {
-               return const_cast<_iConnection*>(_this);
-            } else if (((IX_NULLPTR == _otherObj->_slot) || (IX_NULLPTR == _thisObj->_slot))
-                 && (_otherObj->_slotObj == _thisObj->_slotObj)) {
-               return const_cast<_iConnection*>(_this);
             } else if ((IX_NULLPTR == _otherObj->_slot) && (IX_NULLPTR == _otherObj->_slotObj)) {
-               return const_cast<_iConnection*>(_this);
+                return const_cast<_iConnection*>(_this);
             } else if ((IX_NULLPTR == _thisObj->_slot) && (IX_NULLPTR == _thisObj->_slotObj)) {
-               return const_cast<_iConnection*>(_this);
+                return const_cast<_iConnection*>(_this);
+            } else if ((IX_NULLPTR != _otherObj->_slot)
+                && (_otherObj->_slotObj == _thisObj->_slotObj)
+                && (*reinterpret_cast<const SlotFunc *>(_otherObj->_slot) == _thisObj->_func)) {
+                return const_cast<_iConnection*>(_this);
+            } else if ((IX_NULLPTR != _otherObj->_slot)
+                && (*reinterpret_cast<const SlotFunc *>(_otherObj->_slot) == _thisObj->_func)
+                && ((IX_NULLPTR == _otherObj->_slotObj) || (IX_NULLPTR == _thisObj->_slotObj))) {
+                return const_cast<_iConnection*>(_this);
+            } else if ((_otherObj->_slotObj == _thisObj->_slotObj)
+                && ((IX_NULLPTR == _otherObj->_slot) || (IX_NULLPTR == _thisObj->_slot))) {
+                return const_cast<_iConnection*>(_this);
             } else {}
             }
             break;
@@ -1216,14 +1223,14 @@ class _iConnectionHelper : public _iConnection
             {
             const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
             SlotFuncType::template call<typename SignalFuncType::Arguments, typename SignalFuncType::ReturnType>(
-                        _thisObj->_func, _thisObj->_func_obj, args, ret);
+                        _thisObj->_func, _thisObj->_funcObj, args, ret);
             }
             break;
 
         case Clone:
             {
             const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
-            _iConnectionHelper* _newObj = new _iConnectionHelper(_thisObj->_type, _thisObj->_func, _thisObj->_func_obj);
+            _iConnectionHelper* _newObj = new _iConnectionHelper(_thisObj->_type, _thisObj->_funcObj, _thisObj->_func);
             _newObj->_slot = _thisObj->_slot;
             _newObj->_slotObj = _thisObj->_slotObj;
             _newObj->_receiver = _thisObj->_receiver;
@@ -1246,7 +1253,6 @@ class _iConnectionHelper : public _iConnection
             _receiver = slotObj;
         } else {
             _receiver = _sender;
-            _type = DirectConnection;
         }
     }
 
@@ -1254,17 +1260,16 @@ class _iConnectionHelper : public _iConnection
         _slot = slot;
         _slotObj = slotObj;
         _receiver = _sender;
-        _type = DirectConnection;
     }
 
-    _iConnectionHelper(ConnectionType type, SlotFunc slot, const SlotObject* obj)
-        : _iConnection(&impl, type), _func(slot), _func_obj(obj) {}
+    _iConnectionHelper(ConnectionType type, const SlotObject* obj, SlotFunc slot)
+        : _iConnection(&impl, type), _funcObj(obj), _func(slot) {}
     
 public:
     _iConnectionHelper(const iObject* sender, SignalFunc signal, const SlotObject* slotObj, SlotFunc slot, ConnectionType type)
         : _iConnection(&impl, type)
-        , _func(slot)
-        , _func_obj(slotObj) {
+        , _funcObj(slotObj)
+        , _func(slot) {
         typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
 
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
