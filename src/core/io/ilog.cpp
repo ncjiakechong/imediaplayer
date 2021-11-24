@@ -203,7 +203,7 @@ void iLogger::append(bool value)
 
     char* buff = m_buff.data();
     value_len = snprintf(buff + backup_size, m_buff.capacity() - backup_size,
-             "%hhd", static_cast<int>(value));
+             "%hhd", static_cast<char>(value));
     m_buff.resize(backup_size + value_len);
 }
 
