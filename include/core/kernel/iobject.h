@@ -108,7 +108,7 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iConnectionHelper<Func1, Func2> conn(sender, signal, sender, slot, DirectConnection);
+        _iConnectionHelper<Func1, Func2> conn(sender, signal, IX_NULLPTR, slot, DirectConnection);
         return connectImpl(conn);
     }
 

@@ -317,10 +317,36 @@ public:
     }
 };
 
+class TestFunctionSlot
+{
+public:
+   inline void tst_slot_int0() {
+        ilog_debug(this, " function tst_slot_int0");
+    }
+
+    inline void tst_slot_int1(int arg1) {
+        ilog_debug(this, " function tst_slot_int1 arg1 ", arg1);
+    }
+
+    inline void tst_slot_int2(int arg1, int arg2) {
+        ilog_debug(this, " function tst_slot_int2 arg1 ", arg1, ", arg2 ", arg2);
+    }
+
+    inline int tst_slot_int3(int arg1, int arg2, int arg3) {
+        ilog_debug(this, " function tst_slot_int3 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3);
+        return arg1;
+    }
+
+    inline void tst_slot_int4(int arg1, int arg2, int arg3, int arg4) {
+        ilog_debug(this, " function tst_slot_int4 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4);
+    }
+};
+
 int test_object(void)
 {
     TestSignals tst_sig;
     TestObject tst_obj;
+    TestFunctionSlot tst_funcSlot;
     tst_sig.emit_signals();
 
     iRegisterConverter<TestObject*, iObject*>();
@@ -329,6 +355,8 @@ int test_object(void)
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_obj, &TestObject::tst_slot_int0);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_obj, &TestObject::tst_slot_return);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_obj, &TestObject::tst_slot_int0, QueuedConnection);
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_funcSlot, &TestFunctionSlot::tst_slot_int0);
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_funcSlot, &TestFunctionSlot::tst_slot_int0, QueuedConnection);
 
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, &tst_obj, &TestObject::tst_slot_return);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, &tst_obj, &TestObject::tst_slot_int0);
@@ -576,9 +604,23 @@ int test_object(void)
 
     ilog_debug("-------------slot disconnect");
     TestObject* tst_sharedObj_6 = new TestObject();
-    iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_6, &TestObject::tst_slot_int0);
-    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_6, &TestObject::tst_slot_int0);
+    tst_sharedObj_6->slot_disconnect = 0;
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_6, &TestObject::tst_slot_disconnect);
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_6, &TestObject::tst_slot_disconnect);
+    IEMIT tst_sig.tst_sig_int0();
+    IX_ASSERT(0 == tst_sharedObj_6->slot_disconnect);
     delete tst_sharedObj_6;
+
+    TestObject* tst_sharedObj_6_1 = new TestObject();
+    tst_sharedObj_6_1->slot_disconnect = 0;
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_6_1, &TestObject::tst_slot_disconnect);
+    IEMIT tst_sig.tst_sig_int0();
+    IX_ASSERT(0 < tst_sharedObj_6_1->slot_disconnect);
+    tst_sharedObj_6_1->slot_disconnect = 0;
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, IX_NULLPTR, &TestObject::tst_slot_disconnect);
+    IEMIT tst_sig.tst_sig_int0();
+    IX_ASSERT(0 == tst_sharedObj_6_1->slot_disconnect);
+    delete tst_sharedObj_6_1;
 
     TestObject* tst_sharedObj_7 = new TestObject();
     tst_sharedObj_7->slot_disconnect = 0;

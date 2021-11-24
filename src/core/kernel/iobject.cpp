@@ -514,7 +514,7 @@ bool iObject::connectImpl(const _iConnection& conn)
         return false;
     }
 
-    if (conn.compare(reinterpret_cast<void* const *>(&conn._signal))) {
+    if (conn.compare(&conn)) {
         ilog_warn("invalid argument for connecting same signal/slot");
         return false;
     }
@@ -531,8 +531,7 @@ bool iObject::connectImpl(const _iConnection& conn)
             _iConnection* c2 = it->second.first;
 
             while (c2) {
-                if ((c2->_receiver == r)
-                    && conn.compare(c2->_slot))
+                if (conn.compare(c2))
                     return false;
 
                 c2 = c2->_nextConnectionList;
@@ -596,9 +595,7 @@ bool iObject::disconnectHelper(const _iConnection &conn)
 
         if (c->_receiver
             && !c->_orphaned
-            && ((IX_NULLPTR == conn._receiver)
-                || ((c->_receiver == conn._receiver)
-                    && ((IX_NULLPTR == conn._slot) || (c->compare(conn._slot)))))) {
+            && c->compare(&conn)) {
             bool needToUnlock = false;
             iMutex *receiverMutex = IX_NULLPTR;
             if (c->_receiver) {
@@ -1010,6 +1007,7 @@ _iConnection::_iConnection(ImplFn impl, ConnectionType type)
     , _argDeleter(IX_NULLPTR)
     , _signal(IX_NULLPTR)
     , _slot(IX_NULLPTR)
+    , _slotObj(IX_NULLPTR)
 {
 }
 
@@ -1030,7 +1028,7 @@ void _iConnection::deref()
     --_ref;
     if (0 == _ref) {
         IX_ASSERT(_impl);
-        _impl(Destroy, this, IX_NULLPTR, _slot, IX_NULLPTR, IX_NULLPTR);
+        _impl(Destroy, this, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
     }
 }
 
@@ -1040,19 +1038,13 @@ void _iConnection::setSignal(const iObject* sender, _iMemberFunction signal)
     _signal = signal;
 }
 
-void _iConnection::setSlot(const iObject* receiver, void * const *slot)
-{
-    _receiver = receiver;
-    _slot = slot;
-}
-
 void _iConnection::emits(void* args, void* ret) const
 {
     if (_orphaned || (IX_NULLPTR == _impl)) {
         return;
     }
 
-    _impl(Call, this, _receiver, _slot, args, ret);
+    _impl(Call, this, IX_NULLPTR, args, ret);
 }
 
 size_t iConKeyHashFunc::operator()(const _iMemberFunction& key) const
