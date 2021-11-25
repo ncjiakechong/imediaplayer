@@ -49,7 +49,7 @@ public:
 
     }
 
-    void testSingleShot() {
+    static void testSingleShot() {
         static int index = 0;
         ++index;
         IX_ASSERT(index <= 1);
