@@ -256,499 +256,7 @@ template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgu
 
 template<typename Func, int N> struct FunctionPointer { enum {ArgumentCount = -1, IsPointerToMemberFunction = false}; };
 
-// hack code for lambda functor
-template<typename Func> struct FunctionPointer<Func, 0>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void*, void* ret) {
-        f(), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 1>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 1, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 2>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 2, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 3>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 3, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 4>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 4, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 5>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 5, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 6>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 6, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 7>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 7, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-          tArgs->template get<6>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 8>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 8, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-          tArgs->template get<6>(), tArgs->template get<7>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 9>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 9, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-          tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>()), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Func> struct FunctionPointer<Func, 10>
-{
-    typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 10, IsPointerToMemberFunction = false};
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-          tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>(),
-          tArgs->template get<9>()), ApplyReturnValue<R>(ret);
-    }
-};
-
-// template for NonMember function
-template<typename Ret, int N> struct FunctionPointer<Ret (*) (), N>
-{
-    typedef void Object;
-    typedef iTuple<iNullTypeList> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) ();
-    enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void*) {
-        return IX_NULLPTR;
-    }
-
-    static void freeArgs(void*) {
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void*, void* ret) {
-        f(), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, int N> struct FunctionPointer<Ret (*) (Arg1), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, int N> struct FunctionPointer<Ret (*) (Arg1, Arg2), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, int N>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2, Arg3> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2, Arg3);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, int N>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-                             tArgs->template get<3>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, int N>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-                             tArgs->template get<3>(), tArgs->template get<4>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-            static_cast<Arg5>(tArgs->template get<4>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, int N>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, int N>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-                             tArgs->template get<6>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-            static_cast<Arg7>(tArgs->template get<6>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, int N>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-                             tArgs->template get<6>(), tArgs->template get<7>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, int N>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-                             tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()),  static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
-            static_cast<Arg9>(tArgs->template get<8>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10, int N>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), N>
-{
-    typedef void Object;
-    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
-    typedef Ret ReturnType;
-    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
-    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
-
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-                             tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>(),
-                             tArgs->template get<9>());
-    }
-
-    static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
-    }
-
-    template <typename SignalArgs, typename R>
-    static void call(Function f, const Object*, void* args, void* ret) {
-        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
-
-        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
-            static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>())),
-            ApplyReturnValue<R>(ret);
-    }
-};
-
-template<class Obj, typename Ret, int N> struct FunctionPointer<Ret (Obj::*) (), N>
+template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), -1>
 {
     typedef Obj Object;
     typedef iTuple<iNullTypeList> Arguments;
@@ -768,7 +276,7 @@ template<class Obj, typename Ret, int N> struct FunctionPointer<Ret (Obj::*) (),
         (const_cast<Object*>(o)->*f)(), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, int N> struct FunctionPointer<Ret (Obj::*) (Arg1), N>
+template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1> Arguments;
@@ -794,7 +302,7 @@ template<class Obj, typename Ret, typename Arg1, int N> struct FunctionPointer<R
         (const_cast<Object*>(o)->*f)(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, int N> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2), N>
+template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2> Arguments;
@@ -821,8 +329,8 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2, int N> struct Fu
                 ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), N>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3> Arguments;
@@ -850,8 +358,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), N>
                 ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), N>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
@@ -881,8 +389,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), N>
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), N>
+         typename Arg5>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
@@ -913,8 +421,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), N>
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), N>
+         typename Arg5, typename Arg6>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
@@ -945,8 +453,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), N>
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), N>
+         typename Arg5, typename Arg6, typename Arg7>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
@@ -979,8 +487,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), 
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), N>
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
@@ -1013,8 +521,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), N>
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
@@ -1048,8 +556,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), N>
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
@@ -1084,7 +592,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 };
 
-template<class Obj, typename Ret, int N> struct FunctionPointer<Ret (Obj::*) () const, N>
+template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const, -1>
 {
     typedef Obj Object;
     typedef iTuple<iNullTypeList> Arguments;
@@ -1104,7 +612,7 @@ template<class Obj, typename Ret, int N> struct FunctionPointer<Ret (Obj::*) () 
         (o->*f)(), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, int N> struct FunctionPointer<Ret (Obj::*) (Arg1) const, N>
+template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1> Arguments;
@@ -1130,7 +638,7 @@ template<class Obj, typename Ret, typename Arg1, int N> struct FunctionPointer<R
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, int N> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2) const, N>
+template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2> Arguments;
@@ -1157,8 +665,8 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2, int N> struct Fu
                 ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, N>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3> Arguments;
@@ -1186,8 +694,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, N>
                 ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, N>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
@@ -1217,8 +725,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, N>
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, N>
+         typename Arg5>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
@@ -1249,8 +757,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, N>
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, N>
+         typename Arg5, typename Arg6>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
@@ -1281,8 +789,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, 
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const, N>
+         typename Arg5, typename Arg6, typename Arg7>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
@@ -1315,8 +823,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) c
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const, N>
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
@@ -1349,8 +857,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const, N>
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
@@ -1384,8 +892,8 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10, int N>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const, N>
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const, -1>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
@@ -1417,6 +925,498 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
                 static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
                 static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>())),
                 ApplyReturnValue<R>(ret);
+    }
+};
+
+// template for NonMember function
+template<typename Ret> struct FunctionPointer<Ret (*) (), -1>
+{
+    typedef void Object;
+    typedef iTuple<iNullTypeList> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) ();
+    enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void*) {
+        return IX_NULLPTR;
+    }
+
+    static void freeArgs(void*) {
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void*, void* ret) {
+        f(), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (*) (Arg1, Arg2), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2, Arg3> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+                             tArgs->template get<3>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+                             tArgs->template get<3>(), tArgs->template get<4>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
+                             tArgs->template get<6>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
+                             tArgs->template get<6>(), tArgs->template get<7>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
+                             tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()),  static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
+            static_cast<Arg9>(tArgs->template get<8>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), -1>
+{
+    typedef void Object;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static void* cloneArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+
+        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+                             tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
+                             tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>(),
+                             tArgs->template get<9>());
+    }
+
+    static void freeArgs(void* args) {
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        delete tArgs;
+    }
+
+    template <typename SignalArgs, typename R>
+    static void call(Function f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
+            static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+
+// hack code for lambda functor
+template<typename Func> struct FunctionPointer<Func, 0>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void*, void* ret) {
+        f(), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 1>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 1, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 2>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 2, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 3>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 3, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 4>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 4, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+          tArgs->template get<3>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 5>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 5, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+          tArgs->template get<3>(), tArgs->template get<4>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 6>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 6, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 7>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 7, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
+          tArgs->template get<6>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 8>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 8, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
+          tArgs->template get<6>(), tArgs->template get<7>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 9>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 9, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
+          tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>()), ApplyReturnValue<R>(ret);
+    }
+};
+template<typename Func> struct FunctionPointer<Func, 10>
+{
+    typedef void Object;
+    typedef Func Function;
+    enum {ArgumentCount = 10, IsPointerToMemberFunction = false};
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const Object*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
+          tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>(),
+          tArgs->template get<9>()), ApplyReturnValue<R>(ret);
     }
 };
 
@@ -1524,7 +1524,7 @@ template<typename SignalFunc, typename SlotFunc, int N>
 class _iConnectionHelper : public _iConnection
 {
     typedef FunctionPointer<SignalFunc, -1> SignalFuncType;
-    typedef FunctionPointer<SlotFunc, N> SlotFuncType;
+    typedef FunctionPointer<SlotFunc, N> SlotFuncType; // hack code to lambda
     typedef typename SlotFuncType::Object SlotObject;
     const SlotObject* _funcObj;
     SlotFunc _func;
@@ -1700,7 +1700,8 @@ public:
     }
 
     static bool setFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
-        typedef typename FunctionPointer<SetFunc, -1>::Object Obj;
+        typedef FunctionPointer<SetFunc, -1> SetFuncType;
+        typedef typename SetFuncType::Object Obj;
 
         Obj* _classThis = static_cast<Obj*>(obj);
         const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
@@ -1709,13 +1710,14 @@ public:
             return false;
 
         IX_CHECK_PTR(_classThis);
-        (_classThis->*(_typedThis->_setFunc))(value.value< typename iTypeGetter<0, typename FunctionPointer<SetFunc, -1>::Arguments::Type>::HeadType >());
+        (_classThis->*(_typedThis->_setFunc))(value.value< typename iTypeGetter<0, typename SetFuncType::Arguments::Type>::HeadType >());
         return true;
     }
 
     static bool signalFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
-        typedef typename FunctionPointer<SignalFunc, -1>::Object Obj;
-        IX_COMPILER_VERIFY((1 == FunctionPointer<SignalFunc, -1>::ArgumentCount));
+        typedef FunctionPointer<SignalFunc, -1> SignalFuncType;
+        typedef typename SignalFuncType::Object Obj;
+        IX_COMPILER_VERIFY((1 == SignalFuncType::ArgumentCount));
 
         Obj* _classThis = static_cast<Obj*>(obj);
         const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
@@ -1724,14 +1726,15 @@ public:
             return false;
 
         IX_CHECK_PTR(_classThis);
-        (_classThis->*(_typedThis->_signalFunc))(value.value< typename iTypeGetter<0, typename FunctionPointer<SignalFunc, -1>::Arguments::Type>::HeadType >());
+        (_classThis->*(_typedThis->_signalFunc))(value.value< typename iTypeGetter<0, typename SignalFuncType::Arguments::Type>::HeadType >());
         return true;
     }
 
     static void* argumentWraper(void* args) {
+        typedef FunctionPointer<SignalFunc, -1> SignalFuncType;
         typedef iTuple<iVariant> ArgumentsAdaptor;
-        typedef typename FunctionPointer<SignalFunc, -1>::Arguments Arguments;
-        IX_COMPILER_VERIFY((1 == FunctionPointer<SignalFunc, -1>::ArgumentCount));
+        typedef typename SignalFuncType::Arguments Arguments;
+        IX_COMPILER_VERIFY((1 == SignalFuncType::ArgumentCount));
 
         Arguments* tArgs = static_cast<Arguments*>(args);
         return new ArgumentsAdaptor(iVariant(tArgs->template get<0>()));
@@ -1746,22 +1749,19 @@ public:
 
     template<typename NewGetFunc>
     _iPropertyHelper<NewGetFunc, SetFunc, SignalFunc> parseProperty(READ, NewGetFunc get) const {
-        typedef FunctionPointer<NewGetFunc, -1> GetType;
-        IX_COMPILER_VERIFY(0 == int(GetType::ArgumentCount));
+        IX_COMPILER_VERIFY(0 == int(FunctionPointer<NewGetFunc, -1>::ArgumentCount));
         return _iPropertyHelper<NewGetFunc, SetFunc, SignalFunc>(get, _setFunc, _signalFunc);
     }
 
     template<typename NewSetFunc>
     _iPropertyHelper<GetFunc, NewSetFunc, SignalFunc> parseProperty(WRITE, NewSetFunc set) const {
-        typedef FunctionPointer<NewSetFunc, -1> SetType;
-        IX_COMPILER_VERIFY(1 == int(SetType::ArgumentCount));
+        IX_COMPILER_VERIFY(1 == int(FunctionPointer<NewSetFunc, -1>::ArgumentCount));
         return _iPropertyHelper<GetFunc, NewSetFunc, SignalFunc>(_getFunc, set, _signalFunc);
     }
 
     template<typename NewSignalFunc>
     _iPropertyHelper<GetFunc, SetFunc, NewSignalFunc> parseProperty(NOTIFY, NewSignalFunc signal) const {
-        typedef FunctionPointer<NewSignalFunc, -1> SignalType;
-        IX_COMPILER_VERIFY(1 == int(SignalType::ArgumentCount));
+        IX_COMPILER_VERIFY(1 == int(FunctionPointer<NewSignalFunc, -1>::ArgumentCount));
         return _iPropertyHelper<GetFunc, SetFunc, NewSignalFunc>(_getFunc, _setFunc, signal);
     }
 

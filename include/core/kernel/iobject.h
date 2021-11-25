@@ -67,8 +67,9 @@ public:
 
     template<typename Func>
     bool observeProperty(const char *name, const typename FunctionPointer<Func, -1>::Object* obj, Func slot) {
-        typedef void (FunctionPointer<Func, -1>::Object::*SignalFunc)(iVariant);
-        IX_COMPILER_VERIFY(int(FunctionPointer<Func, -1>::ArgumentCount) <= 1);
+        typedef FunctionPointer<Func, -1> FuncType;
+        typedef void (FuncType::Object::*SignalFunc)(iVariant);
+        IX_COMPILER_VERIFY(int(FuncType::ArgumentCount) <= 1);
 
         _iConnectionHelper<SignalFunc, Func, -1> conn(this, IX_NULLPTR, true, obj, slot, true, AutoConnection);
         return observePropertyImp(name, conn);
@@ -108,11 +109,12 @@ public:
         IX_COMPILER_VERIFY((FunctorArgumentCount >= 0));
         // TODO: check Return type convertible
 
-        _iConnectionHelper<Func1, Func2, FunctorArgumentCount> conn(sender, signal, true, IX_NULLPTR, slot, true, DirectConnection);
+        _iConnectionHelper<Func1, Func2, FunctorArgumentCount> conn(sender, signal, true, IX_NULLPTR, slot, true, type);
         return connectImpl(conn);
     }
 
     /// connect to a function pointer (not a member)
+    /// NOTICE: forbid lambda function because lambda can't be correct disconnect without receiver arg
     template <typename Func1, typename Func2>
     static inline bool connect(const typename FunctionPointer<Func1, -1>::Object *sender, Func1 signal, Func2 slot) {
         typedef FunctionPointer<Func1, -1> SignalType;
