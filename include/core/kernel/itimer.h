@@ -41,19 +41,21 @@ public:
 
     // singleShot to a iObject slot
     template <typename Duration, typename Func1>
-    static inline void singleShot(Duration interval, const typename FunctionPointer<Func1>::Object *receiver, Func1 slot) {
+    static inline void singleShot(Duration interval, const typename FunctionPointer<Func1, -1>::Object *receiver, Func1 slot) {
         singleShot(interval, defaultTypeFor(interval), receiver, slot);
     }
     template <typename Duration, typename Func1>
-    static inline void singleShot(Duration interval, TimerType timerType, const typename FunctionPointer<Func1>::Object *receiver,
+    static inline void singleShot(Duration interval, TimerType timerType, const typename FunctionPointer<Func1, -1>::Object *receiver,
                                   Func1 slot) {
         typedef void (iTimer::*SignalFunc)();
-        typedef FunctionPointer<Func1> SlotType;
+        typedef FunctionPointer<Func1, -1> SlotType;
 
         //compilation error if the slot has arguments.
         IX_COMPILER_VERIFY(int(SlotType::ArgumentCount) == 0);
+        //compilation error if the slot not iObject class.
+        IX_COMPILER_VERIFY((SlotType::IsPointerToMemberFunction));
 
-        _iConnectionHelper<SignalFunc, Func1> conn(IX_NULLPTR, &iTimer::timeout, receiver, slot, DirectConnection);
+        _iConnectionHelper<SignalFunc, Func1, -1> conn(IX_NULLPTR, &iTimer::timeout, true, receiver, slot, true, DirectConnection);
         singleShotImpl(interval, timerType, receiver, conn);
     }
 

@@ -991,10 +991,12 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
     return true;
 }
 
-_iConnection::_iConnection(ImplFn impl, ConnectionType type)
+_iConnection::_iConnection(ImplFn impl, ConnectionType type, xuint16 signalSize, xuint16 slotSize)
     : _isArgAdapter(false)
     , _orphaned(false)
     , _ref(1)
+    , _signalSize(signalSize)
+    , _slotSize(slotSize)
     , _type(type)
     , _nextConnectionList(IX_NULLPTR)
     , _next(IX_NULLPTR)
