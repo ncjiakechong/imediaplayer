@@ -84,9 +84,20 @@ struct ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N
     : ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, N > {};
 
 template <class Functor, class ArgHead, class ArgTail>
+struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, -1>
+{ enum { value = -1 }; };
+template <class Functor, class ArgHead, class ArgTail>
 struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 0>
-{ enum { value = 0 }; };
-
+{
+    static const int N = 0;
+    template <typename D> static D dummy();
+    template <typename F> static auto test(F f) -> decltype(((f.operator()()), int()));
+    static char test(...);
+    enum {
+        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
+        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
+    };
+};
 template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 1>
 {
     static const int N = 1;

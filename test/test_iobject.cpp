@@ -630,6 +630,7 @@ int test_object(void)
         ++lambda_slot_count;
         });
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &tst_funcSlot, lambdaFunc);
+    // iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &tst_funcSlot, [](int, int){IX_ASSERT(1);}); // build error
     IEMIT tst_sig.tst_sig_int1(2);
     IX_ASSERT(3 == lambda_slot_count);
 
