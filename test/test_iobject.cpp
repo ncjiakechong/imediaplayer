@@ -367,14 +367,12 @@ int test_object(void)
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, &tst_obj, &TestObject::tst_slot_return);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, &tst_obj, &TestObject::tst_slot_int0);
 
-    // iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, [](int){});
+
 
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &tst_obj, &TestObject::tst_slot_return);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &tst_obj, &TestObject::tst_slot_int0);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &tst_obj, &TestObject::tst_slot_int1);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &tst_funcSlot, &TestFunctionSlot::tst_slot_int1);
-
-    // iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, [](int){});
 
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int2, &tst_obj, &TestObject::tst_slot_return);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int2, &tst_obj, &TestObject::tst_slot_int0);
@@ -519,7 +517,11 @@ int test_object(void)
 
     tst_obj.signal_struct(11, E(), 13);
 
+    // iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &tst_obj); // build error
+    // iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, "build error"); // build error
+    // iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, 2); // build error
     // iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &tst_obj); // build error
+    // iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, "build error"); // build error
     IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
     IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref));
     IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, IX_NULLPTR, IX_NULLPTR));
@@ -527,9 +529,6 @@ int test_object(void)
 
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
-//    #ifdef IX_HAVE_CXX11
-//    iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, [](int) {ilog_debug("call lambda slot");});
-//    #endif
 
     tst_obj.signal_struct(21, E(), 23);
 
@@ -618,6 +617,28 @@ int test_object(void)
 
     delete tst_sharedObj_5;
     IX_ASSERT(IX_NULLPTR == share_weakprt_5.data());
+
+    // lambda
+    #ifdef IX_HAVE_CXX11
+    int lambda_slot_count = 0;
+    auto lambdaFunc = [&lambda_slot_count](int arg){
+        ilog_debug("call lambda slot int ", arg);
+        lambda_slot_count += arg;
+        };
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &tst_funcSlot, [&lambda_slot_count](){
+        ilog_debug("call lambda slot");
+        ++lambda_slot_count;
+        });
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &tst_funcSlot, lambdaFunc);
+    IEMIT tst_sig.tst_sig_int1(2);
+    IX_ASSERT(3 == lambda_slot_count);
+
+    lambda_slot_count = 0;
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int1, &tst_funcSlot, lambdaFunc);
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int1, &tst_funcSlot, IX_NULLPTR);
+    IEMIT tst_sig.tst_sig_int1(3);
+    IX_ASSERT(0 == lambda_slot_count);
+    #endif
 
     ilog_debug("-------------slot disconnect");
     TestObject* tst_sharedObj_6 = new TestObject();
