@@ -49,7 +49,7 @@ public:
     static std::list<iString> arguments();
 
     static bool sendEvent(iObject *receiver, iEvent *event);
-    static void postEvent(iObject *receiver, iEvent *event);
+    static void postEvent(iObject *receiver, iEvent *event, int priority = NormalEventPriority);
     static void removePostedEvents(iObject *receiver, int eventType);
 
     static void sendPostedEvents(iObject *receiver, int event_type = 0);

@@ -86,7 +86,7 @@ iEventDispatcher::~iEventDispatcher()
 {
 }
 
-int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *object)
+int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     if (interval < 0 || !object) {
         ilog_warn("invalid arguments");
@@ -97,7 +97,7 @@ int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *
     }
 
     int id = allocateTimerId();
-    registerTimer(id, interval, timerType, object);
+    doregisterTimer(id, interval, timerType, object, userdata);
     return id;
 }
 

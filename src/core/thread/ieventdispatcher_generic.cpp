@@ -36,7 +36,12 @@ public:
 
     virtual bool prepare(int *)
     {
-        return (serialNumber.value() != lastSerialNumber);
+        iThreadData *data = iThreadData::current();
+        if (!data)
+            return false;
+
+        const bool canWait = data->canWaitLocked();
+        return ((!canWait) || (serialNumber.value() != lastSerialNumber));
     }
 
     virtual bool check()
@@ -173,7 +178,7 @@ bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flag
     return result;
 }
 
-void iEventDispatcher_generic::registerTimer(int timerId, int interval, TimerType timerType, iObject *object)
+void iEventDispatcher_generic::doregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     if ((timerId < 1) || interval < 0 || !object) {
         ilog_warn("invalid arguments");
@@ -183,7 +188,7 @@ void iEventDispatcher_generic::registerTimer(int timerId, int interval, TimerTyp
         return;
     }
 
-    m_timerSource->timerList.registerTimer(timerId, interval, timerType, object);
+    m_timerSource->timerList.registerTimer(timerId, interval, timerType, object, userdata);
 }
 
 bool iEventDispatcher_generic::unregisterTimer(int timerId)

@@ -21,6 +21,7 @@ namespace iShell {
 
 iThreadData::iThreadData(int initialRefCount)
     : quitNow(false)
+    , canWait(true)
     , isAdopted(false)
     , requiresCoreApplication(true)
     , loopLevel(0)

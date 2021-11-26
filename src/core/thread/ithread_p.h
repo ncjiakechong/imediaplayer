@@ -31,13 +31,58 @@ class iPostEvent
 public:
     iObject* receiver;
     iEvent* event;
+    int priority;
 
     inline iPostEvent()
-        : receiver(IX_NULLPTR), event(IX_NULLPTR)
-    { }
-    inline iPostEvent(iObject *r, iEvent *e)
-        : receiver(r), event(e)
-    { }
+        : receiver(IX_NULLPTR), event(IX_NULLPTR), priority(0) {}
+    inline iPostEvent(iObject *r, iEvent *e, int p)
+        : receiver(r), event(e), priority(p) {}
+};
+
+inline bool operator<(const iPostEvent &first, const iPostEvent &second)
+{
+    return first.priority > second.priority;
+}
+
+// This class holds the list of posted events.
+//  The list has to be kept sorted by priority
+class iPostEventList : public std::list<iPostEvent>
+{
+public:
+    // recursion == recursion count for sendPostedEvents()
+    int recursion;
+
+    // sendOffset == the current event to start sending
+    int startOffset;
+    // insertionOffset == set by sendPostedEvents to tell postEvent() where to start insertions
+    int insertionOffset;
+
+    iMutex mutex;
+
+    inline iPostEventList() : std::list<iPostEvent>(), recursion(0), startOffset(0), insertionOffset(0) { }
+
+    void addEvent(const iPostEvent &ev) {
+        int priority = ev.priority;
+        if (empty() || (back().priority >= priority)|| (insertionOffset >= size())) {
+            // optimization: we can simply append if the last event in
+            // the queue has higher or equal priority
+            push_back(ev);
+        } else {
+            // insert event in descending priority order, using upper
+            // bound for a given priority (to ensure proper ordering
+            // of events with the same priority)
+            iterator it = begin();
+            std::advance(it, insertionOffset);
+            iPostEventList::iterator at = std::upper_bound(it, end(), ev);
+            insert(at, ev);
+        }
+    }
+
+private:
+    //hides because they do not keep that list sorted. addEvent must be used
+    using std::list<iPostEvent>::push_front;
+    using std::list<iPostEvent>::push_back;
+    using std::list<iPostEvent>::insert;
 };
 
 class iThreadData
@@ -52,8 +97,14 @@ public:
     void ref();
     void deref();
 
+    bool canWaitLocked() {
+        iScopedLock<iMutex> locker(postEventList.mutex);
+        return canWait;
+    }
+
 public:
     bool                            quitNow;
+    bool                            canWait;
     bool                            isAdopted;
     bool                            requiresCoreApplication;
 
@@ -61,11 +112,10 @@ public:
     int                             scopeLevel;
 
     std::list<iEventLoop *>         eventLoops;
-    std::list<iPostEvent>           postEventList;
+    iPostEventList                  postEventList;
     iAtomicCounter<xintptr>         threadHd;
     iAtomicPointer<iThread>         thread;
     iAtomicPointer<iEventDispatcher> dispatcher;
-    iMutex                          eventMutex;
 
     std::list<void*>                tls; 
 private:

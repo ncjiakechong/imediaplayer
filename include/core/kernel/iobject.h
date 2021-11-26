@@ -59,7 +59,7 @@ public:
     iThread* thread() const;
     void moveToThread(iThread *targetThread);
 
-    int startTimer(int interval, TimerType timerType = CoarseTimer);
+    int startTimer(int interval, xintptr userdata = 0, TimerType timerType = CoarseTimer);
     void killTimer(int id);
 
     iVariant property(const char *name) const;
@@ -122,7 +122,7 @@ public:
 
         // compilation error if the arguments does not match.
         // The slot requires more arguments than the signal provides.
-        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
+        IX_COMPILER_VERIFY(((int(SlotType::ArgumentCount) >= 0) && (int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount))));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
         // Return type of the slot is not compatible with the return type of the signal.

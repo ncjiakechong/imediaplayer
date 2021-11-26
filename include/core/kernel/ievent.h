@@ -15,8 +15,6 @@
 
 namespace iShell {
 
-class iObject;
-
 class IX_CORE_EXPORT iEvent
 {
 public:
@@ -55,18 +53,23 @@ protected:
     unsigned short m_posted : 1;
     unsigned short m_accept : 1;
     unsigned short m_reserved : 14;
+
+    friend class iCoreApplication;
 };
 
 class IX_CORE_EXPORT iTimerEvent : public iEvent
 {
 public:
-    explicit iTimerEvent( int timerId );
+    explicit iTimerEvent( int timerId, xintptr userdata);
     ~iTimerEvent();
     int timerId() const { return id; }
+    xintptr userData() const { return userdata; }
 protected:
     int id;
+    xintptr userdata;
 };
 
+class iObject;
 class IX_CORE_EXPORT iChildEvent : public iEvent
 {
 public:

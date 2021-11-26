@@ -148,13 +148,20 @@ struct GPostEventSource
 
 static gboolean postEventSourcePrepare(GSource *s, gint *timeout)
 {
+    iThreadData *data = iThreadData::current();
+    if (!data)
+        return false;
+
     gint dummy;
     if (!timeout)
         timeout = &dummy;
     *timeout =  -1;
 
+    const bool canWait = data->canWaitLocked();
+    *timeout = canWait ? -1 : 0;
+
     GPostEventSource *source = reinterpret_cast<GPostEventSource *>(s);
-    return (source->serialNumber.value() != source->lastSerialNumber);
+    return ((!canWait) || (source->serialNumber.value() != source->lastSerialNumber));
 }
 
 static gboolean postEventSourceCheck(GSource *source)
@@ -327,7 +334,7 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
     return result;
 }
 
-void iEventDispatcher_Glib::registerTimer(int timerId, int interval, TimerType timerType, iObject *object)
+void iEventDispatcher_Glib::doregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     if (timerId < 1 || interval < 0 || !object) {
         ilog_warn("invalid arguments");
@@ -337,7 +344,7 @@ void iEventDispatcher_Glib::registerTimer(int timerId, int interval, TimerType t
         return;
     }
 
-    m_timerSource->timerList.registerTimer(timerId, interval, timerType, object);
+    m_timerSource->timerList.registerTimer(timerId, interval, timerType, object, userdata);
 }
 
 bool iEventDispatcher_Glib::unregisterTimer(int timerId)

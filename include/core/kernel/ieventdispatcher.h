@@ -32,10 +32,11 @@ public:
     {
         int timerId;
         int interval;
+        xintptr userdata;
         TimerType timerType;
 
-        inline TimerInfo(int id, int i, TimerType t)
-            : timerId(id), interval(i), timerType(t)
+        inline TimerInfo(int id, int i, TimerType t, xintptr u)
+            : timerId(id), interval(i), timerType(t), userdata(u)
         { }
     };
 
@@ -49,8 +50,8 @@ public:
 
     virtual bool processEvents(iEventLoop::ProcessEventsFlags flags) = 0;
 
-    int registerTimer(int interval, TimerType timerType, iObject *object);
-    virtual void registerTimer(int timerId, int interval, TimerType timerType, iObject *object) = 0;
+    int registerTimer(int interval, TimerType timerType, iObject *object, xintptr userdata);
+    virtual void doregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata) = 0;
     virtual bool unregisterTimer(int timerId) = 0;
     virtual bool unregisterTimers(iObject *object, bool releaseId) = 0;
     virtual std::list<TimerInfo> registeredTimers(iObject *object) const = 0;

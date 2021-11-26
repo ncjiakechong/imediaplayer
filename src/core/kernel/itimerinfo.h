@@ -25,6 +25,7 @@ public:
     struct TimerInfo {
         int id;           // - timer identifier
         int interval;     // - timer interval in milliseconds
+        xintptr userdata; // - userdata
         TimerType timerType; // - timer type
         xint64 timeout;  // - when to actually fire
         iObject *obj;     // - object to receive event
@@ -40,7 +41,7 @@ public:
 
     int timerRemainingTime(int timerId);
 
-    void registerTimer(int timerId, int interval, TimerType timerType, iObject *object);
+    void registerTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata);
     bool unregisterTimer(int timerId);
     bool unregisterTimers(iObject *object, bool releaseId);
     std::list<iEventDispatcher::TimerInfo> registeredTimers(iObject *object) const;
