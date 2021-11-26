@@ -37,22 +37,23 @@ public:
     }
 
     void start() {
-        iTimer::singleShot(10, this, &TestTimer::testSingleShot);
+        iTimer::singleShot(10, 10, this, &TestTimer::testSingleShot);
 
         xint64 cur = iDeadlineTimer::current().deadline();
         double disCur = cur / 1000.0;
         ilog_debug("TestTimer: [", iThread::currentThreadId(), "]start now:", disCur);
-        m_t500 = startTimer(500);
-        m_t1s = startTimer(1000, PreciseTimer);
-        m_t3s = startTimer(3000);
+        m_t500 = startTimer(500, 500);
+        m_t1s = startTimer(1000, 1000, PreciseTimer);
+        m_t3s = startTimer(3000, 3000);
         ilog_debug("m_t500: ", m_t500, ", m_t1s: ", m_t1s, ", m_t3s:", m_t3s);
 
     }
 
-    static void testSingleShot() {
+    static void testSingleShot(xintptr userdata) {
         static int index = 0;
         ++index;
         IX_ASSERT(index <= 1);
+        IX_ASSERT(10 == userdata);
     }
 
     virtual bool event(iEvent *e) {
@@ -62,7 +63,7 @@ public:
 
         iTimerEvent* event = static_cast<iTimerEvent*>(e);
         xint64 cur = iDeadlineTimer::current().deadline();
-        ilog_debug("TestTimer[", event->timerId(), "], now: ", cur);
+        ilog_debug("TestTimer[ id ", event->timerId(), ", duration: ", event->userData()," ], now: ", cur);
 
         if (m_t1s == event->timerId()) {
             killTimer(m_t1s);
@@ -103,13 +104,13 @@ int test_timer(void)
     thread->setObjectName("test_timer");
 
     TestTimer* timer = new TestTimer();
-    timer->startTimer(1000, VeryCoarseTimer);
+    timer->startTimer(1000, 1000, VeryCoarseTimer);
     timer->moveToThread(thread);
     iObject::connect(timer, &TestTimer::tst_sig, timer, &TestTimer::start);
     thread->start();
 
     IEMIT timer->tst_sig();
-    IX_ASSERT(0 == timer->startTimer(500));
+    IX_ASSERT(0 == timer->startTimer(500, 500));
 
     thread->wait();
     delete timer;

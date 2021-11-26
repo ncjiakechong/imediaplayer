@@ -62,9 +62,10 @@ iEvent::~iEvent()
 {
 }
 
-iTimerEvent::iTimerEvent(int timerId)
+iTimerEvent::iTimerEvent(int timerId, xintptr u)
     : iEvent(Timer)
     , id(timerId)
+    , userdata(u)
 {
 }
 iTimerEvent::~iTimerEvent()

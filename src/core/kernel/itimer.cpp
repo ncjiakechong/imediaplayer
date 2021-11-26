@@ -21,6 +21,7 @@ iTimer::iTimer(iObject *parent)
     , m_single(0)
     , m_id(0)
     , m_inter(0)
+    , m_userdata(0)
     , m_type(CoarseTimer)
 {
 }
@@ -36,12 +37,13 @@ void iTimer::start()
     if (m_id != 0)                        // stop running timer
         stop();
 
-    m_id = startTimer(m_inter, m_type);
+    m_id = startTimer(m_inter, m_userdata, m_type);
 }
 
-void iTimer::start(int msec)
+void iTimer::start(int msec, xintptr userdata)
 {
     m_inter = msec;
+    m_userdata = userdata;
     start();
 }
 
@@ -64,7 +66,7 @@ bool iTimer::event(iEvent *e)
         if (m_single)
             stop();
 
-        IEMIT timeout();
+        IEMIT timeout(event->userData());
         return true;
     }
 
@@ -76,7 +78,7 @@ void iTimer::setInterval(int msec)
     m_inter = msec;
     if (m_id != 0) {                        // create new timer
         killTimer(m_id);                        // restart timer
-        m_id = startTimer(msec, m_type);
+        m_id = startTimer(msec, m_userdata, m_type);
     }
 }
 
@@ -97,16 +99,16 @@ class iSingleShotTimer : public iObject
     _iConnection* connection;
 public:
     ~iSingleShotTimer();
-    iSingleShotTimer(int msec, TimerType timerType, const iObject *receiver, const _iConnection& conn);
+    iSingleShotTimer(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn);
 
 protected:
     bool event(iEvent *e);
 };
 
-iSingleShotTimer::iSingleShotTimer(int msec, TimerType timerType, const iObject *receiver, const _iConnection& conn)
+iSingleShotTimer::iSingleShotTimer(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn)
     : iObject(iEventDispatcher::instance()), receiver(receiver), connection(conn.clone())
 {
-    timerId = startTimer(msec, timerType);
+    timerId = startTimer(msec, userdata, timerType);
     if (receiver && thread() != receiver->thread()) {
         // Avoid leaking the iSingleShotTimer instance in case the application exits before the timer fires
         connect(iCoreApplication::instance(), &iCoreApplication::aboutToQuit, this, &iObject::deleteLater);
@@ -140,9 +142,11 @@ bool iSingleShotTimer::event(iEvent *e)
 
     // If the receiver was destroyed, skip this part
     if (!receiver.isNull()) {
-        // We allocate only the return type - we previously checked the function had
-        // no arguments.
-        connection->emits(IX_NULLPTR, IX_NULLPTR);
+        typedef void (iTimer::*SignalFunc)(xintptr userdata);
+        typedef typename FunctionPointer< SignalFunc, -1>::Arguments Arguments;
+
+        Arguments arg(event->userData());
+        connection->emits(&arg, IX_NULLPTR);
     }
 
     // we would like to use delete later here, but it feels like a
@@ -164,9 +168,9 @@ bool iSingleShotTimer::event(iEvent *e)
     \a slot a pointer only used when using UniqueConnection
     \a slotObj the slot object
  */
-void iTimer::singleShotImpl(int msec, TimerType timerType, const iObject *receiver, const _iConnection& conn)
+void iTimer::singleShotImpl(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn)
 {
-    new iSingleShotTimer(msec, timerType, receiver, conn);
+    new iSingleShotTimer(msec, userdata, timerType, receiver, conn);
 }
 
 } // namespace iShell

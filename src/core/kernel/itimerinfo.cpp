@@ -255,11 +255,12 @@ int iTimerInfoList::timerRemainingTime(int timerId)
     return -1;
 }
 
-void iTimerInfoList::registerTimer(int timerId, int interval, TimerType timerType, iObject *object)
+void iTimerInfoList::registerTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     TimerInfo *t = new TimerInfo;
     t->id = timerId;
     t->interval = interval;
+    t->userdata = userdata;
     t->timerType = timerType;
     t->obj = object;
     t->activateRef = IX_NULLPTR;
@@ -365,7 +366,7 @@ std::list<iEventDispatcher::TimerInfo> iTimerInfoList::registeredTimers(iObject 
         if (t->obj == object) {
             iEventDispatcher::TimerInfo insert(t->id,
                                                (t->timerType == VeryCoarseTimer ? t->interval * 1000 : t->interval),
-                                               t->timerType);
+                                               t->timerType, t->userdata);
             list.push_back(insert);
         }
     }
@@ -427,7 +428,7 @@ int iTimerInfoList::activateTimers()
             // send event, but don't allow it to recurse
             currentTimerInfo->activateRef = &currentTimerInfo;
 
-            iTimerEvent e(currentTimerInfo->id);
+            iTimerEvent e(currentTimerInfo->id, currentTimerInfo->userdata);
             iCoreApplication::sendEvent(currentTimerInfo->obj, &e);
 
             if (currentTimerInfo)

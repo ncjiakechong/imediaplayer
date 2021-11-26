@@ -41,39 +41,45 @@ public:
 
     // singleShot to a iObject slot
     template <typename Duration, typename Func1, typename Object>
-    static inline void singleShot(Duration interval, const Object *receiver, Func1 slot) {
-        singleShot(interval, defaultTypeFor(interval), receiver, slot);
+    static inline void singleShot(Duration interval, xintptr userdata, const Object *receiver, Func1 slot) {
+        singleShot(interval, userdata, defaultTypeFor(interval), receiver, slot);
     }
     template <typename Duration, typename Func1, typename Object>
-    static inline void singleShot(Duration interval, TimerType timerType, const Object *receiver, Func1 slot) {
-        typedef void (iTimer::*SignalFunc)();
+    static inline void singleShot(Duration interval, xintptr userdata, TimerType timerType, const Object *receiver, Func1 slot) {
+        typedef void (iTimer::*SignalFunc)(xintptr userdata);
+        typedef FunctionPointer<SignalFunc, -1> SignalType;
         typedef FunctionPointer<Func1, -1> SlotType;
 
         //compilation error if the slot has arguments.
-        IX_COMPILER_VERIFY(int(SlotType::ArgumentCount) == 0);
+        IX_COMPILER_VERIFY(int(SlotType::ArgumentCount) >= 0);
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
+        // Return type of the slot is not compatible with the return type of the signal.
+        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
         _iConnectionHelper<SignalFunc, Func1, -1> conn(IX_NULLPTR, &iTimer::timeout, true, receiver, slot, true, DirectConnection);
-        singleShotImpl(interval, timerType, receiver, conn);
+        singleShotImpl(interval, userdata, timerType, receiver, conn);
     }
 
 public: //slot
-    void start(int msec);
+    void start(int msec, xintptr userdata = 0);
 
     void start();
     void stop();
 
     // SIGNAL
-    void timeout() ISIGNAL(timeout)
+    void timeout(xintptr userdata) ISIGNAL(timeout)
 
 protected:
     virtual bool event(iEvent *);
 
 private:
-    static void singleShotImpl(int msec, TimerType timerType, const iObject *receiver, const _iConnection& conn);
+    static void singleShotImpl(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn);
 
     bool m_single;
     int m_id;
     int m_inter;
+    xintptr m_userdata;
     TimerType m_type;
 
     iTimer(const iTimer &);

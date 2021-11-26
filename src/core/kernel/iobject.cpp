@@ -307,7 +307,10 @@ void iObject::moveToThread(iThread *targetThread)
     if (IX_NULLPTR == targetData)
         targetData = new iThreadData(0);
 
-    iOrderedMutexLocker locker(&currentData->eventMutex, &targetData->eventMutex);
+    // make sure nobody adds/removes connections to this object while we're moving it
+    iScopedLock<iMutex> l(m_signalSlotLock);
+
+    iOrderedMutexLocker locker(&currentData->postEventList.mutex, &targetData->postEventList.mutex);
 
     // keep currentData alive (since we've got it locked)
     currentData->ref();
@@ -333,7 +336,7 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
             continue;
         }
         if (pe.receiver == this) {
-            targetData->postEventList.push_back(pe);
+            targetData->postEventList.addEvent(pe);
             ++eventsMoved;
             it = currentData->postEventList.erase(it);
             continue;
@@ -344,6 +347,7 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
 
     // need weak target
     if (eventsMoved > 0 && targetData->dispatcher.load()) {
+        targetData->canWait = false;
         targetData->dispatcher.load()->wakeUp();
     }
 
@@ -368,7 +372,7 @@ void iObject::moveToThread_helper()
     }
 }
 
-int iObject::startTimer(int interval, TimerType timerType)
+int iObject::startTimer(int interval, xintptr userdata, TimerType timerType)
 {
     if (interval < 0) {
         ilog_warn("Timers cannot have negative intervals");
@@ -383,7 +387,7 @@ int iObject::startTimer(int interval, TimerType timerType)
         return 0;
     }
 
-    int timerId = m_threadData->dispatcher.load()->registerTimer(interval, timerType, this);
+    int timerId = m_threadData->dispatcher.load()->registerTimer(interval, timerType, this, userdata);
     m_runningTimers.insert(timerId);
     return timerId;
 }
@@ -738,6 +742,7 @@ void iObject::emitImpl(_iMemberFunction signal, void *args, void* ret)
 
     const _iConnectionList& list = it->second;
     iThreadData* currentThreadData = iThreadData::current();
+    bool inSenderThread = (currentThreadData == this->m_threadData);
 
     _iConnection* conn = list.first;
     if (IX_NULLPTR == conn)
@@ -758,7 +763,14 @@ void iObject::emitImpl(_iMemberFunction signal, void *args, void* ret)
             continue;
 
         iObject* const receiver = const_cast<iObject*>(conn->_receiver);
-        const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
+        bool receiverInSameThread = true;
+        if (inSenderThread || (receiver == this)) {
+            receiverInSameThread = (currentThreadData == receiver->m_threadData);
+        } else {
+            // need to lock before reading the threadId, because moveToThread() could interfere
+            iScopedLock<iMutex> locker(receiver->m_signalSlotLock);
+            receiverInSameThread = (currentThreadData == receiver->m_threadData);
+        }
 
         // determine if this connection should be sent immediately or
         // put into the event queue
@@ -948,7 +960,7 @@ void iObject::reregisterTimers(void* args)
          it != timerList->cend();
          ++it) {
         const iEventDispatcher::TimerInfo& ti = *it;
-        eventDispatcher->registerTimer(ti.timerId, ti.interval, ti.timerType, this);
+        eventDispatcher->doregisterTimer(ti.timerId, ti.interval, ti.timerType, this, ti.userdata);
     }
 
     delete timerList;

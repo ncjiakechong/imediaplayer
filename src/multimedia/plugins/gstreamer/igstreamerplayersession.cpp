@@ -1530,7 +1530,7 @@ void iGstreamerPlayerSession::updateDuration()
     if (m_durationQueries > 0) {
         //increase delay between duration requests
         int delay = 25 << (5 - m_durationQueries);
-        iTimer::singleShot(delay, this, &iGstreamerPlayerSession::updateDuration);
+        iTimer::singleShot(delay, 0, this, &iGstreamerPlayerSession::updateDuration);
         m_durationQueries--;
     }
     ilog_verbose(m_duration);

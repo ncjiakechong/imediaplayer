@@ -58,12 +58,14 @@ int test_thread(void)
     iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1_block, BlockingQueuedConnection);
     thread->start();
 
+    thread1->slot = 0;
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 start");
     IEMIT signal1->tst_sig_int1(1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 end");
     IX_ASSERT(1 == signal1->slot);
     IX_ASSERT(1 == thread1->slot);
 
+    thread1->slot = 0;
     iObject::disconnect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1_block);
     iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_sig_int1 2 start");
@@ -84,9 +86,29 @@ int test_thread(void)
     IX_ASSERT(!iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1, ConnectionType(DirectConnection | UniqueConnection)));
     thread->start();
 
+    thread1->slot = 0;
     ilog_debug("test_thread: [", iThread::currentThreadId(),"]tst_sig_int1");
     IEMIT signal1->tst_sig_int1(2);
     IX_ASSERT(2 == thread1->slot);
+
+    delete thread1;
+
+    int lambda_slot_count = 0;
+    thread1 = new TestThread;
+    thread1->moveToThread(thread);
+    iObject::connect(thread1, &TestThread::tst_sig_int1, thread1, [&lambda_slot_count](int value){
+        iThread::msleep(100);
+        ilog_debug("call lambda slot at testThread ", value);
+        lambda_slot_count += value;
+        });
+    iObject::invokeMethod(thread1, &TestThread::tst_sig_int1, 3, BlockingQueuedConnection);
+    IX_ASSERT(3 == lambda_slot_count);
+    ilog_debug("lambda slot at mainthread ", lambda_slot_count);
+
+    lambda_slot_count = 0;
+    iObject::invokeMethod(thread1, &TestThread::tst_sig_int1, 4);
+    IX_ASSERT(0 == lambda_slot_count);
+    ilog_debug("lambda slot at mainthread ", lambda_slot_count);
 
     iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));
     // mutity test

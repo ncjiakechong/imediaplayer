@@ -80,6 +80,12 @@ enum TimeSpec {
     TimeZone
 };
 
+enum EventPriority {
+    HighEventPriority = 1,
+    NormalEventPriority = 0,
+    LowEventPriority = -1
+};
+
 } // namespace iShell
 
 #endif // INAMESPACE_H
