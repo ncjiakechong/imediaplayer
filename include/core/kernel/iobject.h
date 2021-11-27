@@ -149,7 +149,7 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iConnectionHelper<typename SignalType::Function, typename SlotType::Function, -1> conn(sender, SignalHelper::safeFunc(signal), SignalHelper::valid,
+        _iConnectionHelper<typename SignalHelper::Function, typename SlotHelper::Function, -1> conn(sender, SignalHelper::safeFunc(signal), SignalHelper::valid,
                                                                                             receiver, SlotHelper::safeFunc(slot), SlotHelper::valid,
                                                                                             AutoConnection);
         return disconnectImpl(conn);
@@ -172,7 +172,7 @@ public:
         IX_COMPILER_VERIFY((FunctorArgumentCount >= 0));
         // TODO: check Return type convertible
 
-        _iConnectionHelper<typename SignalType::Function, typename SlotHelper::Function, FunctorArgumentCount> conn(sender, SignalHelper::safeFunc(signal), SignalHelper::valid,
+        _iConnectionHelper<typename SignalHelper::Function, typename SlotHelper::Function, FunctorArgumentCount> conn(sender, SignalHelper::safeFunc(signal), SignalHelper::valid,
                                                                                                                 receiver, SlotHelper::safeFunc(slot), SlotHelper::valid,
                                                                                                                 AutoConnection);
         return disconnectImpl(conn);

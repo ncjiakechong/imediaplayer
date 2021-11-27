@@ -40,15 +40,16 @@ public:
     { return msecs >= 2000 ? CoarseTimer : PreciseTimer; }
 
     // singleShot to a iObject slot
-    template <typename Duration, typename Func1, typename Object>
-    static inline void singleShot(Duration interval, xintptr userdata, const Object *receiver, Func1 slot) {
+    template <typename Duration, typename Func, typename Object>
+    static inline void singleShot(Duration interval, xintptr userdata, const Object *receiver, Func slot) {
         singleShot(interval, userdata, defaultTypeFor(interval), receiver, slot);
     }
-    template <typename Duration, typename Func1, typename Object>
-    static inline void singleShot(Duration interval, xintptr userdata, TimerType timerType, const Object *receiver, Func1 slot) {
+    template <typename Duration, typename Func, typename Object>
+    static inline typename enable_if< FunctionPointer<Func, -1>::ArgumentCount >= 0, void>::type
+        singleShot(Duration interval, xintptr userdata, TimerType timerType, const Object *receiver, Func slot) {
         typedef void (iTimer::*SignalFunc)(xintptr userdata);
         typedef FunctionPointer<SignalFunc, -1> SignalType;
-        typedef FunctionPointer<Func1, -1> SlotType;
+        typedef FunctionPointer<Func, -1> SlotType;
 
         //compilation error if the slot has arguments.
         IX_COMPILER_VERIFY(int(SlotType::ArgumentCount) >= 0);
@@ -57,7 +58,23 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
 
-        _iConnectionHelper<SignalFunc, Func1, -1> conn(IX_NULLPTR, &iTimer::timeout, true, receiver, slot, true, DirectConnection);
+        _iConnectionHelper<SignalFunc, Func, -1> conn(IX_NULLPTR, &iTimer::timeout, true, receiver, slot, true, DirectConnection);
+        singleShotImpl(interval, userdata, timerType, receiver, conn);
+    }
+    template <typename Duration, typename Func, typename Object>
+    static inline typename enable_if< FunctionPointer<Func, -1>::ArgumentCount == -1 && !is_convertible<Func, const char*>::value, void>::type
+        singleShot(Duration interval, xintptr userdata, TimerType timerType, const Object *receiver, Func slot) {
+        typedef void (iTimer::*SignalFunc)(xintptr userdata);
+        typedef FunctionPointer<SignalFunc, -1> SignalType;
+
+        const int FunctorArgumentCount = ComputeFunctorArgumentCount<Func , typename SignalType::Arguments::Type, SignalType::ArgumentCount>::value;
+
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((FunctorArgumentCount >= 0));
+        // TODO: check Return type convertible
+
+        _iConnectionHelper<SignalFunc, Func, FunctorArgumentCount> conn(IX_NULLPTR, &iTimer::timeout, true, receiver, slot, true, DirectConnection);
         singleShotImpl(interval, userdata, timerType, receiver, conn);
     }
 
