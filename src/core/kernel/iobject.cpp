@@ -741,12 +741,15 @@ void iObject::emitImpl(_iMemberFunction signal, void *args, void* ret)
         return;
 
     const _iConnectionList& list = it->second;
-    iThreadData* currentThreadData = iThreadData::current();
-    bool inSenderThread = (currentThreadData == this->m_threadData);
-
     _iConnection* conn = list.first;
     if (IX_NULLPTR == conn)
         return;
+
+    iThreadData* currentThreadData = iThreadData::current();
+    bool inSenderThread = (currentThreadData == this->m_threadData);
+    if (!inSenderThread) {
+        ilog_info("obj[", this, " name:", objectName(), "] signal not emit at sender thread");
+    }
 
     // We need to check against last here to ensure that signals added
     // during the signal emission are not emitted in this emission.

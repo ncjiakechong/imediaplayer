@@ -38,6 +38,10 @@ public:
 
     void start() {
         iTimer::singleShot(10, 10, this, &TestTimer::testSingleShot);
+        iTimer::singleShot(20, 20, this, [](xintptr userdata) {
+            IX_ASSERT(20 == userdata);
+            ilog_debug("singleShot lambda timeout ", userdata);
+        });
 
         xint64 cur = iDeadlineTimer::current().deadline();
         double disCur = cur / 1000.0;
@@ -100,8 +104,8 @@ int test_timer(void)
 {
     ilog_debug("test_timer: current thread ", iThread::currentThreadId());
     iThread* thread = new iThread();
-    thread->moveToThread(thread);
     thread->setObjectName("test_timer");
+    thread->moveToThread(thread);
 
     TestTimer* timer = new TestTimer();
     timer->startTimer(1000, 1000, VeryCoarseTimer);
