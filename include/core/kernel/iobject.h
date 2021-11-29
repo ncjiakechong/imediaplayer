@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #ifndef IOBJECT_H
 #define IOBJECT_H
@@ -469,16 +469,16 @@ protected:
     virtual bool event(iEvent *e);
 
     template <typename ReturnType>
-    if_requires_ret<ReturnType, true> emitHelper(_iMemberFunction signal, void* args) {
+    if_requires_ret<ReturnType, true> emitHelper(const char* name, _iMemberFunction signal, void* args) {
         ReturnType ret = TYPEWRAPPER_DEFAULTVALUE(ReturnType);
-        emitImpl(signal, args, &ret);
+        emitImpl(name, signal, args, &ret);
         return ret;
     }
 
     template <typename ReturnType>
-    if_requires_ret<ReturnType, false> emitHelper(_iMemberFunction signal, void* args) {
+    if_requires_ret<ReturnType, false> emitHelper(const char* name, _iMemberFunction signal, void* args) {
         IX_COMPILER_VERIFY((is_same<ReturnType, void>::value));
-        return emitImpl(signal, args, IX_NULLPTR);
+        return emitImpl(name, signal, args, IX_NULLPTR);
     }
 
 private:
@@ -505,7 +505,7 @@ private:
     typedef std::list<iObject *> iObjectList;
 
     bool observePropertyImp(const char* name, _iConnection &conn);
-    void emitImpl(_iMemberFunction signal, void* args, void* ret);
+    void emitImpl(const char* name, _iMemberFunction signal, void* args, void* ret);
     static bool connectImpl(const _iConnection& conn);
     static bool disconnectImpl(const _iConnection& conn);
 

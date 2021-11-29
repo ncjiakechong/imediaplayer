@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
 #include "core/kernel/iobject.h"
@@ -672,7 +672,7 @@ bool iObject::disconnectImpl(const _iConnection& conn)
     return success;
 }
 
-void iObject::emitImpl(_iMemberFunction signal, void *args, void* ret)
+void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, void* ret)
 {
     struct ConnectionListsRef {
         _iObjectConnectionList* connectionLists;
@@ -748,7 +748,7 @@ void iObject::emitImpl(_iMemberFunction signal, void *args, void* ret)
     iThreadData* currentThreadData = iThreadData::current();
     bool inSenderThread = (currentThreadData == this->m_threadData);
     if (!inSenderThread) {
-        ilog_info("obj[", this, " name:", objectName(), "] signal not emit at sender thread");
+        ilog_info("obj[", this, " name:", objectName(), " signal:", name, "] signal not emit at sender thread");
     }
 
     // We need to check against last here to ensure that signals added
@@ -797,7 +797,7 @@ void iObject::emitImpl(_iMemberFunction signal, void *args, void* ret)
         } else {}
 
         if (receiverInSameThread) {
-            ilog_warn("iObject Dead lock detected while activating a BlockingQueuedConnection: "
+            ilog_warn("obj[", this, " name:", objectName(), " signal:", name, "] Dead lock detected while activating a BlockingQueuedConnection: "
                 "receiver is ", receiver->objectName(), "(", receiver, ")");
         }
 
@@ -963,7 +963,7 @@ void iObject::reregisterTimers(void* args)
          it != timerList->cend();
          ++it) {
         const iEventDispatcher::TimerInfo& ti = *it;
-        eventDispatcher->doregisterTimer(ti.timerId, ti.interval, ti.timerType, this, ti.userdata);
+        eventDispatcher->reregisterTimer(ti.timerId, ti.interval, ti.timerType, this, ti.userdata);
     }
 
     delete timerList;

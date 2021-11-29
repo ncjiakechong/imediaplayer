@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #ifndef IOBJECTDEFS_IMPL_H
 #define IOBJECTDEFS_IMPL_H
@@ -84,9 +84,6 @@ struct ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N
     : ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, N > {};
 
 template <class Functor, class ArgHead, class ArgTail>
-struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, -1>
-{ enum { value = -1 }; };
-template <class Functor, class ArgHead, class ArgTail>
 struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 0>
 {
     static const int N = 0;
@@ -95,7 +92,7 @@ struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 0>
     static char test(...);
     enum {
         Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
+        value = Ok ? N : N - 1
     };
 };
 template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 1>
@@ -1862,7 +1859,7 @@ private:
     _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor); \
     \
     Arguments args = Arguments(__VA_ARGS__); \
-    return const_cast<IX_ThisType*>(this)->emitHelper< typename ThisFuncitonPointer::ReturnType >(tSignal, &args); \
+    return const_cast<IX_ThisType*>(this)->emitHelper<typename ThisFuncitonPointer::ReturnType >(# name, tSignal, &args); \
     }
 
 #define IEMIT

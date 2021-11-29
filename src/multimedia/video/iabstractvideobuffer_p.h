@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #ifndef IABSTRACTVIDEOBUFFER_P_H
 #define IABSTRACTVIDEOBUFFER_P_H

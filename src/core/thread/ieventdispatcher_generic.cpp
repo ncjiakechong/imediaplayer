@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
 #include <limits>       // std::numeric_limits
@@ -178,7 +178,7 @@ bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flag
     return result;
 }
 
-void iEventDispatcher_generic::doregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
+void iEventDispatcher_generic::reregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     if ((timerId < 1) || interval < 0 || !object) {
         ilog_warn("invalid arguments");

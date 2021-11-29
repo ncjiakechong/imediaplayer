@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
 #include "core/kernel/icoreapplication.h"
@@ -334,7 +334,7 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
     return result;
 }
 
-void iEventDispatcher_Glib::doregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
+void iEventDispatcher_Glib::reregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     if (timerId < 1 || interval < 0 || !object) {
         ilog_warn("invalid arguments");

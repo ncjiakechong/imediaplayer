@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
 #include "core/kernel/ieventdispatcher.h"
@@ -97,7 +97,7 @@ int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *
     }
 
     int id = allocateTimerId();
-    doregisterTimer(id, interval, timerType, object, userdata);
+    reregisterTimer(id, interval, timerType, object, userdata);
     return id;
 }
 
