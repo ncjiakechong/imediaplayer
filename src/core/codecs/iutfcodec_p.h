@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #ifndef IUTFCODEC_P_H
 #define IUTFCODEC_P_H

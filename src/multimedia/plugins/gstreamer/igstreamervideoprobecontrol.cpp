@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #include "igstreamervideoprobecontrol_p.h"
 #include "igstvideobuffer_p.h"

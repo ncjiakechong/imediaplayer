@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #ifndef IGLOBAL_H
 #define IGLOBAL_H

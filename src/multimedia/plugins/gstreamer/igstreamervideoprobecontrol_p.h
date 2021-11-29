@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #ifndef IGSTREAMERVIDEOPROBECONTROL_P_H
 #define IGSTREAMERVIDEOPROBECONTROL_P_H

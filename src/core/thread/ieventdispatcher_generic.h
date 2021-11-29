@@ -6,7 +6,7 @@
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
-/// @author  anfengce@
+/// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #ifndef IEVENTDISPATCHER_GENERIC_H
 #define IEVENTDISPATCHER_GENERIC_H
@@ -33,7 +33,7 @@ public:
 
     virtual bool processEvents(iEventLoop::ProcessEventsFlags flags);
 
-    virtual void doregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata);
+    virtual void reregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata);
     virtual bool unregisterTimer(int timerId);
     virtual bool unregisterTimers(iObject *object, bool releaseId);
     virtual std::list<TimerInfo> registeredTimers(iObject *object) const;
