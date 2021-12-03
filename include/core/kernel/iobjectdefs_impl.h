@@ -268,6 +268,10 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), -1>
     static void freeArgs(void*) {
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void*, void* ret) {
         (const_cast<Object*>(o)->*f)(), ApplyReturnValue<R>(ret);
@@ -290,6 +294,10 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -318,6 +326,10 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -344,6 +356,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), -1>
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -376,6 +392,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), -1>
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -405,6 +425,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -439,6 +463,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -470,6 +498,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), 
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -506,6 +538,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -538,6 +574,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -576,6 +616,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -604,6 +648,10 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const, 
     static void freeArgs(void*) {
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void*, void* ret) {
         (o->*f)(), ApplyReturnValue<R>(ret);
@@ -626,6 +674,10 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -654,6 +706,10 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -680,6 +736,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, -1>
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -712,6 +772,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, -1>
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -741,6 +805,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, -1>
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -775,6 +843,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, 
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -806,6 +878,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) c
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -842,6 +918,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -874,6 +954,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -912,6 +996,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -941,6 +1029,10 @@ template<typename Ret> struct FunctionPointer<Ret (*) (), -1>
     static void freeArgs(void*) {
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object*, void*, void* ret) {
         f(), ApplyReturnValue<R>(ret);
@@ -963,6 +1055,10 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1), -1>
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -991,6 +1087,10 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1017,6 +1117,10 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), -1>
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -1049,6 +1153,10 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), -1>
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1078,6 +1186,10 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -1112,6 +1224,10 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1143,6 +1259,10 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -1179,6 +1299,10 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8),
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1211,6 +1335,10 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     static void freeArgs(void* args) {
         Arguments* tArgs = static_cast<Arguments*>(args);
         delete tArgs;
+    }
+
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
     }
 
     template <typename SignalArgs, typename R>
@@ -1249,6 +1377,10 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
         delete tArgs;
     }
 
+    static bool equal(Function func1, Function func2) {
+        return (func1 == func2);
+    }
+
     template <typename SignalArgs, typename R>
     static void call(Function f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1269,6 +1401,11 @@ template<typename Func> struct FunctionPointer<Func, 0>
     typedef Func Function;
     enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
 
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
+
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void*, void* ret) {
         f(), ApplyReturnValue<R>(ret);
@@ -1279,6 +1416,11 @@ template<typename Func> struct FunctionPointer<Func, 1>
     typedef void Object;
     typedef Func Function;
     enum {ArgumentCount = 1, IsPointerToMemberFunction = false};
+
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
 
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
@@ -1293,6 +1435,11 @@ template<typename Func> struct FunctionPointer<Func, 2>
     typedef Func Function;
     enum {ArgumentCount = 2, IsPointerToMemberFunction = false};
 
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
+
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1306,6 +1453,11 @@ template<typename Func> struct FunctionPointer<Func, 3>
     typedef Func Function;
     enum {ArgumentCount = 3, IsPointerToMemberFunction = false};
 
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
+
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1318,6 +1470,11 @@ template<typename Func> struct FunctionPointer<Func, 4>
     typedef void Object;
     typedef Func Function;
     enum {ArgumentCount = 4, IsPointerToMemberFunction = false};
+
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
 
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
@@ -1333,6 +1490,11 @@ template<typename Func> struct FunctionPointer<Func, 5>
     typedef Func Function;
     enum {ArgumentCount = 5, IsPointerToMemberFunction = false};
 
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
+
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1347,6 +1509,11 @@ template<typename Func> struct FunctionPointer<Func, 6>
     typedef Func Function;
     enum {ArgumentCount = 6, IsPointerToMemberFunction = false};
 
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
+
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1360,6 +1527,11 @@ template<typename Func> struct FunctionPointer<Func, 7>
     typedef void Object;
     typedef Func Function;
     enum {ArgumentCount = 7, IsPointerToMemberFunction = false};
+
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
 
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
@@ -1376,6 +1548,11 @@ template<typename Func> struct FunctionPointer<Func, 8>
     typedef Func Function;
     enum {ArgumentCount = 8, IsPointerToMemberFunction = false};
 
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
+
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1391,6 +1568,11 @@ template<typename Func> struct FunctionPointer<Func, 9>
     typedef Func Function;
     enum {ArgumentCount = 9, IsPointerToMemberFunction = false};
 
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
+
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
@@ -1405,6 +1587,11 @@ template<typename Func> struct FunctionPointer<Func, 10>
     typedef void Object;
     typedef Func Function;
     enum {ArgumentCount = 10, IsPointerToMemberFunction = false};
+
+    // hack code to compare slot function because lambda doesn't support operator== and operator!=
+    static bool equal(const Function&, const Function&) {
+        return true;
+    }
 
     template <typename SignalArgs, typename R>
     static void call(const Function& f, const Object*, void* args, void* ret) {
@@ -1534,16 +1721,13 @@ class _iConnectionHelper : public _iConnection
 
         case Compare:
             {
-            // hack code to compare slot function because lambda doesn't support operator== and operator!=
-            typedef const typename iIntegerForSizeof<SlotFunc>::Unsigned* SlotPtr;
-
             const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
             const _iConnectionHelper* _otherObj = static_cast<const _iConnectionHelper*>(_other);
-            // hack code to campare connection valid
             if (_this == _other) {
                 void* const * _signalFunc = reinterpret_cast<void* const *>(&_thisObj->_signal);
-                if ((_thisObj->_signalSize == _thisObj->_slotSize) 
-                    && (*reinterpret_cast<SlotPtr>(_signalFunc) == *reinterpret_cast<SlotPtr>(&_thisObj->_func))) {
+                if ((_thisObj->_signalSize == _thisObj->_slotSize)
+                    && SlotFuncType::IsPointerToMemberFunction
+                    && SlotFuncType::equal(*reinterpret_cast<const SlotFunc *>(_signalFunc), _thisObj->_func)) {
                     return const_cast<_iConnection*>(_this);
                 }
             } else if ((IX_NULLPTR == _otherObj->_slot) && (IX_NULLPTR == _otherObj->_slotObj)) {
@@ -1553,11 +1737,11 @@ class _iConnectionHelper : public _iConnection
             } else if ((IX_NULLPTR != _otherObj->_slot)
                 && (_otherObj->_slotObj == _thisObj->_slotObj)
                 && (_otherObj->_slotSize == _thisObj->_slotSize)
-                && (*reinterpret_cast<SlotPtr>(_otherObj->_slot) == *reinterpret_cast<SlotPtr>(&_thisObj->_func))) {
+                && SlotFuncType::equal(*reinterpret_cast<const SlotFunc *>(_otherObj->_slot), _thisObj->_func)) {
                 return const_cast<_iConnection*>(_this);
             } else if ((IX_NULLPTR != _otherObj->_slot)
                 && (_otherObj->_slotSize == _thisObj->_slotSize)
-                && (*reinterpret_cast<SlotPtr>(_otherObj->_slot) == *reinterpret_cast<SlotPtr>(&_thisObj->_func))
+                && SlotFuncType::equal(*reinterpret_cast<const SlotFunc *>(_otherObj->_slot), _thisObj->_func)
                 && ((IX_NULLPTR == _otherObj->_slotObj) || (IX_NULLPTR == _thisObj->_slotObj))) {
                 return const_cast<_iConnection*>(_this);
             } else if ((_otherObj->_slotObj == _thisObj->_slotObj)

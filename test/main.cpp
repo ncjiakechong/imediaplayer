@@ -62,13 +62,13 @@ public:
         case 5:
         {
             std::list<iString> args = iCoreApplication::arguments();
-            iString url = "file:///home/jiakechong/Downloads/Video.mp4";
+            iString url;
             if (args.size() > 1) {
                 std::list<iString>::iterator tmpIt = args.begin();
                 std::advance(tmpIt, 1);
                 url = *tmpIt;
             }
-            if (0 == test_player(url))
+            if (!url.isEmpty() && 0 == test_player(url))
                 return;
         }
             break;
