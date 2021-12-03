@@ -141,7 +141,7 @@ public:
 
     void positionChanged(xint64 position)
     {
-        ilog_debug(position, "/", player->duration());
+        ilog_debug(position / 1000.0, "/", player->duration() / 1000.0);
     }
 
     int play(const iString& path) {

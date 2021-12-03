@@ -67,7 +67,8 @@ public:
 
         iTimerEvent* event = static_cast<iTimerEvent*>(e);
         xint64 cur = iDeadlineTimer::current().deadline();
-        ilog_debug("TestTimer[ id ", event->timerId(), ", duration: ", event->userData()," ], now: ", cur);
+        double disCur = cur / 1000.0;
+        ilog_debug("TestTimer[ id ", event->timerId(), ", duration: ", event->userData()," ], now: ", disCur);
 
         if (m_t1s == event->timerId()) {
             killTimer(m_t1s);
