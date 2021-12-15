@@ -2,29 +2,29 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iipcoperation.h
-/// @brief   Short description
+/// @file    iincoperation.h
+/// @brief   async operation of INC(Inter Node Communication)
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
-#ifndef IIPCOPERATION_H
-#define IIPCOPERATION_H
+#ifndef IINCOPERATION_H
+#define IINCOPERATION_H
 
 #include <core/global/imacro.h>
 #include <core/thread/iatomiccounter.h>
-#include <ipc/iipcglobal.h>
+#include <inc/iincglobal.h>
 
 namespace iShell {
 
-class iIPCStream;
-class iIPCContext;
+class iINCStream;
+class iINCContext;
 
-class IX_IPC_EXPORT iIPCOperation
+class IX_INC_EXPORT iINCOperation
 {
 public:
     /** A callback for operation state changes */
-    typedef void (*notify_cb_t) (iIPCOperation* o, void* userdata);
+    typedef void (*notify_cb_t) (iINCOperation* o, void* userdata);
 
     /** The state of an operation */
     enum State {
@@ -63,15 +63,16 @@ public:
 private:
     typedef void (*cb_wraper_t)(void* userdata);
 
-    iIPCOperation(iIPCContext* c, iIPCStream* s, cb_wraper_t cb, void *userdata);
+    iINCOperation(iINCContext* c, iINCStream* s, cb_wraper_t cb, void *userdata);
+    ~iINCOperation();
 
     void done();
     void unlink();
     void setState(State st);
 
     iAtomicCounter<int> m_ref;
-    iIPCContext*    m_context;
-    iIPCStream*     m_stream;
+    iINCContext*    m_context;
+    iINCStream*     m_stream;
 
     State           m_state;
     void*           m_userdata;
@@ -81,11 +82,11 @@ private:
 
     void*           m_private; /* some operations might need this */
 
-    friend class iIPCStream;
-    friend class iIPCContext;
-    IX_DISABLE_COPY(iIPCOperation)
+    friend class iINCStream;
+    friend class iINCContext;
+    IX_DISABLE_COPY(iINCOperation)
 };
 
 } // namespace iShell
 
-#endif // IIPCOPERATION_H
+#endif // IINCOPERATION_H

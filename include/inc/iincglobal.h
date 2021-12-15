@@ -2,25 +2,23 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iipcstream.cpp
-/// @brief   Short description
+/// @file    iincglobal.h
+/// @brief   global define for INC(Inter Node Communication)
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
-
-#include <ipc/iipcstream.h>
-#include <ipc/iipccontext.h>
+#ifndef IINCGLOBAL_H
+#define IINCGLOBAL_H
 
 namespace iShell {
 
-iIPCStream::iIPCStream(iIPCContext* context)
-    : iObject(context)
-{
-}
-
-iIPCStream::~iIPCStream()
-{
-}
+#if defined(IBUILD_INC_LIB)
+#    define IX_INC_EXPORT IX_DECL_EXPORT
+#else
+#    define IX_INC_EXPORT IX_DECL_IMPORT
+#endif
 
 } // namespace iShell
+
+#endif // IINCGLOBAL_H

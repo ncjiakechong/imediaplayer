@@ -2,24 +2,24 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iipccontext.cpp
-/// @brief   Short description
+/// @file    iincstream.cpp
+/// @brief   stream of INC(Inter Node Communication)
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <ipc/iipccontext.h>
+#include <inc/iincstream.h>
+#include <inc/iinccontext.h>
 
 namespace iShell {
 
-iIPCContext::iIPCContext(iStringView name, iObject *parent)
-    : iObject(parent)
+iINCStream::iINCStream(iINCContext* context)
+    : iObject(context)
 {
-    setObjectName(name.toString());
 }
 
-iIPCContext::~iIPCContext()
+iINCStream::~iINCStream()
 {
 }
 

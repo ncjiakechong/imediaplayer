@@ -2,20 +2,20 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iipcoperation.cpp
+/// @file    iincoperation.cpp
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <ipc/iipccontext.h>
-#include <ipc/iipcstream.h>
-#include <ipc/iipcoperation.h>
+#include <inc/iinccontext.h>
+#include <inc/iincstream.h>
+#include <inc/iincoperation.h>
 
 namespace iShell {
 
-iIPCOperation::iIPCOperation(iIPCContext* c, iIPCStream* s, cb_wraper_t cb, void *userdata)
+iINCOperation::iINCOperation(iINCContext* c, iINCStream* s, cb_wraper_t cb, void *userdata)
     : m_ref(1)
     , m_context(c)
     , m_stream(s)
@@ -32,13 +32,16 @@ iIPCOperation::iIPCOperation(iIPCContext* c, iIPCStream* s, cb_wraper_t cb, void
     ++m_ref;
 }
 
-void iIPCOperation::ref()
+iINCOperation::~iINCOperation()
+{}
+
+void iINCOperation::ref()
 {
     IX_ASSERT(m_ref >= 1);
     ++m_ref;
 }
 
-void iIPCOperation::deref() {
+void iINCOperation::deref() {
     IX_ASSERT(m_ref >= 1);
 
     if (--m_ref <= 0) {
@@ -49,11 +52,11 @@ void iIPCOperation::deref() {
     }
 }
 
-void iIPCOperation::unlink() {
+void iINCOperation::unlink() {
     if (m_context) {
         IX_ASSERT(m_ref >= 2);
 
-        std::unordered_set<iIPCOperation*>::const_iterator it = m_context->m_operations.find(this);
+        std::unordered_set<iINCOperation*>::const_iterator it = m_context->m_operations.find(this);
         if (it != m_context->m_operations.cend())
             m_context->m_operations.erase(it);
 
@@ -68,7 +71,7 @@ void iIPCOperation::unlink() {
     m_state_userdata = IX_NULLPTR;
 }
 
-void iIPCOperation::setState(State st) {
+void iINCOperation::setState(State st) {
     IX_ASSERT(m_ref >= 1);
 
     if ((st == m_state) || (m_state == STATE_DONE) || (m_state == STATE_CANCELLED))
@@ -86,22 +89,22 @@ void iIPCOperation::setState(State st) {
     deref();
 }
 
-void iIPCOperation::cancel() {
+void iINCOperation::cancel() {
     IX_ASSERT(m_ref >= 1);
     setState(STATE_CANCELLED);
 }
 
-void iIPCOperation::done() {
+void iINCOperation::done() {
     IX_ASSERT(m_ref >= 1);
     setState(STATE_DONE);
 }
 
-iIPCOperation::State iIPCOperation::getState() const {
+iINCOperation::State iINCOperation::getState() const {
     IX_ASSERT(m_ref >= 1);
     return m_state;
 }
 
-void iIPCOperation::setStateCallback(notify_cb_t cb, void *userdata) {
+void iINCOperation::setStateCallback(notify_cb_t cb, void *userdata) {
     IX_ASSERT(m_ref >= 1);
 
     if ((m_state == STATE_DONE) || (m_state== STATE_CANCELLED))
