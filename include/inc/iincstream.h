@@ -2,39 +2,39 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iipcstream.h
-/// @brief   Short description
+/// @file    iincstream.h
+/// @brief   stream of INC(Inter Node Communication)
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
-#ifndef IIPCSTREAM_H
-#define IIPCSTREAM_H
+#ifndef IINCSTREAM_H
+#define IINCSTREAM_H
 
 #include <core/kernel/iobject.h>
-#include <ipc/iipcglobal.h>
+#include <inc/iincglobal.h>
 
 namespace iShell {
 
-class iIPCContext;
-class iIPCOperation;
+class iINCContext;
+class iINCOperation;
 
-class IX_IPC_EXPORT iIPCStream : public iObject
+class IX_INC_EXPORT iINCStream : public iObject
 {
-    IX_OBJECT(iIPCStream)
+    IX_OBJECT(iINCStream)
 public:
-    iIPCStream(iIPCContext* context);
+    iINCStream(iINCContext* context);
 
 public: // signal
 
 protected:
-    virtual ~iIPCStream();
+    virtual ~iINCStream();
 
 private:
 
-    friend class iIPCOperation;
+    friend class iINCOperation;
 };
 
 } // namespace iShell
 
-#endif // IIPCSTREAM_H
+#endif // IINCSTREAM_H

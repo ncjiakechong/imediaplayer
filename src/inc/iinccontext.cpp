@@ -2,23 +2,25 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iipcglobal.h
+/// @file    iinccontext.cpp
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
-#ifndef IIPCGLOBAL_H
-#define IIPCGLOBAL_H
+
+#include <inc/iinccontext.h>
 
 namespace iShell {
 
-#if defined(IBUILD_IPC_LIB)
-#    define IX_IPC_EXPORT IX_DECL_EXPORT
-#else
-#    define IX_IPC_EXPORT IX_DECL_IMPORT
-#endif
+iINCContext::iINCContext(iStringView name, iObject *parent)
+    : iObject(parent)
+{
+    setObjectName(name.toString());
+}
+
+iINCContext::~iINCContext()
+{
+}
 
 } // namespace iShell
-
-#endif // IIPCGLOBAL_H

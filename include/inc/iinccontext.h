@@ -2,24 +2,24 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iipccontext.h
-/// @brief   Short description
+/// @file    iinccontext.h
+/// @brief   context of INC(Inter Node Communication)
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
-#ifndef IIPCCONTEXT_H
-#define IIPCCONTEXT_H
+#ifndef IINCCONTEXT_H
+#define IINCCONTEXT_H
 
 #include <unordered_set>
 
 #include <core/kernel/iobject.h>
-#include <ipc/iipcglobal.h>
+#include <inc/iincglobal.h>
 
 namespace iShell {
 
-class iIPCStream;
-class iIPCOperation;
+class iINCStream;
+class iINCOperation;
 
 /** \section Context
  *
@@ -35,13 +35,13 @@ class iIPCOperation;
  * All operations on the context are performed asynchronously. I.e. the
  * client will not wait for the server to complete the request. To keep
  * track of all these in-flight operations, the application is given a
- * iIPCOperation object for each asynchronous operation.
+ * iINCOperation object for each asynchronous operation.
  *
  * There are only two actions (besides reference counting) that can be
- * performed on a iIPCOperation: querying its state with
+ * performed on a iINCOperation: querying its state with
  * getState() and aborting it with cancel().
  *
- * A iIPCOperation object is reference counted, so an application must
+ * A iINCOperation object is reference counted, so an application must
  * make sure to unreference it, even if it has no intention of using it.
  *
  * \subsection Connecting
@@ -49,7 +49,7 @@ class iIPCOperation;
  * A context must be connected to a server before any operation can be
  * issued. Calling connect() will initiate the connection
  * procedure. Unlike most asynchronous operations, connecting does not
- * result in a iIPCOperation object. Instead, the application should
+ * result in a iINCOperation object. Instead, the application should
  * bind a signal using stateChanged().
  *
  * \subsection Disconnecting
@@ -63,15 +63,15 @@ class iIPCOperation;
  * connection has terminated by itself, then there is no need to explicitly
  * disconnect the context using disconnect().
  */
-class IX_IPC_EXPORT iIPCContext : public iObject
+class IX_INC_EXPORT iINCContext : public iObject
 {
-    IX_OBJECT(iIPCContext)
+    IX_OBJECT(iINCContext)
 public:
     /** Generic notification callback prototype */
-    typedef void (*notify_cb_t)(iIPCContext* c, void* userdata);
+    typedef void (*notify_cb_t)(iINCContext* c, void* userdata);
 
     /** A generic callback for operation completion */
-    typedef void (*success_cb_t) (iIPCContext* c, int success, void* userdata);
+    typedef void (*success_cb_t) (iINCContext* c, int success, void* userdata);
 
     /** The state of a connection context */
     enum State {
@@ -128,7 +128,7 @@ public:
         SUBSCRIPTION_EVENT_TYPE_MASK = 0x0030U      /**< A mask to extract the event operation from an event value */
     };
 
-    iIPCContext(iStringView name, iObject *parent = IX_NULLPTR);
+    iINCContext(iStringView name, iObject *parent = IX_NULLPTR);
 
     /** Increase the reference count by one */
     void ref();
@@ -151,15 +151,15 @@ public:
     void disconnect();
 
     /** Enable event notification */
-    iIPCOperation* subscribe(SubscriptionMasks m, success_cb_t cb, void *userdata);
+    iINCOperation* subscribe(SubscriptionMasks m, success_cb_t cb, void *userdata);
 
     /** Drain the context. If there is nothing to drain, the function returns NULL */
-    iIPCOperation* drain(notify_cb_t cb, void *userdata);
+    iINCOperation* drain(notify_cb_t cb, void *userdata);
 
     /** Tell the daemon to exit. The returned operation is unlikely to
      * complete successfully, since the daemon probably died before
      * returning a success notification */
-    iIPCOperation* exitDaemon(success_cb_t cb, void *userdata);
+    iINCOperation* exitDaemon(success_cb_t cb, void *userdata);
 
     /** Returns 1 when the connection is to a local daemon. Returns negative when no connection has been made yet. */
     int isLocal();
@@ -180,15 +180,15 @@ public: // signal
     void subscribeNotify(SubscriptionEventType t, xuint32 idx) ISIGNAL(subscribeNotify, t, idx)
 
 protected:
-    virtual ~iIPCContext();
+    virtual ~iINCContext();
 
 private:
-    std::unordered_set<iIPCOperation*> m_operations;
+    std::unordered_set<iINCOperation*> m_operations;
 
-    friend class iIPCOperation;
-    IX_DISABLE_COPY(iIPCContext)
+    friend class iINCOperation;
+    IX_DISABLE_COPY(iINCContext)
 };
 
 } // namespace iShell
 
-#endif // IIPCCONTEXT_H
+#endif // IINCCONTEXT_H

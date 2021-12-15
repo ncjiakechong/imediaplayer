@@ -1,12 +1,12 @@
 cmake_minimum_required (VERSION 2.8)
-project (iipc)
+project (iinc)
 
-add_definitions(-DIBUILD_IPC_LIB)
+add_definitions(-DIBUILD_INC_LIB)
 
 set (ComSource
-	iipccontext.cpp
-	iipcoperation.cpp
-	iipcstream.cpp)
+	iinccontext.cpp
+	iincoperation.cpp
+	iincstream.cpp)
 
 find_package(PkgConfig)
 
