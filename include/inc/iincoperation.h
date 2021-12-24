@@ -23,9 +23,6 @@ class iINCContext;
 class IX_INC_EXPORT iINCOperation
 {
 public:
-    /** A callback for operation state changes */
-    typedef void (*notify_cb_t) (iINCOperation* o, void* userdata);
-
     /** The state of an operation */
     enum State {
         STATE_RUNNING,      /**< The operation is still running */
@@ -47,26 +44,22 @@ public:
      * sure that the callback associated with this operation will not be
      * called anymore, effectively disabling the operation from the client
      * side's view. */
-    void cancel();
+    inline void cancel() { setState(STATE_CANCELLED); }
 
     /** Return the current status of the operation */
-    State getState() const;
+    inline State getState() const { return m_state; }
 
-    /** Set the callback function that is called when the operation state
-     * changes. Usually this is not necessary, since the functions that
-     * create pa_operation objects already take a callback that is called
-     * when the operation finishes. Registering a state change callback is
-     * mainly useful, if you want to get called back also if the operation
-     * gets cancelled. \since 4.0 */
-    void setStateCallback(notify_cb_t cb, void *userdata);
+protected:
+    iINCOperation(iINCContext* c, iINCStream* s);
+
+    /** A callback for operation state changes */
+    virtual void stateChanges(State now, State pre) = 0;
+
+    inline void done() { setState(STATE_DONE); }
 
 private:
-    typedef void (*cb_wraper_t)(void* userdata);
+    virtual ~iINCOperation();
 
-    iINCOperation(iINCContext* c, iINCStream* s, cb_wraper_t cb, void *userdata);
-    ~iINCOperation();
-
-    void done();
     void unlink();
     void setState(State st);
 
@@ -75,12 +68,6 @@ private:
     iINCStream*     m_stream;
 
     State           m_state;
-    void*           m_userdata;
-    cb_wraper_t     m_callback;
-    void*           m_state_userdata;
-    notify_cb_t     m_state_callback;
-
-    void*           m_private; /* some operations might need this */
 
     friend class iINCStream;
     friend class iINCContext;

@@ -67,11 +67,11 @@ class IX_INC_EXPORT iINCContext : public iObject
 {
     IX_OBJECT(iINCContext)
 public:
-    /** Generic notification callback prototype */
-    typedef void (*notify_cb_t)(iINCContext* c, void* userdata);
-
-    /** A generic callback for operation completion */
-    typedef void (*success_cb_t) (iINCContext* c, int success, void* userdata);
+    /** A generic notification for operation completion */
+    struct Listener {
+        virtual ~Listener() = 0;
+        virtual void notify(iINCContext* c, iINCOperation* o) {}
+    };
 
     /** The state of a connection context */
     enum State {
@@ -151,15 +151,15 @@ public:
     void disconnect();
 
     /** Enable event notification */
-    iINCOperation* subscribe(SubscriptionMasks m, success_cb_t cb, void *userdata);
+    iINCOperation* subscribe(SubscriptionMasks m, Listener* l);
 
     /** Drain the context. If there is nothing to drain, the function returns NULL */
-    iINCOperation* drain(notify_cb_t cb, void *userdata);
+    iINCOperation* drain(Listener* l);
 
     /** Tell the daemon to exit. The returned operation is unlikely to
      * complete successfully, since the daemon probably died before
      * returning a success notification */
-    iINCOperation* exitDaemon(success_cb_t cb, void *userdata);
+    iINCOperation* exitDaemon(Listener* l);
 
     /** Returns 1 when the connection is to a local daemon. Returns negative when no connection has been made yet. */
     int isLocal();

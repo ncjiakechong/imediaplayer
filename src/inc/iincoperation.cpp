@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iincoperation.cpp
-/// @brief   Short description
+/// @brief   async operation of INC(Inter Node Communication)
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -15,16 +15,12 @@
 
 namespace iShell {
 
-iINCOperation::iINCOperation(iINCContext* c, iINCStream* s, cb_wraper_t cb, void *userdata)
+iINCOperation::iINCOperation(iINCContext* c, iINCStream* s)
     : m_ref(1)
     , m_context(c)
     , m_stream(s)
-    , m_state(STATE_RUNNING)
-    , m_userdata(userdata)
-    , m_callback(cb)
-    , m_state_userdata(IX_NULLPTR)
-    , m_state_callback(IX_NULLPTR)
-    , m_private(IX_NULLPTR) {
+    , m_state(STATE_RUNNING) 
+{
     IX_ASSERT(c);
 
     /* Refcounting is strictly one-way: from the "bigger" to the "smaller" object. */
@@ -41,7 +37,8 @@ void iINCOperation::ref()
     ++m_ref;
 }
 
-void iINCOperation::deref() {
+void iINCOperation::deref() 
+{
     IX_ASSERT(m_ref >= 1);
 
     if (--m_ref <= 0) {
@@ -52,7 +49,8 @@ void iINCOperation::deref() {
     }
 }
 
-void iINCOperation::unlink() {
+void iINCOperation::unlink() 
+{
     if (m_context) {
         IX_ASSERT(m_ref >= 2);
 
@@ -65,53 +63,25 @@ void iINCOperation::unlink() {
     }
 
     m_stream = IX_NULLPTR;
-    m_callback = IX_NULLPTR;
-    m_userdata = IX_NULLPTR;
-    m_state_callback = IX_NULLPTR;
-    m_state_userdata = IX_NULLPTR;
 }
 
-void iINCOperation::setState(State st) {
+void iINCOperation::setState(State now) 
+{
     IX_ASSERT(m_ref >= 1);
 
-    if ((st == m_state) || (m_state == STATE_DONE) || (m_state == STATE_CANCELLED))
+    if ((now == m_state) || (m_state == STATE_DONE) || (m_state == STATE_CANCELLED))
         return;
 
     ref();
 
-    m_state = st;
-    if (m_state_callback)
-        m_state_callback(this, m_state_userdata);
+    State pre = m_state;
+    m_state = now;
+    stateChanges(now, pre);
 
     if ((m_state == STATE_DONE) || (m_state== STATE_CANCELLED))
         unlink();
 
     deref();
-}
-
-void iINCOperation::cancel() {
-    IX_ASSERT(m_ref >= 1);
-    setState(STATE_CANCELLED);
-}
-
-void iINCOperation::done() {
-    IX_ASSERT(m_ref >= 1);
-    setState(STATE_DONE);
-}
-
-iINCOperation::State iINCOperation::getState() const {
-    IX_ASSERT(m_ref >= 1);
-    return m_state;
-}
-
-void iINCOperation::setStateCallback(notify_cb_t cb, void *userdata) {
-    IX_ASSERT(m_ref >= 1);
-
-    if ((m_state == STATE_DONE) || (m_state== STATE_CANCELLED))
-        return;
-
-    m_state_callback = cb;
-    m_state_userdata = userdata;
 }
 
 } // namespace iShell
