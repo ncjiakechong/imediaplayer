@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iinccontext.cpp
-/// @brief   Short description
+/// @brief   context of INC(Inter Node Communication)
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -14,13 +14,15 @@
 namespace iShell {
 
 iINCContext::iINCContext(iStringView name, iObject *parent)
-    : iObject(parent)
+    : iObject(parent) 
 {
     setObjectName(name.toString());
 }
 
 iINCContext::~iINCContext()
-{
-}
+{}
+
+iINCContext::Listener::~Listener()
+{}
 
 } // namespace iShell

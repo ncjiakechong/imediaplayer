@@ -16,11 +16,9 @@ namespace iShell {
 
 iINCStream::iINCStream(iINCContext* context)
     : iObject(context)
-{
-}
+{}
 
 iINCStream::~iINCStream()
-{
-}
+{}
 
 } // namespace iShell
