@@ -14,6 +14,7 @@
 #include "core/kernel/iobject.h"
 #include "core/utils/isharedptr.h"
 #include "core/utils/iregularexpression.h"
+#include "core/utils/ifreelist.h"
 
 #define ILOG_TAG "test"
 
@@ -86,6 +87,16 @@ int test_ivariant(void)
     ilog_debug("var_str1 as wchar*:[ ", var_str1.value<wchar_t*>(), "]");
     ilog_debug("var_str1 as const wchar*:[ ", var_str1.value<const wchar_t*>(), "]");
     ilog_debug("var_int as const istring: ", var_str1.value<iString>());
+
+    iFreeList<int> freelist;
+    freelist.push(1);
+    freelist.push(2);
+    freelist.push(3);
+    IX_ASSERT(3 == freelist.pop());
+    IX_ASSERT(2 == freelist.pop());
+    IX_ASSERT(1 == freelist.pop());
+    IX_ASSERT(0 == freelist.pop());
+    IX_ASSERT(0 <= freelist.next());
 
     // build error
 //    iVariant var_tst2 = iVariant(tst_Variant());
