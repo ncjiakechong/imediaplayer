@@ -125,12 +125,13 @@ int test_ivariant(void)
     IX_ASSERT(0 <= freelist.next());
 
     iFreeList<int, testFreeListConstants> freelist2;
-    freelist2.push(4);
-    freelist2.push(5);
-    freelist2.push(6);
-    IX_ASSERT(6 == freelist2.pop());
-    IX_ASSERT(5 == freelist2.pop());
-    IX_ASSERT(4 == freelist2.pop());
+    for (int idx = testFreeListConstants::InitialNextValue; idx < testFreeListConstants::MaxIndex; ++idx) {
+        IX_ASSERT(freelist2.push(idx));
+    }
+    IX_ASSERT(!freelist2.push(testFreeListConstants::MaxIndex));
+    for (int idx = testFreeListConstants::MaxIndex; idx > testFreeListConstants::InitialNextValue; --idx) {
+        IX_ASSERT((idx - 1) == freelist2.pop());
+    }
     IX_ASSERT(0 == freelist2.pop());
     IX_ASSERT(-1 == freelist2.pop(-1));
     IX_ASSERT(0 <= freelist2.next());
