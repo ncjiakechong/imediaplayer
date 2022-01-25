@@ -119,8 +119,7 @@ protected:
     typedef typename ElementType::ReferenceType ReferenceType;
 
     // return which block the index \a x falls in, and modify \a x to be the index into that block
-    static inline int blockfor(int &x)
-    {
+    static inline int blockfor(int &x) {
         for (int i = 0; i < ConstantsType::BlockCount; ++i) {
             int size = ConstantsType::Sizes[i];
             if (x < size)
@@ -133,8 +132,7 @@ protected:
     }
 
     // allocate a block of the given \a size, initialized starting with the given \a offset
-    static inline ElementType *allocate(int offset, int size)
-    {
+    static inline ElementType *allocate(int offset, int size) {
         ElementType *v = new ElementType[size];
         for (int i = 0; i < size; ++i)
             v[i].next = (offset + i + 1);
@@ -143,8 +141,7 @@ protected:
     }
 
     // take the current serial number from \a o, increment it, and store it in \a n
-    static inline int incrementserial(int o, int n)
-    {
+    static inline int incrementserial(int o, int n) {
         return int((uint(n) & ConstantsType::IndexMask) | ((uint(o) + ConstantsType::SerialCounter) & ConstantsType::SerialMask));
     }
 
@@ -152,7 +149,7 @@ protected:
     inline void release4list(iAtomicCounter<int>& list, int id);
 
     inline iFreeListBase()
-        : /*_v{},*/ _stored(-1), _empty(ConstantsType::InitialNextValue) { }
+        : /*_v{},*/ _stored(ConstantsType::IndexMask), _empty(ConstantsType::InitialNextValue) { }
 
     inline ~iFreeListBase() {
         for (int i = 0; i < ConstantsType::BlockCount; ++i)
@@ -196,7 +193,10 @@ public:
         Return the next free id. Use this id to access the payload (see above).
         Call release(id) when done using the id.
     */
-    inline int next() { IX_ASSERT(-1 == this->_stored); return this->next4list(this->_empty, true); }
+    inline int next() {
+        IX_ASSERT(ConstantsType::IndexMask == (this->_stored.value() & ConstantsType::IndexMask));
+        return this->next4list(this->_empty, true);
+    }
     inline void release(int id) { this->release4list(this->_empty, id); }
 
     /*
@@ -215,10 +215,10 @@ public:
         return true;
     }
 
-    inline typename ParentType::ReferenceType pop() {
+    inline T pop(typename ParentType::ConstReferenceType defaultValue = T()) {
         int id = this->next4list(this->_stored, false);
         if (id < ConstantsType::InitialNextValue)
-            return typename ParentType::ElementType().t();
+            return defaultValue;
         
         this->release4list(this->_empty, id);
         const int block = this->blockfor(id);
@@ -244,7 +244,10 @@ public:
         Return the next free id. Use this id to access the payload (see above).
         Call release(id) when done using the id.
     */
-    inline int next() { IX_ASSERT(-1 == this->_stored); return this->next4list(this->_empty, true); }
+    inline int next() {
+        IX_ASSERT(ConstantsType::IndexMask == (this->_stored.value() & ConstantsType::IndexMask));
+        return this->next4list(this->_empty, true);
+    }
     inline void release(int id) { this->release4list(this->_empty, id); }
 };
 
@@ -256,11 +259,11 @@ inline int iFreeListBase<T, ConstantsType>::next4list(iAtomicCounter<int>& list,
     do {
         id = list.value();
         at = id & ConstantsType::IndexMask;
-        if (at < ConstantsType::InitialNextValue)
+        if (at < ConstantsType::InitialNextValue || at >= ConstantsType::IndexMask)
             return -1;
 
         const int block = blockfor(at);
-        if (block < ConstantsType::InitialNextValue)
+        if (block < 0)
             return -1;
 
         v = _v[block].load();
