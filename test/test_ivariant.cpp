@@ -20,6 +20,31 @@
 
 using namespace iShell;
 
+// we allow for 2^24 = 8^8 = 16777216 simultaneously running timers
+struct testFreeListConstants : public iFreeListDefaultConstants
+{
+    enum {
+        InitialNextValue = 1,
+        IndexMask = 0x0f,
+        SerialMask = ~IndexMask & ~0x80000000,
+        SerialCounter = IndexMask + 1,
+        MaxIndex = IndexMask,
+        BlockCount = 1
+    };
+
+    static const int Sizes[BlockCount];
+};
+
+enum {
+    Offset0 = 0x00000000,
+
+    Size0 = testFreeListConstants::MaxIndex  - Offset0
+};
+
+const int testFreeListConstants::Sizes[testFreeListConstants::BlockCount] = {
+    Size0
+};
+
 struct tst_Variant
 {
     tst_Variant(){ilog_debug("tst_Variant constract");}
@@ -96,7 +121,26 @@ int test_ivariant(void)
     IX_ASSERT(2 == freelist.pop());
     IX_ASSERT(1 == freelist.pop());
     IX_ASSERT(0 == freelist.pop());
+    IX_ASSERT(-1 == freelist.pop(-1));
     IX_ASSERT(0 <= freelist.next());
+
+    iFreeList<int, testFreeListConstants> freelist2;
+    freelist2.push(4);
+    freelist2.push(5);
+    freelist2.push(6);
+    IX_ASSERT(6 == freelist2.pop());
+    IX_ASSERT(5 == freelist2.pop());
+    IX_ASSERT(4 == freelist2.pop());
+    IX_ASSERT(0 == freelist2.pop());
+    IX_ASSERT(-1 == freelist2.pop(-1));
+    IX_ASSERT(0 <= freelist2.next());
+
+    iFreeList<void, testFreeListConstants> freelist3;
+    IX_ASSERT(0 <= freelist3.next());
+
+    iFreeList<void*, testFreeListConstants> freelist4;
+    IX_ASSERT(IX_NULLPTR == freelist4.pop());
+    IX_ASSERT(IX_NULLPTR == freelist4.pop(IX_NULLPTR));
 
     // build error
 //    iVariant var_tst2 = iVariant(tst_Variant());
