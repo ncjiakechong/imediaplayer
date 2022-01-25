@@ -36,6 +36,7 @@ struct iFreeListElement
 
     inline ConstReferenceType t() const { return _t; }
     inline ReferenceType t() { return _t; }
+    inline void setT(ConstReferenceType v) { _t = v; }
 };
 
 /*! \internal
@@ -105,8 +106,13 @@ struct iFreeListDefaultConstants
     available.
 */
 template <typename T, typename ConstantsType = iFreeListDefaultConstants>
-class iFreeList
+class iFreeListBase
 {
+    // iFreeListBase is not copyable
+    iFreeListBase(const iFreeListBase &);
+    iFreeListBase &operator=(const iFreeListBase &);
+
+protected:
     typedef T ValueType;
     typedef iFreeListElement<T> ElementType;
     typedef typename ElementType::ConstReferenceType ConstReferenceType;
@@ -119,6 +125,7 @@ class iFreeList
             int size = ConstantsType::Sizes[i];
             if (x < size)
                 return i;
+
             x -= size;
         }
         IX_ASSERT(false);
@@ -131,6 +138,7 @@ class iFreeList
         ElementType *v = new ElementType[size];
         for (int i = 0; i < size; ++i)
             v[i].next = (offset + i + 1);
+
         return v;
     }
 
@@ -140,70 +148,124 @@ class iFreeList
         return int((uint(n) & ConstantsType::IndexMask) | ((uint(o) + ConstantsType::SerialCounter) & ConstantsType::SerialMask));
     }
 
+    inline int next4list(iAtomicCounter<int>& list, bool doExpand);
+    inline void release4list(iAtomicCounter<int>& list, int id);
+
+    inline iFreeListBase()
+        : /*_v{},*/ _stored(-1), _empty(ConstantsType::InitialNextValue) { }
+
+    inline ~iFreeListBase() {
+        for (int i = 0; i < ConstantsType::BlockCount; ++i)
+            delete [] _v[i].load();
+    }
+
     // the blocks
     iAtomicPointer<ElementType> _v[ConstantsType::BlockCount];
-    // the next free id
-    iAtomicCounter<int> _next;
 
-    // iFreeList is not copyable
-    iFreeList(const iFreeList &);
-    iFreeList &operator=(const iFreeList &);
+    // Stack that contains pointers stored into free list
+    iAtomicCounter<int> _stored;
+    // Stack that contains empty list elements
+    iAtomicCounter<int> _empty;
+}; 
 
+template <typename T, typename ConstantsType = iFreeListDefaultConstants>
+class iFreeList : public iFreeListBase<T, ConstantsType>
+{
+    typedef iFreeListBase<T, ConstantsType> ParentType;
+    typedef void (*DestroyNotify)(iFreeList* list);
+
+    // destroy notify
+    DestroyNotify _destoryNotify;
 public:
-    inline iFreeList();
-    inline ~iFreeList();
+    inline iFreeList(DestroyNotify notify = IX_NULLPTR)
+        : _destoryNotify(notify) { }
+
+    inline ~iFreeList() {
+        if (IX_NULLPTR != _destoryNotify)
+            _destoryNotify(this);
+    }
 
     // returns the payload for the given index \a x
-    inline ConstReferenceType at(int x) const;
-    inline ReferenceType operator[](int x);
+    inline typename ParentType::ConstReferenceType at(int x) const 
+        { const int block = this->blockfor(x); return (this->_v[block].load())[x].t(); }
+    inline typename ParentType::ReferenceType operator[](int x) 
+        { const int block = this->blockfor(x); return (this->_v[block].load())[x].t(); }
+
+    /*
+        Mode 1: 
+        Return the next free id. Use this id to access the payload (see above).
+        Call release(id) when done using the id.
+    */
+    inline int next() { IX_ASSERT(-1 == this->_stored); return this->next4list(this->_empty, true); }
+    inline void release(int id) { this->release4list(this->_empty, id); }
+
+    /*
+        Mode 2: 
+        cache value for free list
+        Please note that this routine might fail!
+    */
+    inline bool push(typename ParentType::ConstReferenceType value) {
+        int id = this->next4list(this->_empty, true);
+        if (id < ConstantsType::InitialNextValue)
+            return false;
+
+        const int block = this->blockfor(id);
+        (this->_v[block].load())[id].setT(value);
+        this->release4list(this->_stored, id);
+        return true;
+    }
+
+    inline typename ParentType::ReferenceType pop() {
+        int id = this->next4list(this->_stored, false);
+        if (id < ConstantsType::InitialNextValue)
+            return typename ParentType::ElementType().t();
+        
+        this->release4list(this->_empty, id);
+        const int block = this->blockfor(id);
+        return (this->_v[block].load())[id].t();
+    }
+};
+
+template <typename ConstantsType>
+class iFreeList<void, ConstantsType> : public iFreeListBase<void, ConstantsType>
+{
+    typedef iFreeListBase<void, ConstantsType> ParentType;
+public:
+    inline iFreeList() { }
+    inline ~iFreeList() { }
+
+    // returns the payload for the given index \a x
+    inline typename ParentType::ConstReferenceType at(int x) const 
+        { const int block = this->blockfor(x); return (this->_v[block].load())[x].t(); }
+    inline typename ParentType::ReferenceType operator[](int x) 
+        { const int block = this->blockfor(x); return (this->_v[block].load())[x].t(); }
 
     /*
         Return the next free id. Use this id to access the payload (see above).
         Call release(id) when done using the id.
     */
-    inline int next();
-    inline void release(int id);
+    inline int next() { IX_ASSERT(-1 == this->_stored); return this->next4list(this->_empty, true); }
+    inline void release(int id) { this->release4list(this->_empty, id); }
 };
 
 template <typename T, typename ConstantsType>
-inline iFreeList<T, ConstantsType>::iFreeList()
-    : /*_v{},*/ _next(ConstantsType::InitialNextValue)
-{ }
-
-template <typename T, typename ConstantsType>
-inline iFreeList<T, ConstantsType>::~iFreeList()
-{
-    for (int i = 0; i < ConstantsType::BlockCount; ++i)
-        delete [] _v[i].load();
-}
-
-template <typename T, typename ConstantsType>
-inline typename iFreeList<T, ConstantsType>::ConstReferenceType iFreeList<T, ConstantsType>::at(int x) const
-{
-    const int block = blockfor(x);
-    return (_v[block].load())[x].t();
-}
-
-template <typename T, typename ConstantsType>
-inline typename iFreeList<T, ConstantsType>::ReferenceType iFreeList<T, ConstantsType>::operator[](int x)
-{
-    const int block = blockfor(x);
-    return (_v[block].load())[x].t();
-}
-
-template <typename T, typename ConstantsType>
-inline int iFreeList<T, ConstantsType>::next()
+inline int iFreeListBase<T, ConstantsType>::next4list(iAtomicCounter<int>& list, bool doExpand)
 {
     int id, newid, at;
     ElementType *v;
     do {
-        id = _next.value();
-
+        id = list.value();
         at = id & ConstantsType::IndexMask;
+        if (at < ConstantsType::InitialNextValue)
+            return -1;
+
         const int block = blockfor(at);
+        if (block < ConstantsType::InitialNextValue)
+            return -1;
+
         v = _v[block].load();
 
-        if (!v) {
+        if (!v && doExpand) {
             v = allocate((id & ConstantsType::IndexMask) - at, ConstantsType::Sizes[block]);
             if (!_v[block].testAndSet(IX_NULLPTR, v)) {
                 // race with another thread lost
@@ -211,15 +273,17 @@ inline int iFreeList<T, ConstantsType>::next()
                 v = _v[block].load();
                 IX_ASSERT(v != IX_NULLPTR);
             }
+        } else if (!v) {
+            return -1;
         }
 
         newid = v[at].next | (id & ~ConstantsType::IndexMask);
-    } while (!_next.testAndSet(id, newid));
+    } while (!list.testAndSet(id, newid));
     return id & ConstantsType::IndexMask;
 }
 
 template <typename T, typename ConstantsType>
-inline void iFreeList<T, ConstantsType>::release(int id)
+inline void iFreeListBase<T, ConstantsType>::release4list(iAtomicCounter<int>& list, int id)
 {
     int at = id & ConstantsType::IndexMask;
     const int block = blockfor(at);
@@ -227,11 +291,11 @@ inline void iFreeList<T, ConstantsType>::release(int id)
 
     int x, newid;
     do {
-        x = _next.value();
+        x = list.value();
         v[at].next = (x & ConstantsType::IndexMask);
 
         newid = incrementserial(x, id);
-    } while (!_next.testAndSet(x, newid));
+    } while (!list.testAndSet(x, newid));
 }
 
 } // namespace iShell
