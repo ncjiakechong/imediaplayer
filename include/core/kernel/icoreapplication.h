@@ -58,6 +58,8 @@ public:
 
     iEventDispatcher* eventDispatcher() const;
 
+    static xint64 applicationPid();
+
     void aboutToQuit() ISIGNAL(aboutToQuit)
 
 protected:

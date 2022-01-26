@@ -14,6 +14,7 @@
 #include "core/io/ilog.h"
 #include "core/utils/idatetime.h"
 #include "core/thread/ithread.h"
+#include "core/kernel/icoreapplication.h"
 
 namespace iShell {
 
@@ -74,9 +75,10 @@ static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t leve
     int  meta_len = 0;
     char meta_buf[256] = {0};
     iTime current = iDateTime::currentDateTime().time();
-    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c %s:%d:%s",
+    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5lld %5d %s:%c %s:%d:%s",
                     current.hour(), current.minute(), current.second(), current.msec(),
-                    iThread::currentThreadId(), tag, cur_level, file, line, function);
+                    iCoreApplication::applicationPid(), iThread::currentThreadId(), 
+                    tag, cur_level, file, line, function);
 
     fprintf(stdout, "%s %s\n", meta_buf, msg);
     fflush(stdout);
@@ -104,9 +106,10 @@ static void ilog_default_data_callback(void*, const char* tag, ilog_level_t leve
     iString log_buf(1024, Uninitialized);
     const uchar* data = static_cast<const uchar*>(msg);
     iTime current = iDateTime::currentDateTime().time();
-    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5d %s:%c %s:%d:%s ",
+    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5lld %5d %s:%c %s:%d:%s ",
                     current.hour(), current.minute(), current.second(), current.msec(),
-                    iThread::currentThreadId(), tag, cur_level, file, line, function);
+                    iCoreApplication::applicationPid(), iThread::currentThreadId(), 
+                    tag, cur_level, file, line, function);
 
     int limit_len = std::min(4, size);
     for (int idx = 0; idx < limit_len && (meta_len < sizeof(meta_buf)); ++idx) {
