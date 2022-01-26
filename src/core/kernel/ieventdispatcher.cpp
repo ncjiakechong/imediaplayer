@@ -20,11 +20,15 @@
 namespace iShell {
 
 // we allow for 2^24 = 8^8 = 16777216 simultaneously running timers
-struct iTimerIdFreeListConstants : public iFreeListDefaultConstants
+struct iTimerIdFreeListConstants
 {
     enum
     {
         InitialNextValue = 1,
+        IndexMask = 0x0000ffff,
+        SerialMask = ~IndexMask & ~0x80000000,
+        SerialCounter = IndexMask + 1,
+        MaxIndex = IndexMask,
         BlockCount = 6
     };
 
@@ -35,9 +39,9 @@ enum {
     Offset0 = 0x00000000,
     Offset1 = 0x00000040,
     Offset2 = 0x00000100,
-    Offset3 = 0x00001000,
-    Offset4 = 0x00010000,
-    Offset5 = 0x00100000,
+    Offset3 = 0x00000800,
+    Offset4 = 0x00001000,
+    Offset5 = 0x00008000,
 
     Size0 = Offset1  - Offset0,
     Size1 = Offset2  - Offset1,
