@@ -17,9 +17,14 @@
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 
-#ifdef IX_OS_WIN
+#if defined(IX_OS_WIN)
+#include <windows.h>
+
 #include "thread/ieventdispatcher_generic.h"
 #elif defined(IX_OS_UNIX)
+#include <unistd.h>
+#include <sys/types.h>
+
 #include "thread/ieventdispatcher_generic.h"
 #include "thread/ieventdispatcher_glib.h"
 #else
@@ -545,6 +550,17 @@ bool iCoreApplication::compressEvent(iEvent * event, iObject *receiver, std::lis
     }
 
     return false;
+}
+
+xint64 iCoreApplication::applicationPid()
+{
+#if defined(IX_OS_WIN)
+    return GetCurrentProcessId();
+#elif defined(IX_OS_VXWORKS)
+    return (xint64)taskIdCurrent;
+#else 
+    return getpid();
+#endif
 }
 
 } // namespace iShell
