@@ -16,8 +16,7 @@
 
 namespace iShell {
 
-
-/*! \internal
+/*!
 
     Element in a iFreeList. ConstReferenceType and ReferenceType are used as
     the return values for iFreeList::at() and iFreeList::operator[](). Contains
@@ -39,7 +38,7 @@ struct iFreeListElement
     inline void setT(ConstReferenceType v) { _t = v; }
 };
 
-/*! \internal
+/*!
 
     Element in a iFreeList without a payload. ConstReferenceType and
     ReferenceType are void, the t() functions return void and are empty.
@@ -56,7 +55,7 @@ struct iFreeListElement<void>
     inline void t() { }
 };
 
-/*! \internal
+/*
 
     Defines default constants used by iFreeList:
 
@@ -78,7 +77,7 @@ struct iFreeListDefaultConstants
     // used by iFreeList, make sure to define all of when customizing
     enum {
         InitialNextValue = 0,
-        IndexMask = 0x00ffffff,
+        IndexMask = 0x00000fff,
         SerialMask = ~IndexMask & ~0x80000000,
         SerialCounter = IndexMask + 1,
         MaxIndex = IndexMask,
@@ -88,23 +87,6 @@ struct iFreeListDefaultConstants
     static const int Sizes[BlockCount];
 };
 
-/*! \internal
-
-    This is a generic implementation of a lock-free free list. Use next() to
-    get the next free entry in the list, and release(id) when done with the id.
-
-    This version is templated and allows having a payload of type T which can
-    be accessed using the id returned by next(). The payload is allocated and
-    deallocated automatically by the free list, but *NOT* when calling
-    next()/release(). Initialization should be done by code needing it after
-    next() returns. Likewise, cleanup() should happen before calling release().
-    It is possible to have use 'void' as the payload type, in which case the
-    free list only contains indexes to the next free entry.
-
-    The ConstantsType type defaults to iFreeListDefaultConstants above. You can
-    define your custom ConstantsType, see above for details on what needs to be
-    available.
-*/
 template <typename T, typename ConstantsType = iFreeListDefaultConstants>
 class iFreeListBase
 {
@@ -127,7 +109,7 @@ protected:
 
             x -= size;
         }
-        IX_ASSERT(false);
+
         return -1;
     }
 
@@ -148,8 +130,11 @@ protected:
     inline int next4list(iAtomicCounter<int>& list, bool doExpand);
     inline void release4list(iAtomicCounter<int>& list, int id);
 
-    inline iFreeListBase()
-        : /*_v{},*/ _stored(ConstantsType::IndexMask), _empty(ConstantsType::InitialNextValue) { }
+    inline iFreeListBase(int size)
+        : /*_v{},*/ _stored(ConstantsType::MaxIndex)
+        , _empty(ConstantsType::InitialNextValue)
+        , _maxIndex((size <= 0) ? ConstantsType::MaxIndex : std::min<int>(std::max(ConstantsType::InitialNextValue + 1, ConstantsType::InitialNextValue + size), ConstantsType::MaxIndex)) 
+        { }
 
     inline ~iFreeListBase() {
         for (int i = 0; i < ConstantsType::BlockCount; ++i)
@@ -163,8 +148,31 @@ protected:
     iAtomicCounter<int> _stored;
     // Stack that contains empty list elements
     iAtomicCounter<int> _empty;
+
+    // the max index for blocks
+    const int _maxIndex;
 }; 
 
+/*!
+
+    This is a generic implementation of a lock-free free list. 
+    Mode 1: Use next() to get the next free entry in the list, 
+            and release(id) when done with the id.
+    Mode 2: Use push() to save an item to free entry in the list, 
+            and pop() to restore the item.
+
+    This version is templated and allows having a payload of type T which can
+    be accessed using the id returned by next()/push(). The payload is allocated and
+    deallocated automatically by the free list, but *NOT* when calling
+    next()/release()/push()/pop(). Initialization should be done by code needing it after
+    next() returns. Likewise, cleanup() should happen before calling release()/pop().
+    It is possible to have use 'void' as the payload type, in which case the
+    free list only contains indexes to the next free entry.
+
+    The ConstantsType type defaults to iFreeListDefaultConstants above. You can
+    define your custom ConstantsType, see above for details on what needs to be
+    available.
+*/
 template <typename T, typename ConstantsType = iFreeListDefaultConstants>
 class iFreeList : public iFreeListBase<T, ConstantsType>
 {
@@ -174,8 +182,8 @@ class iFreeList : public iFreeListBase<T, ConstantsType>
     // destroy notify
     DestroyNotify _destoryNotify;
 public:
-    inline iFreeList(DestroyNotify notify = IX_NULLPTR)
-        : _destoryNotify(notify) { }
+    inline iFreeList(int size = 0, DestroyNotify notify = IX_NULLPTR)
+        : ParentType(size), _destoryNotify(notify) { }
 
     inline ~iFreeList() {
         if (IX_NULLPTR != _destoryNotify)
@@ -184,9 +192,9 @@ public:
 
     // returns the payload for the given index \a x
     inline typename ParentType::ConstReferenceType at(int x) const 
-        { const int block = this->blockfor(x); return (this->_v[block].load())[x].t(); }
+        { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
     inline typename ParentType::ReferenceType operator[](int x) 
-        { const int block = this->blockfor(x); return (this->_v[block].load())[x].t(); }
+        { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
 
     /*
         Mode 1: 
@@ -210,6 +218,8 @@ public:
             return false;
 
         const int block = this->blockfor(id);
+
+        IX_ASSERT(block >= 0);
         (this->_v[block].load())[id].setT(value);
         this->release4list(this->_stored, id);
         return true;
@@ -222,6 +232,8 @@ public:
         
         this->release4list(this->_empty, id);
         const int block = this->blockfor(id);
+
+        IX_ASSERT(block >= 0);
         return (this->_v[block].load())[id].t();
     }
 };
@@ -231,14 +243,14 @@ class iFreeList<void, ConstantsType> : public iFreeListBase<void, ConstantsType>
 {
     typedef iFreeListBase<void, ConstantsType> ParentType;
 public:
-    inline iFreeList() { }
+    inline iFreeList(int size = 0) : ParentType(size) { }
     inline ~iFreeList() { }
 
     // returns the payload for the given index \a x
     inline typename ParentType::ConstReferenceType at(int x) const 
-        { const int block = this->blockfor(x); return (this->_v[block].load())[x].t(); }
+        { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
     inline typename ParentType::ReferenceType operator[](int x) 
-        { const int block = this->blockfor(x); return (this->_v[block].load())[x].t(); }
+        { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
 
     /*
         Return the next free id. Use this id to access the payload (see above).
@@ -259,7 +271,7 @@ inline int iFreeListBase<T, ConstantsType>::next4list(iAtomicCounter<int>& list,
     do {
         id = list.value();
         at = id & ConstantsType::IndexMask;
-        if (at < ConstantsType::InitialNextValue || at >= ConstantsType::IndexMask)
+        if (at < ConstantsType::InitialNextValue || at >= this->_maxIndex)
             return -1;
 
         const int block = blockfor(at);
@@ -290,6 +302,7 @@ inline void iFreeListBase<T, ConstantsType>::release4list(iAtomicCounter<int>& l
 {
     int at = id & ConstantsType::IndexMask;
     const int block = blockfor(at);
+    IX_ASSERT(block >= 0);
     ElementType *v = _v[block].load();
 
     int x, newid;

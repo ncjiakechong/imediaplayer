@@ -16,9 +16,9 @@ namespace iShell {
 // default sizes and offsets (no need to define these when customizing)
 enum {
     Offset0 = 0x00000000,
-    Offset1 = 0x00008000,
-    Offset2 = 0x00080000,
-    Offset3 = 0x00800000,
+    Offset1 = 0x00000080,
+    Offset2 = 0x00000200,
+    Offset3 = 0x00000800,
 
     Size0 = Offset1  - Offset0,
     Size1 = Offset2  - Offset1,
