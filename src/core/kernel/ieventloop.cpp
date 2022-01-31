@@ -95,8 +95,8 @@ int iEventLoop::exec(ProcessEventsFlags flags)
 
 void iEventLoop::exit(int returnCode)
 {
-    m_exit = 1;
     m_returnCode = returnCode;
+    m_exit = 1;
 
     iThreadData *threadData = iThread::get2(thread());
     if (threadData->dispatcher.load())

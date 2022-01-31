@@ -1635,7 +1635,7 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
         ilog_debug("Current source is a non-live source");
 
     if (self->m_videoSink)
-        g_object_set(G_OBJECT(self->m_videoSink), "sync", !self->m_isLiveSource, IX_NULLPTR);
+        g_object_set(G_OBJECT(self->m_videoSink), "sync", /* !self->m_isLiveSource*/ true, IX_NULLPTR);
 
     gst_object_unref(source);
 }
