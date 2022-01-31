@@ -95,7 +95,7 @@ bool iThread::wait(long time)
 }
 
 iThread::iThread(iObject *parent)
-    : iObject(parent)
+    : iObject(IX_NULLPTR)
     , m_running(false)
     , m_finished(false)
     , m_isInFinish(false)
@@ -107,10 +107,12 @@ iThread::iThread(iObject *parent)
     , m_impl(new iThreadImpl(this))
 {
     m_data->thread = this;
+    moveToThread(this);
+    setParent(parent);
 }
 
 iThread::iThread(iThreadData* data, iObject *parent)
-    : iObject(parent)
+    : iObject(IX_NULLPTR)
     , m_running(false)
     , m_finished(false)
     , m_isInFinish(false)
@@ -125,6 +127,8 @@ iThread::iThread(iThreadData* data, iObject *parent)
         m_data = new iThreadData();
 
     m_data->thread = this;
+    moveToThread(this);
+    setParent(parent);
 }
 
 iThread::~iThread()

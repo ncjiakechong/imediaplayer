@@ -50,7 +50,6 @@ int test_thread(void)
 
     ilog_debug("test_thread: current thread ", iThread::currentThreadId());
     iThread* thread = new iThread();
-    thread->moveToThread(thread);
     thread->setObjectName("test_threadtest_threadtest_thread");
 
     TestThread* thread1 = new TestThread;

@@ -106,7 +106,6 @@ int test_timer(void)
     ilog_debug("test_timer: current thread ", iThread::currentThreadId());
     iThread* thread = new iThread();
     thread->setObjectName("test_timer");
-    thread->moveToThread(thread);
 
     TestTimer* timer = new TestTimer();
     timer->startTimer(1000, 1000, VeryCoarseTimer);

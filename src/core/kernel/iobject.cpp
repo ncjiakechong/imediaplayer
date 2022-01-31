@@ -288,6 +288,11 @@ void iObject::moveToThread(iThread *targetThread)
         return;
     }
 
+    if (this == m_threadData->thread) {
+        ilog_warn("Cannot move a thread to another");
+        return;
+    }
+
     iThreadData *currentData = iThreadData::current();
     iThreadData *targetData = targetThread ? iThread::get2(targetThread) : IX_NULLPTR;
     if ((m_threadData->thread == IX_NULLPTR) && (currentData == targetData)) {
