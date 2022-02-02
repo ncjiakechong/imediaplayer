@@ -1975,8 +1975,9 @@ _iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2) {
 class IX_CORE_EXPORT iMetaObject
 {
 public:
-    iMetaObject(const iMetaObject* supper);
+    iMetaObject(const char* className, const iMetaObject* supper);
 
+    const char* className() const { return m_className; }
     const iMetaObject *superClass() const { return m_superdata; }
     bool inherits(const iMetaObject *metaObject) const;
 
@@ -1990,6 +1991,7 @@ public:
 private:
     bool m_propertyCandidate : 1; // hack for init property
     bool m_propertyInited : 1; // hack for init property
+    const char* m_className;
     const iMetaObject* m_superdata;
     std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> m_property;
 };
@@ -2002,7 +2004,7 @@ private:
     /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */ \
 public: \
     virtual const iMetaObject *metaObject() const { \
-        static iMetaObject staticMetaObject = iMetaObject(IX_BaseType::metaObject()); \
+        static iMetaObject staticMetaObject = iMetaObject(# TYPE, IX_BaseType::metaObject()); \
         if (!staticMetaObject.hasProperty()) { \
             std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> ppt; \
             staticMetaObject.setProperty(ppt); \

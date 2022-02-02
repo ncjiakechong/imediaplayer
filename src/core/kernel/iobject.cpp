@@ -49,9 +49,10 @@ iMetaCallEvent::~iMetaCallEvent()
         semaphore->release();
 }
 
-iMetaObject::iMetaObject(const iMetaObject* supper)
+iMetaObject::iMetaObject(const char* className, const iMetaObject* supper)
     : m_propertyCandidate(false)
     , m_propertyInited(false)
+    , m_className(className)
     , m_superdata(supper)
 {
 }
@@ -753,7 +754,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
     iThreadData* currentThreadData = iThreadData::current();
     bool inSenderThread = (currentThreadData == this->m_threadData);
     if (!inSenderThread) {
-        ilog_info("obj[", this, " name:", objectName(), " signal:", name, "] signal not emit at sender thread");
+        ilog_info("obj[", this, " ", objectName(), "@", metaObject()->className(), "::", name, "] signal not emit at sender thread");
     }
 
     // We need to check against last here to ensure that signals added
@@ -802,8 +803,8 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         } else {}
 
         if (receiverInSameThread) {
-            ilog_warn("obj[", this, " name:", objectName(), " signal:", name, "] Dead lock detected while activating a BlockingQueuedConnection: "
-                "receiver is ", receiver->objectName(), "(", receiver, ")");
+            ilog_warn("obj[", this, " ", objectName(), "@", metaObject()->className(), "::", name, "] Dead lock detected while activating a BlockingQueuedConnection: "
+                "receiver ", receiver, " ", receiver->objectName(), "@", receiver->metaObject()->className());
         }
 
         conn->ref();
@@ -822,7 +823,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
 
 const iMetaObject* iObject::metaObject() const
 {
-    static iMetaObject staticMetaObject = iMetaObject(IX_NULLPTR);
+    static iMetaObject staticMetaObject = iMetaObject("iObject", IX_NULLPTR);
     if (!staticMetaObject.hasProperty()) {
         std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> ppt;
         staticMetaObject.setProperty(ppt);
@@ -837,6 +838,7 @@ const iMetaObject* iObject::metaObject() const
 iVariant iObject::property(const char *name) const
 {
     const iMetaObject* mo = metaObject();
+    const char* className = mo->className();
 
     do {
         const _iProperty* tProperty = mo->property(iLatin1String(name));
@@ -846,13 +848,14 @@ iVariant iObject::property(const char *name) const
         return tProperty->_get(tProperty, this);
     } while ((mo = mo->superClass()));
 
-    ilog_warn("obj[", objectName(), "] property[", name, "] not found!");
+    ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] not found!");
     return iVariant();
 }
 
 bool iObject::setProperty(const char *name, const iVariant& value)
 {
     const iMetaObject* mo = metaObject();
+    const char* className = mo->className();
 
     do {
         const _iProperty* tProperty = mo->property(iLatin1String(name));
@@ -861,18 +864,19 @@ bool iObject::setProperty(const char *name, const iVariant& value)
 
         bool ret = tProperty->_set(tProperty, this, value);
         if (!ret)
-            ilog_warn("obj[", objectName(), "] property[", name, "] no set function!");
+            ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] no set function!");
 
         return ret;
     } while ((mo = mo->superClass()));
 
-    ilog_warn("obj[", objectName(), "] property[", name, "] not found!");
+    ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] not found!");
     return false;
 }
 
 bool iObject::observePropertyImp(const char* name, _iConnection& conn)
 {
     const iMetaObject* mo = metaObject();
+    const char* className = mo->className();
 
     do {
         const _iProperty* tProperty = mo->property(iLatin1String(name));
@@ -886,12 +890,12 @@ bool iObject::observePropertyImp(const char* name, _iConnection& conn)
 
         bool ret = connectImpl(conn);
         if (!ret)
-            ilog_warn("obj[", objectName(), "] property[", name, "] no signal func!");
+            ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] no signal func!");
 
         return ret;
     } while ((mo = mo->superClass()));
 
-    ilog_warn("obj[", objectName(), "] property[", name, "] not found!");
+    ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] not found!");
     return false;
 }
 
@@ -993,7 +997,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
     } else if (_type == BlockingQueuedConnection) {
         if (receiverInSameThread) {
             ilog_warn("iObject Dead lock detected while activating a BlockingQueuedConnection: "
-                "receiver is ", receiver->objectName(), "(", receiver, ")");
+                "receiver ", receiver, " ", receiver->objectName(), "@", receiver->metaObject()->className());
         }
         iSemaphore semaphore;
         iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
