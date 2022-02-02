@@ -283,13 +283,13 @@ void iObject::moveToThread(iThread *targetThread)
         return;
     }
 
-    if (IX_NULLPTR != m_parent) {
-        ilog_warn("Cannot move objects with a parent");
+    if (this == m_threadData->thread) {
+        ilog_warn("Cannot move a thread to another");
         return;
     }
 
-    if (this == m_threadData->thread) {
-        ilog_warn("Cannot move a thread to another");
+    if (IX_NULLPTR != m_parent) {
+        ilog_warn("Cannot move objects with a parent");
         return;
     }
 
