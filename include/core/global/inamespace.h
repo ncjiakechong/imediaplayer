@@ -86,6 +86,13 @@ enum EventPriority {
     LowEventPriority = -1
 };
 
+enum MemType {
+    MEMTYPE_SHARED_POSIX,         /* Data is shared and created using POSIX shm_open() */
+    MEMTYPE_SHARED_MEMFD,         /* Data is shared and created using Linux memfd_create() */
+    MEMTYPE_PRIVATE,              /* Data is private and created using classic memory allocation
+                                         (posix_memalign(), malloc() or anonymous mmap()) */
+};
+
 } // namespace iShell
 
 #endif // INAMESPACE_H
