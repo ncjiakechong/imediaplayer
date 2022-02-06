@@ -63,10 +63,16 @@ public:
     ValueType operator ++ (int); // postfix
         /// Increments the counter and returns the previous value.
 
+    iAtomicCounter& operator += (int); // postfix
+        /// Increments the counter and returns the previous value.
+
     ValueType operator -- (); // prefix
         /// Decrements the counter and returns the result.
 
     ValueType operator -- (int); // postfix
+        /// Decrements the counter and returns the previous value.
+    
+    iAtomicCounter& operator -= (int); // postfix
         /// Decrements the counter and returns the previous value.
 
     bool operator ! () const;
@@ -165,6 +171,13 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ (int
 }
 
 template <typename T>
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (int count)
+{
+    m_counter += count;
+    return *this;
+}
+
+template <typename T>
 inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- () // prefix
 {
     return --m_counter;
@@ -174,6 +187,13 @@ template <typename T>
 inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- (int) // postfix
 {
     return m_counter--;
+}
+
+template <typename T>
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
+{
+    m_counter -= count;
+    return *this;
 }
 
 template <typename T>

@@ -31,6 +31,7 @@ set (ComSource
 	thread/ieventdispatcher_generic.cpp
 	thread/imutex.cpp
 	thread/isemaphore.cpp
+	thread/iaupdate.cpp
 	thread/ithread.cpp
 	thread/iwakeup.cpp
 	thread/ithreadstorage.cpp
@@ -44,6 +45,11 @@ set (ComSource
 	utils/ihashfunctions.cpp
 	utils/ilocale_tools_p.cpp
 	utils/ilocale.cpp
+	utils/imemblock.cpp
+	utils/imemblockq.cpp
+	utils/imemchunk.cpp
+	utils/isharemem.cpp
+	utils/imemtrap.cpp
 	utils/irect.cpp
 	utils/iregularexpression.cpp
 	utils/iringbuffer.cpp

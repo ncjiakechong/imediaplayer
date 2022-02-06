@@ -350,7 +350,7 @@ xintptr iThread::currentThreadHd()
 
 int iThread::currentThreadId()
 {
-    static __thread uint64_t id = 0;
+    static __thread xuint64 id = 0;
     if (id != 0) 
         return id;
 
