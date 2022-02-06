@@ -27,7 +27,7 @@ class iMemExport;
 class iMemImportSegment;
 
 /** A generic free() like callback prototype */
-typedef void (*iFreeCb)(void *p);
+typedef void (*iFreeCb)(void* p);
 
 /**
  * A memblock is a reference counted memory block. PulseAudio
@@ -45,17 +45,17 @@ public:
     static iMemBlock* new4Pool(iMemPool* pool, size_t length);
 
     /// Allocate a new memory block of type MEMBLOCK_USER */
-    static iMemBlock* new4User(iMemPool* pool, void *data, size_t length, iFreeCb freeCb, void *freeCbData, bool readOnly);
+    static iMemBlock* new4User(iMemPool* pool, void* data, size_t length, iFreeCb freeCb, void* freeCbData, bool readOnly);
 
     /// Allocate a new memory block of type MEMBLOCK_FIXED
-    static iMemBlock* new4Fixed(iMemPool* pool, void *data, size_t length, bool read_only);
+    static iMemBlock* new4Fixed(iMemPool* pool, void* data, size_t length, bool readOnly);
 
     void ref();
     void deref();
 
     inline bool isOurs() const { return m_type != MEMBLOCK_IMPORTED; }
-    inline bool isReadOnly() const { return m_read_only || (m_ref.value() > 1); }
-    inline bool isSilence() const { return m_is_silence; }
+    inline bool isReadOnly() const { return m_readOnly || (m_ref.value() > 1); }
+    inline bool isSilence() const { return m_isSilence; }
     inline bool refIsOne() const { return 1 == m_ref.value(); }
     inline size_t length() const { return m_length; }
     void setIsSilence(bool v);
@@ -75,7 +75,7 @@ private:
         MEMBLOCK_POOL,             /* Memory is part of the memory pool */
         MEMBLOCK_POOL_EXTERNAL,    /* Data memory is part of the memory pool but the pa_memblock structure itself is not */
         MEMBLOCK_APPENDED,         /* The data is appended to the memory block */
-        MEMBLOCK_USER,             /* User supplied memory, to be freed with free_cb */
+        MEMBLOCK_USER,             /* User supplied memory, to be freed with freeCb */
         MEMBLOCK_FIXED,            /* Data is a pointer to fixed memory that needs not to be freed */
         MEMBLOCK_IMPORTED,         /* Memory is imported from another process via shm */
         MEMBLOCK_TYPE_MAX
@@ -96,25 +96,25 @@ private:
 
     Type m_type;
 
-    bool m_read_only:1;
-    bool m_is_silence:1;
+    bool m_readOnly:1;
+    bool m_isSilence:1;
 
     iAtomicCounter<void*> m_data;
     size_t m_length;
 
-    iAtomicCounter<int> m_n_acquired;
-    iAtomicCounter<int> m_please_signal;
+    iAtomicCounter<int> m_nAcquired;
+    iAtomicCounter<int> m_pleaseSignal;
 
     struct {
         /* If type == PA_MEMBLOCK_USER this points to a function for freeing this memory block */
-        iFreeCb free_cb;
-        /* If type == PA_MEMBLOCK_USER this is passed as free_cb argument */
-        void *free_cb_data;
+        iFreeCb freeCb;
+        /* If type == PA_MEMBLOCK_USER this is passed as freeCb argument */
+        void* freeCbData;
     } m_user;
 
     struct {
-        uint32_t id;
-        iMemImportSegment *segment;
+        uint id;
+        iMemImportSegment* segment;
     } m_imported;
 
     friend class iMemPool;
@@ -128,25 +128,25 @@ class IX_CORE_EXPORT iMemPool
 public:
     /**
      * Please note that updates to this structure are not locked,
-     * i.e. n_allocated might be updated at a point in time where
-     * n_accumulated is not yet. Take these values with a grain of salt,
+     * i.e. nAllocated might be updated at a point in time where
+     * nAccumulated is not yet. Take these values with a grain of salt,
      * they are here for purely statistical reasons.
      */
     struct Stat {
-        iAtomicCounter<int> n_allocated;
-        iAtomicCounter<int> n_accumulated;
-        iAtomicCounter<int> n_imported;
-        iAtomicCounter<int> n_exported;
-        iAtomicCounter<int> allocated_size;
-        iAtomicCounter<int> accumulated_size;
-        iAtomicCounter<int> imported_size;
-        iAtomicCounter<int> exported_size;
+        iAtomicCounter<int> nAllocated;
+        iAtomicCounter<int> nAccumulated;
+        iAtomicCounter<int> nImported;
+        iAtomicCounter<int> nExported;
+        iAtomicCounter<int> allocatedSize;
+        iAtomicCounter<int> accumulatedSize;
+        iAtomicCounter<int> importedSize;
+        iAtomicCounter<int> exportedSize;
 
-        iAtomicCounter<int> n_too_large_for_pool;
-        iAtomicCounter<int> n_pool_full;
+        iAtomicCounter<int> nTooLargeForPool;
+        iAtomicCounter<int> nPoolFull;
 
-        iAtomicCounter<int> n_allocated_by_type[iMemBlock::MEMBLOCK_TYPE_MAX];
-        iAtomicCounter<int> n_accumulated_by_type[iMemBlock::MEMBLOCK_TYPE_MAX];
+        iAtomicCounter<int> nAllocatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
+        iAtomicCounter<int> nAccumulatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
     };
 
     static iMemPool* create(MemType type, size_t size, bool perClient);
@@ -160,7 +160,7 @@ public:
     bool isMemfdBacked() const;
     inline bool isGlobal() const { return m_global; }
     inline bool isPerClient() const { return !m_global; }
-    inline bool isRemoteWritable() const { return m_is_remote_writable; }
+    inline bool isRemoteWritable() const { return m_isRemoteWritable; }
     void setIsRemoteWritable(bool writable);
     size_t blockSizeMax() const;
 
@@ -183,17 +183,17 @@ private:
 
     bool m_global;
 
-    size_t m_block_size;
-    xuint32 m_n_blocks;
-    bool m_is_remote_writable;
+    size_t m_blockSize;
+    xuint32 m_nBlocks;
+    bool m_isRemoteWritable;
 
-    iAtomicCounter<int> m_n_init;
+    iAtomicCounter<int> m_nInit;
 
     iMemImport* m_imports;
     iMemExport* m_exports;
 
     /* A list of free slots that may be reused */
-    iFreeList<Slot*> m_free_slots;
+    iFreeList<Slot*> m_freeSlots;
 
     Stat m_stat;
 
@@ -202,35 +202,35 @@ private:
     friend class iMemExport;
 };
 
-typedef void (*iMemImportReleaseCb)(iMemImport *i, xuint32 block_id, void *userdata);
-typedef void (*iMemExportRevokeCb)(iMemExport *e, xuint32 block_id, void *userdata);
+typedef void (*iMemImportReleaseCb)(iMemImport* imp, uint blockId, void* userdata);
+typedef void (*iMemExportRevokeCb)(iMemExport* exp, uint blockId, void* userdata);
 
 /* For receiving blocks from other nodes */
 class IX_CORE_EXPORT iMemImport
 {
 public:
-    iMemImport(iMemPool *p, iMemImportReleaseCb cb, void *userdata);
+    iMemImport(iMemPool* pool, iMemImportReleaseCb cb, void* userdata);
     ~iMemImport();
 
-    iMemBlock* get(MemType type, xuint32 block_id, xuint32 shm_id, size_t offset, size_t size, bool writable);
-    int processRevoke(uint32_t block_id);
+    iMemBlock* get(MemType type, uint blockId, uint shmId, size_t offset, size_t size, bool writable);
+    int processRevoke(uint blockId);
 
-    int attachMemfd(uint32_t shm_id, int memfd_fd, bool writable);
+    int attachMemfd(uint shmId, int memfd_fd, bool writable);
 
 private:
-    iMemImportSegment* segmentAttach(MemType type, xuint32 shm_id, int memfd_fd, bool writable);
-    static void segmentDetach(iMemImportSegment *seg);
-    static bool segmentIsPermanent(iMemImportSegment *seg);
+    iMemImportSegment* segmentAttach(MemType type, uint shmId, int memfd_fd, bool writable);
+    static void segmentDetach(iMemImportSegment* seg);
+    static bool segmentIsPermanent(iMemImportSegment* seg);
 
     iMutex m_mutex;
 
     iMemPool* m_pool;
     std::unordered_map<uint, iMemImportSegment*> m_segments;
-    std::unordered_map<uint32_t, iMemBlock*> m_blocks;
+    std::unordered_map<uint, iMemBlock*> m_blocks;
 
     /* Called whenever an imported memory block is no longer
      * needed. */
-    iMemImportReleaseCb m_release_cb;
+    iMemImportReleaseCb m_releaseCb;
     void* m_userdata;
 
     iMemImport* m_next;
@@ -243,11 +243,11 @@ private:
 class IX_CORE_EXPORT iMemExport
 {
 public:
-    iMemExport(iMemPool *p, iMemExportRevokeCb cb, void *userdata);
+    iMemExport(iMemPool* pool, iMemExportRevokeCb cb, void* userdata);
     ~iMemExport();
 
-    int put(iMemBlock *b, MemType *type, xuint32 *block_id, xuint32 *shm_id, size_t *offset, size_t *size);
-    int processRelease(uint32_t id);
+    int put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId, size_t* offset, size_t* size);
+    int processRelease(uint id);
 
 private:
     #define IMEMEXPORT_SLOTS_MAX 128
@@ -266,15 +266,15 @@ private:
 
     Slot m_slots[IMEMEXPORT_SLOTS_MAX];
 
-    Slot* m_free_slots;
-    Slot* m_used_slots;
-    xuint32 m_n_init;
-    xuint32 m_baseidx;
+    Slot* m_freeSlots;
+    Slot* m_usedSlots;
+    xuint32 m_nInit;
+    uint m_baseIdx;
 
     /* Called whenever a client from which we imported a memory block
        which we in turn exported to another client dies and we need to
        revoke the memory block accordingly */
-    iMemExportRevokeCb m_revoke_cb;
+    iMemExportRevokeCb m_revokeCb;
     void* m_userdata;
 
     iMemExport* m_next;
