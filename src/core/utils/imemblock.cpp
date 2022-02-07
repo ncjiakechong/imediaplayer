@@ -188,66 +188,70 @@ void iMemBlock::doFree()
 }
 
 /* No lock necessary */
-void iMemBlock::ref() 
+bool iMemBlock::ref() 
 {
-    IX_ASSERT(m_ref.value() > 0);
-    m_ref++;
+    return m_ref.ref();
 }
 
 /* No lock necessary */
-void iMemBlock::deref() 
+bool iMemBlock::deref() 
 {
-    IX_ASSERT(m_ref.value() > 0);
+    bool valid = m_ref.deref();
+    if (!valid)
+        doFree();
 
-    if (--m_ref > 0)
-        return;
-
-    doFree();
+    return valid;
 }
 
-iMemBlock* iMemBlock::newOne(iMemPool* p, size_t length)
+iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t length)
 {
-    iMemBlock* b = new4Pool(p, length);
-    if (b)
-        return b;
+    iMemBlock* block = IX_NULLPTR;
+    if (IX_NULLPTR != pool) {
+        block = new4Pool(pool, length);
+    } else {
+        pool = iMemPool::fakeAdaptor();
+    }
+
+    if (IX_NULLPTR != block)
+        return block;
 
     /* If -1 is passed as length we choose the size for the caller. */
     if (length == (size_t) -1)
-        length = p->blockSizeMax();
+        length = pool->blockSizeMax();
 
     void* slot = ::malloc(IX_ALIGN(sizeof(iMemBlock)) + length);
-    b = new (slot) iMemBlock(p, MEMBLOCK_APPENDED, (xuint8*)slot + IX_ALIGN(sizeof(iMemBlock)), length);
-    return b;
+    block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, (xuint8*)slot + IX_ALIGN(sizeof(iMemBlock)), length);
+    return block;
 }
 
 /* No lock necessary */
-iMemBlock* iMemBlock::new4Pool(iMemPool* p, size_t length)
+iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t length)
 {
     IX_ASSERT(length);
 
     /* If -1 is passed as length we choose the size for the caller: we
      * take the largest size that fits in one of our slots. */
     if (length == (size_t) -1)
-        length = p->blockSizeMax();
+        length = pool->blockSizeMax();
 
-    if (p->m_blockSize >= IX_ALIGN(sizeof(iMemBlock)) + length) {
-        iMemPool::Slot* slot = p->allocateSlot();
-        if (!slot)
+    if (pool->m_blockSize >= IX_ALIGN(sizeof(iMemBlock)) + length) {
+        iMemPool::Slot* slot = pool->allocateSlot();
+        if (IX_NULLPTR == slot)
             return IX_NULLPTR;
 
-        iMemBlock* b = new (p->slotData(slot)) iMemBlock(p, MEMBLOCK_POOL, 
-                                                        (xuint8*)p->slotData(slot) + IX_ALIGN(sizeof(iMemBlock)), length);
-        return b;
-    } else if (p->m_blockSize >= length) {
-        iMemPool::Slot* slot = p->allocateSlot();
-         if (!slot)
+        iMemBlock* block = new (pool->slotData(slot)) iMemBlock(pool, MEMBLOCK_POOL, 
+                                                        (xuint8*)pool->slotData(slot) + IX_ALIGN(sizeof(iMemBlock)), length);
+        return block;
+    } else if (pool->m_blockSize >= length) {
+        iMemPool::Slot* slot = pool->allocateSlot();
+         if (IX_NULLPTR == slot)
             return IX_NULLPTR;
 
-        iMemBlock* b = new iMemBlock(p, MEMBLOCK_POOL_EXTERNAL, p->slotData(slot), length);
-        return b;
+        iMemBlock* block = new iMemBlock(pool, MEMBLOCK_POOL_EXTERNAL, pool->slotData(slot), length);
+        return block;
     } else {
-        ilog_info("Memory block too large for pool: ", length, " > ", p->m_blockSize);
-        p->m_stat.nTooLargeForPool++;
+        ilog_info("Memory block too large for pool: ", length, " > ", pool->m_blockSize);
+        pool->m_stat.nTooLargeForPool++;
         return IX_NULLPTR;
     }
 
@@ -255,28 +259,31 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* p, size_t length)
 }
 
 /* No lock necessary */
-iMemBlock* iMemBlock::new4Fixed(iMemPool* p, void *d, size_t length, bool readOnly)
+iMemBlock* iMemBlock::new4Fixed(iMemPool* pool, void* data, size_t length, bool readOnly)
 {
-    IX_ASSERT(p);
-    IX_ASSERT(d);
-    IX_ASSERT(length != (size_t) -1);
-    IX_ASSERT(length);
+    if (IX_NULLPTR == pool)
+        pool = iMemPool::fakeAdaptor();
 
-    iMemBlock* b = new iMemBlock(p, MEMBLOCK_FIXED, d, length);
-    b->m_readOnly = readOnly;
-    return b;
+    IX_ASSERT(pool && data && length && (length != (size_t) -1));
+    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_FIXED, data, length);
+    block->m_readOnly = readOnly;
+
+    return block;
 }
 
 /* No lock necessary */
-iMemBlock* iMemBlock::new4User(iMemPool* p, void* d, size_t length, iFreeCb freeCb, void* freeCbData, bool readOnly)
+iMemBlock* iMemBlock::new4User(iMemPool* pool, void* data, size_t length, iFreeCb freeCb, void* freeCbData, bool readOnly)
 {
-    IX_ASSERT(p && d && length && (length != (size_t) -1));
-    iMemBlock* b = new iMemBlock(p, MEMBLOCK_USER, d, length);
-    b->m_readOnly = readOnly;
-    b->m_user.freeCb = freeCb;
-    b->m_user.freeCbData = freeCbData;
+    if (IX_NULLPTR == pool)
+        pool = iMemPool::fakeAdaptor();
 
-    return b;
+    IX_ASSERT(pool && data && length && (length != (size_t) -1));
+    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_USER, data, length);
+    block->m_readOnly = readOnly;
+    block->m_user.freeCb = freeCb;
+    block->m_user.freeCbData = freeCbData;
+
+    return block;
 }
 
 /* No lock necessary */
@@ -341,7 +348,7 @@ void iMemBlock::release()
 {
     IX_ASSERT(m_ref.value() > 0);
 
-    int r = --m_nAcquired;
+    int r = m_nAcquired--;
     IX_ASSERT(r >= 1);
 
     /* Signal a waiting thread that this memblock is no longer used */
@@ -508,6 +515,17 @@ iMemPool* iMemPool::create(MemType type, size_t size, bool perClient)
     return pool;
 }
 
+iMemPool* iMemPool::fakeAdaptor() 
+{
+    static iMemPool s_fakeMemPool(IX_PAGE_SIZE, 0, false);
+    
+    if (IX_NULLPTR == s_fakeMemPool.m_memory) {
+        s_fakeMemPool.m_memory = new iShareMem();
+    }
+
+    return &s_fakeMemPool;
+}
+
 iMemPool::iMemPool(size_t block_size, xuint32 n_blocks, bool perClient)
     : m_ref(1)
     , m_semaphore(0)
@@ -617,11 +635,11 @@ iMemPool::Slot* iMemPool::allocateSlot()
         return slot;
     }
 
-    int idx = ++m_nInit;
+    int idx = m_nInit++;
 
     /* The free list was empty, we have to allocate a new entry */
     if ((unsigned) idx >= m_nBlocks) {
-        --m_nInit;
+        m_nInit--;
     } else {
         slot = (Slot*) ((xuint8*) m_memory->data() + (m_blockSize * (size_t) idx));
     }
@@ -679,15 +697,18 @@ bool iMemPool::isMemfdBacked() const
     return (m_memory->type() == MEMTYPE_SHARED_MEMFD);
 }
 
-void iMemPool::ref() 
+bool iMemPool::ref() 
 {
-    m_ref++;
+    return m_ref.ref();
 }
 
-void iMemPool::deref() 
+bool iMemPool::deref() 
 {
-    if (--m_ref <= 0)
+    bool valid = m_ref.deref();
+    if (!valid)
         delete this;
+    
+    return valid;
 }
 
 /* For receiving blocks from other nodes */
