@@ -14,6 +14,7 @@
 #include "core/kernel/ieventloop.h"
 #include "core/thread/ithread.h"
 #include "core/kernel/ievent.h"
+#include "core/utils/imemtrap.h"
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 
@@ -95,6 +96,8 @@ iCoreApplication::~iCoreApplication()
 
 void iCoreApplication::init()
 {
+    iMemTrap::install();
+
     iEventDispatcher* dispatcher;
     dispatcher = m_threadData->dispatcher.load();
     bool needStarting = false;

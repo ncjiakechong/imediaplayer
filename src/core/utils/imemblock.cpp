@@ -86,10 +86,68 @@ struct iMemImportSegment {
     bool writable;
 };
 
-iMemBlock::iMemBlock(iMemPool* pool, Type type, void* data, size_t length)
+iMemPoolWraper::iMemPoolWraper(iMemPool* pool) 
+    : _pool(pool) 
+{
+    _pool->ref(); 
+}
+
+iMemPoolWraper::iMemPoolWraper(const iMemPoolWraper& other) 
+    : _pool(other._pool) 
+{
+    _pool->ref(); 
+}
+
+iMemPoolWraper::~iMemPoolWraper() 
+{
+    _pool->deref();
+}
+
+iMemPoolWraper& iMemPoolWraper::operator=(const iMemPoolWraper& other)
+{
+    if (&other == this)
+        return *this;
+
+    _pool->deref();
+    _pool = other._pool;
+    _pool->ref();
+
+    return *this;
+}
+
+iMemDataWraper::iMemDataWraper(const iMemBlock* block, size_t offset)
+    : _block(block), _data(const_cast<iMemBlock*>(block)->acquire(offset))
+{}
+
+iMemDataWraper::iMemDataWraper(const iMemDataWraper& other)
+    : _block(other._block), _data(other._data)
+{
+    const_cast<iMemBlock*>(_block)->acquire(0);
+}
+
+iMemDataWraper::~iMemDataWraper()
+{
+    const_cast<iMemBlock*>(_block)->release();
+}
+
+iMemDataWraper& iMemDataWraper::operator=(const iMemDataWraper& other)
+{
+    if (&other == this)
+        return *this;
+
+    const_cast<iMemBlock*>(_block)->release();
+    _block = other._block;
+    _data = other._data;
+    const_cast<iMemBlock*>(_block)->acquire(0);
+
+    return *this;
+}
+
+iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length)
     : m_ref(1)
     , m_pool(pool)
     , m_type(type)
+    , m_options(options)
     , m_readOnly(false)
     , m_isSilence(false)
     , m_data(data)
@@ -123,7 +181,7 @@ void iMemBlock::doFree()
     switch (m_type) {
         case MEMBLOCK_USER :
             IX_ASSERT(m_user.freeCb);
-            m_user.freeCb(m_user.freeCbData);
+            m_user.freeCb(m_data.value(), m_user.freeCbData);
 
             /* Fall through */
 
@@ -203,7 +261,7 @@ bool iMemBlock::deref()
     return valid;
 }
 
-iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t length)
+iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t length, size_t alignment, ArrayOptions options)
 {
     iMemBlock* block = IX_NULLPTR;
     if (IX_NULLPTR != pool) {
@@ -220,7 +278,7 @@ iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t length)
         length = pool->blockSizeMax();
 
     void* slot = ::malloc(IX_ALIGN(sizeof(iMemBlock)) + length);
-    block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, (xuint8*)slot + IX_ALIGN(sizeof(iMemBlock)), length);
+    block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, options, (xuint8*)slot + IX_ALIGN(sizeof(iMemBlock)), length);
     return block;
 }
 
@@ -239,7 +297,7 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t length)
         if (IX_NULLPTR == slot)
             return IX_NULLPTR;
 
-        iMemBlock* block = new (pool->slotData(slot)) iMemBlock(pool, MEMBLOCK_POOL, 
+        iMemBlock* block = new (pool->slotData(slot)) iMemBlock(pool, MEMBLOCK_POOL, DefaultAllocationFlags,
                                                         (xuint8*)pool->slotData(slot) + IX_ALIGN(sizeof(iMemBlock)), length);
         return block;
     } else if (pool->m_blockSize >= length) {
@@ -247,7 +305,7 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t length)
          if (IX_NULLPTR == slot)
             return IX_NULLPTR;
 
-        iMemBlock* block = new iMemBlock(pool, MEMBLOCK_POOL_EXTERNAL, pool->slotData(slot), length);
+        iMemBlock* block = new iMemBlock(pool, MEMBLOCK_POOL_EXTERNAL, DefaultAllocationFlags, pool->slotData(slot), length);
         return block;
     } else {
         ilog_info("Memory block too large for pool: ", length, " > ", pool->m_blockSize);
@@ -265,7 +323,7 @@ iMemBlock* iMemBlock::new4Fixed(iMemPool* pool, void* data, size_t length, bool 
         pool = iMemPool::fakeAdaptor();
 
     IX_ASSERT(pool && data && length && (length != (size_t) -1));
-    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_FIXED, data, length);
+    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_FIXED, DefaultAllocationFlags, data, length);
     block->m_readOnly = readOnly;
 
     return block;
@@ -278,12 +336,29 @@ iMemBlock* iMemBlock::new4User(iMemPool* pool, void* data, size_t length, iFreeC
         pool = iMemPool::fakeAdaptor();
 
     IX_ASSERT(pool && data && length && (length != (size_t) -1));
-    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_USER, data, length);
+    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_USER, DefaultAllocationFlags, data, length);
     block->m_readOnly = readOnly;
     block->m_user.freeCb = freeCb;
     block->m_user.freeCbData = freeCbData;
 
     return block;
+}
+
+iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t newLength, ArrayOptions options)
+{
+    IX_ASSERT(block && (MEMBLOCK_APPENDED == block->m_type) && (0 == block->m_nAcquired));
+
+    block->statRemove();
+    xptrdiff offset = reinterpret_cast<char *>(block->m_data.value()) - reinterpret_cast<char *>(block);
+    IX_ASSERT(offset < newLength);
+
+    iMemBlock* newBlock = static_cast<iMemBlock *>(::realloc(block, newLength));
+    newBlock->m_data = reinterpret_cast<char *>(newBlock) + offset;
+    newBlock->m_options = options;
+    newBlock->m_length = newLength;
+    newBlock->statAdd();
+
+    return newBlock;
 }
 
 /* No lock necessary */
@@ -328,19 +403,19 @@ void iMemBlock::statRemove()
 }
 
 /* No lock necessary */
-void* iMemBlock::acquire() 
+iMemDataWraper iMemBlock::data4Chunk(const iMemChunk *c) const
 {
-    IX_ASSERT(m_ref.value() > 0);
-
-    m_nAcquired++;
-    return m_data.value();
+    IX_ASSERT(c);
+    return iMemDataWraper(c->m_memblock, c->m_index);
 }
 
 /* No lock necessary */
-void* iMemBlock::acquire4Chunk(const iMemChunk *c)
+void* iMemBlock::acquire(size_t offset) 
 {
-    IX_ASSERT(c);
-    return (xuint8 *)(c->m_memblock->acquire()) + c->m_index;
+    IX_ASSERT((m_ref.value() > 0) && (offset < m_length));
+
+    m_nAcquired++;
+    return (xuint8 *)(m_data.value()) + offset;
 }
 
 /* No lock necessary, in corner cases locks by its own */
@@ -354,15 +429,6 @@ void iMemBlock::release()
     /* Signal a waiting thread that this memblock is no longer used */
     if (r == 1 && m_pleaseSignal.value())
         m_pool->m_semaphore.release();
-}
-
-/* Note! Always unref the returned pool after use */
-iMemPool* iMemBlock::getPool()
-{
-    IX_ASSERT(m_pool && (m_ref.value() > 0));
-
-    m_pool->ref();
-    return m_pool;
 }
 
 /* Self locked */
@@ -388,6 +454,10 @@ static void* ix_xmemdup(const void* p, size_t l) {
     char* r = (char*)::malloc(l);
     ::memcpy(r, p, l);
     return r;
+}
+static void freeWarper(void* pointer, void* userData)
+{
+    free(pointer);
 }
 
 /* No lock necessary. This function is not multiple caller safe! */
@@ -416,8 +486,8 @@ void iMemBlock::makeLocal()
     }
 
     /* Humm, not enough space in the pool, so lets allocate the memory with malloc() */
-    m_user.freeCb = free;
     m_data = ix_xmemdup(m_data.value(), m_length);
+    m_user.freeCb = freeWarper;
     m_user.freeCbData = m_data.value();
 
     m_type = MEMBLOCK_USER;
@@ -883,7 +953,7 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, size_t offset
         return IX_NULLPTR;
     }
 
-    iMemBlock* b = new iMemBlock(m_pool, iMemBlock::MEMBLOCK_IMPORTED, (xuint8*)seg->memory.data() + offset, size);
+    iMemBlock* b = new iMemBlock(m_pool, iMemBlock::MEMBLOCK_IMPORTED, iMemBlock::DefaultAllocationFlags, (xuint8*)seg->memory.data() + offset, size);
     b->m_readOnly = !writable;
     b->m_imported.id = blockId;
     b->m_imported.segment = seg;
@@ -1067,7 +1137,7 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
     ilog_debug("Got block id ", *blockId);
 
     iShareMem* memory = IX_NULLPTR;
-    void *data = block->acquire();
+    iMemDataWraper data = block->data();
     if (iMemBlock::MEMBLOCK_IMPORTED == block->m_type) {
         IX_ASSERT(block->m_imported.segment);
         memory = &block->m_imported.segment->memory;
@@ -1077,15 +1147,13 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
         memory = block->m_pool->m_memory;
     }
 
-    IX_ASSERT(data >= memory->data());
-    IX_ASSERT((xuint8*) data + block->m_length <= (xuint8*) memory->data() + memory->size());
+    IX_ASSERT(data.value() >= memory->data());
+    IX_ASSERT((xuint8*) data.value() + block->m_length <= (xuint8*) memory->data() + memory->size());
 
     *type = memory->type();
     *shmId = memory->id();
-    *offset = (size_t) ((xuint8*) data - (xuint8*) memory->data());
+    *offset = (size_t) ((xuint8*) data.value() - (xuint8*) memory->data());
     *size = block->m_length;
-
-    block->release();
 
     ++m_pool->m_stat.nExported;
     m_pool->m_stat.exportedSize += (int) block->m_length;

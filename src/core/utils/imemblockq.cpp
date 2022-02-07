@@ -453,11 +453,7 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk *chunk)
         return 0;
     }
 
-    iMemPool* pool = tchunk.m_memblock->getPool();
-    iMemChunk rchunk(iMemBlock::newOne(pool, block_size), 0, tchunk.m_length);
-    pool->deref();
-    pool = IX_NULLPTR;
-
+    iMemChunk rchunk(iMemBlock::newOne(tchunk.m_memblock->pool().value(), block_size), 0, tchunk.m_length);
     rchunk.copy(&tchunk);
     rchunk.m_index += tchunk.m_length;
 
