@@ -20,7 +20,7 @@ namespace iShell {
  * regions will be remapped to anonymous memory (i.e. writable NUL
  * bytes) on SIGBUS, so that execution of the main program can
  * continue though with memory having changed beneath its hands. With
- * pa_memtrap_is_good() it is possible to query if a memory region is
+ * isGood() it is possible to query if a memory region is
  * still 'good' i.e. no SIGBUS has happened yet for it.
  *
  * Intended usage is to handle memory mapped in which is controlled by
@@ -31,7 +31,6 @@ class IX_CORE_EXPORT iMemTrap
 {
 public:
     static void install();
-    static void memChanged(void* data);
 
     iMemTrap(const void *start, size_t size);
     ~iMemTrap();
@@ -40,6 +39,8 @@ public:
     bool isGood() const { return !m_bad.value(); }
 
 private:
+    static void signalHandler(void* data);
+
     void link(uint idx);
     void unlink(uint idx);
 

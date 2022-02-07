@@ -65,25 +65,14 @@ iMemChunk& iMemChunk::makeWritable(size_t min) {
 
     size_t l = std::max(m_length, min);
 
-    iMemPool* pool = m_memblock->getPool();
-    iMemBlock* n = iMemBlock::newOne(pool, l);
-    pool->deref();
-    pool = IX_NULLPTR;
-
-    void* sdata = m_memblock->acquire();
-    void* tdata = n->acquire();
-
-    memcpy(tdata, (xuint8*) sdata + m_index, m_length);
-
-    m_memblock->release();
-    n->release();
+    iMemBlock* n = iMemBlock::newOne(m_memblock->pool().value(), l);
+    memcpy(n->data().value(), (xuint8*) m_memblock->data().value() + m_index, m_length);
 
     n->ref();
     m_memblock->deref();
 
     m_memblock = n;
     m_index = 0;
-
     return *this;
 }
 
@@ -102,13 +91,7 @@ iMemChunk& iMemChunk::copy(iMemChunk *src)
 {
     IX_ASSERT(src && (m_length == src->m_length));
 
-    void* p = m_memblock->acquire();
-    void* q = src->m_memblock->acquire();
-
-    memmove((xuint8*) p + m_index, (xuint8*) q + src->m_index, m_length);
-
-    m_memblock->release();
-    src->m_memblock->release();
+    memmove((xuint8*)m_memblock->data().value() + m_index, (xuint8*) src->m_memblock->data().value() + src->m_index, m_length);
     return *this;
 }
 
@@ -152,12 +135,8 @@ void iMCAlign::push(const iMemChunk *c)
 
             /* Can we use the current block? */
             m_leftover.makeWritable(m_base);
-
-            void* lo_data = m_leftover.m_memblock->acquire();
-            void* c_data = c->m_memblock->acquire();
-            memcpy((xuint8*) lo_data + m_leftover.m_index + m_leftover.m_length, (xuint8*) c_data + c->m_index, l);
-            m_leftover.m_memblock->release();
-            c->m_memblock->release();
+            memcpy((xuint8*) m_leftover.m_memblock->data().value() + m_leftover.m_index + m_leftover.m_length, 
+                    (xuint8*) c->m_memblock->data().value() + c->m_index, l);
             m_leftover.m_length += l;
 
             IX_ASSERT(m_leftover.m_length <= m_base);

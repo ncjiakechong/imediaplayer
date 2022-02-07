@@ -28,7 +28,32 @@ class iMemExport;
 class iMemImportSegment;
 
 /** A generic free() like callback prototype */
-typedef void (*iFreeCb)(void* p);
+typedef void (*iFreeCb)(void* pointer, void* userData);
+
+class IX_CORE_EXPORT iMemPoolWraper
+{
+    iMemPool* _pool;
+public:
+    iMemPoolWraper(iMemPool* pool);
+    iMemPoolWraper(const iMemPoolWraper& other);
+    ~iMemPoolWraper();
+
+    iMemPoolWraper& operator=(const iMemPoolWraper& other);
+    inline iMemPool* value() const { return _pool; }
+};
+
+class IX_CORE_EXPORT iMemDataWraper
+{
+    void*            _data;
+    const iMemBlock* _block;
+public:
+    iMemDataWraper(const iMemBlock* block, size_t offset);
+    iMemDataWraper(const iMemDataWraper& other);
+    ~iMemDataWraper();
+
+    iMemDataWraper& operator=(const iMemDataWraper& other);
+    inline void* value() const { return _data; }
+};
 
 /**
  * A memblock is a reference counted memory block. PulseAudio
@@ -39,8 +64,17 @@ typedef void (*iFreeCb)(void* p);
 class IX_CORE_EXPORT iMemBlock
 {
 public:
+    enum ArrayOption {
+        /// this option is used by the allocate() function
+        DefaultAllocationFlags = 0,
+        CapacityReserved     = 0x1,  //!< the capacity was reserved by the user, try to keep it
+        GrowsForward         = 0x2,  //!< allocate with eyes towards growing through append()
+        GrowsBackwards       = 0x4   //!< allocate with eyes towards growing through prepend()
+    };
+	typedef uint ArrayOptions;
+    
     /// Allocate a new memory block of type PMEMBLOCK_MEMPOOL or MEMBLOCK_APPENDED, depending on the size */
-    static iMemBlock* newOne(iMemPool* pool, size_t length);
+    static iMemBlock* newOne(iMemPool* pool, size_t length, size_t alignment = 0, ArrayOptions options = DefaultAllocationFlags);
 
     /// Allocate a new memory block of type MEMBLOCK_MEMPOOL. If the requested size is too large, return NULL
     static iMemBlock* new4Pool(iMemPool* pool, size_t length);
@@ -51,24 +85,42 @@ public:
     /// Allocate a new memory block of type MEMBLOCK_FIXED
     static iMemBlock* new4Fixed(iMemPool* pool, void* data, size_t length, bool readOnly);
 
+    /// Reallocate the memory block of type MEMBLOCK_APPENDED
+    static iMemBlock* reallocate(iMemBlock* block, size_t newLength, ArrayOptions options = DefaultAllocationFlags);
+
     bool ref();
     bool deref();
 
     inline bool isOurs() const { return m_type != MEMBLOCK_IMPORTED; }
     inline bool isReadOnly() const { return m_readOnly || (m_ref.value() > 1); }
+    inline bool isShared() const { return m_ref.value() != 1; }
     inline bool isSilence() const { return m_isSilence; }
     inline bool refIsOne() const { return 1 == m_ref.value(); }
     inline size_t length() const { return m_length; }
     void setIsSilence(bool v);
 
-    void* acquire();
-    void* acquire4Chunk(const iMemChunk *c);
-    void release();
+    inline iMemPoolWraper pool() const { return iMemPoolWraper(m_pool); }
 
-    /// Note: Always unref the returned pool after use
-    iMemPool* getPool();
+    inline iMemDataWraper data() const { return iMemDataWraper(this, 0); }
+    iMemDataWraper data4Chunk(const iMemChunk* c) const;
 
-    iMemBlock& willNeed();
+    // Returns true if a detach is necessary before modifying the data
+    // This method is intentionally not const: if you want to know whether
+    // detaching is necessary, you should be in a non-const function already
+    inline bool needsDetach() const { return m_ref.value() > 1; }
+
+    inline xsizetype detachCapacity(xsizetype newSize) const {
+        if (m_options & CapacityReserved && newSize < m_length)
+            return m_length;
+        return newSize;
+    }
+
+    inline ArrayOptions detachFlags() const {
+        ArrayOptions result = DefaultAllocationFlags;
+        if (m_options & CapacityReserved)
+            result |= CapacityReserved;
+        return result;
+    }
 
 private:
     /** The type of memory this block points to */
@@ -82,7 +134,7 @@ private:
         MEMBLOCK_TYPE_MAX
     };
 
-    iMemBlock(iMemPool* pool, Type type, void* data, size_t length);
+    iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length);
     ~iMemBlock();
 
     void doFree();
@@ -92,10 +144,15 @@ private:
     void makeLocal();
     void replaceImport();
 
+    /// Note: Always release after use
+    void* acquire(size_t offset);
+    void release();
+
     iRefCount m_ref;
     iMemPool* m_pool;
 
     Type m_type;
+    ArrayOptions m_options;
 
     bool m_readOnly:1;
     bool m_isSilence:1;
@@ -121,6 +178,7 @@ private:
     friend class iMemPool;
     friend class iMemImport;
     friend class iMemExport;
+    friend class iMemDataWraper;
     IX_DISABLE_COPY(iMemBlock)
 };
 

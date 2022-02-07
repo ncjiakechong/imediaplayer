@@ -417,9 +417,8 @@ int iShareMem::attach(MemType type, uint id, xintptr memfd, bool writable)
     return doAttach(type, id, memfd, writable, false);
 }
 
-
 /* Convert the string s to an unsigned integer in *ret_u */
-int ix_atou(const char *s, xuint32 *ret_u) 
+static int ix_atou(const char *s, xuint32 *ret_u) 
 {
     IX_ASSERT(s && ret_u);
 
