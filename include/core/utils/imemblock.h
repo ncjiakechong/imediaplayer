@@ -13,8 +13,9 @@
 
 #include <unordered_map>
 #include <core/thread/imutex.h>
-#include <core/utils/ifreelist.h>
 #include <core/thread/isemaphore.h>
+#include <core/utils/ifreelist.h>
+#include <core/utils/irefcount.h>
 #include <core/global/inamespace.h>
 
 namespace iShell {
@@ -50,8 +51,8 @@ public:
     /// Allocate a new memory block of type MEMBLOCK_FIXED
     static iMemBlock* new4Fixed(iMemPool* pool, void* data, size_t length, bool readOnly);
 
-    void ref();
-    void deref();
+    bool ref();
+    bool deref();
 
     inline bool isOurs() const { return m_type != MEMBLOCK_IMPORTED; }
     inline bool isReadOnly() const { return m_readOnly || (m_ref.value() > 1); }
@@ -91,7 +92,7 @@ private:
     void makeLocal();
     void replaceImport();
 
-    iAtomicCounter<int> m_ref;
+    iRefCount m_ref;
     iMemPool* m_pool;
 
     Type m_type;
@@ -120,6 +121,7 @@ private:
     friend class iMemPool;
     friend class iMemImport;
     friend class iMemExport;
+    IX_DISABLE_COPY(iMemBlock)
 };
 
 /** The memory block manager */
@@ -151,8 +153,8 @@ public:
 
     static iMemPool* create(MemType type, size_t size, bool perClient);
 
-    void deref();
-    void ref();
+    bool ref();
+    bool deref();
 
     inline const Stat* getStat() const { return &m_stat; }
     void vacuum();
@@ -167,6 +169,8 @@ public:
 private:
     struct Slot;
 
+    static iMemPool* fakeAdaptor();
+
     iMemPool(size_t block_size, xuint32 n_blocks, bool perClient);
     ~iMemPool();
 
@@ -175,7 +179,7 @@ private:
     uint slotIdx(const void* ptr) const;
     Slot* slotByPtr(const void* ptr) const;
 
-    iAtomicCounter<int> m_ref;
+    iRefCount m_ref;
     iSemaphore m_semaphore;
     iMutex m_mutex;
 
@@ -200,6 +204,7 @@ private:
     friend class iMemBlock;
     friend class iMemImport;
     friend class iMemExport;
+    IX_DISABLE_COPY(iMemPool)
 };
 
 typedef void (*iMemImportReleaseCb)(iMemImport* imp, uint blockId, void* userdata);
@@ -237,6 +242,7 @@ private:
     iMemImport* m_prev;
 
     friend class iMemBlock;
+    IX_DISABLE_COPY(iMemImport)
 };
 
 /* For sending blocks to other nodes */
@@ -282,6 +288,7 @@ private:
 
     friend class iMemBlock;
     friend class iMemImport;
+    IX_DISABLE_COPY(iMemExport)
 };
 
 } // namespace iShell
