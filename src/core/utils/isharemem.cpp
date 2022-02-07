@@ -274,6 +274,7 @@ int iShareMem::detach()
     m_size = 0;
     m_memfd = -1;
     m_ptr = IX_NULLPTR;
+    return 0;
 }
 
 void iShareMem::FreePrivateMem() 
@@ -416,12 +417,55 @@ int iShareMem::attach(MemType type, uint id, xintptr memfd, bool writable)
     return doAttach(type, id, memfd, writable, false);
 }
 
+
+/* Convert the string s to an unsigned integer in *ret_u */
+int ix_atou(const char *s, xuint32 *ret_u) 
+{
+    IX_ASSERT(s && ret_u);
+
+    /* strtoul() ignores leading spaces. We don't. */
+    if (isspace((unsigned char)*s)) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    /* strtoul() accepts strings that start with a minus sign. In that case the
+     * original negative number gets negated, and strtoul() returns the negated
+     * result. We don't want that kind of behaviour. strtoul() also allows a
+     * leading plus sign, which is also a thing that we don't want. */
+    if (*s == '-' || *s == '+') {
+        errno = EINVAL;
+        return -1;
+    }
+
+    errno = 0;
+    char *x = NULL;
+    unsigned long l = strtoul(s, &x, 0);
+
+    /* If x doesn't point to the end of s, there was some trailing garbage in
+     * the string. If x points to s, no conversion was done (empty string). */
+    if (!x || *x || x == s || errno) {
+        if (!errno)
+            errno = EINVAL;
+        return -1;
+    }
+
+    if ((xuint32) l != l) {
+        errno = ERANGE;
+        return -1;
+    }
+
+    *ret_u = (xuint32) l;
+
+    return 0;
+}
+
 int iShareMem::cleanup() 
 {
     #if defined(SHM_PATH)
     DIR *d = opendir(SHM_PATH);
     if (!d) {
-        ilog_warn("Failed to read "SHM_PATH": ", errno);
+        ilog_warn("Failed to read ", SHM_PATH, ": ", errno);
         return -1;
     }
 
@@ -430,25 +474,25 @@ int iShareMem::cleanup()
         iShareMem seg;
 
         #if defined(__sun)
-        if (strncmp(de->d_name, ".SHMDpulse-shm-", SHM_ID_LEN))
+        if (strncmp(de->d_name, ".SHMDIX-shm-", SHM_ID_LEN))
         #else
-        if (strncmp(de->d_name, "pulse-shm-", SHM_ID_LEN))
+        if (strncmp(de->d_name, "ix-shm-", SHM_ID_LEN))
         #endif
             continue;
 
         unsigned id;
-        if (pa_atou(de->d_name + SHM_ID_LEN, &id) < 0)
+        if (ix_atou(de->d_name + SHM_ID_LEN, &id) < 0)
             continue;
 
-        if (shm_attach(&seg, MEMTYPE_SHARED_POSIX, id, -1, false, true) < 0)
+        if (seg.doAttach(MEMTYPE_SHARED_POSIX, id, -1, false, true) < 0)
             continue;
 
-        if (seg.size < SHMMarkerSize(seg.type)) {
+        if (seg.m_size < SHMMarkerSize(seg.m_type)) {
             // delete seg
             continue;
         }
 
-        SHMMarker* m = (SHMMarker*) ((uint8_t*) seg.ptr + seg.size - SHMMarkerSize(seg.type));
+        SHMMarker* m = (SHMMarker*) ((uint8_t*) seg.m_ptr + seg.m_size - SHMMarkerSize(seg.m_type));
         if (m->marker != SHM_MARKER) {
             // delete seg
             continue;

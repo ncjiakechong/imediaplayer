@@ -9,6 +9,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include <string.h>
 #include "core/utils/imemchunk.h"
 #include "core/utils/imemblock.h"
 
