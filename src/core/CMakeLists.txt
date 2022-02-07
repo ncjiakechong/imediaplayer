@@ -82,6 +82,10 @@ if(UNIX)
 
 	list(APPEND Depend_Libs ${GLIB_PKG_LDFLAGS} pthread)
 
+	if (NOT APPLE)
+	list(APPEND Depend_Libs rt)
+	endif()
+
 elseif(WIN32)
 	set (OsSource
 		thread/ithread_win.cpp)

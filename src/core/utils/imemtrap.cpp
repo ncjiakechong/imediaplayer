@@ -46,8 +46,14 @@ iAUpdate iMemTrap::s_aupdate;
 iMutex iMemTrap::s_mutex;
 
 #ifdef IX_HAVE_SIGACTION
-void iMemTrap::signal_handler(int sig, siginfo_t* si, void *data) 
+static void signal_handler(int sig, siginfo_t* si, void *data)
 {
+    iMemTrap::memChanged(si);
+}
+
+void iMemTrap::memChanged(void* data)
+{
+    siginfo_t* si = (siginfo_t*)data;
     uint j = s_aupdate.readBegin();
 
     iMemTrap* m = IX_NULLPTR;
@@ -77,6 +83,9 @@ void iMemTrap::signal_handler(int sig, siginfo_t* si, void *data)
     s_aupdate.readEnd();
     return;
 }
+#else
+void iMemTrap::memChanged(void* data)
+{}
 #endif
 
 iMemTrap::iMemTrap(const void *start, size_t size)
@@ -175,7 +184,7 @@ void iMemTrap::install()
     struct sigaction sa;
 
     memset(&sa, 0, sizeof(sa));
-    sa.sa_sigaction = iMemTrap::signal_handler;
+    sa.sa_sigaction = signal_handler;
     sa.sa_flags = SA_RESTART|SA_SIGINFO;
 
     IX_ASSERT(sigaction(SIGBUS, &sa, NULL) == 0);

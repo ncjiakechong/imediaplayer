@@ -31,6 +31,7 @@ class IX_CORE_EXPORT iMemTrap
 {
 public:
     static void install();
+    static void memChanged(void* data);
 
     iMemTrap(const void *start, size_t size);
     ~iMemTrap();
@@ -39,7 +40,6 @@ public:
     bool isGood() const { return !m_bad.value(); }
 
 private:
-    static void signal_handler(int sig, siginfo_t* si, void *data);
     void link(uint idx);
     void unlink(uint idx);
 
