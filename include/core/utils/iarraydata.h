@@ -105,7 +105,7 @@ public:
     class AlignmentDummy { iMemBlock header; T data; };
 
     void updatePtr(T* ptr) {
-        IX_ASSERT((xuintptr(ptr) - xuintptr(this) + allocatedCapacity() * sizeof(T)) <= length());
+        IX_ASSERT((xuintptr(ptr) - xuintptr(dataStart(this, alignof(AlignmentDummy))) + allocatedCapacity() * sizeof(T)) <= length());
         safeReservePtr(ptr);
     }
 
