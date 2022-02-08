@@ -58,7 +58,6 @@ public:
     {
         if (!deref()) {
             destroyAll();
-            Data::deallocate(d);
         }
     }
 
@@ -93,7 +92,7 @@ public:
     bool detach()
     {
         if (needsDetach()) {
-            std::pair<Data *, T *> copy = clone(detachFlags());
+            std::pair<Data *, T *> copy = clone(detachOptions());
             iArrayDataPointer old(d, ptr, size);
             d = copy.first;
             ptr = copy.second;
@@ -103,7 +102,7 @@ public:
         return false;
     }
 
-    // forwards from iArrayData
+    // forwards from iTypedArrayData
     size_t allocatedCapacity() const { return d ? d->allocatedCapacity() : 0; }
     void ref() { if (d) d->ref(); }
     bool deref() { return !d || d->deref(); }
@@ -112,10 +111,10 @@ public:
     bool isSharedWith(const iArrayDataPointer &other) const { return d && d == other.d; }
     bool needsDetach() const { return !d || d->needsDetach(); }
     size_t detachCapacity(size_t newSize) const { return d ? d->detachCapacity(newSize) : newSize; }
-    const typename Data::ArrayOptions flags() const { return d ? typename Data::ArrayOption(d->flags) : Data::DefaultAllocationFlags; }
-    void setFlag(typename Data::ArrayOptions f) { IX_ASSERT(d); d->flags |= f; }
-    void clearFlag(typename Data::ArrayOptions f) { IX_ASSERT(d); d->flags &= ~f; }
-    typename Data::ArrayOptions detachFlags() const { return d ? d->detachFlags() : Data::DefaultAllocationFlags; }
+    const typename Data::ArrayOptions options() const { return d ? typename Data::ArrayOption(d->options()) : Data::DefaultAllocationFlags; }
+    void setOptions(typename Data::ArrayOptions f) { IX_ASSERT(d); d->setOptions(f); }
+    void clearOptions(typename Data::ArrayOptions f) { IX_ASSERT(d); d->clearOptions(f); }
+    typename Data::ArrayOptions detachOptions() const { return d ? d->detachOptions() : Data::DefaultAllocationFlags; }
 
     Data *d_ptr() { return d; }
     void setBegin(T *begin) { ptr = begin; }
@@ -124,7 +123,7 @@ public:
     {
         if (d == IX_NULLPTR)
             return 0;
-        return this->ptr - Data::dataStart(d, alignof(typename Data::AlignmentDummy));
+        return this->ptr - static_cast<T*>(Data::dataStart(d, alignof(typename Data::AlignmentDummy)));
     }
 
     xsizetype freeSpaceAtEnd() const
@@ -135,22 +134,22 @@ public:
     }
 
     static iArrayDataPointer allocateGrow(const iArrayDataPointer &from,
-                                          xsizetype newSize, iArrayData::ArrayOptions options)
+                                          xsizetype newSize, typename Data::ArrayOptions options)
     {
         return allocateGrow(from, from.detachCapacity(newSize), newSize, options);
     }
 
     static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype capacity,
-                                          xsizetype newSize, iArrayData::ArrayOptions options)
+                                          xsizetype newSize, typename Data::ArrayOptions options)
     {
         Data* d = Data::allocate(capacity, options);
-        const bool valid = d != IX_NULLPTR && d->ptr_ != IX_NULLPTR;
+        const bool valid = d != IX_NULLPTR && d->data().value() != IX_NULLPTR;
         const bool grows = (options & (Data::GrowsForward | Data::GrowsBackwards));
         if (!valid || !grows)
-            return iArrayDataPointer(d, static_cast<T*>(d->ptr_));
+            return iArrayDataPointer(d, static_cast<T*>(d->data().value()));
 
         // when growing, special rules apply to memory layout
-        T* dataPtr = static_cast<T*>(d->ptr_);
+        T* dataPtr = static_cast<T*>(d->data().value());
         if (from.needsDetach()) {
             // When detaching: the free space reservation is biased towards
             // append. If we're growing backwards, put the data
@@ -158,14 +157,14 @@ public:
             // uncommon and even initial prepend will eventually be followed by
             // at least some appends.
             if (options & Data::GrowsBackwards)
-                dataPtr += (d->alloc - newSize) / 2;
+                dataPtr += (d->allocatedCapacity() - newSize) / 2;
         } else {
-            // When not detaching: fake ::realloc() policy - preserve existing
+            // When not detaching ::realloc() policy - preserve existing
             // free space at beginning.
             dataPtr += from.freeSpaceAtBegin();
         }
 
-        d->ptr_ = dataPtr;
+        d->updatePtr(dataPtr);
         return iArrayDataPointer(d, dataPtr);
     }
 
@@ -184,9 +183,9 @@ public:
                       this->size * sizeof(T));
         }
 
-        Data* d = Data::reallocateUnaligned(this->d, this->ptr, alloc, options);
+        Data* d = Data::reallocateUnaligned(this->d, alloc, options);
         this->d = d;
-        this->ptr = static_cast<T*>(d->ptr_);
+        this->ptr = static_cast<T*>(d->data().value());
     }
 
     // Returns whether reallocation is desirable before adding more elements
@@ -197,9 +196,9 @@ public:
     {
         if (this->d == IX_NULLPTR)
             return true;
-        if (this->d->flags & iArrayData::CapacityReserved)
+        if (this->d->options() & Data::CapacityReserved)
             return false;
-        if (!(this->d->flags & (iArrayData::GrowsForward | iArrayData::GrowsBackwards)))
+        if (!(this->d->options() & (Data::GrowsForward | Data::GrowsBackwards)))
             return false;
         IX_ASSERT(where >= this->begin() && where <= this->end());  // in range
 
@@ -292,7 +291,6 @@ public:
     void destroyAll() // Call from destructors, ONLY!
     {
         IX_ASSERT(this->d);
-        IX_ASSERT(this->d->ref_.value() == 0);
 
         // As this is to be called only from destructor, it doesn't need to be
         // exception safe; size not updated.
@@ -388,10 +386,10 @@ public:
     }
 
 private:
-    Data* clone(iArrayData::ArrayOptions options) const
+    Data* clone(typename Data::ArrayOptions options) const
     {
         Data* d = Data::allocate(detachCapacity(size), options);
-        iArrayDataPointer copy(d, static_cast<T*>(d->ptr_), 0);
+        iArrayDataPointer copy(d, static_cast<T*>(d->data().value()), 0);
         if (size)
             copy->copyAppend(begin(), end());
 

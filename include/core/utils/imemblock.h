@@ -21,6 +21,7 @@
 namespace iShell {
 
 class iMemPool;
+class iMemBlock;
 class iMemChunk;
 class iShareMem;
 class iMemImport;
@@ -74,10 +75,10 @@ public:
 	typedef uint ArrayOptions;
     
     /// Allocate a new memory block of type PMEMBLOCK_MEMPOOL or MEMBLOCK_APPENDED, depending on the size */
-    static iMemBlock* newOne(iMemPool* pool, size_t length, size_t alignment = 0, ArrayOptions options = DefaultAllocationFlags);
+    static iMemBlock* newOne(iMemPool* pool, size_t elementCount, size_t elementSize = 1, size_t alignment = 0, ArrayOptions options = DefaultAllocationFlags);
 
     /// Allocate a new memory block of type MEMBLOCK_MEMPOOL. If the requested size is too large, return NULL
-    static iMemBlock* new4Pool(iMemPool* pool, size_t length);
+    static iMemBlock* new4Pool(iMemPool* pool, size_t elementCount, size_t elementSize = 1, size_t alignment = 0, ArrayOptions options = DefaultAllocationFlags);
 
     /// Allocate a new memory block of type MEMBLOCK_USER */
     static iMemBlock* new4User(iMemPool* pool, void* data, size_t length, iFreeCb freeCb, void* freeCbData, bool readOnly);
@@ -86,7 +87,7 @@ public:
     static iMemBlock* new4Fixed(iMemPool* pool, void* data, size_t length, bool readOnly);
 
     /// Reallocate the memory block of type MEMBLOCK_APPENDED
-    static iMemBlock* reallocate(iMemBlock* block, size_t newLength, ArrayOptions options = DefaultAllocationFlags);
+    static iMemBlock* reallocate(iMemBlock* block, size_t elementCount, size_t elementSize = 1, ArrayOptions options = DefaultAllocationFlags);
 
     bool ref();
     bool deref();
@@ -97,6 +98,10 @@ public:
     inline bool isSilence() const { return m_isSilence; }
     inline bool refIsOne() const { return 1 == m_ref.value(); }
     inline size_t length() const { return m_length; }
+    inline size_t allocatedCapacity() const { return m_capacity; }
+    inline ArrayOptions options() const { return m_options; }
+    inline void setOptions(ArrayOptions o) { m_options |= o; }
+    inline void clearOptions(ArrayOptions o) { m_options &= ~o; }
     void setIsSilence(bool v);
 
     inline iMemPoolWraper pool() const { return iMemPoolWraper(m_pool); }
@@ -110,19 +115,21 @@ public:
     inline bool needsDetach() const { return m_ref.value() > 1; }
 
     inline xsizetype detachCapacity(xsizetype newSize) const {
-        if (m_options & CapacityReserved && newSize < m_length)
-            return m_length;
+        if ((m_options & CapacityReserved) && (newSize < allocatedCapacity()))
+            return allocatedCapacity();
         return newSize;
     }
 
-    inline ArrayOptions detachFlags() const {
+    inline ArrayOptions detachOptions() const {
         ArrayOptions result = DefaultAllocationFlags;
         if (m_options & CapacityReserved)
             result |= CapacityReserved;
         return result;
     }
 
-private:
+    static void* dataStart(iMemBlock* block, size_t alignment);
+
+protected:
     /** The type of memory this block points to */
     enum Type {
         MEMBLOCK_POOL,             /* Memory is part of the memory pool */
@@ -134,9 +141,13 @@ private:
         MEMBLOCK_TYPE_MAX
     };
 
-    iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length);
+    iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length, size_t capacity);
     ~iMemBlock();
 
+    void updateCapacity(size_t capacity) { IX_ASSERT(capacity <= m_length); m_capacity = capacity; }
+    void safeReservePtr(void* ptr) { m_data = ptr; }
+
+private:
     void doFree();
     void statAdd();
     void statRemove();
@@ -159,6 +170,7 @@ private:
 
     iAtomicCounter<void*> m_data;
     size_t m_length;
+    size_t m_capacity;
 
     iAtomicCounter<int> m_nAcquired;
     iAtomicCounter<int> m_pleaseSignal;

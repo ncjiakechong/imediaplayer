@@ -9,11 +9,13 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include "core/io/ilog.h"
+#include "global/inumeric_p.h"
+#include "core/kernel/imath.h"
 #include "core/utils/isharemem.h"
 #include "core/utils/imemtrap.h"
 #include "core/utils/imemchunk.h"
 #include "core/utils/imemblock.h"
+#include "core/io/ilog.h"
 
 #define IX_PAGE_SIZE 4096
 
@@ -143,7 +145,100 @@ iMemDataWraper& iMemDataWraper::operator=(const iMemDataWraper& other)
     return *this;
 }
 
-iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length)
+
+/*!
+    Returns the memory block size for a container containing \a elementCount
+    elements, each of \a elementSize bytes, plus a header of \a headerSize
+    bytes. That is, this function returns \c
+      {elementCount * elementSize + headerSize}
+
+    but unlike the simple calculation, it checks for overflows during the
+    multiplication and the addition.
+
+    Both \a elementCount and \a headerSize can be zero, but \a elementSize
+    cannot.
+
+    This function returns -1 on overflow or if the memory block size
+    would not fit a xsizetype.
+*/
+static xsizetype __calculateBlockSize(size_t elementCount, size_t elementSize, size_t headerSize)
+{
+    IX_ASSERT(elementSize);
+    size_t bytes;
+    if (mul_overflow(elementSize, elementCount, &bytes) || add_overflow(bytes, headerSize, &bytes))
+        return -1;
+
+    if (xsizetype(bytes) < 0)
+        return -1;
+
+    return xsizetype(bytes);
+}
+
+/*!
+    Returns the memory block size and the number of elements that will fit in
+    that block for a container containing \a elementCount elements, each of \a
+    elementSize bytes, plus a header of \a headerSize bytes. This function
+    assumes the container will grow and pre-allocates a growth factor.
+
+    Both \a elementCount and \a headerSize can be zero, but \a elementSize
+    cannot.
+
+    This function returns -1 on overflow or if the memory block size
+    would not fit a xsizetype.
+
+    \note The memory block may contain up to \a elementSize - 1 bytes more than
+    needed.
+*/
+static xsizetype __calculateGrowingBlockSize(size_t elementCount, size_t elementSize, size_t headerSize)
+{
+    xsizetype bytes = __calculateBlockSize(elementCount, elementSize, headerSize);
+    if (bytes < 0)
+        return -1;
+
+    size_t morebytes = static_cast<size_t>(iNextPowerOfTwo(xuint64(bytes)));
+    if (xsizetype(morebytes) < 0) {
+        // grow by half the difference between bytes and morebytes
+        // this slows the growth and avoids trying to allocate exactly
+        // 2G of memory (on 32bit), something that many OSes can't deliver
+        bytes += (morebytes - bytes) / 2;
+    } else {
+        bytes = xsizetype(morebytes);
+    }
+
+    return (bytes - headerSize) / elementSize * elementSize + headerSize;
+}
+
+/*!
+    \internal
+
+    Returns \a allocSize plus extra reserved bytes necessary to store '\0'.
+ */
+static inline xsizetype reserveExtraBytes(xsizetype allocSize)
+{
+    // We deal with iByteArray and iString only
+    xsizetype extra = std::max(sizeof(iByteArray::value_type), sizeof(iString::value_type));
+    if (allocSize < 0)
+        return -1;
+
+    if (add_overflow(allocSize, extra, &allocSize))
+        return -1;
+
+    return allocSize;
+}
+
+static inline xsizetype calculateBlockSize(size_t elementCount, size_t elementSize, size_t headerSize, uint options)
+{
+    // Calculate the byte size
+    // allocSize = objectSize * capacity + headerSize, but checked for overflow
+    // plus padded to grow in size
+    if (options & (iMemBlock::GrowsForward | iMemBlock::GrowsBackwards)) {
+        return __calculateGrowingBlockSize(elementCount, elementSize, headerSize);
+    } else {
+        return __calculateBlockSize(elementCount, elementSize, headerSize);
+    }
+}
+
+iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length, size_t capacity)
     : m_ref(1)
     , m_pool(pool)
     , m_type(type)
@@ -152,10 +247,11 @@ iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data
     , m_isSilence(false)
     , m_data(data)
     , m_length(length)
+    , m_capacity(capacity)
     , m_nAcquired(0)
     , m_pleaseSignal(0)
 {
-    IX_ASSERT(pool);
+    IX_ASSERT(pool && (m_capacity <= m_length));
     m_pool->ref();
 
     m_user.freeCb = IX_NULLPTR;
@@ -168,27 +264,21 @@ iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data
 }
 
 iMemBlock::~iMemBlock()
-{}
+{
+    if (IX_NULLPTR != m_user.freeCb)
+        m_user.freeCb(m_data.value(), m_user.freeCbData);
+
+    statRemove();
+    m_pool->deref();
+}
 
 void iMemBlock::doFree()
 {
-    IX_ASSERT(m_pool);
-    IX_ASSERT(m_nAcquired.value() == 0);
-
-    iMemPool* pool = m_pool;
-    statRemove();
+    IX_ASSERT(m_pool && m_nAcquired.value() == 0);
 
     switch (m_type) {
-        case MEMBLOCK_USER :
-            IX_ASSERT(m_user.freeCb);
-            m_user.freeCb(m_data.value(), m_user.freeCbData);
-
-            /* Fall through */
-
+        case MEMBLOCK_USER:
         case MEMBLOCK_FIXED:
-            delete this;
-            break;
-
         case MEMBLOCK_APPENDED:
             /* We could attach it to unused_memblocks, but that would
              * probably waste some considerable amount of memory */
@@ -231,8 +321,11 @@ void iMemBlock::doFree()
              * the free list fails */
             while (!m_pool->m_freeSlots.push(slot)) {}
 
-            if (call_free)
+            if (MEMBLOCK_POOL_EXTERNAL == m_type) {
                 delete this;
+            } else {
+                this->~iMemBlock();
+            }
 
             break;
         }
@@ -241,8 +334,6 @@ void iMemBlock::doFree()
         default:
             break;
     }
-
-    pool->deref();
 }
 
 /* No lock necessary */
@@ -261,54 +352,102 @@ bool iMemBlock::deref()
     return valid;
 }
 
-iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t length, size_t alignment, ArrayOptions options)
+void* iMemBlock::dataStart(iMemBlock* block, size_t alignment)
+{
+    // Alignment is a power of two
+    IX_ASSERT((alignment >= alignof(iMemBlock)) && !(alignment & (alignment - 1)));
+    return reinterpret_cast<void*>((xuintptr(block) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1)); 
+}
+
+class alignas(std::max_align_t) AlignedMemBlock : public iMemBlock
+{};
+
+iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t elementSize, size_t alignment, ArrayOptions options)
 {
     iMemBlock* block = IX_NULLPTR;
     if (IX_NULLPTR != pool) {
-        block = new4Pool(pool, length);
+        block = new4Pool(pool, elementCount, elementSize, alignment, options);
     } else {
         pool = iMemPool::fakeAdaptor();
     }
 
     if (IX_NULLPTR != block)
         return block;
+    
+    if (0 == alignment)
+        alignment = alignof(AlignedMemBlock);
+    
+    // Alignment is a power of two
+    IX_ASSERT((elementSize > 0) && (alignment >= alignof(iMemBlock)) && !(alignment & (alignment - 1)));
 
-    /* If -1 is passed as length we choose the size for the caller. */
-    if (length == (size_t) -1)
-        length = pool->blockSizeMax();
+    size_t headerSize = sizeof(AlignedMemBlock);
+    const size_t headerAlignment = alignof(AlignedMemBlock);
 
-    void* slot = ::malloc(IX_ALIGN(sizeof(iMemBlock)) + length);
-    block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, options, (xuint8*)slot + IX_ALIGN(sizeof(iMemBlock)), length);
+    if (alignment > headerAlignment) {
+        // Allocate extra (alignment - Q_ALIGNOF(iArrayData)) padding bytes so we
+        // can properly align the data array. This assumes malloc is able to
+        // provide appropriate alignment for the header -- as it should!
+        headerSize += alignment - headerAlignment;
+    }
+    IX_ASSERT(headerSize > 0);
+
+    xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
+    allocSize = reserveExtraBytes(allocSize);
+    if (((allocSize - headerSize) < 0) || (allocSize > pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
+        return IX_NULLPTR;
+    }
+
+    void* slot = ::malloc(allocSize);
+    void* ptr = reinterpret_cast<void*>((xuintptr(slot) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1)); 
+    block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, options, ptr, allocSize - headerSize, (allocSize - headerSize) / elementSize);
     return block;
 }
 
 /* No lock necessary */
-iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t length)
+iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t elementSize, size_t alignment, ArrayOptions options)
 {
-    IX_ASSERT(length);
+    if (0 == alignment)
+        alignment = alignof(AlignedMemBlock);
 
-    /* If -1 is passed as length we choose the size for the caller: we
-     * take the largest size that fits in one of our slots. */
-    if (length == (size_t) -1)
-        length = pool->blockSizeMax();
+    // Alignment is a power of two
+    IX_ASSERT((elementSize > 0) && (alignment >= alignof(iMemBlock)) && !(alignment & (alignment - 1)));
 
-    if (pool->m_blockSize >= IX_ALIGN(sizeof(iMemBlock)) + length) {
+    size_t headerSize = sizeof(AlignedMemBlock);
+    const size_t headerAlignment = alignof(AlignedMemBlock);
+
+    if (alignment > headerAlignment) {
+        // Allocate extra (alignment - Q_ALIGNOF(iArrayData)) padding bytes so we
+        // can properly align the data array. This assumes malloc is able to
+        // provide appropriate alignment for the header -- as it should!
+        headerSize += alignment - headerAlignment;
+    }
+    IX_ASSERT(headerSize > 0);
+
+    xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
+    allocSize = reserveExtraBytes(allocSize);
+    if (((allocSize - headerSize) < 0) || (allocSize > pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
+        return IX_NULLPTR;
+    }
+
+    if (pool->m_blockSize >= allocSize) {
         iMemPool::Slot* slot = pool->allocateSlot();
         if (IX_NULLPTR == slot)
             return IX_NULLPTR;
 
+        void* ptr = reinterpret_cast<void*>((xuintptr(slot) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1)); 
         iMemBlock* block = new (pool->slotData(slot)) iMemBlock(pool, MEMBLOCK_POOL, DefaultAllocationFlags,
-                                                        (xuint8*)pool->slotData(slot) + IX_ALIGN(sizeof(iMemBlock)), length);
+                                                        ptr, allocSize - headerSize, (allocSize - headerSize) / elementSize);
         return block;
-    } else if (pool->m_blockSize >= length) {
+    } else if (pool->m_blockSize >= (allocSize - headerSize)) {
         iMemPool::Slot* slot = pool->allocateSlot();
          if (IX_NULLPTR == slot)
             return IX_NULLPTR;
 
-        iMemBlock* block = new iMemBlock(pool, MEMBLOCK_POOL_EXTERNAL, DefaultAllocationFlags, pool->slotData(slot), length);
+        iMemBlock* block = new iMemBlock(pool, MEMBLOCK_POOL_EXTERNAL, DefaultAllocationFlags, pool->slotData(slot), 
+                                        allocSize - headerSize, (allocSize - headerSize) / elementSize);
         return block;
     } else {
-        ilog_info("Memory block too large for pool: ", length, " > ", pool->m_blockSize);
+        ilog_info("Memory block too large for pool: ", allocSize - headerSize, " > ", pool->m_blockSize);
         pool->m_stat.nTooLargeForPool++;
         return IX_NULLPTR;
     }
@@ -323,7 +462,7 @@ iMemBlock* iMemBlock::new4Fixed(iMemPool* pool, void* data, size_t length, bool 
         pool = iMemPool::fakeAdaptor();
 
     IX_ASSERT(pool && data && length && (length != (size_t) -1));
-    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_FIXED, DefaultAllocationFlags, data, length);
+    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_FIXED, DefaultAllocationFlags, data, length, length);
     block->m_readOnly = readOnly;
 
     return block;
@@ -336,7 +475,7 @@ iMemBlock* iMemBlock::new4User(iMemPool* pool, void* data, size_t length, iFreeC
         pool = iMemPool::fakeAdaptor();
 
     IX_ASSERT(pool && data && length && (length != (size_t) -1));
-    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_USER, DefaultAllocationFlags, data, length);
+    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_USER, DefaultAllocationFlags, data, length, length);
     block->m_readOnly = readOnly;
     block->m_user.freeCb = freeCb;
     block->m_user.freeCbData = freeCbData;
@@ -344,18 +483,26 @@ iMemBlock* iMemBlock::new4User(iMemPool* pool, void* data, size_t length, iFreeC
     return block;
 }
 
-iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t newLength, ArrayOptions options)
+iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t elementCount, size_t elementSize, ArrayOptions options)
 {
     IX_ASSERT(block && (MEMBLOCK_APPENDED == block->m_type) && (0 == block->m_nAcquired));
 
+    size_t headerSize = sizeof(AlignedMemBlock);
+    xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
+    allocSize = reserveExtraBytes(allocSize);
+    if (((allocSize - headerSize) < 0) || (allocSize > block->m_pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
+        return IX_NULLPTR;
+    }
+
     block->statRemove();
     xptrdiff offset = reinterpret_cast<char *>(block->m_data.value()) - reinterpret_cast<char *>(block);
-    IX_ASSERT(offset < newLength);
+    IX_ASSERT(offset < allocSize);
 
-    iMemBlock* newBlock = static_cast<iMemBlock *>(::realloc(block, newLength));
+    iMemBlock* newBlock = static_cast<iMemBlock *>(::realloc(block, allocSize));
     newBlock->m_data = reinterpret_cast<char *>(newBlock) + offset;
     newBlock->m_options = options;
-    newBlock->m_length = newLength;
+    newBlock->m_length = allocSize - headerSize;
+	newBlock->m_capacity = (allocSize - headerSize) / elementSize;
     newBlock->statAdd();
 
     return newBlock;
@@ -587,7 +734,8 @@ iMemPool* iMemPool::create(MemType type, size_t size, bool perClient)
 
 iMemPool* iMemPool::fakeAdaptor() 
 {
-    static iMemPool s_fakeMemPool(IX_PAGE_SIZE, 0, false);
+    /* 1 GiB at max */
+    static iMemPool s_fakeMemPool(IX_ALIGN(1024*1024*1024), 0, false);
     
     if (IX_NULLPTR == s_fakeMemPool.m_memory) {
         s_fakeMemPool.m_memory = new iShareMem();
@@ -953,7 +1101,7 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, size_t offset
         return IX_NULLPTR;
     }
 
-    iMemBlock* b = new iMemBlock(m_pool, iMemBlock::MEMBLOCK_IMPORTED, iMemBlock::DefaultAllocationFlags, (xuint8*)seg->memory.data() + offset, size);
+    iMemBlock* b = new iMemBlock(m_pool, iMemBlock::MEMBLOCK_IMPORTED, iMemBlock::DefaultAllocationFlags, (xuint8*)seg->memory.data() + offset, size, size);
     b->m_readOnly = !writable;
     b->m_imported.id = blockId;
     b->m_imported.segment = seg;
