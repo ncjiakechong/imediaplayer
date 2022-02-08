@@ -1345,7 +1345,7 @@ iString::iString(const iChar *unicode, xsizetype size)
             d = DataPointer::fromRawData(&_empty, 0);
         } else {
             Data* td = Data::allocate(size);
-            d = DataPointer(td, static_cast<xuint16*>(td->ptr_), size);
+            d = DataPointer(td, static_cast<xuint16*>(td->data().value()), size);
             memcpy(d.data(), unicode, size * sizeof(iChar));
             d.data()[size] = '\0';
         }
@@ -1364,7 +1364,7 @@ iString::iString(xsizetype size, iChar ch)
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
         Data* td = Data::allocate(size);
-        d = DataPointer(td, static_cast<xuint16*>(td->ptr_), size);
+        d = DataPointer(td, static_cast<xuint16*>(td->data().value()), size);
         d.data()[size] = '\0';
         xuint16 *i = d.data() + size;
         xuint16 *b = d.data();
@@ -1386,7 +1386,7 @@ iString::iString(xsizetype size, iShell::Initialization)
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
         Data* td = Data::allocate(size);
-        d = DataPointer(td, static_cast<xuint16*>(td->ptr_), size);
+        d = DataPointer(td, static_cast<xuint16*>(td->data().value()), size);
         d.data()[size] = '\0';
     }
 }
@@ -1404,7 +1404,7 @@ iString::iString(xsizetype size, iShell::Initialization)
 iString::iString(iChar ch)
 {
     Data* td = Data::allocate(1);
-    d = DataPointer(td, static_cast<xuint16*>(td->ptr_), 1);
+    d = DataPointer(td, static_cast<xuint16*>(td->data().value()), 1);
     d.data()[0] = ch.unicode();
     d.data()[1] = '\0';
 }
@@ -1500,7 +1500,7 @@ void iString::resize(xsizetype size)
 
     const xsizetype capacityAtEnd = capacity() - d.freeSpaceAtBegin();
     if (d.needsDetach() || size > capacityAtEnd)
-        reallocData(size, d.detachFlags() | Data::GrowsForward);
+        reallocData(size, d.detachOptions() | Data::GrowsForward);
     d.size = size;
     if (d.allocatedCapacity())
         d.data()[size] = 0;
@@ -1589,7 +1589,7 @@ void iString::reallocData(xsizetype alloc, Data::ArrayOptions allocOptions)
 
     if (d.needsDetach() || slowReallocatePath) {
         Data* td = Data::allocate(alloc, allocOptions);
-        DataPointer dd(td, static_cast<xuint16*>(td->ptr_), std::min(alloc, d.size));
+        DataPointer dd(td, static_cast<xuint16*>(td->data().value()), std::min(alloc, d.size));
         if (dd.size > 0)
             ::memcpy(dd.data(), d.data(), dd.size * sizeof(iChar));
         dd.data()[dd.size] = 0;
@@ -1827,7 +1827,7 @@ iString& iString::insert(xsizetype i, const iChar *unicode, xsizetype size)
     const xsizetype newSize = std::max(i, oldSize) + size;
     const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), size);
 
-    auto flags = d.detachFlags() | Data::GrowsForward;
+    auto flags = d.detachOptions() | Data::GrowsForward;
     if (oldSize != 0 && i <= oldSize / 4)
         flags |= Data::GrowsBackwards;
 
@@ -1861,7 +1861,7 @@ iString& iString::insert(xsizetype i, iChar ch)
     const xsizetype newSize = std::max(i, oldSize) + 1;
     const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), 1);
 
-    auto flags = d.detachFlags() | Data::GrowsForward;
+    auto flags = d.detachOptions() | Data::GrowsForward;
     if (oldSize != 0 && i <= oldSize / 4)
         flags |= Data::GrowsBackwards;
 
@@ -1904,7 +1904,7 @@ iString &iString::append(const iString &str)
             const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), str.d.size);
             if (d.needsDetach() || size() + str.size() > capacity() || shouldGrow)
                 reallocGrowData(size() + str.size(),
-                                d.detachFlags() | Data::GrowsForward);
+                                d.detachOptions() | Data::GrowsForward);
             d.copyAppend(str.d.data(), str.d.data() + str.d.size);
             d.data()[d.size] = '\0';
         }
@@ -1923,7 +1923,7 @@ iString &iString::append(const iChar *str, xsizetype len)
     if (str && len > 0) {
         const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), len);
         if (d.needsDetach() || size() + len > capacity() || shouldGrow)
-            reallocGrowData(size() + len, d.detachFlags() | Data::GrowsForward);
+            reallocGrowData(size() + len, d.detachOptions() | Data::GrowsForward);
         IX_COMPILER_VERIFY(sizeof(iChar) == sizeof(xuint16));
         // the following should be safe as iChar uses xuint16 as underlying data
         const xuint16 *char16String = reinterpret_cast<const xuint16 *>(str);
@@ -1945,7 +1945,7 @@ iString &iString::append(iLatin1String str)
         xsizetype len = str.size();
         const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), len);
         if (d.needsDetach() || size() + len > capacity() || shouldGrow)
-            reallocGrowData(size() + len, d.detachFlags() | Data::GrowsForward);
+            reallocGrowData(size() + len, d.detachOptions() | Data::GrowsForward);
 
         if (d.freeSpaceAtBegin() == 0) {  // fast path
             xuint16 *i = d.data() + d.size;
@@ -1998,7 +1998,7 @@ iString &iString::append(iChar ch)
 {
     const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), 1);
     if (d.needsDetach() || size() + 1 > capacity() || shouldGrow)
-        reallocGrowData(d.size + 1u, d.detachFlags() | Data::GrowsForward);
+        reallocGrowData(d.size + 1u, d.detachOptions() | Data::GrowsForward);
     d.copyAppend(1, ch.unicode());
     d.data()[d.size] = '\0';
     return *this;
@@ -3114,7 +3114,7 @@ iString &iString::replace(const iRegularExpression &re, const iString &after)
     if (!iterator.hasNext()) // no matches at all
         return *this;
 
-    reallocData(d.size, d.detachFlags());
+    reallocData(d.size, d.detachOptions());
 
     xsizetype numCaptures = re.captureCount();
 
@@ -3951,6 +3951,7 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
 
     // Swap the d pointers.
     // Kids, avert your eyes. Don't try this at home.
+    s.d.d_ptr()->reinterpreted<xuint16>();
 
     // this relies on the fact that we use iArrayData for everything behind the scenes which has the same layout
     IX_COMPILER_VERIFY(sizeof(iByteArray::DataPointer) == sizeof(iString::DataPointer));
@@ -3958,12 +3959,8 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
     ba_d.ref();
     s.clear();
 
-    char *ddata = ba_d.data();
-
-    // multiply the allocated capacity by sizeof(xuint16)
-    ba_d.d_ptr()->alloc *= sizeof(xuint16);
-
     // do the in-place conversion
+    char *ddata = ba_d.data();
     ix_to_latin1(reinterpret_cast<uchar *>(ddata), data, length);
     ddata[length] = '\0';
     return iByteArray(ba_d);
@@ -4160,7 +4157,7 @@ iString::DataPointer iString::fromLatin1_helper(const char *str, xsizetype size)
             size = istrlen(str);
         
         Data* td = Data::allocate(size);
-        d = DataPointer(td, static_cast<xuint16*>(td->ptr_), size);
+        d = DataPointer(td, static_cast<xuint16*>(td->data().value()), size);
         d.data()[size] = '\0';
         xuint16 *dst = d.data();
         ix_from_latin1(dst, str, size_t(size));
@@ -5118,7 +5115,7 @@ const xuint16 *iString::utf16() const
 {
     if (!d.isMutable()) {
         // ensure '\0'-termination for ::fromRawData strings
-        const_cast<iString*>(this)->reallocData(d.size, d.detachFlags());
+        const_cast<iString*>(this)->reallocData(d.size, d.detachOptions());
     }
     return reinterpret_cast<const xuint16 *>(d.data());
 }

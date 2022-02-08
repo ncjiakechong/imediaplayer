@@ -369,7 +369,7 @@ inline const char *iByteArray::data() const
 inline const char *iByteArray::constData() const
 { return data(); }
 inline void iByteArray::detach()
-{ if (d.needsDetach()) reallocData(size(), d.detachFlags()); }
+{ if (d.needsDetach()) reallocData(size(), d.detachOptions()); }
 inline bool iByteArray::isDetached() const
 { return !d.isShared(); }
 inline iByteArray::iByteArray(const iByteArray &a) : d(a.d)
@@ -380,20 +380,20 @@ inline xsizetype iByteArray::capacity() const { return xsizetype(d.allocatedCapa
 inline void iByteArray::reserve(xsizetype asize)
 {
     if (d.needsDetach() || asize > capacity() - d.freeSpaceAtBegin()) {
-        reallocData(std::max(size(), asize), d.detachFlags() | Data::CapacityReserved);
+        reallocData(std::max(size(), asize), d.detachOptions() | Data::CapacityReserved);
     } else {
-        d.setFlag(Data::CapacityReserved);
+        d.setOptions(Data::CapacityReserved);
     }
 }
 
 inline void iByteArray::squeeze()
 {
-    if ((d.flags() & Data::CapacityReserved) == 0)
+    if ((d.options() & Data::CapacityReserved) == 0)
         return;
     if (d.needsDetach() || size() < capacity()) {
-        reallocData(size(), d.detachFlags() & ~Data::CapacityReserved);
+        reallocData(size(), d.detachOptions() & ~Data::CapacityReserved);
     } else {
-        d.clearFlag(Data::CapacityReserved);
+        d.clearOptions(Data::CapacityReserved);
     }
 }
 

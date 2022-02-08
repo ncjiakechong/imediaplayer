@@ -701,7 +701,7 @@ inline iChar *iString::data()
 inline const iChar *iString::constData() const
 { return data(); }
 inline void iString::detach()
-{ if (d.needsDetach()) reallocData(d.size, d.detachFlags()); }
+{ if (d.needsDetach()) reallocData(d.size, d.detachOptions()); }
 inline bool iString::isDetached() const
 { return !d.isShared(); }
 inline void iString::clear()
@@ -780,20 +780,20 @@ inline iString::~iString() {}
 inline void iString::reserve(xsizetype asize)
 {
     if (d.needsDetach() || asize >= capacity() - d.freeSpaceAtBegin()) {
-        reallocData(std::max(asize, size()), d.detachFlags() | Data::CapacityReserved);
+        reallocData(std::max(asize, size()), d.detachOptions() | Data::CapacityReserved);
     } else {
-        d.setFlag(Data::CapacityReserved);
+        d.setOptions(Data::CapacityReserved);
     }
 }
 
 inline void iString::squeeze()
 {
-    if ((d.flags() & Data::CapacityReserved) == 0)
+    if ((d.options() & Data::CapacityReserved) == 0)
         return;
     if (d.needsDetach() || d.size < capacity()) {
-        reallocData(d.size, d.detachFlags() & ~Data::CapacityReserved);
+        reallocData(d.size, d.detachOptions() & ~Data::CapacityReserved);
     } else {
-        d.clearFlag(Data::CapacityReserved);
+        d.clearOptions(Data::CapacityReserved);
     }
 }
 

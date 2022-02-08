@@ -857,7 +857,7 @@ iByteArray &iByteArray::operator=(const char *str)
         const xsizetype capacityAtEnd = d.allocatedCapacity() - d.freeSpaceAtBegin();
         if (d.needsDetach() || size_t(len) > capacityAtEnd
                 || (len < size() && size_t(len) < (capacityAtEnd >> 1)))
-            reallocData(len, d.detachFlags());
+            reallocData(len, d.detachOptions());
         memcpy(d.data(), str, len + 1); // include null terminator
         d.size = len;
     }
@@ -1299,7 +1299,7 @@ iByteArray::iByteArray(const char *data, xsizetype size)
             d = DataPointer::fromRawData(&_empty, 0);
         } else {
             Data* td = Data::allocate(size);
-            d = DataPointer(td, static_cast<char*>(td->ptr_), size);
+            d = DataPointer(td, static_cast<char*>(td->data().value()), size);
             memcpy(d.data(), data, size);
             d.data()[size] = '\0';
         }
@@ -1319,7 +1319,7 @@ iByteArray::iByteArray(xsizetype size, char ch)
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
         Data* td = Data::allocate(size);
-        d = DataPointer(td, static_cast<char*>(td->ptr_), size);
+        d = DataPointer(td, static_cast<char*>(td->data().value()), size);
         memset(d.data(), ch, size);
         d.data()[size] = '\0';
     }
@@ -1337,7 +1337,7 @@ iByteArray::iByteArray(xsizetype size, iShell::Initialization)
         d = DataPointer::fromRawData(&_empty, 0);
     } else {
         Data* td = Data::allocate(size);
-        d = DataPointer(td, static_cast<char*>(td->ptr_), size);
+        d = DataPointer(td, static_cast<char*>(td->data().value()), size);
         d.data()[size] = '\0';
     }
 }
@@ -1361,7 +1361,7 @@ void iByteArray::resize(xsizetype size)
 
     const xsizetype capacityAtEnd = capacity() - d.freeSpaceAtBegin();
     if (d.needsDetach() || size > capacityAtEnd)
-        reallocData(size, d.detachFlags() | Data::GrowsForward);
+        reallocData(size, d.detachOptions() | Data::GrowsForward);
     d.size = size;
     if (d.allocatedCapacity())
         d.data()[size] = 0;
@@ -1400,7 +1400,7 @@ void iByteArray::reallocData(xsizetype alloc, Data::ArrayOptions options)
 
     if (d.needsDetach() || slowReallocatePath) {
         Data* td = Data::allocate(alloc, options);
-        DataPointer dd(td, static_cast<char*>(td->ptr_), std::min(alloc, d.size));
+        DataPointer dd(td, static_cast<char*>(td->data().value()), std::min(alloc, d.size));
         if (dd.size > 0)
             ::memcpy(dd.data(), d.data(), dd.size);
         dd.data()[dd.size] = 0;
@@ -1643,7 +1643,7 @@ iByteArray &iByteArray::insert(xsizetype i, const char *str, xsizetype len)
 
     // ### optimize me
     if (d.needsDetach() || newSize > capacity() || shouldGrow) {
-        Data::ArrayOptions flags = d.detachFlags() | Data::GrowsForward;
+        Data::ArrayOptions flags = d.detachOptions() | Data::GrowsForward;
         if (oldSize != 0 && i <= oldSize / 4)  // using QList's policy
             flags |= Data::GrowsBackwards;
         reallocGrowData(newSize, flags);
@@ -1692,7 +1692,7 @@ iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
 
     // ### optimize me
     if (d.needsDetach() || newSize > capacity() || shouldGrow) {
-        Data::ArrayOptions flags = d.detachFlags() | Data::GrowsForward;
+        Data::ArrayOptions flags = d.detachOptions() | Data::GrowsForward;
         if (oldSize != 0 && i <= oldSize / 4)  // using std::list's policy
             flags |= Data::GrowsBackwards;
         reallocGrowData(newSize, flags);

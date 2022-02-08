@@ -58,15 +58,6 @@ enum {
     MaxByteArraySize = MaxAllocSize - sizeof(std::remove_pointer<iByteArray::DataPointer>::type)
 };
 
-struct CalculateGrowingBlockSizeResult {
-    xsizetype size;
-    xsizetype elementCount;
-};
-
-// implemented in ibytearray.cpp
-xsizetype iCalculateBlockSize(xsizetype elementCount, xsizetype elementSize, xsizetype headerSize = 0);
-CalculateGrowingBlockSizeResult iCalculateGrowingBlockSize(xsizetype elementCount, xsizetype elementSize, xsizetype headerSize = 0) ;
-
 xuint32 foldCase(const xuint16 *ch, const xuint16 *start);
 xuint32 foldCase(xuint32 ch, xuint32 &last);
 xuint16 foldCase(xuint16 ch);

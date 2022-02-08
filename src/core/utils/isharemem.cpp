@@ -156,14 +156,14 @@ iShareMem* iShareMem::createSharedMem(MemType type, size_t size, mode_t mode)
         segmentName(fn, sizeof(fn), shm->m_id);
         shm->m_memfd = shm_open(fn, O_RDWR|O_CREAT|O_EXCL, mode);
         shm->m_doUnlink = true;
+        break;
     }
-    break;
 
     #ifdef IX_HAVE_MEMFD
     case MEMTYPE_SHARED_MEMFD: {
         shm->m_memfd = memfd_create("ishell", MFD_ALLOW_SEALING);
+        break;
     }
-    break;
     #endif
 
     default:
@@ -343,14 +343,14 @@ int iShareMem::doAttach(MemType type, uint id, xintptr memfd, bool writable, boo
                 ilog_warn("shm_open() failed: ", errno);
             return -1;
         }
+        break;
     }
-    break;
     #ifdef IX_HAVE_MEMFD
     case MEMTYPE_SHARED_MEMFD: {
         IX_ASSERT(-1 == memfd);
         fd = memfd;
+        break;
     }
-    break;
     #endif
 
     default:
