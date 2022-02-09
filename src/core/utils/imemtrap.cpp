@@ -12,8 +12,9 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#include "core/io/ilog.h"
 #include "core/utils/imemtrap.h"
+#include "utils/itools_p.h"
+#include "core/io/ilog.h"
 
 /* This is deprecated on glibc but is still used by FreeBSD */
 #if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
@@ -24,22 +25,9 @@
 #define IX_HAVE_SIGACTION 1
 #endif
 
-#define IX_PAGE_SIZE 4096
-
 #define ILOG_TAG "ix_utils"
 
 namespace iShell {
-
-/* Rounds down */
-static inline void* IX_PAGE_ALIGN_PTR(const void *p) {
-    return (void*) (((size_t) p) & ~(IX_PAGE_SIZE - 1));
-}
-
-/* Rounds up */
-static inline size_t IX_PAGE_ALIGN(size_t l) {
-    size_t page_size = IX_PAGE_SIZE;
-    return (l + page_size - 1) & ~(page_size - 1);
-}
 
 iMemTrap* iMemTrap::s_memtraps[2] = {IX_NULLPTR, IX_NULLPTR};
 iAUpdate iMemTrap::s_aupdate;
@@ -89,8 +77,8 @@ void iMemTrap::memChanged(void* data)
 #endif
 
 iMemTrap::iMemTrap(const void *start, size_t size)
-    : m_start(IX_PAGE_ALIGN_PTR(start))
-    , m_size(IX_PAGE_ALIGN(size))
+    : m_start(ix_page_align_ptr(start))
+    , m_size(ix_page_align(size))
     , m_bad(0)
 {
     IX_ASSERT(start && (size > 0));
@@ -128,8 +116,8 @@ void iMemTrap::update(const void *start, size_t size)
 {
     IX_ASSERT(start && (size > 0));
 
-    start = IX_PAGE_ALIGN_PTR(start);
-    size = IX_PAGE_ALIGN(size);
+    start = ix_page_align_ptr(start);
+    size = ix_page_align(size);
 
     s_mutex.lock();
 

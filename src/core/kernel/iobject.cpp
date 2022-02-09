@@ -450,8 +450,8 @@ void iObject::setParent(iObject *o)
     m_parent = o;
 
     if (m_parent) {
-        // object hierarchies are constrained to a single thread
-        if (m_threadData != m_parent->m_threadData) {
+        // object hierarchies are constrained to a single thread, but ignoal thread itself
+        if ((m_threadData != m_parent->m_threadData) && (this != m_threadData->thread)) {
             ilog_warn("Cannot set parent, new parent is in a different thread");
             m_parent = IX_NULLPTR;
             return;

@@ -98,7 +98,7 @@ public:
     template <typename X>
     void reinterpreted() {
         if (sizeof(T) != sizeof(X)) {
-            updateCapacity(allocatedCapacity() * sizeof(T) / sizeof(X));
+            updateCapacity(allocatedCapacity() * sizeof(X) / sizeof(T));
         }
     }
 
@@ -122,6 +122,15 @@ public:
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
         iMemBlock* d = reallocate(data, capacity, sizeof(T), options);
         return static_cast<iTypedArrayData *>(d);
+    }
+
+    static iTypedArrayData* fromRawData(T *rawData, xsizetype capacity)
+    {
+        IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
+        iMemBlock* d = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, IX_NULLPTR, IX_NULLPTR, false);
+        iTypedArrayData* ret = static_cast<iTypedArrayData *>(d);
+        ret->reinterpreted<char>();
+        return ret;
     }
 };
 
