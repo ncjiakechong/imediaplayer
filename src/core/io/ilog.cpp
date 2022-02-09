@@ -20,8 +20,8 @@ namespace iShell {
 
 static inline const char* ilog_path_basename (const char* file_name)
 {
-    const char* index_slash = 0;
-    const char* index_backlash = 0;
+    const char* index_slash = IX_NULLPTR;
+    const char* index_backlash = IX_NULLPTR;
     register const char* base = file_name;
     do {
         if( *base == '/' )

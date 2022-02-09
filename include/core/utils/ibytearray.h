@@ -264,7 +264,7 @@ public:
     static iByteArray number(double, char f = 'g', int prec = 6);
     static iByteArray fromRawData(const char * data, xsizetype size)
     {
-        return iByteArray(DataPointer(IX_NULLPTR, const_cast<char *>(data), size));
+        return iByteArray(DataPointer::fromRawData(data, size));
     }
     static iByteArray fromBase64(const iByteArray &base64, Base64Options options);
     static iByteArray fromHex(const iByteArray &hexEncoded);

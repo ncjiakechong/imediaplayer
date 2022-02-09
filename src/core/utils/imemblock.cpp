@@ -15,9 +15,8 @@
 #include "core/utils/imemtrap.h"
 #include "core/utils/imemchunk.h"
 #include "core/utils/imemblock.h"
+#include "utils/itools_p.h"
 #include "core/io/ilog.h"
-
-#define IX_PAGE_SIZE 4096
 
 #define IX_BYTES_SNPRINT_MAX 11
 
@@ -63,17 +62,6 @@ namespace iShell {
         }                                                               \
         _item->m_next = _item->m_prev = IX_NULLPTR;                     \
     } while(0)
-
-/* Rounds down */
-static inline void* IX_PAGE_ALIGN_PTR(const void *p) {
-    return (void*) (((size_t) p) & ~(IX_PAGE_SIZE - 1));
-}
-
-/* Rounds up */
-static inline size_t IX_PAGE_ALIGN(size_t l) {
-    size_t page_size = IX_PAGE_SIZE;
-    return (l + page_size - 1) & ~(page_size - 1);
-}
 
 /* Rounds up */
 static inline size_t IX_ALIGN(size_t l) {
@@ -278,12 +266,19 @@ void iMemBlock::doFree()
 
     switch (m_type) {
         case MEMBLOCK_USER:
-        case MEMBLOCK_FIXED:
-        case MEMBLOCK_APPENDED:
-            /* We could attach it to unused_memblocks, but that would
-             * probably waste some considerable amount of memory */
+        case MEMBLOCK_FIXED: {
             delete this;
             break;
+        }
+
+        case MEMBLOCK_APPENDED: {
+            /* We could attach it to unused_memblocks, but that would
+             * probably waste some considerable amount of memory */
+            void* ptr = this;
+            this->~iMemBlock();
+            ::free(ptr);
+            break;
+        }
 
         case MEMBLOCK_IMPORTED: {
             /* FIXME! This should be implemented lock-free */
@@ -313,8 +308,6 @@ void iMemBlock::doFree()
         case MEMBLOCK_POOL: {
             iMemPool::Slot *slot = m_pool->slotByPtr(m_data.value());
             IX_ASSERT(slot);
-
-            bool call_free = (m_type == MEMBLOCK_POOL_EXTERNAL);
 
             /* The free list dimensions should easily allow all slots
              * to fit in, hence try harder if pushing this slot into
@@ -393,7 +386,7 @@ iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t element
 
     xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
     allocSize = reserveExtraBytes(allocSize);
-    if (((allocSize - headerSize) < 0) || (allocSize > pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
+    if ((allocSize < 0) || (allocSize - (xsizetype)headerSize) < 0) {  // handle overflow. cannot allocate reliably
         return IX_NULLPTR;
     }
 
@@ -425,7 +418,7 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t eleme
 
     xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
     allocSize = reserveExtraBytes(allocSize);
-    if (((allocSize - headerSize) < 0) || (allocSize > pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
+    if ((allocSize < 0) || ((allocSize - (xsizetype)headerSize) < 0) || (allocSize > pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
         return IX_NULLPTR;
     }
 
@@ -702,8 +695,8 @@ void iMemBlock::replaceImport()
  * TODO-2: Remove global mempools support */
 iMemPool* iMemPool::create(MemType type, size_t size, bool perClient)
 {
-    const size_t page_size = IX_PAGE_SIZE;
-    size_t block_size = IX_PAGE_ALIGN(IX_MEMPOOL_SLOT_SIZE);
+    const size_t page_size = ix_page_size();
+    size_t block_size = ix_page_align(IX_MEMPOOL_SLOT_SIZE);
     if (block_size < page_size)
         block_size = page_size;
 
@@ -734,14 +727,15 @@ iMemPool* iMemPool::create(MemType type, size_t size, bool perClient)
 
 iMemPool* iMemPool::fakeAdaptor() 
 {
-    /* 1 GiB at max */
-    static iMemPool s_fakeMemPool(IX_ALIGN(1024*1024*1024), 0, false);
-    
-    if (IX_NULLPTR == s_fakeMemPool.m_memory) {
-        s_fakeMemPool.m_memory = new iShareMem();
-    }
+    class StaticAdaptor {
+    public:
+        iMemPool* _pool;
+        StaticAdaptor() : _pool(new iMemPool(1024, 0, false)) { _pool->m_memory = new iShareMem(); }
+        ~StaticAdaptor() { _pool->deref(); }
+    };
 
-    return &s_fakeMemPool;
+    static StaticAdaptor s_fakeMemPool;
+    return s_fakeMemPool._pool;
 }
 
 iMemPool::iMemPool(size_t block_size, xuint32 n_blocks, bool perClient)
@@ -808,7 +802,7 @@ iMemPool::~iMemPool()
             }
 
             if (!k)
-                ilog_error("REF: Leaked memory block ", slot);
+                ilog_error("REF: Leaked memory block ", slot, " idx:", idx);
 
             while ((k = list.pop(IX_NULLPTR)))
                 while (!m_freeSlots.push(k)) {}
@@ -817,9 +811,7 @@ iMemPool::~iMemPool()
         ilog_error("Memory pool destroyed but not all memory blocks freed! remain ", m_stat.nAllocated.value());
     }
 
-    // TODO
     while(m_freeSlots.pop(IX_NULLPTR)) {}
-
     delete m_memory;
 }
 
@@ -862,7 +854,7 @@ iMemPool::Slot* iMemPool::allocateSlot()
         slot = (Slot*) ((xuint8*) m_memory->data() + (m_blockSize * (size_t) idx));
     }
 
-    if (IX_NULLPTR == slot) {
+    if (IX_NULLPTR == slot && (m_nBlocks > 0)) {
         ilog_debug("Pool full");
         m_stat.nPoolFull++;
         return IX_NULLPTR;

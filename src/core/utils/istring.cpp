@@ -3949,15 +3949,15 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
     const xuint16 *data = s.d.data();
     xsizetype length = s.d.size;
 
-    // Swap the d pointers.
-    // Kids, avert your eyes. Don't try this at home.
-    s.d.d_ptr()->reinterpreted<xuint16>();
-
     // this relies on the fact that we use iArrayData for everything behind the scenes which has the same layout
     IX_COMPILER_VERIFY(sizeof(iByteArray::DataPointer) == sizeof(iString::DataPointer));
     iByteArray::DataPointer ba_d(reinterpret_cast<iByteArray::Data *>(s.d.d_ptr()), reinterpret_cast<char *>(s.d.data()), length);
     ba_d.ref();
     s.clear();
+
+    // Swap the d pointers.
+    // Kids, avert your eyes. Don't try this at home.
+    ba_d.d_ptr()->reinterpreted<xuint16>();
 
     // do the in-place conversion
     char *ddata = ba_d.data();

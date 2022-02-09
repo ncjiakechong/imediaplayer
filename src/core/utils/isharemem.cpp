@@ -21,10 +21,11 @@
 #include <dirent.h>
 #include <signal.h>
 
-#include "core/io/ilog.h"
-#include "core/thread/iatomiccounter.h"
 #include "core/utils/isharemem.h"
+#include "core/thread/iatomiccounter.h"
 #include "core/kernel/icoreapplication.h"
+#include "utils/itools_p.h"
+#include "core/io/ilog.h"
 
 #if defined(IX_OS_LINUX) && !defined(MADV_REMOVE)
 #define MADV_REMOVE 9
@@ -58,19 +59,6 @@ static inline size_t IX_ALIGN(size_t l) {
 
 /* 1 GiB at max */
 #define MAX_SHM_SIZE (IX_ALIGN(1024*1024*1024))
-
-#define IX_PAGE_SIZE 4096
-
-/* Rounds down */
-static inline void* IX_PAGE_ALIGN_PTR(const void *p) {
-    return (void*) (((size_t) p) & ~(IX_PAGE_SIZE - 1));
-}
-
-/* Rounds up */
-static inline size_t IX_PAGE_ALIGN(size_t l) {
-    size_t page_size = IX_PAGE_SIZE;
-    return (l + page_size - 1) & ~(page_size - 1);
-}
 
 #define SHM_MARKER ((int) 0xbeefcafe)
 
@@ -118,7 +106,7 @@ iShareMem* iShareMem::createPrivateMem(size_t size)
     }
     #elif defined(IX_HAVE_POSIX_MEMALIGN)
     {
-        int r = posix_memalign(&shm->m_ptr, IX_PAGE_SIZE, size);
+        int r = posix_memalign(&shm->m_ptr, ix_page_size(), size);
         if (r < 0) {
             ilog_warn("posix_memalign() failed: ", r);
             delete shm;
@@ -190,7 +178,7 @@ iShareMem* iShareMem::createSharedMem(MemType type, size_t size, mode_t mode)
     #define MAP_NORESERVE 0
     #endif
 
-    if ((shm->m_ptr = mmap(NULL, IX_PAGE_ALIGN(shm->m_size), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_NORESERVE, shm->m_memfd, (off_t) 0)) == MAP_FAILED) {
+    if ((shm->m_ptr = mmap(NULL, ix_page_align(shm->m_size), PROT_READ|PROT_WRITE, MAP_SHARED|MAP_NORESERVE, shm->m_memfd, (off_t) 0)) == MAP_FAILED) {
         ilog_info("shm mmap() failed: ", errno);
         delete shm;
         return IX_NULLPTR;
@@ -220,7 +208,7 @@ iShareMem* iShareMem::create(MemType type, size_t size, mode_t mode) {
     IX_ASSERT(!(mode & ~0777) && (mode >= 0600));
 
     /* Round up to make it page aligned */
-    size = IX_PAGE_ALIGN(size);
+    size = ix_page_align(size);
     if (type == MEMTYPE_PRIVATE)
         return createPrivateMem(size);
 
@@ -253,7 +241,7 @@ int iShareMem::detach()
             break;
         }
 
-        if (munmap(m_ptr, IX_PAGE_ALIGN(m_size)) < 0)
+        if (munmap(m_ptr, ix_page_align(m_size)) < 0)
             ilog_warn("munmap() failed: ", errno);
 
         if ((MEMTYPE_SHARED_POSIX == m_type) && m_doUnlink) {
@@ -299,8 +287,8 @@ void iShareMem::punch(size_t offset, size_t size)
 
     /* Align the pointer up to multiples of the page size */
     void* ptr = (xuint8*) m_ptr + offset;
-    const size_t page_size = IX_PAGE_SIZE;
-    size_t o = (size_t) ((xuint8*) ptr - (xuint8*) IX_PAGE_ALIGN_PTR(ptr));
+    const size_t page_size = ix_page_size();
+    size_t o = (size_t) ((xuint8*) ptr - (xuint8*) ix_page_align_ptr(ptr));
 
     if (o > 0) {
         size_t delta = page_size - o;
@@ -381,7 +369,7 @@ int iShareMem::doAttach(MemType type, uint id, xintptr memfd, bool writable, boo
     }
 
     int prot = writable ? PROT_READ | PROT_WRITE : PROT_READ;
-    m_ptr = mmap(NULL, IX_PAGE_ALIGN(st.st_size), prot, MAP_SHARED, fd, (off_t) 0);
+    m_ptr = mmap(NULL, ix_page_align(st.st_size), prot, MAP_SHARED, fd, (off_t) 0);
     if (MAP_FAILED == m_ptr) {
         ilog_warn("mmap() failed: ", errno);
 

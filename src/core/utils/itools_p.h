@@ -68,6 +68,17 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype
 void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, xsizetype from);
 bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, xsizetype from, xsizetype *lastStable);
 
+inline size_t ix_page_size() { return 4096; }
+
+/* Rounds down */
+inline void* ix_page_align_ptr (const void *p) { return (void*) (((size_t) p) & ~(ix_page_size() - 1)); }
+
+/* Rounds up */
+inline size_t ix_page_align(size_t l) {
+    size_t page_size = ix_page_size();
+    return (l + page_size - 1) & ~(page_size - 1);
+}
+
 } // namespace iShell
 
 #endif // ITOOLS_P_H
