@@ -77,7 +77,7 @@ static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t leve
     iTime current = iDateTime::currentDateTime().time();
     meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5lld %5d %s:%c %s:%d:%s",
                     current.hour(), current.minute(), current.second(), current.msec(),
-                    iCoreApplication::applicationPid(), iThread::currentThreadId(), 
+                    (long long int)iCoreApplication::applicationPid(), iThread::currentThreadId(),
                     tag, cur_level, file, line, function);
 
     fprintf(stdout, "%s %s\n", meta_buf, msg);
@@ -108,7 +108,7 @@ static void ilog_default_data_callback(void*, const char* tag, ilog_level_t leve
     iTime current = iDateTime::currentDateTime().time();
     meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5lld %5d %s:%c %s:%d:%s ",
                     current.hour(), current.minute(), current.second(), current.msec(),
-                    iCoreApplication::applicationPid(), iThread::currentThreadId(), 
+                    (long long int)iCoreApplication::applicationPid(), iThread::currentThreadId(),
                     tag, cur_level, file, line, function);
 
     int limit_len = std::min(4, size);
