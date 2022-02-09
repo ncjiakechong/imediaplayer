@@ -44,7 +44,7 @@ public:
     static iArrayDataPointer fromRawData(const T *rawData, xsizetype length)
     {
         IX_ASSERT(rawData || !length);
-        if (0 == length)
+        if (length <= 0)
             return { IX_NULLPTR, const_cast<T *>(rawData), length };
 
         Data* d = Data::fromRawData(const_cast<T *>(rawData), length);
