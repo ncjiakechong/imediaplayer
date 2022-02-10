@@ -207,10 +207,6 @@ public:
 
 private:
     iUrlPrivate *d;
-
-public:
-    typedef iUrlPrivate * DataPtr;
-    inline DataPtr &data_ptr() { return d; }
 };
 
 inline iUrl::FormattingOptions operator|(iUrl::UrlFormattingOption f1, iUrl::UrlFormattingOption f2)

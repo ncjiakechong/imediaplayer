@@ -41,13 +41,13 @@ public:
     {
     }
 
-    static iArrayDataPointer fromRawData(const T *rawData, xsizetype length)
+    static iArrayDataPointer fromRawData(const T *rawData, xsizetype length, iFreeCb freeCb, void* freeCbData)
     {
         IX_ASSERT(rawData || !length);
         if (length <= 0)
             return { IX_NULLPTR, const_cast<T *>(rawData), length };
 
-        Data* d = Data::fromRawData(const_cast<T *>(rawData), length);
+        Data* d = Data::fromRawData(const_cast<T *>(rawData), length, freeCb, freeCbData);
         return { d, const_cast<T *>(rawData), length };
     }
 

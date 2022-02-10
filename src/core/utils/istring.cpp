@@ -1342,7 +1342,7 @@ iString::iString(const iChar *unicode, xsizetype size)
                 ++size;
         }
         if (!size) {
-            d = DataPointer::fromRawData(&_empty, 0);
+            d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
         } else {
             Data* td = Data::allocate(size);
             d = DataPointer(td, static_cast<xuint16*>(td->data().value()), size);
@@ -1361,7 +1361,7 @@ iString::iString(const iChar *unicode, xsizetype size)
 iString::iString(xsizetype size, iChar ch)
 {
     if (size <= 0) {
-        d = DataPointer::fromRawData(&_empty, 0);
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
     } else {
         Data* td = Data::allocate(size);
         d = DataPointer(td, static_cast<xuint16*>(td->data().value()), size);
@@ -1383,7 +1383,7 @@ iString::iString(xsizetype size, iChar ch)
 iString::iString(xsizetype size, iShell::Initialization)
 {
     if (size <= 0) {
-        d = DataPointer::fromRawData(&_empty, 0);
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
     } else {
         Data* td = Data::allocate(size);
         d = DataPointer(td, static_cast<xuint16*>(td->data().value()), size);
@@ -1578,7 +1578,7 @@ void iString::resize(xsizetype size, iChar fillChar)
 void iString::reallocData(xsizetype alloc, Data::ArrayOptions allocOptions)
 {
     if (!alloc) {
-        d = DataPointer::fromRawData(&_empty, 0);
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
         return;
     }
 
@@ -3737,7 +3737,7 @@ iString iString::mid(xsizetype position, xsizetype n) const
     case iContainerImplHelper::Null:
         return iString();
     case iContainerImplHelper::Empty:
-        return iString(DataPointer::fromRawData(&_empty, 0));
+        return iString(DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR));
     case iContainerImplHelper::Full:
         return *this;
     case iContainerImplHelper::Subset:
@@ -4151,7 +4151,7 @@ iString::DataPointer iString::fromLatin1_helper(const char *str, xsizetype size)
     if (!str) {
         // nothing to do
     } else if (size == 0 || (!*str && size < 0)) {
-        d = DataPointer::fromRawData(&_empty, 0);
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
     } else {
         if (size < 0)
             size = istrlen(str);
@@ -4207,7 +4207,7 @@ iString iString::fromLocal8Bit_helper(const char *str, xsizetype size)
     if (!str)
         return iString();
     if (size == 0 || (!*str && size < 0)) {
-        return iString(DataPointer::fromRawData(&_empty, 0));
+        return iString(DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR));
     }
 
     return fromUtf8(str, size);
@@ -7566,9 +7566,9 @@ bool iString::isRightToLeft() const
 
     \sa fromUtf16(), setRawData()
 */
-iString iString::fromRawData(const iChar *unicode, xsizetype size)
+iString iString::fromRawData(const iChar *unicode, xsizetype size, iFreeCb freeCb, void* freeCbData)
 {
-    return iString(DataPointer::fromRawData(const_cast<xuint16 *>(reinterpret_cast<const xuint16 *>(unicode)), size));
+    return iString(DataPointer::fromRawData(const_cast<xuint16 *>(reinterpret_cast<const xuint16 *>(unicode)), size, freeCb, freeCbData));
 }
 
 /*!
@@ -7585,12 +7585,12 @@ iString iString::fromRawData(const iChar *unicode, xsizetype size)
 
     \sa fromRawData()
 */
-iString &iString::setRawData(const iChar *unicode, xsizetype size)
+iString &iString::setRawData(const iChar *unicode, xsizetype size, iFreeCb freeCb, void* freeCbData)
 {
     if (!unicode || !size) {
         clear();
     }
-    *this = fromRawData(unicode, size);
+    *this = fromRawData(unicode, size, freeCb, freeCbData);
     return *this;
 }
 
