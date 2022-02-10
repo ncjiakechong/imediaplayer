@@ -255,16 +255,16 @@ public:
     iByteArray &setNum(xuint64, int base = 10);
     inline iByteArray &setNum(float, char f = 'g', int prec = 6);
     iByteArray &setNum(double, char f = 'g', int prec = 6);
-    iByteArray &setRawData(const char *a, xsizetype n);
+    iByteArray &setRawData(const char *a, xsizetype n, iFreeCb freeCb = IX_NULLPTR, void* freeCbData = IX_NULLPTR);
 
     static iByteArray number(int, int base = 10);
     static iByteArray number(uint, int base = 10);
     static iByteArray number(xint64, int base = 10);
     static iByteArray number(xuint64, int base = 10);
     static iByteArray number(double, char f = 'g', int prec = 6);
-    static iByteArray fromRawData(const char * data, xsizetype size)
+    static iByteArray fromRawData(const char * data, xsizetype size, iFreeCb freeCb = IX_NULLPTR, void* freeCbData = IX_NULLPTR)
     {
-        return iByteArray(DataPointer::fromRawData(data, size));
+        return iByteArray(DataPointer::fromRawData(data, size, freeCb, freeCbData));
     }
     static iByteArray fromBase64(const iByteArray &base64, Base64Options options);
     static iByteArray fromHex(const iByteArray &hexEncoded);
@@ -315,11 +315,7 @@ public:
     inline xsizetype length() const { return size(); }
     bool isNull() const;
 
-    inline DataPointer &data_ptr() { return d; }
-    explicit inline iByteArray(const DataPointer &dd)
-        : d(dd)
-    {
-    }
+    explicit inline iByteArray(const DataPointer &dd) : d(dd) {}
 
 private:
     void reallocData(xsizetype alloc, Data::ArrayOptions options);

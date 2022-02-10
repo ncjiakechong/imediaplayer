@@ -851,7 +851,7 @@ iByteArray &iByteArray::operator=(const char *str)
     if (!str) {
         d.clear();
     } else if (!*str) {
-        d = DataPointer::fromRawData(&_empty, 0);
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
     } else {
         const xsizetype len = xsizetype(strlen(str));
         const xsizetype capacityAtEnd = d.allocatedCapacity() - d.freeSpaceAtBegin();
@@ -1296,7 +1296,7 @@ iByteArray::iByteArray(const char *data, xsizetype size)
         if (size < 0)
             size = istrlen(data);
         if (!size) {
-            d = DataPointer::fromRawData(&_empty, 0);
+            d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
         } else {
             Data* td = Data::allocate(size);
             d = DataPointer(td, static_cast<char*>(td->data().value()), size);
@@ -1316,7 +1316,7 @@ iByteArray::iByteArray(const char *data, xsizetype size)
 iByteArray::iByteArray(xsizetype size, char ch)
 {
     if (size <= 0) {
-        d = DataPointer::fromRawData(&_empty, 0);
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
     } else {
         Data* td = Data::allocate(size);
         d = DataPointer(td, static_cast<char*>(td->data().value()), size);
@@ -1334,7 +1334,7 @@ iByteArray::iByteArray(xsizetype size, char ch)
 iByteArray::iByteArray(xsizetype size, iShell::Initialization)
 {
     if (size <= 0) {
-        d = DataPointer::fromRawData(&_empty, 0);
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
     } else {
         Data* td = Data::allocate(size);
         d = DataPointer(td, static_cast<char*>(td->data().value()), size);
@@ -1389,7 +1389,7 @@ iByteArray &iByteArray::fill(char ch, xsizetype size)
 void iByteArray::reallocData(xsizetype alloc, Data::ArrayOptions options)
 {
     if (!alloc) {
-        d = DataPointer::fromRawData(&_empty, 0);
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
         return;
     }
 
@@ -2643,7 +2643,7 @@ iByteArray iByteArray::mid(xsizetype pos, xsizetype len) const
         return iByteArray();
     case iContainerImplHelper::Empty:
     {
-        return iByteArray(DataPointer::fromRawData(&_empty, 0));
+        return iByteArray(DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR));
     }
     case iContainerImplHelper::Full:
         return *this;
@@ -3896,12 +3896,12 @@ iByteArray iByteArray::number(double n, char f, int prec)
 
     \sa fromRawData(), data(), constData()
 */
-iByteArray &iByteArray::setRawData(const char *data, xsizetype size)
+iByteArray &iByteArray::setRawData(const char *data, xsizetype size, iFreeCb freeCb, void* freeCbData)
 {
     if (!data || !size)
         clear();
     else
-        *this = fromRawData(data, size);
+        *this = fromRawData(data, size, freeCb, freeCbData);
     return *this;
 }
 
@@ -4384,11 +4384,6 @@ iByteArray iByteArray::toPercentEncoding(const iByteArray &exclude, const iByteA
 /*! \typedef iByteArray::value_type
   \internal
  */
-
-/*!
-    \fn DataPtr &iByteArray::data_ptr()
-    \internal
-*/
 
 /*!
     \typedef iByteArray::DataPtr

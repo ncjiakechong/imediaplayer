@@ -698,12 +698,6 @@ iBitArray operator^(const iBitArray &a1, const iBitArray &a2)
     Sets the value referenced by the iBitRef to \a v.
 */
 
-
-/*!
-    \fn DataPtr &iBitArray::data_ptr()
-    \internal
-*/
-
 /*!
     \typedef iBitArray::DataPtr
     \internal

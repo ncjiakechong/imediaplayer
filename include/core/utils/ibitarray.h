@@ -68,10 +68,6 @@ public:
 
     const char *bits() const { return isEmpty() ? IX_NULLPTR : d.constData() + 1; }
     static iBitArray fromBits(const char *data, xsizetype len);
-
-public:
-    typedef iByteArray::DataPointer DataPtr;
-    inline DataPtr &data_ptr() { return d.data_ptr(); }
 };
 
 inline bool iBitArray::fill(bool aval, int asize)

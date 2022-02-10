@@ -124,10 +124,10 @@ public:
         return static_cast<iTypedArrayData *>(d);
     }
 
-    static iTypedArrayData* fromRawData(T *rawData, xsizetype capacity)
+    static iTypedArrayData* fromRawData(T *rawData, xsizetype capacity, iFreeCb freeCb, void* freeCbData)
     {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
-        iMemBlock* d = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, IX_NULLPTR, IX_NULLPTR, false);
+        iMemBlock* d = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, freeCb, freeCbData, false);
         iTypedArrayData* ret = static_cast<iTypedArrayData *>(d);
         ret->reinterpreted<char>();
         return ret;

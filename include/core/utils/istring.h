@@ -406,7 +406,7 @@ public:
     { return str.isNull() ? iString() : fromLocal8Bit(str.data(), istrnlen(str.constData(), str.size())); }
     static iString fromUtf16(const xuint16 *, xsizetype size = -1);
     static iString fromUcs4(const xuint32 *, xsizetype size = -1);
-    static iString fromRawData(const iChar *, xsizetype size);
+    static iString fromRawData(const iChar *, xsizetype size, iFreeCb freeCb = IX_NULLPTR, void* freeCbData = IX_NULLPTR);
 
     static iString fromUtf16(const char16_t *str, xsizetype size = -1)
     { return fromUtf16(reinterpret_cast<const xuint16 *>(str), size); }
@@ -416,7 +416,7 @@ public:
     inline xsizetype toWCharArray(wchar_t *array) const;
     static inline iString fromWCharArray(const wchar_t *string, xsizetype size = -1);
 
-    iString &setRawData(const iChar *unicode, xsizetype size);
+    iString &setRawData(const iChar *unicode, xsizetype size, iFreeCb freeCb = IX_NULLPTR, void* freeCbData = IX_NULLPTR);
     iString &setUnicode(const iChar *unicode, xsizetype size);
     inline iString &setUtf16(const xuint16 *utf16, xsizetype size);
 
@@ -588,12 +588,11 @@ public:
     // compatibility
     inline bool isNull() const { return d.isNull(); }
 
-
     bool isSimpleText() const;
     bool isRightToLeft() const;
 
     iString(xsizetype size, iShell::Initialization);
-    inline iString(const DataPointer& dd) : d(dd) {}
+    explicit inline iString(const DataPointer& dd) : d(dd) {}
 
 private:
     DataPointer d;

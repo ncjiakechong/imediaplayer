@@ -156,6 +156,23 @@ int test_ivariant(void)
     IX_ASSERT(IX_NULLPTR == freelist4.pop());
     IX_ASSERT(IX_NULLPTR == freelist4.pop(IX_NULLPTR));
 
+    struct freeTest {
+        void* _ptr;
+
+        static void free(void* point, void* data) {
+            freeTest* _this = static_cast<freeTest*>(data);
+            _this->_ptr = IX_NULLPTR;
+            ::free(point);
+        }
+    };
+
+    const int tmpSize = 128;
+    freeTest tmpTst;
+    tmpTst._ptr = ::malloc(tmpSize);
+    iByteArray tmpArry = iByteArray::fromRawData((char*)tmpTst._ptr, tmpSize, &freeTest::free, &tmpTst);
+    tmpArry.clear();
+    IX_ASSERT(IX_NULLPTR == tmpTst._ptr);
+
     // build error
 //    iVariant var_tst2 = iVariant(tst_Variant());
 //    var_tst2.setValue<tst_Variant>(tst_Variant());
