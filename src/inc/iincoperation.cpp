@@ -25,34 +25,29 @@ iINCOperation::iINCOperation(iINCContext* c, iINCStream* s)
 
     /* Refcounting is strictly one-way: from the "bigger" to the "smaller" object. */
     c->m_operations.insert(this);
-    ++m_ref;
+    m_ref.ref();
 }
 
 iINCOperation::~iINCOperation()
 {}
 
-void iINCOperation::ref()
+bool iINCOperation::deref()
 {
-    IX_ASSERT(m_ref >= 1);
-    ++m_ref;
-}
-
-void iINCOperation::deref() 
-{
-    IX_ASSERT(m_ref >= 1);
-
-    if (--m_ref <= 0) {
+    if (!m_ref.deref()) {
         IX_ASSERT(!m_context);
         IX_ASSERT(!m_stream);
 
         delete this;
+        return false;
     }
+
+    return true;
 }
 
 void iINCOperation::unlink() 
 {
     if (m_context) {
-        IX_ASSERT(m_ref >= 2);
+        IX_ASSERT(m_ref.value() >= 2);
 
         std::unordered_set<iINCOperation*>::const_iterator it = m_context->m_operations.find(this);
         if (it != m_context->m_operations.cend())
@@ -67,7 +62,7 @@ void iINCOperation::unlink()
 
 void iINCOperation::setState(State now) 
 {
-    IX_ASSERT(m_ref >= 1);
+    IX_ASSERT(m_ref.value() >= 1);
 
     if ((now == m_state) || (m_state == STATE_DONE) || (m_state == STATE_CANCELLED))
         return;

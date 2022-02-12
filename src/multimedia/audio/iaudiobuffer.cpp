@@ -51,9 +51,8 @@ class iAudioBufferPrivate : public iSharedData
 public:
     iAudioBufferPrivate(iAbstractAudioBuffer *provider)
         : mProvider(provider)
-    {
-        mCount.initializeOwned();
-    }
+        , mCount(1)
+    {}
 
     ~iAudioBufferPrivate()
     {
@@ -156,7 +155,7 @@ iAudioBufferPrivate *iAudioBufferPrivate::clone()
     // We want to create a single bufferprivate with a
     // single qaab
     // This should only be called when the count is > 1
-    IX_ASSERT(mCount.atomic.value() > 1);
+    IX_ASSERT(mCount.value() > 1);
 
     if (mProvider) {
         iAbstractAudioBuffer *abuf = mProvider->clone();
@@ -449,7 +448,7 @@ void *iAudioBuffer::data()
     if (!isValid())
         return IX_NULLPTR;
 
-    if (d->mCount.atomic.value() != 1) {
+    if (d->mCount.value() != 1) {
         // Can't share a writable buffer
         // so we need to detach
         iAudioBufferPrivate *newd = d->clone();

@@ -56,6 +56,28 @@ public:
     inline void* value() const { return _data; }
 };
 
+class IX_CORE_EXPORT iMemGuard
+{
+    friend class iMemBlock;
+
+    struct ExternalData
+    {
+        iRefCount  _weakreef;
+        iMemBlock* _block;
+    };
+    ExternalData* _d;
+
+    iMemGuard(ExternalData* data);
+public:
+    iMemGuard();
+    iMemGuard(const iMemGuard& other);
+    ~iMemGuard();
+
+    iMemGuard& operator=(const iMemGuard& other);
+
+    inline iMemBlock* block() const { return (IX_NULLPTR == _d) ? IX_NULLPTR : _d->_block; }
+};
+
 /**
  * A memblock is a reference counted memory block. PulseAudio
  * passes references to memblocks around instead of copying
@@ -104,10 +126,11 @@ public:
     inline void clearOptions(ArrayOptions o) { m_options &= ~o; }
     void setIsSilence(bool v);
 
+    iMemGuard guard() const;
     inline iMemPoolWraper pool() const { return iMemPoolWraper(m_pool); }
 
     inline iMemDataWraper data() const { return iMemDataWraper(this, 0); }
-    iMemDataWraper data4Chunk(const iMemChunk* c) const;
+    iMemDataWraper data4Chunk(const iMemChunk& c) const;
 
     // Returns true if a detach is necessary before modifying the data
     // This method is intentionally not const: if you want to know whether
@@ -159,18 +182,20 @@ private:
     void* acquire(size_t offset);
     void release();
 
-    iRefCount m_ref;
-    iMemPool* m_pool;
+    bool m_readOnly:1;
+    bool m_isSilence:1;
 
     Type m_type;
     ArrayOptions m_options;
 
-    bool m_readOnly:1;
-    bool m_isSilence:1;
-
-    iAtomicCounter<void*> m_data;
     size_t m_length;
     size_t m_capacity;
+
+    iMemPool* m_pool;
+    iRefCount m_ref;
+
+    iAtomicPointer<void> m_data;
+    iAtomicPointer< iMemGuard::ExternalData > m_guardData;
 
     iAtomicCounter<int> m_nAcquired;
     iAtomicCounter<int> m_pleaseSignal;

@@ -441,7 +441,7 @@ inline void iAtomicAssign(T *&d, T *x)
 template <typename T>
 inline void iAtomicDetach(T *&d)
 {
-    if (d->ref.atomic == 1)
+    if (d->ref.value() == 1)
         return;
     T *x = d;
     d = new T(*d);
@@ -590,29 +590,27 @@ public:
 };
 
 inline iUrlPrivate::iUrlPrivate()
-    : port(-1),
-      error(0),
-      sectionIsPresent(0),
-      flags(0)
-{
-    ref.atomic = 1;
-}
+    : ref(1)
+    , port(-1)
+    , error(0)
+    , sectionIsPresent(0)
+    , flags(0)
+{}
 
 inline iUrlPrivate::iUrlPrivate(const iUrlPrivate &copy)
-    : port(copy.port),
-      scheme(copy.scheme),
-      userName(copy.userName),
-      password(copy.password),
-      host(copy.host),
-      path(copy.path),
-      query(copy.query),
-      fragment(copy.fragment),
-      error(copy.cloneError()),
-      sectionIsPresent(copy.sectionIsPresent),
-      flags(copy.flags)
-{
-    ref.atomic = 1;
-}
+    : ref(1)
+    , port(copy.port)
+    , scheme(copy.scheme)
+    , userName(copy.userName)
+    , password(copy.password)
+    , host(copy.host)
+    , path(copy.path)
+    , query(copy.query)
+    , fragment(copy.fragment)
+    , error(copy.cloneError())
+    , sectionIsPresent(copy.sectionIsPresent)
+    , flags(copy.flags)
+{}
 
 inline iUrlPrivate::~iUrlPrivate()
 {
@@ -3891,7 +3889,7 @@ void iUrl::detach()
 */
 bool iUrl::isDetached() const
 {
-    return !d || d->ref.atomic == 1;
+    return !d || d->ref.value() == 1;
 }
 
 /*!

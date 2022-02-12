@@ -573,11 +573,11 @@ int test_object(void)
 
     TestObject* tst_weakObj = new TestObject(&tst_obj);
     iWeakPtr<TestObject> weak_1(tst_weakObj);
-    IX_ASSERT(tst_weakObj == weak_1.data());
     iSharedPtr<TestObject> share_weakprt_1(weak_1);
     IX_ASSERT(IX_NULLPTR == share_weakprt_1.data());
+    IX_ASSERT(!weak_1.isNull() && weak_1 != share_weakprt_1);
     delete tst_weakObj;
-    IX_ASSERT(IX_NULLPTR == weak_1.data());
+    IX_ASSERT(weak_1.isNull());
 
     iWeakPtr<TestObject> weak_2;
     {
@@ -585,21 +585,20 @@ int test_object(void)
         IX_ASSERT(IX_NULLPTR != shareprt_2.data());
 
         weak_2 = shareprt_2;
-        IX_ASSERT(shareprt_2.data() == weak_2.data());
+        IX_ASSERT(weak_2 == shareprt_2);
     }
-    IX_ASSERT(IX_NULLPTR == weak_2.data());
+    IX_ASSERT(weak_2.isNull());
 
     // iWeakPtr<int> weak_3(new int(1));
     iSharedPtr<int> shareprt_3(new int(3));
-    ilog_debug("shareprt_3 ", *shareprt_3.data());
     iWeakPtr<int> weakprt_3(shareprt_3);
-    ilog_debug("weakprt_3_3 ", *weakprt_3.data());
+    ilog_debug("shareprt_3 ", *shareprt_3.data());
 
     TestObject* tst_sharedObj_5 = new TestObject(&tst_obj);
     iSharedPtr<TestObject> shared_5(tst_sharedObj_5, &TestObject::deleteLater);
     IX_ASSERT(tst_sharedObj_5 == shared_5.data());
     iWeakPtr<TestObject> share_weakprt_5(shared_5);
-    IX_ASSERT(tst_sharedObj_5 == share_weakprt_5.data());
+    IX_ASSERT(share_weakprt_5 == shared_5);
 
     tst_sharedObj_5->observeProperty("objectName", tst_sharedObj_5, &TestObject::tst_slot_int0);
     tst_sharedObj_5->setProperty("objectName", iVariant("tst_sharedObj_5"));
@@ -616,7 +615,7 @@ int test_object(void)
     IX_ASSERT(5 == tst_sharedObj_5->slot_arg1);
 
     delete tst_sharedObj_5;
-    IX_ASSERT(IX_NULLPTR == share_weakprt_5.data());
+    IX_ASSERT(share_weakprt_5.isNull());
 
     // lambda
     #ifdef IX_HAVE_CXX11

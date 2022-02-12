@@ -12,8 +12,8 @@
 #define ISHAREDPTR_H
 
 #include <algorithm>
+#include <core/utils/irefcount.h>
 #include <core/global/imetaprogramming.h>
-#include <core/thread/iatomiccounter.h>
 
 namespace iShell {
 
@@ -30,8 +30,7 @@ namespace isharedpointer {
     struct NormalDeleter {};
 
     template <class T, typename Deleter>
-    struct CustomDeleter
-    {
+    struct CustomDeleter {
         Deleter deleter;
         T *ptr;
 
@@ -47,8 +46,7 @@ namespace isharedpointer {
     // is an optimization: instead of storing a pointer to a function that does
     // the deleting, we simply delete the pointer ourselves.
     template <class T>
-    struct CustomDeleter<T, NormalDeleter>
-    {
+    struct CustomDeleter<T, NormalDeleter> {
         T *ptr;
 
         CustomDeleter(T *p, NormalDeleter) : ptr(p) {}
@@ -67,19 +65,18 @@ namespace isharedpointer {
     // The deleter is stored in the destroyer member and is always a pointer to
     // a static function in ExternalRefCountWithCustomDeleter or in
     // ExternalRefCountWithContiguousData
-    struct IX_CORE_EXPORT ExternalRefCountData
-    {
+    struct IX_CORE_EXPORT ExternalRefCountData {
         typedef void (*DestroyerFn)(ExternalRefCountData*);
         virtual ~ExternalRefCountData();
 
         inline int strongCount() { return _strongRef.value(); }
-        inline void strongRef() { ++_strongRef; }
-        int strongUnref();
+        inline bool strongRef() { return _strongRef.ref(); }
+        bool strongDeref();
         bool testAndSetStrong(int expectedValue, int newValue);
 
         inline int weakCount() { return _weakRef.value(); }
-        inline void weakRef() { ++_weakRef; }
-        int weakUnref();
+        inline bool weakRef() { return _weakRef.ref(); }
+        bool weakDeref();
 
         void checkObjectShared(const iObject *);
         inline void checkObjectShared(...) { }
@@ -93,8 +90,8 @@ namespace isharedpointer {
             : _weakRef(weak), _strongRef(strong), _extFree(ext), _objFree(obj) {}
 
     private:
-        iAtomicCounter<int> _weakRef;
-        iAtomicCounter<int> _strongRef;
+        iRefCount _weakRef;
+        iRefCount _strongRef;
         DestroyerFn _extFree;
         DestroyerFn _objFree;
 
@@ -106,21 +103,18 @@ namespace isharedpointer {
     // custom deleter are kept in the "extra" member so we can construct
     // and destruct it independently of the full structure.
     template <class T, typename Deleter>
-    struct ExternalRefCountWithCustomDeleter: public ExternalRefCountData
-    {
+    struct ExternalRefCountWithCustomDeleter: public ExternalRefCountData {
         typedef ExternalRefCountWithCustomDeleter Self;
         typedef ExternalRefCountData BaseClass;
         CustomDeleter<T, Deleter> extra;
 
         ExternalRefCountWithCustomDeleter(T *ptr, Deleter objDeleter, DestroyerFn dataDeleter)
             : ExternalRefCountData(1, 1, ExternalRefCountWithCustomDeleter::objDeleter, dataDeleter)
-            , extra(ptr, objDeleter)
-        {
+            , extra(ptr, objDeleter) {
             setObjectShared(ptr, true);
         }
 
-        static inline void objDeleter(ExternalRefCountData *self)
-        {
+        static inline void objDeleter(ExternalRefCountData *self) {
             IX_CHECK_PTR(self);
             Self *realself = static_cast<Self *>(self);
             realself->extra.execute();
@@ -128,8 +122,7 @@ namespace isharedpointer {
             // delete the deleter too
             realself->extra.~CustomDeleter<T, Deleter>();
         }
-        static inline void dataDeleter(ExternalRefCountData *self)
-        {
+        static inline void dataDeleter(ExternalRefCountData *self) {
             delete self;
         }
     private:
@@ -143,13 +136,11 @@ namespace isharedpointer {
     // the static function that deletes the object. The pointer and the
     // custom deleter are kept in the "extra" member so we can construct
     // and destruct it independently of the full structure.
-    struct WeakRefCountWithCustomDeleter: public ExternalRefCountData
-    {
+    struct WeakRefCountWithCustomDeleter: public ExternalRefCountData {
         typedef WeakRefCountWithCustomDeleter Self;
         typedef ExternalRefCountData BaseClass;
 
-        static ExternalRefCountData *getAndRef(const iObject * obj)
-        {
+        static ExternalRefCountData *getAndRef(const iObject * obj) {
             ExternalRefCountData *that =ExternalRefCountData::getAndTest(obj, IX_NULLPTR);
             if (that) {
                 that->weakRef();
@@ -166,15 +157,11 @@ namespace isharedpointer {
             return that;
         }
 
-        static inline void dataDeleter(ExternalRefCountData *self)
-        {
-            delete self;
-        }
+        static inline void dataDeleter(ExternalRefCountData *self) { delete self; }
     private:
         WeakRefCountWithCustomDeleter()
             : ExternalRefCountData(2, -1, IX_NULLPTR, dataDeleter)
-        {
-        }
+        {}
 
         // prevent construction
         WeakRefCountWithCustomDeleter(const WeakRefCountWithCustomDeleter&);
@@ -216,8 +203,7 @@ public:
 
     iSharedPtr(const iSharedPtr &other) : value(other.value), d(other.d)
     { if (d) ref(); }
-    iSharedPtr &operator=(const iSharedPtr &other)
-    {
+    iSharedPtr &operator=(const iSharedPtr &other) {
         iSharedPtr copy(other);
         swap(copy);
         return *this;
@@ -228,8 +214,7 @@ public:
     { if (d) ref(); }
 
     template <class X>
-    inline iSharedPtr &operator=(const iSharedPtr<X> &other)
-    {
+    inline iSharedPtr &operator=(const iSharedPtr<X> &other) {
         iSharedPtr copy(other);
         swap(copy);
         return *this;
@@ -260,21 +245,18 @@ public:
 private:
     template <class X> friend class iWeakPtr;
 
-    void deref(Data *dd)
-    {
-        if (!dd) {
+    void deref(Data *dd) {
+        if (!dd)
             return;
-        }
 
-        dd->strongUnref();
-        dd->weakUnref();
+        dd->strongDeref();
+        dd->weakDeref();
     }
 
     void ref() const { d->weakRef(); d->strongRef(); }
 
     template <typename X, typename Deleter>
-    inline void internalConstruct(X *ptr, Deleter deleter)
-    {
+    inline void internalConstruct(X *ptr, Deleter deleter) {
         if (!ptr) {
             d = IX_NULLPTR;
             return;
@@ -284,15 +266,12 @@ private:
         d = new Private(ptr, deleter, Private::dataDeleter);
     }
 
-    void internalSwap(iSharedPtr &other)
-    {
-
+    void internalSwap(iSharedPtr &other) {
         std::swap(d, other.d);
         std::swap(this->value, other.value);
     }
 
-    inline void internalSet(Data *o, T *actual)
-    {
+    inline void internalSet(Data *o, T *actual) {
         if (o) {
             // increase the strongref, but never up from zero
             // or less (-1 is used by iWeakPointer on untracked iObject)
@@ -337,14 +316,13 @@ public:
 
     bool isNull() const { return (d == IX_NULLPTR || d->strongCount() == 0 || value == IX_NULLPTR); }
     bool operator !() const { return isNull(); }
-    T *data() const { return (d == IX_NULLPTR || d->strongCount() == 0) ? IX_NULLPTR : value; }
 
     inline iWeakPtr() : d(IX_NULLPTR), value(IX_NULLPTR) { }
-    inline ~iWeakPtr() { if (d) d->weakUnref(); }
+    inline ~iWeakPtr() { if (d) d->weakDeref(); }
 
     template <class X>
     inline iWeakPtr(X *ptr) : d(ptr ? isharedpointer::WeakRefCountWithCustomDeleter::getAndRef(ptr) : IX_NULLPTR), value(ptr)
-    { }
+    {}
 
     template <class X>
     inline iWeakPtr &operator=(X *ptr)
@@ -353,23 +331,20 @@ public:
     iWeakPtr(const iWeakPtr &other) : d(other.d), value(other.value)
     { if (d) d->weakRef(); }
 
-    iWeakPtr &operator=(const iWeakPtr &other)
-    {
+    iWeakPtr &operator=(const iWeakPtr &other) {
         iWeakPtr copy(other);
         swap(copy);
         return *this;
     }
 
-    void swap(iWeakPtr &other)
-    {
+    void swap(iWeakPtr &other) {
         std::swap(this->d, other.d);
         std::swap(this->value, other.value);
     }
 
     inline iWeakPtr(const iSharedPtr<T> &o) : d(o.d), value(o.data())
     { if (d) d->weakRef();}
-    inline iWeakPtr &operator=(const iSharedPtr<T> &o)
-    {
+    inline iWeakPtr &operator=(const iSharedPtr<T> &o) {
         internalSet(o.d, o.value);
         return *this;
     }
@@ -379,8 +354,7 @@ public:
     { *this = o; }
 
     template <class X>
-    inline iWeakPtr &operator=(const iWeakPtr<X> &o)
-    {
+    inline iWeakPtr &operator=(const iWeakPtr<X> &o) {
         // conversion between X and T could require access to the virtual table
         // so force the operation to go through iSharedPointer
         *this = o.toStrongRef();
@@ -400,8 +374,7 @@ public:
     { *this = o; }
 
     template <class X>
-    inline iWeakPtr &operator=(const iSharedPtr<X> &o)
-    {
+    inline iWeakPtr &operator=(const iSharedPtr<X> &o) {
         internalSet(o.d, o.data());
         return *this;
     }
@@ -423,13 +396,12 @@ public:
 private:
     template <class X> friend class iSharedPtr;
 
-    inline void internalSet(Data *o, T *actual)
-    {
+    inline void internalSet(Data *o, T *actual) {
         if (d == o) return;
         if (o)
             o->weakRef();
         if (d)
-            d->weakUnref();
+            d->weakDeref();
         d = o;
         value = actual;
     }
@@ -439,10 +411,7 @@ private:
 };
 
 template <class T>
-iWeakPtr<T> iSharedPtr<T>::toWeakRef() const
-{
-    return iWeakPtr<T>(*this);
-}
+iWeakPtr<T> iSharedPtr<T>::toWeakRef() const { return iWeakPtr<T>(*this); }
 
 } // namespace iShell
 

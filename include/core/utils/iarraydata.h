@@ -13,7 +13,7 @@
 
 #include <cstring>
 
-#include <core/utils/imemblock.h>
+#include <core/io/imemblock.h>
 #include <core/global/imetaprogramming.h>
 
 namespace iShell {
@@ -110,22 +110,19 @@ public:
     }
 
     static iTypedArrayData* allocate(xsizetype capacity,
-            ArrayOptions options = DefaultAllocationFlags)
-    {
+            ArrayOptions options = DefaultAllocationFlags) {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
         iMemBlock *data = newOne(IX_NULLPTR, capacity, sizeof(T), alignof(AlignmentDummy), options);
         return static_cast<iTypedArrayData *>(data);
     }
 
-    static iTypedArrayData* reallocateUnaligned(iTypedArrayData* data, xsizetype capacity, ArrayOptions options = DefaultAllocationFlags)
-    {
+    static iTypedArrayData* reallocateUnaligned(iTypedArrayData* data, xsizetype capacity, ArrayOptions options = DefaultAllocationFlags) {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
         iMemBlock* d = reallocate(data, capacity, sizeof(T), options);
         return static_cast<iTypedArrayData *>(d);
     }
 
-    static iTypedArrayData* fromRawData(T *rawData, xsizetype capacity, iFreeCb freeCb, void* freeCbData)
-    {
+    static iTypedArrayData* fromRawData(T *rawData, xsizetype capacity, iFreeCb freeCb, void* freeCbData) {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
         iMemBlock* d = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, freeCb, freeCbData, false);
         iTypedArrayData* ret = static_cast<iTypedArrayData *>(d);

@@ -11,7 +11,7 @@
 #ifndef IMEMBLOCKQ_H
 #define IMEMBLOCKQ_H
 
-#include <core/utils/imemchunk.h>
+#include <core/io/imemchunk.h>
 #include <core/utils/istring.h>
 
 namespace iShell {

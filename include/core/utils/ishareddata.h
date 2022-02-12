@@ -54,17 +54,17 @@ public:
     inline bool operator!=(const iSharedDataPointer<T> &other) const { return d != other.d; }
 
     inline iSharedDataPointer() { d = IX_NULLPTR; }
-    inline ~iSharedDataPointer() { if (d && (0 == --d->ref)) delete d; }
+    inline ~iSharedDataPointer() { if (d && !d->ref.deref()) delete d; }
 
     explicit iSharedDataPointer(T *data);
-    inline iSharedDataPointer(const iSharedDataPointer<T> &o) : d(o.d) { if (d) ++d->ref; }
+    inline iSharedDataPointer(const iSharedDataPointer<T> &o) : d(o.d) { if (d) d->ref.ref(); }
     inline iSharedDataPointer<T> & operator=(const iSharedDataPointer<T> &o) {
         if (o.d != d) {
             if (o.d)
-                ++o.d->ref;
+                o.d->ref.ref();
             T *old = d;
             d = o.d;
-            if (old && (0 == --old->ref))
+            if (old && !old->ref.deref())
                 delete old;
         }
         return *this;
@@ -72,10 +72,10 @@ public:
     inline iSharedDataPointer &operator=(T *o) {
         if (o != d) {
             if (o)
-                ++o->ref;
+                o->ref.ref(true);
             T *old = d;
             d = o;
-            if (old && (0 == --old->ref))
+            if (old && !old->ref.deref())
                 delete old;
         }
         return *this;
@@ -118,7 +118,7 @@ public:
     inline const T *constData() const { return d; }
     inline T *take() { T *x = d; d = IX_NULLPTR; return x; }
 
-    inline void detach() { if (d && d->ref.load() != 1) detach_helper(); }
+    inline void detach() { if (d && d->ref.value() != 1) detach_helper(); }
 
     inline void reset()
     {
@@ -136,26 +136,26 @@ public:
     inline bool operator!=(const T *ptr) const { return d != ptr; }
 
     inline iExplicitlySharedDataPointer() { d = IX_NULLPTR; }
-    inline ~iExplicitlySharedDataPointer() { if (d && (0 == --d->ref)) delete d; }
+    inline ~iExplicitlySharedDataPointer() { if (d && !d->ref.deref()) delete d; }
 
     explicit iExplicitlySharedDataPointer(T *data);
-    inline iExplicitlySharedDataPointer(const iExplicitlySharedDataPointer<T> &o) : d(o.d) { if (d) ++d->ref; }
+    inline iExplicitlySharedDataPointer(const iExplicitlySharedDataPointer<T> &o) : d(o.d) { if (d) d->ref.ref(); }
 
     template<class X>
     inline iExplicitlySharedDataPointer(const iExplicitlySharedDataPointer<X> &o)
         : d(static_cast<T *>(o.data()))
     {
         if(d)
-            ++d->ref;
+            d->ref.ref(true);
     }
 
     inline iExplicitlySharedDataPointer<T> & operator=(const iExplicitlySharedDataPointer<T> &o) {
         if (o.d != d) {
             if (o.d)
-                ++o.d->ref;
+                o.d->ref.ref();
             T *old = d;
             d = o.d;
-            if (old && (0 == --old->ref))
+            if (old && !old->ref.deref())
                 delete old;
         }
         return *this;
@@ -163,10 +163,10 @@ public:
     inline iExplicitlySharedDataPointer &operator=(T *o) {
         if (o != d) {
             if (o)
-                ++o->ref;
+                o->ref.ref(true);
             T *old = d;
             d = o;
-            if (old && (0 == --old->ref))
+            if (old &&!old->ref.deref())
                 delete old;
         }
         return *this;
@@ -189,7 +189,7 @@ private:
 template <class T>
 inline iSharedDataPointer<T>::iSharedDataPointer(T *adata)
     : d(adata)
-{ if (d) ++d->ref; }
+{ if (d) d->ref.ref(true); }
 
 template <class T>
 inline T *iSharedDataPointer<T>::clone()
@@ -201,8 +201,8 @@ template <class T>
 void iSharedDataPointer<T>::detach_helper()
 {
     T *x = clone();
-    ++x->ref;
-    if (0 == --d->ref)
+    x->ref.ref(true);
+    if (!d->ref.deref())
         delete d;
     d = x;
 }
@@ -217,7 +217,7 @@ template <class T>
 void iExplicitlySharedDataPointer<T>::detach_helper()
 {
     T *x = clone();
-    x->ref.ref();
+    x->ref.ref(true);
     if (!d->ref.deref())
         delete d;
     d = x;
@@ -226,7 +226,7 @@ void iExplicitlySharedDataPointer<T>::detach_helper()
 template <class T>
 inline iExplicitlySharedDataPointer<T>::iExplicitlySharedDataPointer(T *adata)
     : d(adata)
-{ if (d) ++d->ref; }
+{ if (d) d->ref.ref(true); }
 
 template <class T> inline bool operator==(std::nullptr_t, const iExplicitlySharedDataPointer<T> &p2)
 {

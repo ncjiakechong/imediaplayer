@@ -73,12 +73,19 @@ public:
         DaylightMask        = SetToStandardTime | SetToDaylightTime
     };
 
-    iDateTimePrivate() : m_msecs(0),
-                         m_status(StatusFlag(iShell::LocalTime << TimeSpecShift)),
-                         m_offsetFromUtc(0),
-                         ref(0)
-    {
-    }
+    iDateTimePrivate()
+        : m_msecs(0)
+        , m_status(StatusFlag(iShell::LocalTime << TimeSpecShift))
+        , m_offsetFromUtc(0)
+        , ref(1)
+    {}
+
+    iDateTimePrivate(const iDateTimePrivate& other)
+        : m_msecs(other.m_msecs)
+        , m_status(other.m_status)
+        , m_offsetFromUtc(other.m_offsetFromUtc)
+        , ref(other.ref)
+    {}
 
     static iDateTime::Data create(const iDate &toDate, const iTime &toTime, iShell::TimeSpec toSpec,
                                   int offsetSeconds);
@@ -86,7 +93,7 @@ public:
     xint64 m_msecs;
     StatusFlags m_status;
     int m_offsetFromUtc;
-    mutable iAtomicCounter<int> ref;
+    mutable iRefCount ref;
 
     // expose publicly in iDateTime
     // The first and last years of which iDateTime can represent some part:
@@ -1847,8 +1854,7 @@ inline iDateTime::Data::Data(iShell::TimeSpec spec)
         d = reinterpret_cast<iDateTimePrivate *>(xuintptr(mergeSpec(iDateTimePrivate::ShortData, spec)));
     } else {
         // the structure is too small, we need to detach
-        d = new iDateTimePrivate;
-        ++d->ref;
+        d = new iDateTimePrivate();
         d->m_status = mergeSpec(0, spec);
     }
 }
@@ -1865,7 +1871,7 @@ inline iDateTime::Data::Data(const Data &other)
             data = sd;
         } else {
             // no, have to keep it big
-            ++d->ref;
+            d->ref.ref();
         }
     }
 }
@@ -1895,18 +1901,18 @@ inline iDateTime::Data &iDateTime::Data::operator=(const Data &other)
             data = sd;
         } else {
             // no, have to keep it big
-            ++other.d->ref;
+            other.d->ref.ref();
         }
     }
 
-    if (!(xuintptr(x) & iDateTimePrivate::ShortData) && (0 == --x->ref))
+    if (!(xuintptr(x) & iDateTimePrivate::ShortData) && !x->ref.deref())
         delete x;
     return *this;
 }
 
 inline iDateTime::Data::~Data()
 {
-    if (!isShort() && (0 == --d->ref))
+    if (!isShort() && !d->ref.deref())
         delete d;
 }
 
@@ -1931,18 +1937,18 @@ inline void iDateTime::Data::detach()
     bool wasShort = isShort();
     if (wasShort) {
         // force enlarging
-        x = new iDateTimePrivate;
+        x = new iDateTimePrivate();
         x->m_status = iDateTimePrivate::StatusFlag(data.status & ~iDateTimePrivate::ShortData);
         x->m_msecs = data.msecs;
     } else {
-        if (d->ref == 1)
+        if (d->ref.value() == 1)
             return;
 
         x = new iDateTimePrivate(*d);
+        x->ref.initializeOwned();
     }
 
-    x->ref = 1;
-    if (!wasShort && (0 == --d->ref))
+    if (!wasShort && !d->ref.deref())
         delete d;
     d = x;
 }
@@ -1957,7 +1963,7 @@ inline iDateTimePrivate *iDateTime::Data::operator->()
 {
     // should we attempt to detach here?
     IX_ASSERT(!isShort());
-    IX_ASSERT(d->ref == 1);
+    IX_ASSERT(d->ref.value() == 1);
     return d;
 }
 

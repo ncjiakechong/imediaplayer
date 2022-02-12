@@ -18,12 +18,13 @@ namespace iShell {
 class IX_CORE_EXPORT iRefCount
 {
 public:
-    iRefCount() {}
+    iRefCount() : atomic(0) {}
     explicit iRefCount(int initialValue) : atomic(initialValue) {}
+    iRefCount(const iRefCount& other) : atomic(other.atomic) {}
 
-    inline bool ref() {
+    inline bool ref(bool force = false) {
         int count = atomic.value();
-        if (count == 0) // !isSharable
+        if (count == 0 && !force) // !isSharable
             return false;
 
         if (count != -1) // !isStatic
@@ -43,8 +44,7 @@ public:
         return (0 != --atomic);
     }
 
-    bool setSharable(bool sharable)
-    {
+    bool setSharable(bool sharable) {
         IX_ASSERT(!isShared());
         if (sharable)
             return atomic.testAndSet(0, 1);
@@ -52,39 +52,33 @@ public:
             return atomic.testAndSet(1, 0);
     }
 
-    bool isSharable() const
-    {
+    bool isSharable() const {
         // Sharable === Shared ownership.
         return atomic.value() != 0;
     }
 
-    bool isStatic() const
-    {
+    bool isStatic() const {
         // Persistent object, never deleted
         return atomic.value() == -1;
     }
 
-    bool isShared() const
-    {
+    bool isShared() const  {
         int count = atomic.value();
         return (count != 1) && (count != 0);
     }
 
+    int value() const { return atomic.value(); }
+
     void initializeOwned() { atomic = 1; }
     void initializeUnsharable() { atomic = 0; }
 
-    int load() const { return atomic.value(); }
-    int value() const { return atomic.value(); }
-
-    iRefCount& operator= (int value) { atomic = value; return *this; }
-    int operator++ () { return ++atomic; }
-    int operator++ (int) { return atomic++; }
-    int operator-- ()  { return --atomic; }
-    int operator-- (int) { return atomic--; }
-    bool operator! () const { return atomic.value() == 0; }
     bool testAndSet(int expectedValue, int newValue) { return atomic.testAndSet(expectedValue, newValue); }
 
+private:
     iAtomicCounter<int> atomic;
+
+    // using the assignment operator would lead to corruption in the ref-counting
+    iRefCount& operator=(const iRefCount&);
 };
 
 } // namespace iShell

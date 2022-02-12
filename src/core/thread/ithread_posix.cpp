@@ -91,8 +91,7 @@ protected:
 };
 
 iAdoptedThread::~iAdoptedThread()
-{
-}
+{}
 
 // Utility functions for getting, setting and clearing thread specific data.
 static iThreadData *get_thread_data()
@@ -117,7 +116,7 @@ iThreadData* iThreadData::current(bool createIfNecessary)
 {
     iThreadData *data = get_thread_data();
     if (!data && createIfNecessary) {
-        data = new iThreadData;
+        data = new iThreadData();
         set_thread_data(data);
         data->isAdopted = true;
         data->thread = new iAdoptedThread(data);

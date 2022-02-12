@@ -15,6 +15,11 @@ set (ComSource
 	io/iurl.cpp
 	io/iurlidna.cpp
 	io/iurlrecode.cpp
+	io/imemblock.cpp
+	io/imemblockq.cpp
+	io/imemchunk.cpp
+	io/isharemem.cpp
+	io/imemtrap.cpp
 	kernel/icoreapplication.cpp
 	kernel/ideadlinetimer.cpp
 	kernel/ievent.cpp
@@ -45,11 +50,6 @@ set (ComSource
 	utils/ihashfunctions.cpp
 	utils/ilocale_tools_p.cpp
 	utils/ilocale.cpp
-	utils/imemblock.cpp
-	utils/imemblockq.cpp
-	utils/imemchunk.cpp
-	utils/isharemem.cpp
-	utils/imemtrap.cpp
 	utils/irect.cpp
 	utils/iregularexpression.cpp
 	utils/iringbuffer.cpp

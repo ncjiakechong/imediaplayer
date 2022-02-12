@@ -21,7 +21,7 @@
 #include <dirent.h>
 #include <signal.h>
 
-#include "core/utils/isharemem.h"
+#include "core/io/isharemem.h"
 #include "core/thread/iatomiccounter.h"
 #include "core/kernel/icoreapplication.h"
 #include "utils/itools_p.h"

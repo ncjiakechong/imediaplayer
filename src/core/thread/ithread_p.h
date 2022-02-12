@@ -13,10 +13,10 @@
 
 #include <list>
 
-#include <core/thread/iatomiccounter.h>
 #include <core/thread/iatomicpointer.h>
 #include <core/thread/imutex.h>
 #include <core/thread/icondition.h>
+#include <core/utils/irefcount.h>
 
 namespace iShell {
 
@@ -94,8 +94,8 @@ public:
     static iThreadData *current(bool createIfNecessary = true);
     static void clearCurrentThreadData();
 
-    void ref();
-    void deref();
+    inline bool ref() { return m_ref.ref(true); }
+    bool deref();
 
     bool canWaitLocked() {
         iScopedLock<iMutex> locker(postEventList.mutex);
@@ -119,7 +119,7 @@ public:
 
     std::list<void*>                tls; 
 private:
-    iAtomicCounter<int>             m_ref;
+    iRefCount                       m_ref;
 };
 
 class iScopedScopeLevelCounter

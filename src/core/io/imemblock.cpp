@@ -11,10 +11,10 @@
 
 #include "global/inumeric_p.h"
 #include "core/kernel/imath.h"
-#include "core/utils/isharemem.h"
-#include "core/utils/imemtrap.h"
-#include "core/utils/imemchunk.h"
-#include "core/utils/imemblock.h"
+#include "core/io/isharemem.h"
+#include "core/io/imemtrap.h"
+#include "core/io/imemchunk.h"
+#include "core/io/imemblock.h"
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
 
@@ -133,6 +133,42 @@ iMemDataWraper& iMemDataWraper::operator=(const iMemDataWraper& other)
     return *this;
 }
 
+iMemGuard::iMemGuard()
+    : _d(IX_NULLPTR)
+{}
+
+iMemGuard::iMemGuard(iMemGuard::ExternalData* data)
+    : _d(IX_NULLPTR)
+{
+    if (data && data->_weakreef.ref()) _d = data;
+}
+
+iMemGuard::iMemGuard(const iMemGuard& other)
+    : _d(other._d)
+{
+    if (_d) _d->_weakreef.ref();
+}
+
+iMemGuard::~iMemGuard()
+{
+    if (_d && !_d->_weakreef.deref())
+        delete _d;
+}
+
+iMemGuard& iMemGuard::operator=(const iMemGuard& other)
+{
+    if (&other == this)
+        return *this;
+
+    if (_d && !_d->_weakreef.deref())
+        delete _d;
+    
+    _d = other._d;
+    if (_d) 
+        _d->_weakreef.ref();
+
+    return *this;
+}
 
 /*!
     Returns the memory block size for a container containing \a elementCount
@@ -227,15 +263,16 @@ static inline xsizetype calculateBlockSize(size_t elementCount, size_t elementSi
 }
 
 iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length, size_t capacity)
-    : m_ref(1)
-    , m_pool(pool)
+    : m_readOnly(false)
+    , m_isSilence(false)
     , m_type(type)
     , m_options(options)
-    , m_readOnly(false)
-    , m_isSilence(false)
-    , m_data(data)
     , m_length(length)
     , m_capacity(capacity)
+    , m_pool(pool)
+    , m_ref(1)
+    , m_data(data)
+    , m_guardData(IX_NULLPTR)
     , m_nAcquired(0)
     , m_pleaseSignal(0)
 {
@@ -253,8 +290,14 @@ iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data
 
 iMemBlock::~iMemBlock()
 {
+    iMemGuard::ExternalData* guard = m_guardData.load();
+    if (guard)
+        guard->_block = IX_NULLPTR;
+    if (guard && !guard->_weakreef.deref())
+        delete guard;
+
     if (IX_NULLPTR != m_user.freeCb)
-        m_user.freeCb(m_data.value(), m_user.freeCbData);
+        m_user.freeCb(m_data.load(), m_user.freeCbData);
 
     statRemove();
     m_pool->deref();
@@ -306,7 +349,7 @@ void iMemBlock::doFree()
 
         case MEMBLOCK_POOL_EXTERNAL:
         case MEMBLOCK_POOL: {
-            iMemPool::Slot *slot = m_pool->slotByPtr(m_data.value());
+            iMemPool::Slot *slot = m_pool->slotByPtr(m_data.load());
             IX_ASSERT(slot);
 
             /* The free list dimensions should easily allow all slots
@@ -488,7 +531,7 @@ iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t elementCount, size_t e
     }
 
     block->statRemove();
-    xptrdiff offset = reinterpret_cast<char *>(block->m_data.value()) - reinterpret_cast<char *>(block);
+    xptrdiff offset = reinterpret_cast<char *>(block->m_data.load()) - reinterpret_cast<char *>(block);
     IX_ASSERT(offset < allocSize);
 
     iMemBlock* newBlock = static_cast<iMemBlock *>(::realloc(block, allocSize));
@@ -543,10 +586,9 @@ void iMemBlock::statRemove()
 }
 
 /* No lock necessary */
-iMemDataWraper iMemBlock::data4Chunk(const iMemChunk *c) const
+iMemDataWraper iMemBlock::data4Chunk(const iMemChunk& c) const
 {
-    IX_ASSERT(c);
-    return iMemDataWraper(c->m_memblock, c->m_index);
+    return iMemDataWraper(c.m_memblock.block(), c.m_index);
 }
 
 /* No lock necessary */
@@ -555,7 +597,7 @@ void* iMemBlock::acquire(size_t offset)
     IX_ASSERT((m_ref.value() > 0) && (offset < m_length));
 
     m_nAcquired++;
-    return (xuint8 *)(m_data.value()) + offset;
+    return (xuint8 *)(m_data.load()) + offset;
 }
 
 /* No lock necessary, in corner cases locks by its own */
@@ -587,6 +629,24 @@ void iMemBlock::wait()
     }
 }
 
+iMemGuard iMemBlock::guard() const
+{
+    iMemGuard::ExternalData* guard = m_guardData.load();
+    if (guard) {
+        return iMemGuard(guard);
+    }
+
+    // we can create the refcount data because it doesn't exist
+    iMemBlock* that = const_cast<iMemBlock*>(this);
+    guard = new iMemGuard::ExternalData{{iRefCount(1)}, that};
+    if (!that->m_guardData.testAndSet(IX_NULLPTR, guard)) {
+        delete guard;
+        guard = that->m_guardData.load();
+    }
+
+    return guard;
+}
+
 static void* ix_xmemdup(const void* p, size_t l) {
     if (!p)
         return NULL;
@@ -612,7 +672,7 @@ void iMemBlock::makeLocal()
             void* new_data = m_pool->slotData(slot);
             /* We can move it into a local pool, perfect! */
 
-            memcpy(new_data, m_data.value(), m_length);
+            memcpy(new_data, m_data.load(), m_length);
             m_data = new_data;
 
             m_type = MEMBLOCK_POOL_EXTERNAL;
@@ -626,9 +686,9 @@ void iMemBlock::makeLocal()
     }
 
     /* Humm, not enough space in the pool, so lets allocate the memory with malloc() */
-    m_data = ix_xmemdup(m_data.value(), m_length);
+    m_data = ix_xmemdup(m_data.load(), m_length);
     m_user.freeCb = freeWarper;
-    m_user.freeCbData = m_data.value();
+    m_user.freeCbData = m_data.load();
 
     m_type = MEMBLOCK_USER;
     m_readOnly = false;
