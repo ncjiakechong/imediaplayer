@@ -11,11 +11,9 @@
 #ifndef IMEMCHUNK_H
 #define IMEMCHUNK_H
 
-#include <core/global/iglobal.h>
+#include <core/io/imemblock.h>
 
 namespace iShell {
-
-class iMemBlock;
 
 /**
  * A memchunk describes a part of a memblock. In contrast to the memblock, a
@@ -49,10 +47,10 @@ public:
     inline size_t length() const { return m_length; }
 
     /// Return true if any field is set != 0
-    inline bool isValid() const { return (IX_NULLPTR != m_memblock) || (m_index > 0) || (m_length > 0); }
+    inline bool isValid() const { return (IX_NULLPTR != m_memblock.block()) || (m_index > 0) || (m_length > 0); }
 
 private:
-    iMemBlock* m_memblock;
+    iMemGuard  m_memblock;
     size_t     m_index;
     size_t     m_length;
 

@@ -10,8 +10,8 @@
 /////////////////////////////////////////////////////////////////
 
 #include "core/io/ilog.h"
-#include "core/utils/imemblockq.h"
-#include "core/utils/imemblock.h"
+#include "core/io/imemblockq.h"
+#include "core/io/imemblock.h"
 
 #define ILOG_TAG "ix_utils"
 
@@ -60,6 +60,7 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
 
     if (silence) {
         m_silence = *silence;
+        m_silence.m_memblock.block()->ref();
     }
 
     m_mcalign = new iMCAlign(m_base);
@@ -68,6 +69,9 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
 iMemBlockQueue::~iMemBlockQueue() 
 {
     makeSilence();
+
+    if (m_silence.m_memblock.block())
+        m_silence.m_memblock.block()->deref();
 }
 
 void iMemBlockQueue::fixCurrentRead() 
@@ -151,7 +155,9 @@ void iMemBlockQueue::dropBlock(iMBQListItem *q)
     if (m_currentRead == q)
         m_currentRead = q->next;
 
+    q->chunk.m_memblock.block()->deref();
     delete q;
+
     m_nBlocks--;
 }
 
@@ -207,9 +213,9 @@ void iMemBlockQueue::readIndexChanged(xint64 oldReadIndex)
 
 int iMemBlockQueue::push(const iMemChunk *uchunk) {
     IX_ASSERT(uchunk);
-    IX_ASSERT(uchunk->m_memblock);
+    IX_ASSERT(uchunk->m_memblock.block());
     IX_ASSERT(uchunk->m_length > 0);
-    IX_ASSERT(uchunk->m_index + uchunk->m_length <= uchunk->m_memblock->length());
+    IX_ASSERT(uchunk->m_index + uchunk->m_length <= uchunk->m_memblock.block()->length());
 
     IX_ASSERT(uchunk->m_length % m_base == 0);
     IX_ASSERT(uchunk->m_index % m_base == 0);
@@ -253,8 +259,7 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
 
             /* This entry is fully replaced by the new entry, so let's drop it */
 
-            struct iMBQListItem *p;
-            p = q;
+            iMBQListItem* p = q;
             q = q->prev;
             dropBlock(p);
         } else if (m_writeIndex >= q->index) {
@@ -266,6 +271,7 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
                 /* We need to save the end of this memchunk */
                 iMBQListItem *p = new iMBQListItem();
                 p->chunk = q->chunk;
+                p->chunk.m_memblock.block()->ref();
 
                 /* Calculate offset */
                 size_t d = (size_t) (m_writeIndex + (xint64) chunk.m_length - q->index);
@@ -320,7 +326,7 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
 
         /* Try to merge memory blocks */
 
-        if (q->chunk.m_memblock == chunk.m_memblock &&
+        if (q->chunk.m_memblock.block() == chunk.m_memblock.block() &&
             q->chunk.m_index + q->chunk.m_length == chunk.m_index &&
             m_writeIndex == q->index + (xint64) q->chunk.m_length) {
 
@@ -337,6 +343,7 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
     n->chunk = chunk;
     n->index = m_writeIndex;
     m_writeIndex += (xint64) n->chunk.m_length;
+    n->chunk.m_memblock.block()->ref();
 
     n->next = q ? q->next : m_blocks;
     n->prev = q;
@@ -405,8 +412,9 @@ int iMemBlockQueue::peek(iMemChunk *chunk)
             length = 0;
 
         /* We need to return silence, since no data is yet available */
-        if (m_silence.m_memblock) {
+        if (m_silence.m_memblock.block()) {
             *chunk = m_silence;
+            chunk->m_memblock.block()->ref();
 
             if (length > 0 && length < chunk->m_length)
                 chunk->m_length = length;
@@ -418,7 +426,7 @@ int iMemBlockQueue::peek(iMemChunk *chunk)
                 return -1;
 
             // TODO: deref?
-            chunk->m_memblock = IX_NULLPTR;
+            chunk->m_memblock = iMemGuard();
             chunk->m_length = length;
         }
 
@@ -428,6 +436,7 @@ int iMemBlockQueue::peek(iMemChunk *chunk)
 
     /* Ok, let's pass real data to the caller */
     *chunk = m_currentRead->chunk;
+    chunk->m_memblock.block()->ref();
 
     IX_ASSERT(m_readIndex >= m_currentRead->index);
     xint64 d = m_readIndex - m_currentRead->index;
@@ -441,7 +450,7 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk *chunk)
 {
     IX_ASSERT(block_size > 0);
     IX_ASSERT(chunk);
-    IX_ASSERT(m_silence.m_memblock);
+    IX_ASSERT(m_silence.m_memblock.block());
 
     iMemChunk tchunk;
     if (peek(&tchunk) < 0)
@@ -453,9 +462,10 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk *chunk)
         return 0;
     }
 
-    iMemChunk rchunk(iMemBlock::newOne(tchunk.m_memblock->pool().value(), block_size), 0, tchunk.m_length);
+    iMemChunk rchunk(iMemBlock::newOne(tchunk.m_memblock.block()->pool().value(), block_size), 0, tchunk.m_length);
     rchunk.copy(&tchunk);
     rchunk.m_index += tchunk.m_length;
+    tchunk.m_memblock.block()->deref();
 
     /* We don't need to call fix_current_read() here, since
      * pa_memblock_peek() already did that */
@@ -621,8 +631,8 @@ int iMemBlockQueue::pushAlign(const iMemChunk *chunk)
 
     iMemChunk rchunk;
     while (m_mcalign->pop(&rchunk) >= 0) {
-        int r;
-        r = push(&rchunk);
+        int r = push(&rchunk);
+        rchunk.m_memblock.block()->deref();
 
         if (r < 0) {
             m_mcalign->flush();
@@ -753,10 +763,13 @@ int iMemBlockQueue::splice(iMemBlockQueue* source)
 
         IX_ASSERT(chunk.m_length > 0);
 
-        if (chunk.m_memblock) {
+        if (chunk.m_memblock.block()) {
             if (pushAlign(&chunk) < 0) {
+                chunk.m_memblock.block()->deref();
                 return -1;
             }
+
+            chunk.m_memblock.block()->deref();
         } else {
             seek((xint64) chunk.m_length, SEEK_RELATIVE, true);
         }
@@ -767,8 +780,12 @@ int iMemBlockQueue::splice(iMemBlockQueue* source)
 
 void iMemBlockQueue::setSilence(iMemChunk *silence) 
 {
+    if (m_silence.m_memblock.block())
+        m_silence.m_memblock.block()->deref();
+
     if (silence) {
         m_silence = *silence;
+        m_silence.m_memblock.block()->ref();
     } else {
         m_silence.reset();
     }

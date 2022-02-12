@@ -225,11 +225,7 @@ public:
             const iLocaleData *data,
             iLocale::NumberOptions numberOptions = iLocale::DefaultNumberOptions)
     {
-        iLocalePrivate *retval = new iLocalePrivate;
-        retval->m_data = data;
-        retval->ref = 0;
-        retval->m_numberOptions = numberOptions;
-        return retval;
+        return new iLocalePrivate{data, {iRefCount(0)}, numberOptions};
     }
 
     static iLocalePrivate *get(iLocale &l) { return l.d.data(); }
@@ -265,7 +261,7 @@ public:
     iLocale::MeasurementSystem measurementSystem() const;
 
     const iLocaleData *m_data;
-    iAtomicCounter<int> ref;
+    iRefCount ref;
     iLocale::NumberOptions m_numberOptions;
 };
 

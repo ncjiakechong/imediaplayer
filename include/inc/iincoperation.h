@@ -11,9 +11,9 @@
 #ifndef IINCOPERATION_H
 #define IINCOPERATION_H
 
-#include <core/global/imacro.h>
-#include <core/thread/iatomiccounter.h>
 #include <inc/iincglobal.h>
+#include <core/global/imacro.h>
+#include <core/utils/irefcount.h>
 
 namespace iShell {
 
@@ -34,10 +34,10 @@ public:
     };
 
     /** Increase the reference count by one */
-    void ref();
+    bool ref() { return m_ref.ref(); }
 
     /** Decrease the reference count by one */
-    void deref();
+    bool deref();
 
     /** Cancel the operation. Beware! This will not necessarily cancel the
      * execution of the operation on the server side. However it will make
@@ -63,7 +63,7 @@ private:
     void unlink();
     void setState(State st);
 
-    iAtomicCounter<int> m_ref;
+    iRefCount       m_ref;
     iINCContext*    m_context;
     iINCStream*     m_stream;
 

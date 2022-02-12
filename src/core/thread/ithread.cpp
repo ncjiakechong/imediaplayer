@@ -27,8 +27,7 @@ iThreadData::iThreadData(int initialRefCount)
     , loopLevel(0)
     , scopeLevel(0)
     , m_ref(initialRefCount)
-{
-}
+{}
 
 iThreadData::~iThreadData()
 {
@@ -51,16 +50,18 @@ iThreadData::~iThreadData()
     }
 }
 
-void iThreadData::ref()
+bool iThreadData::deref()
 {
-    ++m_ref;
-}
+    // to void recursive
+    if (m_ref.value() <= 0)
+        return true;
 
-void iThreadData::deref()
-{
-    --m_ref;
-    if (0 == m_ref.value())
+    if (!m_ref.deref()) {
         delete this;
+        return false;
+    }
+
+    return true;
 }
 
 iThread* iThread::currentThread()

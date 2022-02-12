@@ -12,7 +12,7 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#include "core/utils/imemtrap.h"
+#include "core/io/imemtrap.h"
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
 

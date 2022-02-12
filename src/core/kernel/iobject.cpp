@@ -147,8 +147,8 @@ iObject::~iObject()
         }
 
         // indicate to all iWeakPtr that this iObject has now been deleted
-        refcount->_strongRef = 0;
-        refcount->weakUnref();
+        refcount->_strongRef.initializeUnsharable();
+        refcount->weakDeref();
     }
 
     IEMIT destroyed(this);

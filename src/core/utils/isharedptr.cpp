@@ -24,13 +24,16 @@ ExternalRefCountData::~ExternalRefCountData()
     IX_ASSERT(_strongRef.value() <= 0);
 }
 
-int ExternalRefCountData::strongUnref()
+bool ExternalRefCountData::strongDeref()
 {
-    int next = --_strongRef;
-    if ((0 == next) && _objFree)
+    if (_strongRef.value() <= 0)
+        return true;
+
+    bool deref = _strongRef.deref();
+    if (!deref && _objFree)
         _objFree(this);
 
-    return next;
+    return deref;
 }
 
 bool ExternalRefCountData::testAndSetStrong(int expectedValue, int newValue)
@@ -38,16 +41,13 @@ bool ExternalRefCountData::testAndSetStrong(int expectedValue, int newValue)
     return  _strongRef.testAndSet(expectedValue, newValue);
 }
 
-int ExternalRefCountData::weakUnref()
+bool ExternalRefCountData::weakDeref()
 {
-    int next = --_weakRef;
-    if (next > 0)
-        return next;
-
-    if ((0 == next) && _extFree)
+    bool deref = _weakRef.deref();
+    if (!deref && _extFree)
         _extFree(this);
 
-    return next;
+    return deref;
 }
 
 void ExternalRefCountData::setObjectShared(const iObject *obj, bool share)
