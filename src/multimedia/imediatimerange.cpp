@@ -187,20 +187,13 @@ public:
 };
 
 iMediaTimeRangePrivate::iMediaTimeRangePrivate()
-    : iSharedData()
-{
-
-}
+{}
 
 iMediaTimeRangePrivate::iMediaTimeRangePrivate(const iMediaTimeRangePrivate &other)
-    : iSharedData()
-    , intervals(other.intervals)
-{
-
-}
+    : intervals(other.intervals)
+{}
 
 iMediaTimeRangePrivate::iMediaTimeRangePrivate(const iMediaTimeInterval &interval)
-    : iSharedData()
 {
     if(interval.isNormal())
         intervals.push_back(interval);

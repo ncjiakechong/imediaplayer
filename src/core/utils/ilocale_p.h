@@ -218,18 +218,21 @@ public:
     xuint16 m_weekend_end : 3;
 };
 
-class iLocalePrivate
+class iLocalePrivate : public iSharedData
 {
 public:
     static iLocalePrivate *create(
             const iLocaleData *data,
             iLocale::NumberOptions numberOptions = iLocale::DefaultNumberOptions)
     {
-        return new iLocalePrivate{data, {iRefCount(0)}, numberOptions};
+        return new iLocalePrivate(data, numberOptions);
     }
 
     static iLocalePrivate *get(iLocale &l) { return l.d.data(); }
     static const    iLocalePrivate *get(const iLocale &l) { return l.d.data(); }
+
+    iLocalePrivate(const iLocaleData *data, iLocale::NumberOptions numberOptions) 
+        : m_data(data), m_numberOptions(numberOptions) {}
 
     iChar decimal() const { return iChar(m_data->m_decimal); }
     iChar group() const { return iChar(m_data->m_group); }
@@ -261,7 +264,6 @@ public:
     iLocale::MeasurementSystem measurementSystem() const;
 
     const iLocaleData *m_data;
-    iRefCount ref;
     iLocale::NumberOptions m_numberOptions;
 };
 

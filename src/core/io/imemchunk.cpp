@@ -51,10 +51,11 @@ iMemChunk& iMemChunk::makeWritable(size_t min) {
 
     size_t l = std::max(m_length, min);
 
-    iMemBlock* n = iMemBlock::newOne(m_memblock.block()->pool().value(), l);
+    iMemBlock* n = iMemBlock::newOne(m_memblock.block()->pool().data(), l);
     memcpy(n->data().value(), (xuint8*) m_memblock.block()->data().value() + m_index, m_length);
 
     // TODO
+    n->ref();
     m_memblock.block()->deref();
 
     m_memblock = n->guard();
