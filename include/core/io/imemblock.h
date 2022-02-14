@@ -15,7 +15,7 @@
 #include <core/thread/imutex.h>
 #include <core/thread/isemaphore.h>
 #include <core/utils/ifreelist.h>
-#include <core/utils/irefcount.h>
+#include <core/utils/ishareddata.h>
 #include <core/global/inamespace.h>
 
 namespace iShell {
@@ -30,18 +30,6 @@ class iMemImportSegment;
 
 /** A generic free() like callback prototype */
 typedef void (*iFreeCb)(void* pointer, void* userData);
-
-class IX_CORE_EXPORT iMemPoolWraper
-{
-    iMemPool* _pool;
-public:
-    iMemPoolWraper(iMemPool* pool);
-    iMemPoolWraper(const iMemPoolWraper& other);
-    ~iMemPoolWraper();
-
-    iMemPoolWraper& operator=(const iMemPoolWraper& other);
-    inline iMemPool* value() const { return _pool; }
-};
 
 class IX_CORE_EXPORT iMemDataWraper
 {
@@ -75,6 +63,7 @@ public:
 
     iMemGuard& operator=(const iMemGuard& other);
 
+    // TODO: noted is not thread-safe
     inline iMemBlock* block() const { return (IX_NULLPTR == _d) ? IX_NULLPTR : _d->_block; }
 };
 
@@ -84,7 +73,7 @@ public:
  * data. See memchunk for a structure that describes parts of
  * memory blocks. 
  */
-class IX_CORE_EXPORT iMemBlock
+class IX_CORE_EXPORT iMemBlock : public iSharedData
 {
 public:
     enum ArrayOption {
@@ -111,14 +100,11 @@ public:
     /// Reallocate the memory block of type MEMBLOCK_APPENDED
     static iMemBlock* reallocate(iMemBlock* block, size_t elementCount, size_t elementSize = 1, ArrayOptions options = DefaultAllocationFlags);
 
-    bool ref();
-    bool deref();
-
     inline bool isOurs() const { return m_type != MEMBLOCK_IMPORTED; }
-    inline bool isReadOnly() const { return m_readOnly || (m_ref.value() > 1); }
-    inline bool isShared() const { return m_ref.value() != 1; }
+    inline bool isReadOnly() const { return m_readOnly || (count() > 1); }
+    inline bool isShared() const { return count() != 1; }
     inline bool isSilence() const { return m_isSilence; }
-    inline bool refIsOne() const { return 1 == m_ref.value(); }
+    inline bool refIsOne() const { return 1 == count(); }
     inline size_t length() const { return m_length; }
     inline size_t allocatedCapacity() const { return m_capacity; }
     inline ArrayOptions options() const { return m_options; }
@@ -127,7 +113,7 @@ public:
     void setIsSilence(bool v);
 
     iMemGuard guard() const;
-    inline iMemPoolWraper pool() const { return iMemPoolWraper(m_pool); }
+    inline iExplicitlySharedDataPointer<iMemPool> pool() const { return m_pool; }
 
     inline iMemDataWraper data() const { return iMemDataWraper(this, 0); }
     iMemDataWraper data4Chunk(const iMemChunk& c) const;
@@ -135,7 +121,7 @@ public:
     // Returns true if a detach is necessary before modifying the data
     // This method is intentionally not const: if you want to know whether
     // detaching is necessary, you should be in a non-const function already
-    inline bool needsDetach() const { return m_ref.value() > 1; }
+    inline bool needsDetach() const { return count() > 1; }
 
     inline xsizetype detachCapacity(xsizetype newSize) const {
         if ((m_options & CapacityReserved) && (newSize < allocatedCapacity()))
@@ -191,8 +177,7 @@ private:
     size_t m_length;
     size_t m_capacity;
 
-    iMemPool* m_pool;
-    iRefCount m_ref;
+    iExplicitlySharedDataPointer<iMemPool> m_pool;
 
     iAtomicPointer<void> m_data;
     iAtomicPointer< iMemGuard::ExternalData > m_guardData;
@@ -220,7 +205,7 @@ private:
 };
 
 /** The memory block manager */
-class IX_CORE_EXPORT iMemPool
+class IX_CORE_EXPORT iMemPool : public iSharedData
 {
 public:
     /**
@@ -248,9 +233,6 @@ public:
 
     static iMemPool* create(MemType type, size_t size, bool perClient);
 
-    bool ref();
-    bool deref();
-
     inline const Stat* getStat() const { return &m_stat; }
     void vacuum();
     bool isShared() const;
@@ -274,7 +256,6 @@ private:
     uint slotIdx(const void* ptr) const;
     Slot* slotByPtr(const void* ptr) const;
 
-    iRefCount m_ref;
     iSemaphore m_semaphore;
     iMutex m_mutex;
 
@@ -324,7 +305,7 @@ private:
 
     iMutex m_mutex;
 
-    iMemPool* m_pool;
+    iExplicitlySharedDataPointer<iMemPool> m_pool;
     std::unordered_map<uint, iMemImportSegment*> m_segments;
     std::unordered_map<uint, iMemBlock*> m_blocks;
 
@@ -363,7 +344,7 @@ private:
     };
 
     iMutex m_mutex;
-    iMemPool* m_pool;
+    iExplicitlySharedDataPointer<iMemPool> m_pool;
 
     Slot m_slots[IMEMEXPORT_SLOTS_MAX];
 

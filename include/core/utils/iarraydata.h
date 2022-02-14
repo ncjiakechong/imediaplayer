@@ -113,7 +113,9 @@ public:
             ArrayOptions options = DefaultAllocationFlags) {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
         iMemBlock *data = newOne(IX_NULLPTR, capacity, sizeof(T), alignof(AlignmentDummy), options);
-        return static_cast<iTypedArrayData *>(data);
+        iTypedArrayData* ret = static_cast<iTypedArrayData *>(data);
+        ret->ref(true);
+        return ret;
     }
 
     static iTypedArrayData* reallocateUnaligned(iTypedArrayData* data, xsizetype capacity, ArrayOptions options = DefaultAllocationFlags) {
@@ -124,9 +126,10 @@ public:
 
     static iTypedArrayData* fromRawData(T *rawData, xsizetype capacity, iFreeCb freeCb, void* freeCbData) {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
-        iMemBlock* d = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, freeCb, freeCbData, false);
-        iTypedArrayData* ret = static_cast<iTypedArrayData *>(d);
+        iMemBlock* data = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, freeCb, freeCbData, false);
+        iTypedArrayData* ret = static_cast<iTypedArrayData *>(data);
         ret->reinterpreted<char>();
+        ret->ref(true);
         return ret;
     }
 };

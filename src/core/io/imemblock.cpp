@@ -76,35 +76,6 @@ struct iMemImportSegment {
     bool writable;
 };
 
-iMemPoolWraper::iMemPoolWraper(iMemPool* pool) 
-    : _pool(pool) 
-{
-    _pool->ref(); 
-}
-
-iMemPoolWraper::iMemPoolWraper(const iMemPoolWraper& other) 
-    : _pool(other._pool) 
-{
-    _pool->ref(); 
-}
-
-iMemPoolWraper::~iMemPoolWraper() 
-{
-    _pool->deref();
-}
-
-iMemPoolWraper& iMemPoolWraper::operator=(const iMemPoolWraper& other)
-{
-    if (&other == this)
-        return *this;
-
-    _pool->deref();
-    _pool = other._pool;
-    _pool->ref();
-
-    return *this;
-}
-
 iMemDataWraper::iMemDataWraper(const iMemBlock* block, size_t offset)
     : _block(block), _data(const_cast<iMemBlock*>(block)->acquire(offset))
 {}
@@ -263,22 +234,20 @@ static inline xsizetype calculateBlockSize(size_t elementCount, size_t elementSi
 }
 
 iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length, size_t capacity)
-    : m_readOnly(false)
+    : iSharedData(FreeCb(&iMemBlock::doFree))
+    , m_readOnly(false)
     , m_isSilence(false)
     , m_type(type)
     , m_options(options)
     , m_length(length)
     , m_capacity(capacity)
     , m_pool(pool)
-    , m_ref(1)
     , m_data(data)
     , m_guardData(IX_NULLPTR)
     , m_nAcquired(0)
     , m_pleaseSignal(0)
 {
     IX_ASSERT(pool && (m_capacity <= m_length));
-    m_pool->ref();
-
     m_user.freeCb = IX_NULLPTR;
     m_user.freeCbData = IX_NULLPTR;
 
@@ -300,7 +269,6 @@ iMemBlock::~iMemBlock()
         m_user.freeCb(m_data.load(), m_user.freeCbData);
 
     statRemove();
-    m_pool->deref();
 }
 
 void iMemBlock::doFree()
@@ -372,22 +340,6 @@ void iMemBlock::doFree()
     }
 }
 
-/* No lock necessary */
-bool iMemBlock::ref() 
-{
-    return m_ref.ref();
-}
-
-/* No lock necessary */
-bool iMemBlock::deref() 
-{
-    bool valid = m_ref.deref();
-    if (!valid)
-        doFree();
-
-    return valid;
-}
-
 void* iMemBlock::dataStart(iMemBlock* block, size_t alignment)
 {
     // Alignment is a power of two
@@ -436,6 +388,7 @@ iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t element
     void* slot = ::malloc(allocSize);
     void* ptr = reinterpret_cast<void*>((xuintptr(slot) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1)); 
     block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, options, ptr, allocSize - headerSize, (allocSize - headerSize) / elementSize);
+
     return block;
 }
 
@@ -594,7 +547,7 @@ iMemDataWraper iMemBlock::data4Chunk(const iMemChunk& c) const
 /* No lock necessary */
 void* iMemBlock::acquire(size_t offset) 
 {
-    IX_ASSERT((m_ref.value() > 0) && (offset < m_length));
+    IX_ASSERT((count() > 0) && (offset < m_length));
 
     m_nAcquired++;
     return (xuint8 *)(m_data.load()) + offset;
@@ -603,7 +556,7 @@ void* iMemBlock::acquire(size_t offset)
 /* No lock necessary, in corner cases locks by its own */
 void iMemBlock::release() 
 {
-    IX_ASSERT(m_ref.value() > 0);
+    IX_ASSERT(count() > 0);
 
     int r = m_nAcquired--;
     IX_ASSERT(r >= 1);
@@ -789,18 +742,17 @@ iMemPool* iMemPool::fakeAdaptor()
 {
     class StaticAdaptor {
     public:
-        iMemPool* _pool;
+        iExplicitlySharedDataPointer<iMemPool> _pool;
         StaticAdaptor() : _pool(new iMemPool(1024, 0, false)) { _pool->m_memory = new iShareMem(); }
-        ~StaticAdaptor() { _pool->deref(); }
+        ~StaticAdaptor() {}
     };
 
     static StaticAdaptor s_fakeMemPool;
-    return s_fakeMemPool._pool;
+    return s_fakeMemPool._pool.data();
 }
 
 iMemPool::iMemPool(size_t block_size, xuint32 n_blocks, bool perClient)
-    : m_ref(1)
-    , m_semaphore(0)
+    : m_semaphore(0)
     , m_mutex(iMutex::Recursive)
     , m_memory(IX_NULLPTR)
     , m_global(!perClient)
@@ -967,20 +919,6 @@ bool iMemPool::isMemfdBacked() const
     return (m_memory->type() == MEMTYPE_SHARED_MEMFD);
 }
 
-bool iMemPool::ref() 
-{
-    return m_ref.ref();
-}
-
-bool iMemPool::deref() 
-{
-    bool valid = m_ref.deref();
-    if (!valid)
-        delete this;
-    
-    return valid;
-}
-
 /* For receiving blocks from other nodes */
 iMemImport::iMemImport(iMemPool* pool, iMemImportReleaseCb cb, void* userdata)
     : m_mutex(iMutex::Recursive)
@@ -991,7 +929,6 @@ iMemImport::iMemImport(iMemPool* pool, iMemImportReleaseCb cb, void* userdata)
     , m_prev(IX_NULLPTR)
 {
     IX_ASSERT(m_pool && cb);
-    m_pool->ref();
     m_pool->m_mutex.lock();
     IX_LLIST_PREPEND(iMemImport, m_pool->m_imports, this);
     m_pool->m_mutex.unlock();
@@ -1073,7 +1010,6 @@ iMemImport::~iMemImport()
     IX_LLIST_REMOVE(iMemImport, m_pool->m_imports, this);
 
     m_pool->m_mutex.unlock();
-    m_pool->deref();
 }
 
 /* Create a new memimport's memfd segment entry, with passed SHM ID
@@ -1153,7 +1089,7 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, size_t offset
         return IX_NULLPTR;
     }
 
-    iMemBlock* b = new iMemBlock(m_pool, iMemBlock::MEMBLOCK_IMPORTED, iMemBlock::DefaultAllocationFlags, (xuint8*)seg->memory.data() + offset, size, size);
+    iMemBlock* b = new iMemBlock(m_pool.data(), iMemBlock::MEMBLOCK_IMPORTED, iMemBlock::DefaultAllocationFlags, (xuint8*)seg->memory.data() + offset, size, size);
     b->m_readOnly = !writable;
     b->m_imported.id = blockId;
     b->m_imported.segment = seg;
@@ -1194,8 +1130,6 @@ iMemExport::iMemExport(iMemPool* pool, iMemExportRevokeCb cb, void* userdata)
     IX_ASSERT(m_pool && cb && m_pool->isShared());
     static iAtomicCounter<uint> export_baseidx(0);
 
-    m_pool->ref();
-
     for (int idx = 0; idx < IMEMEXPORT_SLOTS_MAX; ++idx) {
         m_slots[idx].m_next = IX_NULLPTR;
         m_slots[idx].m_prev = IX_NULLPTR;
@@ -1220,8 +1154,6 @@ iMemExport::~iMemExport()
     m_pool->m_mutex.lock();
     IX_LLIST_REMOVE(iMemExport, m_pool->m_exports, this);
     m_pool->m_mutex.unlock();
-
-    m_pool->deref();
 }
 
 /* Self-locked */
@@ -1301,6 +1233,7 @@ iMemBlock* iMemExport::sharedCopy(iMemPool* pool, iMemBlock* block) const
     if (IX_NULLPTR == next)
         return IX_NULLPTR;
 
+    next->ref(true);
     memcpy(next->m_data, block->m_data, block->m_length);
     return next;
 }
@@ -1311,7 +1244,7 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
     IX_ASSERT(block && type && blockId && shmId && offset && size);
     IX_ASSERT(block->m_pool == m_pool);
 
-    block = sharedCopy(m_pool, block);
+    block = sharedCopy(m_pool.data(), block);
     if (IX_NULLPTR == block)
         return -1;
 

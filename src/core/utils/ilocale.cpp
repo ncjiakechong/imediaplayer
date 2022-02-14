@@ -540,8 +540,8 @@ static iLocale::NumberOptions default_number_options = iLocale::DefaultNumberOpt
 static const iLocaleData *const c_data = locale_data;
 static iLocalePrivate *c_private()
 {
-    static iLocalePrivate c_locale = { c_data, {iRefCount(1)}, iLocale::OmitGroupSeparator };
-    return &c_locale;
+    static iExplicitlySharedDataPointer<iLocalePrivate> c_locale(new iLocalePrivate(c_data, iLocale::OmitGroupSeparator));
+    return c_locale.data();
 }
 
 static const iLocaleData *systemData()

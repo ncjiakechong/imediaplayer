@@ -177,7 +177,7 @@ private:
     friend class iRegularExpressionMatchIterator;
 
     iRegularExpressionMatch(iRegularExpressionMatchPrivate &dd);
-    iSharedDataPointer<iRegularExpressionMatchPrivate> d;
+    iExplicitlySharedDataPointer<iRegularExpressionMatchPrivate> d;
 };
 
 IX_DECLARE_SHARED(iRegularExpressionMatch)
@@ -209,7 +209,7 @@ private:
     friend class iRegularExpression;
 
     iRegularExpressionMatchIterator(iRegularExpressionMatchIteratorPrivate &dd);
-    iSharedDataPointer<iRegularExpressionMatchIteratorPrivate> d;
+    iExplicitlySharedDataPointer<iRegularExpressionMatchIteratorPrivate> d;
 };
 
 } // namespace iShell

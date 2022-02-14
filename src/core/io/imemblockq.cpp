@@ -462,9 +462,10 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk *chunk)
         return 0;
     }
 
-    iMemChunk rchunk(iMemBlock::newOne(tchunk.m_memblock.block()->pool().value(), block_size), 0, tchunk.m_length);
+    iMemChunk rchunk(iMemBlock::newOne(tchunk.m_memblock.block()->pool().data(), block_size), 0, tchunk.m_length);
     rchunk.copy(&tchunk);
     rchunk.m_index += tchunk.m_length;
+    rchunk.m_memblock.block()->ref();
     tchunk.m_memblock.block()->deref();
 
     /* We don't need to call fix_current_read() here, since
