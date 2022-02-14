@@ -41,9 +41,9 @@ namespace iShell {
     do {                                                                \
         t **_head = &(head), *_item = (item);                           \
         IX_ASSERT(_item);                                               \
-        if ((_item->m_next = *_head))                                   \
-            _item->m_next->m_prev = _item;                              \
-        _item->m_prev = IX_NULLPTR;                                     \
+        if ((_item->_next = *_head))                                    \
+            _item->_next->_prev = _item;                                \
+        _item->_prev = IX_NULLPTR;                                      \
         *_head = _item;                                                 \
     } while (0)
 
@@ -52,15 +52,15 @@ namespace iShell {
     do {                                                                \
         t **_head = &(head), *_item = (item);                           \
         IX_ASSERT(_item);                                               \
-        if (_item->m_next)                                              \
-            _item->m_next->m_prev = _item->m_prev;                      \
-        if (_item->m_prev)                                              \
-            _item->m_prev->m_next = _item->m_next;                      \
+        if (_item->_next)                                               \
+            _item->_next->_prev = _item->_prev;                         \
+        if (_item->_prev)                                               \
+            _item->_prev->_next = _item->_next;                         \
         else {                                                          \
             IX_ASSERT(*_head == _item);                                 \
-            *_head = _item->m_next;                                     \
+            *_head = _item->_next;                                      \
         }                                                               \
-        _item->m_next = _item->m_prev = IX_NULLPTR;                     \
+        _item->_next = _item->_prev = IX_NULLPTR;                       \
     } while(0)
 
 /* Rounds up */
@@ -74,6 +74,8 @@ struct iMemImportSegment {
     iMemTrap* trap;
     unsigned n_blocks;
     bool writable;
+
+    bool isPermanent() const { return memory.type() == MEMTYPE_SHARED_MEMFD; }
 };
 
 iMemDataWraper::iMemDataWraper(const iMemBlock* block, size_t offset)
@@ -752,16 +754,16 @@ iMemPool* iMemPool::fakeAdaptor()
 }
 
 iMemPool::iMemPool(size_t block_size, xuint32 n_blocks, bool perClient)
-    : m_semaphore(0)
-    , m_mutex(iMutex::Recursive)
-    , m_memory(IX_NULLPTR)
-    , m_global(!perClient)
+    : m_global(!perClient)
+    , m_isRemoteWritable(false)
     , m_blockSize(block_size)
     , m_nBlocks(n_blocks)
-    , m_isRemoteWritable(false)
-    , m_nInit(0)
+    , m_memory(IX_NULLPTR)
     , m_imports(IX_NULLPTR)
     , m_exports(IX_NULLPTR)
+    , m_nInit(0)
+    , m_semaphore(0)
+    , m_mutex(iMutex::Recursive)
     , m_freeSlots(n_blocks)
 {
     m_stat.nAllocated = 0;
@@ -925,8 +927,8 @@ iMemImport::iMemImport(iMemPool* pool, iMemImportReleaseCb cb, void* userdata)
     , m_pool(pool)
     , m_releaseCb(cb)
     , m_userdata(userdata)
-    , m_next(IX_NULLPTR)
-    , m_prev(IX_NULLPTR)
+    , _next(IX_NULLPTR)
+    , _prev(IX_NULLPTR)
 {
     IX_ASSERT(m_pool && cb);
     m_pool->m_mutex.lock();
@@ -962,7 +964,7 @@ iMemImportSegment* iMemImport::segmentAttach(MemType type, uint shmId, int memfd
 void iMemImport::segmentDetach(iMemImportSegment* seg)
 {
     IX_ASSERT(seg);
-    IX_ASSERT(seg && (seg->n_blocks == (segmentIsPermanent(seg) ? 1u : 0u)));
+    IX_ASSERT(seg && (seg->n_blocks == (seg->isPermanent() ? 1u : 0u)));
 
     seg->import->m_segments.erase(seg->memory.id());
     seg->memory.detach();
@@ -971,11 +973,6 @@ void iMemImport::segmentDetach(iMemImportSegment* seg)
         delete seg->trap;
 
     delete seg;
-}
-
-bool iMemImport::segmentIsPermanent(iMemImportSegment* seg)
-{
-    return seg->memory.type() == MEMTYPE_SHARED_MEMFD;
 }
 
 /* Self-locked. Not multiple-caller safe */
@@ -995,7 +992,7 @@ iMemImport::~iMemImport()
      * memimport's hash; the same hash we're now using for iteration. */
     while (!m_segments.empty()) {
         iMemImportSegment* seg = m_segments.begin()->second;
-        IX_ASSERT(segmentIsPermanent(seg));
+        IX_ASSERT(seg->isPermanent());
         segmentDetach(seg);
     }
 
@@ -1004,7 +1001,7 @@ iMemImport::~iMemImport()
     m_pool->m_mutex.lock();
 
     /* If we've exported this block further we need to revoke that export */
-    for (iMemExport* e = m_pool->m_exports; e != IX_NULLPTR; e = e->m_next)
+    for (iMemExport* e = m_pool->m_exports; e != IX_NULLPTR; e = e->_next)
         e->revokeBlocks(this);
 
     IX_LLIST_REMOVE(iMemImport, m_pool->m_imports, this);
@@ -1035,7 +1032,7 @@ int iMemImport::attachMemfd(uint shmId, int memfd_fd, bool writable)
      * being deleted when receiving silent memchunks, etc., mark our
      * permanent presence by incrementing that refcount. */
     seg->n_blocks++;
-    IX_ASSERT(segmentIsPermanent(seg));
+    IX_ASSERT(seg->isPermanent());
 
     m_mutex.unlock();
     return 0;
@@ -1118,21 +1115,23 @@ int iMemImport::processRevoke(uint blockId)
 
 /* For sending blocks to other nodes */
 iMemExport::iMemExport(iMemPool* pool, iMemExportRevokeCb cb, void* userdata)
-    : m_mutex(iMutex::Recursive)
-    , m_pool(pool)
+    : m_baseIdx(0)
+    , m_nInit(0)
     , m_freeSlots(IX_NULLPTR)
     , m_usedSlots(IX_NULLPTR)
-    , m_nInit(0)
-    , m_baseIdx(0)
+    , m_mutex(iMutex::Recursive)
+    , m_pool(pool)
     , m_revokeCb(cb)
     , m_userdata(userdata)
+    , _next(IX_NULLPTR)
+    , _prev(IX_NULLPTR)
 {
     IX_ASSERT(m_pool && cb && m_pool->isShared());
     static iAtomicCounter<uint> export_baseidx(0);
 
     for (int idx = 0; idx < IMEMEXPORT_SLOTS_MAX; ++idx) {
-        m_slots[idx].m_next = IX_NULLPTR;
-        m_slots[idx].m_prev = IX_NULLPTR;
+        m_slots[idx]._next = IX_NULLPTR;
+        m_slots[idx]._prev = IX_NULLPTR;
         m_slots[idx].block = IX_NULLPTR;
     }
 
@@ -1203,7 +1202,7 @@ void iMemExport::revokeBlocks(iMemImport* imp)
 
     Slot* next = IX_NULLPTR;
     for (Slot* slot = m_usedSlots; slot; slot = next) {
-        next = slot->m_next;
+        next = slot->_next;
 
         if (slot->block->m_type != iMemBlock::MEMBLOCK_IMPORTED ||
             slot->block->m_imported.segment->import != imp)

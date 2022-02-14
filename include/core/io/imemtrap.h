@@ -47,8 +47,8 @@ private:
     const void* m_start;
     size_t m_size;
     iAtomicCounter<int> m_bad;
-    iMemTrap* m_next[2];
-    iMemTrap* m_prev[2];
+    iMemTrap* _next[2];
+    iMemTrap* _prev[2];
 
     static iMemTrap* s_memtraps[2];
     static iAUpdate s_aupdate;
