@@ -47,7 +47,7 @@ void iMemTrap::signalHandler(void* data)
     uint j = s_aupdate.readBegin();
 
     iMemTrap* m = IX_NULLPTR;
-    for (m = s_memtraps[j]; m != IX_NULLPTR; m = m->m_next[j])
+    for (m = s_memtraps[j]; m != IX_NULLPTR; m = m->_next[j])
         if ((si->si_addr >= m->m_start) &&
             ((xuint8*) si->si_addr < (xuint8*) m->m_start + m->m_size))
             break;
@@ -83,10 +83,10 @@ iMemTrap::iMemTrap(const void *start, size_t size)
 {
     IX_ASSERT(start && (size > 0));
 
-    m_next[0] = IX_NULLPTR;
-    m_next[1] = IX_NULLPTR;
-    m_prev[0] = IX_NULLPTR;
-    m_prev[1] = IX_NULLPTR;
+    _next[0] = IX_NULLPTR;
+    _next[1] = IX_NULLPTR;
+    _prev[0] = IX_NULLPTR;
+    _prev[1] = IX_NULLPTR;
 
     s_mutex.lock();
 
@@ -145,24 +145,24 @@ void iMemTrap::update(const void *start, size_t size)
 
 void iMemTrap::link(uint idx)
 {
-    m_prev[idx] = IX_NULLPTR;
+    _prev[idx] = IX_NULLPTR;
 
-    if ((m_next[idx] = s_memtraps[idx]))
-        m_next[idx]->m_prev[idx] = this;
+    if ((_next[idx] = s_memtraps[idx]))
+        _next[idx]->_prev[idx] = this;
 
     s_memtraps[idx] = this;
 }
 
 void iMemTrap::unlink(uint idx)
 {
-    if (m_next[idx]) {
-        m_next[idx]->m_prev[idx] = m_prev[idx];
+    if (_next[idx]) {
+        _next[idx]->_prev[idx] = _prev[idx];
     }
 
-    if (IX_NULLPTR != m_prev[idx]) {
-        m_prev[idx]->m_next[idx] = m_next[idx];
+    if (IX_NULLPTR != _prev[idx]) {
+        _prev[idx]->_next[idx] = _next[idx];
     } else {
-        s_memtraps[idx] = m_next[idx];
+        s_memtraps[idx] = _next[idx];
     }
 }
 

@@ -180,7 +180,7 @@ private:
     iExplicitlySharedDataPointer<iMemPool> m_pool;
 
     iAtomicPointer<void> m_data;
-    iAtomicPointer< iMemGuard::ExternalData > m_guardData;
+    iAtomicPointer<iMemGuard::ExternalData> m_guardData;
 
     iAtomicCounter<int> m_nAcquired;
     iAtomicCounter<int> m_pleaseSignal;
@@ -233,7 +233,7 @@ public:
 
     static iMemPool* create(MemType type, size_t size, bool perClient);
 
-    inline const Stat* getStat() const { return &m_stat; }
+    inline const Stat& getStat() const { return m_stat; }
     void vacuum();
     bool isShared() const;
     bool isMemfdBacked() const;
@@ -245,7 +245,6 @@ public:
 
 private:
     struct Slot;
-
     static iMemPool* fakeAdaptor();
 
     iMemPool(size_t block_size, xuint32 n_blocks, bool perClient);
@@ -256,24 +255,22 @@ private:
     uint slotIdx(const void* ptr) const;
     Slot* slotByPtr(const void* ptr) const;
 
-    iSemaphore m_semaphore;
-    iMutex m_mutex;
-
-    iShareMem* m_memory;
-
     bool m_global;
+    bool m_isRemoteWritable;
 
     size_t m_blockSize;
     xuint32 m_nBlocks;
-    bool m_isRemoteWritable;
 
-    iAtomicCounter<int> m_nInit;
-
+    iShareMem* m_memory;
     iMemImport* m_imports;
     iMemExport* m_exports;
 
     /* A list of free slots that may be reused */
     iFreeList<Slot*> m_freeSlots;
+
+    iAtomicCounter<int> m_nInit;
+    iSemaphore m_semaphore;
+    iMutex m_mutex;
 
     Stat m_stat;
 
@@ -301,7 +298,6 @@ public:
 private:
     iMemImportSegment* segmentAttach(MemType type, uint shmId, int memfd_fd, bool writable);
     static void segmentDetach(iMemImportSegment* seg);
-    static bool segmentIsPermanent(iMemImportSegment* seg);
 
     iMutex m_mutex;
 
@@ -314,8 +310,8 @@ private:
     iMemImportReleaseCb m_releaseCb;
     void* m_userdata;
 
-    iMemImport* m_next;
-    iMemImport* m_prev;
+    iMemImport* _next;
+    iMemImport* _prev;
 
     friend class iMemBlock;
     IX_DISABLE_COPY(iMemImport)
@@ -338,20 +334,18 @@ private:
     iMemBlock* sharedCopy(iMemPool* p, iMemBlock* b) const;
 
     struct Slot {
-        Slot* m_next;
-        Slot* m_prev;
+        Slot* _next;
+        Slot* _prev;
         iMemBlock* block;
     };
 
-    iMutex m_mutex;
-    iExplicitlySharedDataPointer<iMemPool> m_pool;
-
-    Slot m_slots[IMEMEXPORT_SLOTS_MAX];
-
+    uint m_baseIdx;
+    xuint32 m_nInit;
     Slot* m_freeSlots;
     Slot* m_usedSlots;
-    xuint32 m_nInit;
-    uint m_baseIdx;
+
+    iMutex m_mutex;
+    iExplicitlySharedDataPointer<iMemPool> m_pool;
 
     /* Called whenever a client from which we imported a memory block
        which we in turn exported to another client dies and we need to
@@ -359,8 +353,10 @@ private:
     iMemExportRevokeCb m_revokeCb;
     void* m_userdata;
 
-    iMemExport* m_next;
-    iMemExport* m_prev;
+    iMemExport* _next;
+    iMemExport* _prev;
+
+    Slot m_slots[IMEMEXPORT_SLOTS_MAX];
 
     friend class iMemBlock;
     friend class iMemImport;
