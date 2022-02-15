@@ -156,7 +156,6 @@ struct type_wrapper
     typedef const T& CONSTREFTYPE;
 };
 
-
 template <typename T>
 struct type_wrapper<const T>
 {
@@ -165,7 +164,6 @@ struct type_wrapper<const T>
     typedef T& REFTYPE;
     typedef const T& CONSTREFTYPE;
 };
-
 
 template <typename T>
 struct type_wrapper<const T&>
@@ -176,7 +174,6 @@ struct type_wrapper<const T&>
     typedef const T& CONSTREFTYPE;
 };
 
-
 template <typename T>
 struct type_wrapper<T&>
 {
@@ -185,7 +182,6 @@ struct type_wrapper<T&>
     typedef T& REFTYPE;
     typedef const T& CONSTREFTYPE;
 };
-
 
 template <class T>
 struct class_wrapper

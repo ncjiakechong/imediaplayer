@@ -18,8 +18,22 @@
 #include <core/global/imacro.h>
 #include <core/utils/istring.h>
 
-namespace iShell {
+/* ISO varargs available */
+#define ilog_verbose(...) iShell::iLogMeta(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_debug(...)   iShell::iLogMeta(ILOG_TAG, iShell::ILOG_DEBUG, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_info(...)    iShell::iLogMeta(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_notice(...)  iShell::iLogMeta(ILOG_TAG, iShell::ILOG_NOTICE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_warn(...)    iShell::iLogMeta(ILOG_TAG, iShell::ILOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_error(...)   iShell::iLogMeta(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
+#define ilog_data_verbose(...) iShell::iLogData(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_debug(...)   iShell::iLogData(ILOG_TAG, iShell::ILOG_DEBUG, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_info(...)    iShell::iLogData(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_notice(...)  iShell::iLogData(ILOG_TAG, iShell::ILOG_NOTICE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_warn(...)    iShell::iLogData(ILOG_TAG, iShell::ILOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_error(...)   iShell::iLogData(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+
+namespace iShell {
 
 /* A simple logging subsystem */
 
@@ -420,22 +434,6 @@ void iLogMeta(const char* tag, ilog_level_t level, const char* file, const char*
 
 IX_CORE_EXPORT void iLogData(const char* tag, ilog_level_t level, const char* file, const char* function, int line, 
                              const void* data, int size);
-
-/* ISO varargs available */
-#define ilog_verbose(...) iLogMeta(ILOG_TAG, ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_debug(...)   iLogMeta(ILOG_TAG, ILOG_DEBUG, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_info(...)    iLogMeta(ILOG_TAG, ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_notice(...)  iLogMeta(ILOG_TAG, ILOG_NOTICE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_warn(...)    iLogMeta(ILOG_TAG, ILOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_error(...)   iLogMeta(ILOG_TAG, ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-
-#define ilog_data_verbose(...) iLogData(ILOG_TAG, ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_debug(...)   iLogData(ILOG_TAG, ILOG_DEBUG, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_info(...)    iLogData(ILOG_TAG, ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_notice(...)  iLogData(ILOG_TAG, ILOG_NOTICE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_warn(...)    iLogData(ILOG_TAG, ILOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_error(...)   iLogData(ILOG_TAG, ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-
 } // namespace iShell
 
 #endif // ILOG_H

@@ -142,7 +142,7 @@ bool ix_is_ascii(const char *&ptr, const char *end)
         xuint32 data = iFromUnaligned<xuint32>(ptr);
         if (data &= 0x80808080U) {
             uint idx;
-            if (is_little_endian()) {
+            if (iIsLittleEndian()) {
                 idx = iCountTrailingZeroBits(data);
             } else {
                 idx = iCountLeadingZeroBits(data);

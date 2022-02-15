@@ -16,8 +16,6 @@
 #include <core/thread/iatomiccounter.h>
 
 namespace iShell {
-
-
 /**
  * This infrastructure allows lock-free updates of arbitrary data
  * structures in an rcu'ish way: two copies of the data structure

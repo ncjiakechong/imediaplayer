@@ -15,34 +15,17 @@
 
 namespace iShell {
 
-
 template <class Head, class Tail>
 struct iTypeList;
 
-
 struct iNullTypeList
 {
-    enum
-    {
-        length = 0
-    };
+    enum { length = 0 };
 
-    bool operator == (const iNullTypeList&) const
-    {
-        return true;
-    }
-
-    bool operator != (const iNullTypeList&) const
-    {
-        return false;
-    }
-
-    bool operator < (const iNullTypeList&) const
-    {
-        return false;
-    }
+    bool operator == (const iNullTypeList&) const { return true; }
+    bool operator != (const iNullTypeList&) const { return false; }
+    bool operator < (const iNullTypeList&) const { return false; }
 };
-
 
 template <class Head, class Tail>
 struct iTypeList
@@ -52,45 +35,24 @@ struct iTypeList
     typedef Tail TailType;
     typedef typename type_wrapper<HeadType>::CONSTTYPE ConstHeadType;
     typedef typename type_wrapper<TailType>::CONSTTYPE ConstTailType;
-    enum
-    {
-        length = TailType::length+1
-    };
+    enum { length = TailType::length+1 };
 
-    iTypeList():head(), tail()
-    {
-    }
+    iTypeList():head(), tail() {}
+    iTypeList(ConstHeadType& h, ConstTailType& t):head(HeadType(h)), tail(TailType(t)) {}
+    iTypeList(const iTypeList& tl): head(tl.head), tail(tl.tail) {}
 
-    iTypeList(ConstHeadType& h, ConstTailType& t):head(HeadType(h)), tail(TailType(t))
-    {
-    }
-
-    iTypeList(const iTypeList& tl): head(tl.head), tail(tl.tail)
-    {
-    }
-
-    iTypeList& operator = (const iTypeList& tl)
-    {
-        if (this != &tl)
-        {
+    iTypeList& operator = (const iTypeList& tl) {
+        if (this != &tl) {
             head = tl.head;
             tail = tl.tail;
         }
         return *this;
     }
 
-    bool operator == (const iTypeList& tl) const
-    {
-        return tl.head == head && tl.tail == tail;
-    }
+    bool operator == (const iTypeList& tl) const { return tl.head == head && tl.tail == tail; }
+    bool operator != (const iTypeList& tl) const { return !(*this == tl); }
 
-    bool operator != (const iTypeList& tl) const
-    {
-        return !(*this == tl);
-    }
-
-    bool operator < (const iTypeList& tl) const
-    {
+    bool operator < (const iTypeList& tl) const {
         if (head < tl.head)
             return true;
         else if (head == tl.head)
@@ -101,7 +63,6 @@ struct iTypeList
     HeadType head;
     TailType tail;
 };
-
 
 template <typename T0  = iNullTypeList,
     typename T1  = iNullTypeList,
@@ -130,20 +91,17 @@ public:
     typedef iTypeList<T0, TailType> HeadType;
 };
 
-
 template <>
 struct iTypeListType<>
 {
     typedef iNullTypeList HeadType;
 };
 
-
 template <int n>
 struct iGetter
 {
     template <class Ret, class Head, class Tail>
-    static inline Ret& get(iTypeList<Head, Tail>& val)
-    {
+    static inline Ret& get(iTypeList<Head, Tail>& val) {
         return iGetter<n-1>::template get<Ret, typename Tail::HeadType, typename Tail::TailType>(val.tail);
     }
 
@@ -153,28 +111,23 @@ struct iGetter
         return iGetter<n-1>::template get<Ret, typename Tail::HeadType, typename Tail::TailType>(val.tail);
     }
 };
-
 
 template <>
 struct iGetter<0>
 {
     template <class Ret, class Head, class Tail>
-    static inline Ret& get(iTypeList<Head, Tail>& val)
-    {
+    static inline Ret& get(iTypeList<Head, Tail>& val) {
         return val.head;
     }
 
     template <class Ret, class Head, class Tail>
-    static inline const Ret& get(const iTypeList<Head, Tail>& val)
-    {
+    static inline const Ret& get(const iTypeList<Head, Tail>& val) {
         return val.head;
     }
 };
 
-
 template <int N, class Head>
 struct iTypeGetter;
-
 
 template <int N, class Head, class Tail>
 struct iTypeGetter<N, iTypeList<Head, Tail> >
@@ -183,14 +136,12 @@ struct iTypeGetter<N, iTypeList<Head, Tail> >
     typedef typename type_wrapper<HeadType>::CONSTTYPE ConstHeadType;
 };
 
-
 template <class Head, class Tail>
 struct iTypeGetter<0, iTypeList<Head, Tail> >
 {
     typedef typename iTypeList<Head, Tail>::HeadType HeadType;
     typedef typename type_wrapper<HeadType>::CONSTTYPE ConstHeadType;
 };
-
 
 template <class Head, class T>
 struct iTypeLocator;
@@ -204,20 +155,17 @@ struct iTypeLocator;
     /// if (2 == TypeLoc.value) ...
     ///
 
-
 template <class T>
 struct iTypeLocator<iNullTypeList, T>
 {
     enum { value = -1 };
 };
 
-
 template <class T, class Tail>
 struct iTypeLocator<iTypeList<T, Tail>, T>
 {
     enum { value = 0 };
 };
-
 
 template <class Head, class Tail, class T>
 struct iTypeLocator<iTypeList<Head, Tail>, T>
@@ -227,7 +175,6 @@ private:
 public:
     enum { value = tmp == -1 ? -1 : 1 + tmp };
 };
-
 
 template <class Head, class T>
 struct iTypeAppender;
@@ -251,13 +198,11 @@ struct iTypeAppender<iNullTypeList, iNullTypeList>
     typedef iNullTypeList HeadType;
 };
 
-
 template <class T>
 struct iTypeAppender<iNullTypeList, T>
 {
     typedef iTypeList<T, iNullTypeList> HeadType;
 };
-
 
 template <class Head, class Tail>
 struct iTypeAppender<iNullTypeList, iTypeList<Head, Tail> >
@@ -265,13 +210,11 @@ struct iTypeAppender<iNullTypeList, iTypeList<Head, Tail> >
     typedef iTypeList<Head, Tail> HeadType;
 };
 
-
 template <class Head, class Tail, class T>
 struct iTypeAppender<iTypeList<Head, Tail>, T>
 {
     typedef iTypeList<Head, typename iTypeAppender<Tail, T>::HeadType> HeadType;
 };
-
 
 template <class Head, class T>
 struct iTypeOneEraser;
@@ -283,13 +226,11 @@ struct iTypeOneEraser;
     /// (Type2 is a iTypeList of char,float)
     ///
 
-
 template <class T>
 struct iTypeOneEraser<iNullTypeList, T>
 {
     typedef iNullTypeList HeadType;
 };
-
 
 template <class T, class Tail>
 struct iTypeOneEraser<iTypeList<T, Tail>, T>
@@ -297,13 +238,11 @@ struct iTypeOneEraser<iTypeList<T, Tail>, T>
     typedef Tail HeadType;
 };
 
-
 template <class Head, class Tail, class T>
 struct iTypeOneEraser<iTypeList<Head, Tail>, T>
 {
     typedef iTypeList <Head, typename iTypeOneEraser<Tail, T>::HeadType> HeadType;
 };
-
 
 template <class Head, class T>
 struct iTypeAllEraser;
@@ -315,13 +254,11 @@ struct iTypeAllEraser;
     /// (Type2 is a iTypeList of char,float)
     ///
 
-
 template <class T>
 struct iTypeAllEraser<iNullTypeList, T>
 {
     typedef iNullTypeList HeadType;
 };
-
 
 template <class T, class Tail>
 struct iTypeAllEraser<iTypeList<T, Tail>, T>
@@ -329,13 +266,11 @@ struct iTypeAllEraser<iTypeList<T, Tail>, T>
     typedef typename iTypeAllEraser<Tail, T>::HeadType HeadType;
 };
 
-
 template <class Head, class Tail, class T>
 struct iTypeAllEraser<iTypeList<Head, Tail>, T>
 {
     typedef iTypeList <Head, typename iTypeAllEraser<Tail, T>::HeadType> HeadType;
 };
-
 
 template <class Head>
 struct iTypeDuplicateEraser;
@@ -347,13 +282,11 @@ struct iTypeDuplicateEraser;
     /// (Type3 is a iTypeList of char,int,float)
     ///
 
-
 template <>
 struct iTypeDuplicateEraser<iNullTypeList>
 {
     typedef iNullTypeList HeadType;
 };
-
 
 template <class Head, class Tail>
 struct iTypeDuplicateEraser<iTypeList<Head, Tail> >
@@ -364,7 +297,6 @@ private:
 public:
     typedef iTypeList<Head, L2> HeadType;
 };
-
 
 template <class Head, class T, class R>
 struct iTypeOneReplacer;
@@ -377,13 +309,11 @@ struct iTypeOneReplacer;
     /// (TypeR is a iTypeList of char,double,float,int)
     ///
 
-
 template <class T, class R>
 struct iTypeOneReplacer<iNullTypeList, T, R>
 {
     typedef iNullTypeList HeadType;
 };
-
 
 template <class T, class Tail, class R>
 struct iTypeOneReplacer<iTypeList<T, Tail>, T, R>
@@ -391,13 +321,11 @@ struct iTypeOneReplacer<iTypeList<T, Tail>, T, R>
     typedef iTypeList<R, Tail> HeadType;
 };
 
-
 template <class Head, class Tail, class T, class R>
 struct iTypeOneReplacer<iTypeList<Head, Tail>, T, R>
 {
     typedef iTypeList<Head, typename iTypeOneReplacer<Tail, T, R>::HeadType> HeadType;
 };
-
 
 template <class Head, class T, class R>
 struct iTypeAllReplacer;
@@ -410,13 +338,11 @@ struct iTypeAllReplacer;
     /// (TypeR is a iTypeList of char,double,float,double)
     ///
 
-
 template <class T, class R>
 struct iTypeAllReplacer<iNullTypeList, T, R>
 {
     typedef iNullTypeList HeadType;
 };
-
 
 template <class T, class Tail, class R>
 struct iTypeAllReplacer<iTypeList<T, Tail>, T, R>
@@ -424,13 +350,11 @@ struct iTypeAllReplacer<iTypeList<T, Tail>, T, R>
     typedef iTypeList<R, typename iTypeAllReplacer<Tail, T, R>::HeadType> HeadType;
 };
 
-
 template <class Head, class Tail, class T, class R>
 struct iTypeAllReplacer<iTypeList<Head, Tail>, T, R>
 {
     typedef iTypeList<Head, typename iTypeAllReplacer<Tail, T, R>::HeadType> HeadType;
 };
-
 
 } // namespace iShell
 

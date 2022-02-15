@@ -12,7 +12,7 @@
 #define ISIZE_H
 
 #include <core/global/imacro.h>
-#include <core/global/iglobal.h>
+#include <core/global/inumeric.h>
 #include <core/global/inamespace.h>
 
 namespace iShell {

@@ -63,7 +63,7 @@ iString &exponentForm(iChar zero, iChar decimal, iChar exponential,
 inline bool isZero(double d)
 {
     uchar *ch = (uchar *)&d;
-    if (is_little_endian()) {
+    if (iIsLittleEndian()) {
         return !(ch[7] & 0x7F || ch[6] || ch[5] || ch[4] || ch[3] || ch[2] || ch[1] || ch[0]);
     } else {
         return !(ch[0] & 0x7F || ch[1] || ch[2] || ch[3] || ch[4] || ch[5] || ch[6] || ch[7]);

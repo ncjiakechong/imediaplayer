@@ -16,10 +16,7 @@
 
 namespace iShell {
 
-/*
-   iTypeInfo     - type trait functionality
-*/
-
+/** iTypeInfo - type trait functionality */
 template <typename T>
 struct iIsRelocatable
 { enum { value = is_enum<T>::value || is_integral<T>::value }; };
@@ -29,10 +26,7 @@ template <typename T>
 struct iIsTrivial
 { enum { value = is_enum<T>::value || is_integral<T>::value }; };
 
-/*
-  The catch-all template.
-*/
-
+/** The catch-all template. */
 template <typename T>
 class iTypeInfo
 {
@@ -82,9 +76,7 @@ public:
 };
 
 /*!
-    \class iTypeInfoQuery
-    \internal
-    \brief iTypeInfoQuery is used to query the values of a given iTypeInfo<T>
+    iTypeInfoQuery is used to query the values of a given iTypeInfo<T>
 
     We use it because there may be some iTypeInfo<T> specializations in user
     code that don't provide certain flags that we added. They are:
@@ -107,10 +99,7 @@ struct iTypeInfoQuery<T, typename enable_if<iTypeInfo<T>::isRelocatable || true>
 {};
 
 /*!
-    \class iTypeInfoMerger
-    \internal
-
-    \brief iTypeInfoMerger merges the iTypeInfo flags of T1, T2... and presents them
+    iTypeInfoMerger merges the iTypeInfo flags of T1, T2... and presents them
     as a iTypeInfo<T> would do.
 
     Let's assume that we have a simple set of structs:
@@ -144,7 +133,7 @@ public:
     };
 };
 
-/*
+/*!
    Specialize a specific type with:
 
      IX_DECLARE_TYPEINFO(type, flags);
@@ -183,7 +172,7 @@ template<> \
 IX_DECLARE_TYPEINFO_BODY(TYPE, FLAGS)
 
 
-/*
+/*!
    Specialize a shared type with:
 
      IX_DECLARE_SHARED(type)
@@ -192,7 +181,6 @@ IX_DECLARE_TYPEINFO_BODY(TYPE, FLAGS)
    types must define a member-swap, and be defined in the same
    namespace as iShell for this to work.
 */
-
 #define IX_DECLARE_SHARED_IMPL(TYPE, FLAGS) \
 IX_DECLARE_TYPEINFO(TYPE, FLAGS); \
 inline void swap(TYPE &value1, TYPE &value2) \
@@ -219,6 +207,5 @@ IX_DECLARE_TYPEINFO(char16_t, IX_PRIMITIVE_TYPE);
 IX_DECLARE_TYPEINFO(char32_t, IX_PRIMITIVE_TYPE);
 
 } // namespace iShell
-
 
 #endif // ITYPEINFO_H

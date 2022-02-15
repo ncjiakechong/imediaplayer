@@ -20,9 +20,11 @@
 
 namespace iShell {
 
-/*
- * ENDIAN FUNCTIONS
-*/
+inline bool iIsLittleEndian()
+{
+    union {uint16_t u16; uint8_t c;} __byte_order{1};
+    return (__byte_order.c > 0);
+}
 
 // Used to implement a type-safe and alignment-safe copy operation
 // If you want to avoid the memcpy, you must write specializations for these functions
@@ -47,7 +49,7 @@ template <typename T> inline T iFromUnaligned(const void *src)
  * Changes the byte order of a value from big endian to little endian or vice versa.
  * This function can be used if you are not concerned about alignment issues,
  * and it is therefore a bit more convenient and in most cases more efficient.
-*/
+ */
 template <typename T> T ibswap(T source);
 
 // These definitions are written so that they are recognized by most compilers
@@ -132,7 +134,7 @@ inline double ibswap(double source)
  * Changes the byte order of \a src from big endian to little endian or vice versa
  * and stores the result in \a dest.
  * There is no alignment requirements for \a dest.
-*/
+ */
 template <typename T> inline void ibswap(const T src, void *dest)
 {
     iToUnaligned<T>(ibswap(src), dest);
@@ -149,7 +151,7 @@ template<> IX_CORE_EXPORT void *ibswap<8>(const void *source, xsizetype count, v
 
 template <typename T> inline T iToBigEndian(T source)
 {
-    if (!is_little_endian()) {
+    if (!iIsLittleEndian()) {
         return source;
     }
 
@@ -157,7 +159,7 @@ template <typename T> inline T iToBigEndian(T source)
 }
 template <typename T> inline T iFromBigEndian(T source)
 {
-    if (!is_little_endian()) {
+    if (!iIsLittleEndian()) {
         return source;
     }
 
@@ -165,7 +167,7 @@ template <typename T> inline T iFromBigEndian(T source)
 }
 template <typename T> inline T iToLittleEndian(T source)
 {
-    if (!is_little_endian()) {
+    if (!iIsLittleEndian()) {
         return ibswap(source);
     }
 
@@ -174,7 +176,7 @@ template <typename T> inline T iToLittleEndian(T source)
 
 template <typename T> inline T iFromLittleEndian(T source)
 {
-    if (!is_little_endian()) {
+    if (!iIsLittleEndian()) {
         return ibswap(source);
     }
 
@@ -183,7 +185,7 @@ template <typename T> inline T iFromLittleEndian(T source)
 
 template <typename T> inline void iToBigEndian(T src, void *dest)
 {
-    if (!is_little_endian()) {
+    if (!iIsLittleEndian()) {
         iToUnaligned<T>(src, dest);
         return;
     }
@@ -192,7 +194,7 @@ template <typename T> inline void iToBigEndian(T src, void *dest)
 }
 template <typename T> inline void iToLittleEndian(T src, void *dest)
 {
-    if (!is_little_endian()) {
+    if (!iIsLittleEndian()) {
         ibswap<T>(src, dest);
         return;
     }
@@ -202,7 +204,7 @@ template <typename T> inline void iToLittleEndian(T src, void *dest)
 
 template <typename T> inline void iToBigEndian(const void *source, xsizetype count, void *dest)
 {
-    if (is_little_endian()) {
+    if (iIsLittleEndian()) {
         ibswap<sizeof(T)>(source, count, dest);
         return;
     }
@@ -213,7 +215,7 @@ template <typename T> inline void iToBigEndian(const void *source, xsizetype cou
 
 template <typename T> inline void iToLittleEndian(const void *source, xsizetype count, void *dest)
 {
-    if (!is_little_endian()) {
+    if (!iIsLittleEndian()) {
         ibswap<sizeof(T)>(source, count, dest);
         return;
     }
@@ -224,7 +226,7 @@ template <typename T> inline void iToLittleEndian(const void *source, xsizetype 
 
 template <typename T> inline void iFromBigEndian(const void *source, xsizetype count, void *dest)
 {
-    if (is_little_endian()) {
+    if (iIsLittleEndian()) {
         ibswap<sizeof(T)>(source, count, dest);
         return;
     }
@@ -235,7 +237,7 @@ template <typename T> inline void iFromBigEndian(const void *source, xsizetype c
 
 template <typename T> inline void iFromLittleEndian(const void *source, xsizetype count, void *dest)
 {
-    if (!is_little_endian()) {
+    if (!iIsLittleEndian()) {
         ibswap<sizeof(T)>(source, count, dest);
         return;
     }
@@ -249,7 +251,7 @@ template <typename T> inline void iFromLittleEndian(const void *source, xsizetyp
  * This function will read a little-endian encoded value from \a src
  * and return the value in host-endian encoding.
  * There is no requirement that \a src must be aligned.
-*/
+ */
 template <typename T> inline T iFromLittleEndian(const void *src)
 {
     return iFromLittleEndian(iFromUnaligned<T>(src));
@@ -263,7 +265,7 @@ template <> inline xint8 iFromLittleEndian<xint8>(const void *src)
 /* This function will read a big-endian (also known as network order) encoded value from \a src
  * and return the value in host-endian encoding.
  * There is no requirement that \a src must be aligned.
-*/
+ */
 template <class T> inline T iFromBigEndian(const void *src)
 {
     return iFromBigEndian(iFromUnaligned<T>(src));
