@@ -247,7 +247,7 @@ private:
     struct Slot;
     static iMemPool* fakeAdaptor();
 
-    iMemPool(size_t block_size, xuint32 n_blocks, bool perClient);
+    iMemPool(iShareMem* memory, size_t block_size, xuint32 n_blocks, bool perClient);
     ~iMemPool();
 
     Slot* allocateSlot();

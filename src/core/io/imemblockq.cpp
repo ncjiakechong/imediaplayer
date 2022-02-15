@@ -44,7 +44,7 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
         , m_requested(0)
         , m_name(name)
 {
-    ilog_debug("memblockq requested: maxlength=", maxlength, 
+    ilog_debug("memblockq(", m_name, ") requested: maxlength=", maxlength, 
                 ", tlength=", tlength, ", base=", base, ", prebuf=", prebuf, 
                 ", minreq=", minreq, " maxrewind=", maxrewind);
 
@@ -54,7 +54,7 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
     setPreBuf(prebuf);
     setMaxRewind(maxrewind);
 
-    ilog_debug("memblockq sanitized: maxlength=", m_maxLength, 
+    ilog_debug("memblockq(", m_name, ") sanitized: maxlength=", m_maxLength, 
                 ", tlength=", m_tLength, ", base=", m_base, ", prebuf=", m_preBuf, 
                 ", minreq=", m_minReq, " maxrewind=", m_maxRewind);
 
@@ -132,8 +132,7 @@ void iMemBlockQueue::fixCurrentWrite()
 
 void iMemBlockQueue::dropBlock(iMBQListItem *q) 
 {
-    IX_ASSERT(q);
-    IX_ASSERT(m_nBlocks >= 1);
+    IX_ASSERT(q && m_nBlocks >= 1);
 
     if (q->prev)
         q->prev->next = q->next;
@@ -448,9 +447,7 @@ int iMemBlockQueue::peek(iMemChunk *chunk)
 
 int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk *chunk) 
 {
-    IX_ASSERT(block_size > 0);
-    IX_ASSERT(chunk);
-    IX_ASSERT(m_silence.m_memblock.block());
+    IX_ASSERT((block_size > 0) && chunk && m_silence.m_memblock.block());
 
     iMemChunk tchunk;
     if (peek(&tchunk) < 0)
