@@ -18,31 +18,32 @@
 namespace iShell {
 
 struct iMBQListItem {
-    iMBQListItem *next, *prev;
+    iMBQListItem* _next;
+    iMBQListItem* _prev;
     xint64 index;
     iMemChunk chunk;
 };
 
 iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t maxlength, size_t tlength, size_t base, 
-        size_t prebuf, size_t minreq, size_t maxrewind, iMemChunk *silence)
-        : m_blocks(IX_NULLPTR)
-        , m_blocksTail(IX_NULLPTR)
-        , m_currentRead(IX_NULLPTR)
-        , m_currentWrite(IX_NULLPTR)
-        , m_nBlocks(0)
-        , m_maxLength(maxlength)
-        , m_tLength(tlength)
-        , m_base(base)
-        , m_preBuf(prebuf)
-        , m_minReq(minreq)
-        , m_maxRewind(maxrewind)
-        , m_readIndex(idx)
-        , m_writeIndex(idx)
-        , m_inPreBuf(true)
-        , m_mcalign(IX_NULLPTR)
-        , m_missing(0)
-        , m_requested(0)
-        , m_name(name)
+    size_t prebuf, size_t minreq, size_t maxrewind, iMemChunk *silence)
+    : m_blocks(IX_NULLPTR)
+    , m_blocksTail(IX_NULLPTR)
+    , m_currentRead(IX_NULLPTR)
+    , m_currentWrite(IX_NULLPTR)
+    , m_nBlocks(0)
+    , m_maxLength(maxlength)
+    , m_tLength(tlength)
+    , m_base(base)
+    , m_preBuf(prebuf)
+    , m_minReq(minreq)
+    , m_maxRewind(maxrewind)
+    , m_readIndex(idx)
+    , m_writeIndex(idx)
+    , m_inPreBuf(true)
+    , m_mcalign(IX_NULLPTR)
+    , m_missing(0)
+    , m_requested(0)
+    , m_name(name)
 {
     ilog_debug("memblockq(", m_name, ") requested: maxlength=", maxlength, 
                 ", tlength=", tlength, ", base=", base, ", prebuf=", prebuf, 
@@ -86,19 +87,19 @@ void iMemBlockQueue::fixCurrentRead()
 
     /* Scan left */
     while (m_currentRead->index > m_readIndex) {
-        if (m_currentRead->prev)
-            m_currentRead = m_currentRead->prev;
+        if (m_currentRead->_prev)
+            m_currentRead = m_currentRead->_prev;
         else
             break;
     }
 
     /* Scan right */
     while ((m_currentRead != IX_NULLPTR) && (m_currentRead->index + (xint64) m_currentRead->chunk.m_length <= m_readIndex)) {
-        m_currentRead = m_currentRead->next;
+        m_currentRead = m_currentRead->_next;
     }
 
     /* At this point current_read will either point at or left of the
-       next block to play. It may be NULL in case everything in
+       _next block to play. It may be NULL in case everything in
        the queue was already played */
 }
 
@@ -114,19 +115,19 @@ void iMemBlockQueue::fixCurrentWrite()
 
     /* Scan right */
     while (m_currentWrite->index + (xint64) m_currentWrite->chunk.m_length <= m_writeIndex) {
-        if (m_currentWrite->next)
-            m_currentWrite = m_currentWrite->next;
+        if (m_currentWrite->_next)
+            m_currentWrite = m_currentWrite->_next;
         else
             break;
     }
 
     /* Scan left */
     while ((m_currentWrite != IX_NULLPTR) && (m_currentWrite->index > m_writeIndex)) {
-        m_currentWrite = m_currentWrite->prev;
+        m_currentWrite = m_currentWrite->_prev;
     }
 
     /* At this point current_write will either point at or right of
-       the next block to write data to. It may be NULL in case
+       the _next block to write data to. It may be NULL in case
        everything in the queue is still to be played */
 }
 
@@ -134,25 +135,25 @@ void iMemBlockQueue::dropBlock(iMBQListItem *q)
 {
     IX_ASSERT(q && m_nBlocks >= 1);
 
-    if (q->prev)
-        q->prev->next = q->next;
+    if (q->_prev)
+        q->_prev->_next = q->_next;
     else {
         IX_ASSERT(m_blocks == q);
-        m_blocks = q->next;
+        m_blocks = q->_next;
     }
 
-    if (q->next)
-        q->next->prev = q->prev;
+    if (q->_next)
+        q->_next->_prev = q->_prev;
     else {
         IX_ASSERT(m_blocksTail == q);
-        m_blocksTail = q->prev;
+        m_blocksTail = q->_prev;
     }
 
     if (m_currentWrite == q)
-        m_currentWrite = q->prev;
+        m_currentWrite = q->_prev;
 
     if (m_currentRead == q)
-        m_currentRead = q->next;
+        m_currentRead = q->_next;
 
     q->chunk.m_memblock.block()->deref();
     delete q;
@@ -163,7 +164,6 @@ void iMemBlockQueue::dropBlock(iMBQListItem *q)
 void iMemBlockQueue::dropBacklog() 
 {
     xint64 boundary = m_readIndex - (xint64) m_maxRewind;
-
     while (m_blocks && (m_blocks->index + (xint64) m_blocks->chunk.m_length <= boundary))
         dropBlock(m_blocks);
 }
@@ -210,12 +210,12 @@ void iMemBlockQueue::readIndexChanged(xint64 oldReadIndex)
     ilog_verbose("[", m_name, "] popped ", delta,  ": missing counter at ", m_missing);
 }
 
-int iMemBlockQueue::push(const iMemChunk *uchunk) {
+int iMemBlockQueue::push(const iMemChunk *uchunk) 
+{
     IX_ASSERT(uchunk);
     IX_ASSERT(uchunk->m_memblock.block());
     IX_ASSERT(uchunk->m_length > 0);
     IX_ASSERT(uchunk->m_index + uchunk->m_length <= uchunk->m_memblock.block()->length());
-
     IX_ASSERT(uchunk->m_length % m_base == 0);
     IX_ASSERT(uchunk->m_index % m_base == 0);
 
@@ -230,11 +230,10 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
 
     /* First we advance the q pointer right of where we want to
      * write to */
-
     if (q) {
         while (m_writeIndex + (xint64) chunk.m_length > q->index)
-            if (q->next)
-                q = q->next;
+            if (q->_next)
+                q = q->_next;
             else
                 break;
     }
@@ -246,20 +245,19 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
      * this new entry. Drop data we will overwrite on the way */
 
     while (q) {
-
         if (m_writeIndex >= q->index + (xint64) q->chunk.m_length)
             /* We found the entry where we need to place the new entry immediately after */
             break;
         else if (m_writeIndex + (xint64) chunk.m_length <= q->index) {
             /* This entry isn't touched at all, let's skip it */
-            q = q->prev;
+            q = q->_prev;
         } else if (m_writeIndex <= q->index &&
                    m_writeIndex + (xint64) chunk.m_length >= q->index + (xint64) q->chunk.m_length) {
 
             /* This entry is fully replaced by the new entry, so let's drop it */
 
             iMBQListItem* p = q;
-            q = q->prev;
+            q = q->_prev;
             dropBlock(p);
         } else if (m_writeIndex >= q->index) {
             /* The write index points into this memblock, so let's
@@ -281,21 +279,20 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
                 p->chunk.m_length -= d;
 
                 /* Add it to the list */
-                p->prev = q;
-                if ((p->next = q->next))
-                    q->next->prev = p;
+                p->_prev = q;
+                if ((p->_next = q->_next))
+                    q->_next->_prev = p;
                 else
                     m_blocksTail = p;
-                q->next = p;
+                q->_next = p;
 
                 m_nBlocks++;
             }
 
             /* Truncate the chunk */
             if (!(q->chunk.m_length = (size_t) (m_writeIndex - q->index))) {
-                iMBQListItem *p;
-                p = q;
-                q = q->prev;
+                iMBQListItem *p = q;
+                q = q->_prev;
                 dropBlock(p);
             }
 
@@ -315,13 +312,13 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
             q->chunk.m_index += d;
             q->chunk.m_length -= d;
 
-            q = q->prev;
+            q = q->_prev;
         }
     }
 
     if (q) {
         IX_ASSERT(m_writeIndex >=  q->index + (xint64)q->chunk.m_length);
-        IX_ASSERT(!q->next || (m_writeIndex + (xint64)chunk.m_length <= q->next->index));
+        IX_ASSERT(!q->_next || (m_writeIndex + (xint64)chunk.m_length <= q->_next->index));
 
         /* Try to merge memory blocks */
 
@@ -344,16 +341,16 @@ int iMemBlockQueue::push(const iMemChunk *uchunk) {
     m_writeIndex += (xint64) n->chunk.m_length;
     n->chunk.m_memblock.block()->ref();
 
-    n->next = q ? q->next : m_blocks;
-    n->prev = q;
+    n->_next = q ? q->_next : m_blocks;
+    n->_prev = q;
 
-    if (n->next)
-        n->next->prev = n;
+    if (n->_next)
+        n->_next->_prev = n;
     else
         m_blocksTail = n;
 
-    if (n->prev)
-        n->prev->next = n;
+    if (n->_prev)
+        n->_prev->_next = n;
     else
         m_blocks = n;
 
@@ -489,8 +486,8 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk *chunk)
             tchunk.m_index += (size_t) d;
             tchunk.m_length -= (size_t) d;
 
-            /* Go to next item for the next iteration */
-            item = item->next;
+            /* Go to _next item for the _next iteration */
+            item = item->_next;
         }
 
         rchunk.m_length = tchunk.m_length = std::min<size_t>(tchunk.m_length, block_size - rchunk.m_index);
