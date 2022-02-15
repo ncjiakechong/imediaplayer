@@ -421,7 +421,7 @@ iByteArray iUtf16::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec
         length += 2;
     }
     if (e == DetectEndianness) {
-        endian = is_little_endian() ? LittleEndianness : BigEndianness ;
+        endian = iIsLittleEndian() ? LittleEndianness : BigEndianness ;
     }
 
     iByteArray d;
@@ -463,7 +463,7 @@ iString iUtf16::convertToUnicode(const char *chars, xsizetype len, iTextCodec::C
         }
     }
     if (headerdone && endian == DetectEndianness)
-        endian = is_little_endian() ? LittleEndianness : BigEndianness;
+        endian = iIsLittleEndian() ? LittleEndianness : BigEndianness;
 
     iString result(len, iShell::Uninitialized); // worst case
     iChar *qch = (iChar *)result.data();
@@ -485,7 +485,7 @@ iString iUtf16::convertToUnicode(const char *chars, xsizetype len, iTextCodec::C
                     } else if (ch == iChar::ByteOrderMark) {
                         endian = BigEndianness;
                     } else {
-                        if (!is_little_endian()) {
+                        if (!iIsLittleEndian()) {
                             endian = BigEndianness;
                         } else {
                             endian = LittleEndianness;
@@ -530,7 +530,7 @@ iByteArray iUtf32::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec
         length += 4;
     }
     if (e == DetectEndianness) {
-        endian = is_little_endian() ? LittleEndianness : BigEndianness;
+        endian = iIsLittleEndian() ? LittleEndianness : BigEndianness;
     }
 
     iByteArray d(length, iShell::Uninitialized);
@@ -587,7 +587,7 @@ iString iUtf32::convertToUnicode(const char *chars, xsizetype len, iTextCodec::C
         memcpy(tuple, &state->state_data[Data], 4);
     }
     if (headerdone && endian == DetectEndianness)
-        endian = is_little_endian() ? LittleEndianness : BigEndianness;
+        endian = iIsLittleEndian() ? LittleEndianness : BigEndianness;
 
     iString result;
     result.resize((num + len) >> 2 << 1); // worst case
@@ -607,7 +607,7 @@ iString iUtf32::convertToUnicode(const char *chars, xsizetype len, iTextCodec::C
                         endian = BigEndianness;
                         num = 0;
                         continue;
-                    } else if (!is_little_endian()) {
+                    } else if (!iIsLittleEndian()) {
                         endian = BigEndianness;
                     } else {
                         endian = LittleEndianness;

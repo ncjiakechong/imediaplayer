@@ -11,7 +11,7 @@
 #ifndef IPOINT_H
 #define IPOINT_H
 
-#include <core/global/iglobal.h>
+#include <core/global/inumeric.h>
 
 namespace iShell {
 

@@ -17,7 +17,6 @@
 namespace iShell {
 
 /*!
-
     Element in a iFreeList. ConstReferenceType and ReferenceType are used as
     the return values for iFreeList::at() and iFreeList::operator[](). Contains
     the real data storage (_t) and the id of the next free element (next).
@@ -31,7 +30,7 @@ struct iFreeListElement
     typedef T &ReferenceType;
 
     T _t;
-    iAtomicCounter<int> next;
+    iAtomicCounter<int> _next;
 
     inline ConstReferenceType t() const { return _t; }
     inline ReferenceType t() { return _t; }
@@ -39,7 +38,6 @@ struct iFreeListElement
 };
 
 /*!
-
     Element in a iFreeList without a payload. ConstReferenceType and
     ReferenceType are void, the t() functions return void and are empty.
 */
@@ -49,24 +47,20 @@ struct iFreeListElement<void>
     typedef void ConstReferenceType;
     typedef void ReferenceType;
 
-    iAtomicCounter<int> next;
+    iAtomicCounter<int> _next;
 
-    inline void t() const { }
-    inline void t() { }
+    inline void t() const {}
+    inline void t() {}
 };
 
 /*
-
     Defines default constants used by iFreeList:
 
     - The initial value returned by iFreeList::next() is zero.
-
     - iFreeList allows for up to 16777216 elements in iFreeList and uses the top
       8 bits to store a serial counter for ABA(tag) protection.
-
     - iFreeList will make a maximum of 4 allocations (blocks), with each
       successive block larger than the previous.
-
     - Sizes static int[] array to define the size of each block.
 
     It is possible to define your own constants struct/class and give this to
@@ -87,13 +81,10 @@ struct iFreeListDefaultConstants
     static const int Sizes[BlockCount];
 };
 
-template <typename T, typename ConstantsType = iFreeListDefaultConstants>
+template <typename T, typename ConstantsType>
 class iFreeListBase
 {
-    // iFreeListBase is not copyable
-    iFreeListBase(const iFreeListBase &);
-    iFreeListBase &operator=(const iFreeListBase &);
-
+    IX_DISABLE_COPY(iFreeListBase)
 protected:
     typedef T ValueType;
     typedef iFreeListElement<T> ElementType;
@@ -117,7 +108,7 @@ protected:
     static inline ElementType *allocate(int offset, int size) {
         ElementType *v = new ElementType[size];
         for (int i = 0; i < size; ++i)
-            v[i].next = (offset + i + 1);
+            v[i]._next = (offset + i + 1);
 
         return v;
     }
@@ -127,19 +118,19 @@ protected:
         return int((uint(n) & ConstantsType::IndexMask) | ((uint(o) + ConstantsType::SerialCounter) & ConstantsType::SerialMask));
     }
 
-    inline int next4list(iAtomicCounter<int>& list, bool doExpand);
-    inline void release4list(iAtomicCounter<int>& list, int id);
-
     inline iFreeListBase(int size)
         : /*_v{},*/ _stored(ConstantsType::MaxIndex)
         , _empty(ConstantsType::InitialNextValue)
         , _maxIndex((size <= 0) ? ConstantsType::MaxIndex : std::min<int>(std::max(ConstantsType::InitialNextValue + 1, ConstantsType::InitialNextValue + size), ConstantsType::MaxIndex)) 
-        { }
+        {}
 
     inline ~iFreeListBase() {
         for (int i = 0; i < ConstantsType::BlockCount; ++i)
             delete [] _v[i].load();
     }
+
+    inline int next4list(iAtomicCounter<int>& list, bool doExpand);
+    inline void release4list(iAtomicCounter<int>& list, int id);
 
     // the blocks
     iAtomicPointer<ElementType> _v[ConstantsType::BlockCount];
@@ -183,7 +174,7 @@ class iFreeList : public iFreeListBase<T, ConstantsType>
     DestroyNotify _destoryNotify;
 public:
     inline iFreeList(int size = 0, DestroyNotify notify = IX_NULLPTR)
-        : ParentType(size), _destoryNotify(notify) { }
+        : ParentType(size), _destoryNotify(notify) {}
 
     inline ~iFreeList() {
         if (IX_NULLPTR != _destoryNotify)
@@ -243,8 +234,8 @@ class iFreeList<void, ConstantsType> : public iFreeListBase<void, ConstantsType>
 {
     typedef iFreeListBase<void, ConstantsType> ParentType;
 public:
-    inline iFreeList(int size = 0) : ParentType(size) { }
-    inline ~iFreeList() { }
+    inline iFreeList(int size = 0) : ParentType(size) {}
+    inline ~iFreeList() {}
 
     // returns the payload for the given index \a x
     inline typename ParentType::ConstReferenceType at(int x) const 
@@ -266,11 +257,11 @@ public:
 template <typename T, typename ConstantsType>
 inline int iFreeListBase<T, ConstantsType>::next4list(iAtomicCounter<int>& list, bool doExpand)
 {
-    int id, newid, at;
+    int id, newid;
     ElementType *v;
     do {
         id = list.value();
-        at = id & ConstantsType::IndexMask;
+        int at = id & ConstantsType::IndexMask;
         if (at < ConstantsType::InitialNextValue || at >= this->_maxIndex)
             return -1;
 
@@ -292,7 +283,7 @@ inline int iFreeListBase<T, ConstantsType>::next4list(iAtomicCounter<int>& list,
             return -1;
         }
 
-        newid = v[at].next | (id & ~ConstantsType::IndexMask);
+        newid = v[at]._next | (id & ~ConstantsType::IndexMask);
     } while (!list.testAndSet(id, newid));
     return id & ConstantsType::IndexMask;
 }
@@ -308,7 +299,7 @@ inline void iFreeListBase<T, ConstantsType>::release4list(iAtomicCounter<int>& l
     int x, newid;
     do {
         x = list.value();
-        v[at].next = (x & ConstantsType::IndexMask);
+        v[at]._next = (x & ConstantsType::IndexMask);
 
         newid = incrementserial(x, id);
     } while (!list.testAndSet(x, newid));

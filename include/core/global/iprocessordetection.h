@@ -23,8 +23,7 @@
 #  define IX_LITTLE_ENDIAN 1234
 #endif
 
-
-/*
+/**
   NOTE:
   GCC 4.6 added __BYTE_ORDER__, __ORDER_BIG_ENDIAN__, __ORDER_LITTLE_ENDIAN__
   and __ORDER_PDP_ENDIAN__ in SVN r165881. If you are using GCC 4.6 or newer,
@@ -44,6 +43,5 @@
 #else
 #  error "Unable to determine byte order!"
 #endif
-
 
 #endif // IPROCESSORDETECTION_H

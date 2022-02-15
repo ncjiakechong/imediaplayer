@@ -9,6 +9,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include "core/global/iendian.h"
 #include "multimedia/audio/iaudioformat.h"
 
 namespace iShell {
@@ -86,7 +87,7 @@ namespace iShell {
     \endlist
 */
 iAudioFormat::iAudioFormat()
-    : m_byteOrder(iAudioFormat::Endian(is_little_endian()))
+    : m_byteOrder(iAudioFormat::Endian(iIsLittleEndian()))
     , m_sampleType(Unknown)
     , m_sampleRate(-1)
     , m_channels(-1)

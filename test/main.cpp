@@ -17,16 +17,14 @@
 
 #define ILOG_TAG "test"
 
-using namespace iShell;
-
 extern int test_iconvertible(void);
 extern int test_object(void);
 extern int test_ivariant(void);
 extern int test_thread(void);
 extern int test_timer(void);
-extern int test_player(const iString&);
+extern int test_player(const iShell::iString&);
 
-class TestCase : public iObject
+class TestCase : public iShell::iObject
 {
     IX_OBJECT(TestCase)
 public:
@@ -34,7 +32,7 @@ public:
 
     int start() const {
         TestCase* _This = const_cast<TestCase*>(this);
-        connect(_This, &TestCase::tstcase_sig, _This, &TestCase::doTestCase, QueuedConnection);
+        connect(_This, &TestCase::tstcase_sig, _This, &TestCase::doTestCase, iShell::QueuedConnection);
         IEMIT _This->tstcase_sig(0);
 
         return 0;
@@ -61,10 +59,10 @@ public:
         #ifdef ITEST_PLAYER
         case 5:
         {
-            std::list<iString> args = iCoreApplication::arguments();
-            iString url;
+            std::list<iShell::iString> args = iShell::iCoreApplication::arguments();
+            iShell::iString url;
             if (args.size() > 1) {
-                std::list<iString>::iterator tmpIt = args.begin();
+                std::list<iShell::iString>::iterator tmpIt = args.begin();
                 std::advance(tmpIt, 1);
                 url = *tmpIt;
             }
@@ -74,7 +72,7 @@ public:
             break;
         #endif
         default:
-            iCoreApplication::quit();
+            iShell::iCoreApplication::quit();
             return;
 
         }
@@ -87,11 +85,11 @@ public:
 
 int main(int argc, char **argv)
 {
-    iCoreApplication app(argc, argv);
+    iShell::iCoreApplication app(argc, argv);
 
-    iPollFD wakeupFd = {};
-    iWakeup wakeup;
-    iEventSource* source = new iEventSource(0);
+    iShell::iPollFD wakeupFd = {};
+    iShell::iWakeup wakeup;
+    iShell::iEventSource* source = new iShell::iEventSource(0);
 
     wakeup.getPollfd(&wakeupFd);
     source->addPoll(&wakeupFd);
@@ -100,7 +98,7 @@ int main(int argc, char **argv)
 
     TestCase* tstCase = new TestCase;
 
-    tstCase->invokeMethod(tstCase, &TestCase::start, QueuedConnection);
+    tstCase->invokeMethod(tstCase, &TestCase::start, iShell::QueuedConnection);
 
     app.exec();
 

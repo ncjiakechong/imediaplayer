@@ -27,7 +27,6 @@ enum GuardValues {
 
 // We don't know if this compiler supports thread-safe global statics
 // so use our own locked implementation
-
 #define IX_GLOBAL_STATIC_INTERNAL(ARGS)                                 \
     inline Type *innerFunction()                                        \
     {                                                                   \
