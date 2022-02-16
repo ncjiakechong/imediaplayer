@@ -28,6 +28,8 @@ public:
 
 private:
     xintptr m_fds[2];
+
+    IX_DISABLE_COPY(iWakeup)
 };
 
 } // namespace iShell

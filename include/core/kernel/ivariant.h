@@ -92,9 +92,7 @@ public:
     }
 
     template<typename T>
-    operator T() const {
-        return value<T>();
-    }
+    operator T() const { return value<T>(); }
 
     struct iTypeHandler
     {
@@ -127,11 +125,7 @@ public:
 private:
     struct IX_CORE_EXPORT iAbstractVariantImpl
     {
-        enum Operation
-        {
-            Destroy,
-            Create
-        };
+        enum Operation { Destroy, Create };
 
         // don't use virtual functions here; we don't want the
         // compiler to create tons of per-polymorphic-class stuff that
@@ -303,16 +297,12 @@ bool iRegisterConverter(UnaryFunction function)
 
 template<typename From, typename To>
 To iConvertImplicit(const From& from)
-{
-    return To(from);
-}
+{ return To(from); }
 
 // implicit conversion supported like double -> float
 template<typename From, typename To>
 bool iRegisterConverter()
-{
-    return iRegisterConverter<From, To>(iConvertImplicit<From, To>);
-}
+{ return iRegisterConverter<From, To>(iConvertImplicit<From, To>); }
 
 } // namespace iShell
 

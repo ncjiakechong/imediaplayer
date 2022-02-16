@@ -78,16 +78,15 @@ inline void iThreadStorage_deleteData(void *d, T *)
 template <class T>
 class iThreadStorage
 {
-    iThreadStorageData d;
-
     IX_DISABLE_COPY(iThreadStorage)
+    iThreadStorageData d;
 
     static inline void deleteData(void *x)
     { iThreadStorage_deleteData(x, reinterpret_cast<T*>(0)); }
 
 public:
-    inline iThreadStorage() : d(deleteData) { }
-    inline ~iThreadStorage() { }
+    inline iThreadStorage() : d(deleteData) {}
+    inline ~iThreadStorage() {}
 
     inline bool hasLocalData() const
     { return d.get() != IX_NULLPTR; }

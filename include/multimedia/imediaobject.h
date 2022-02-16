@@ -24,7 +24,7 @@ class IX_MULTIMEDIA_EXPORT iMediaObject : public iObject
 {
     IX_OBJECT(iMediaObject)
 public:
-    ~iMediaObject();
+    virtual ~iMediaObject();
 
     virtual bool isAvailable() const;
     virtual iMultimedia::AvailabilityStatus availability() const;

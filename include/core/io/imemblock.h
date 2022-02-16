@@ -248,7 +248,7 @@ private:
     static iMemPool* fakeAdaptor();
 
     iMemPool(iShareMem* memory, size_t block_size, xuint32 n_blocks, bool perClient);
-    ~iMemPool();
+    virtual ~iMemPool();
 
     Slot* allocateSlot();
     void* slotData(const Slot* slot);
@@ -288,7 +288,7 @@ class IX_CORE_EXPORT iMemImport
 {
 public:
     iMemImport(iMemPool* pool, iMemImportReleaseCb cb, void* userdata);
-    ~iMemImport();
+    virtual ~iMemImport();
 
     iMemBlock* get(MemType type, uint blockId, uint shmId, size_t offset, size_t size, bool writable);
     int processRevoke(uint blockId);

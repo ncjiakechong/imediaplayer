@@ -25,8 +25,8 @@
 namespace iShell {
 
 /*
-   Logic that check if the arguments of the slot matches the argument of the signal.
-*/
+ * Logic that check if the arguments of the slot matches the argument of the signal.
+ */
 
 //template <typename List1, typename List2> struct CheckCompatibleArguments { enum { value = false }; };
 //template <> struct CheckCompatibleArguments<iTypeListType<>, iTypeListType<> > { enum { value = true }; };

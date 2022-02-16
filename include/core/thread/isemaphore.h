@@ -58,10 +58,9 @@ public:
         /// semaphore. This number can never be negative.
 
 private:
-    iSemaphore(const iSemaphore&);
-    iSemaphore& operator = (const iSemaphore&);
-
     iSemaphoreImp* m_semph;
+
+    IX_DISABLE_COPY(iSemaphore)
 };
 
 } // namespace iShell

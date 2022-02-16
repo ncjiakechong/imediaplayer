@@ -89,9 +89,7 @@ public:
 // apply defaults for a generic iTypeInfo<T> that didn't provide the new values
 template <typename T, typename = void>
 struct iTypeInfoQuery : public iTypeInfo<T>
-{
-    enum { isRelocatable = !iTypeInfo<T>::isStatic };
-};
+{ enum { isRelocatable = !iTypeInfo<T>::isStatic }; };
 
 // if iTypeInfo<T>::isRelocatable exists, use it
 template <typename T>
@@ -188,8 +186,8 @@ inline void swap(TYPE &value1, TYPE &value2) \
 #define IX_DECLARE_SHARED(TYPE) IX_DECLARE_SHARED_IMPL(TYPE, IX_MOVABLE_TYPE)
 
 /*
-   iTypeInfo primitive specializations
-*/
+ * iTypeInfo primitive specializations
+ */
 IX_DECLARE_TYPEINFO(bool, IX_PRIMITIVE_TYPE);
 IX_DECLARE_TYPEINFO(char, IX_PRIMITIVE_TYPE);
 IX_DECLARE_TYPEINFO(signed char, IX_PRIMITIVE_TYPE);

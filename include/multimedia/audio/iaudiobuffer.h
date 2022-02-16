@@ -64,14 +64,12 @@ public:
         StereoFrame()
             : left(T(StereoFrameDefault<T>::Default))
             , right(T(StereoFrameDefault<T>::Default))
-        {
-        }
+        {}
 
         StereoFrame(T leftSample, T rightSample)
             : left(leftSample)
             , right(rightSample)
-        {
-        }
+        {}
 
         StereoFrame& operator=(const StereoFrame &other)
         {

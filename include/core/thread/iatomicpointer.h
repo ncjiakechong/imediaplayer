@@ -57,50 +57,37 @@ private:
 
     ImplType m_pointer;
 
-    iAtomicPointer(const iAtomicPointer& counter);
-    iAtomicPointer& operator = (const iAtomicPointer& counter);
+    IX_DISABLE_COPY(iAtomicPointer)
 };
 
 
-//
-// inlines
-//
 #ifdef IX_HAVE_CXX11
 //
 // C++11 atomics
 //
 template <typename X>
 inline iAtomicPointer<X>::iAtomicPointer() : m_pointer(0)
-{
-}
+{}
 
 template <typename X>
 inline iAtomicPointer<X>::iAtomicPointer(Type value) : m_pointer(value)
-{
-}
+{}
 
 template <typename X>
 inline iAtomicPointer<X>::~iAtomicPointer()
-{
-}
+{}
 
 template <typename X>
 inline typename iAtomicPointer<X>::Type iAtomicPointer<X>::load() const
-{
-    return m_pointer.load();
-}
+{ return m_pointer.load(); }
 
 template <typename X>
 inline void iAtomicPointer<X>::store(Type newValue)
-{
-    m_pointer.store(newValue);
-}
+{ m_pointer.store(newValue); }
 
 template <typename X>
 inline bool iAtomicPointer<X>::testAndSet(Type expectedValue, Type newValue)
-{
-    return m_pointer.compare_exchange_weak(expectedValue, newValue);
-}
+{ return m_pointer.compare_exchange_weak(expectedValue, newValue); }
 
 #else
 //
@@ -108,20 +95,15 @@ inline bool iAtomicPointer<X>::testAndSet(Type expectedValue, Type newValue)
 //
 template <typename X>
 inline iAtomicPointer<X>::iAtomicPointer()
-{
-    m_pointer.value = 0;
-}
+{ m_pointer.value = 0; }
 
 template <typename X>
 inline iAtomicPointer<X>::iAtomicPointer(Type value)
-{
-    m_pointer.value = value;
-}
+{ m_pointer.value = value; }
 
 template <typename X>
 inline iAtomicPointer<X>::~iAtomicPointer()
-{
-}
+{}
 
 template <typename X>
 inline typename iAtomicPointer<X>::Type iAtomicPointer<X>::load() const
@@ -148,7 +130,6 @@ inline bool iAtomicPointer<X>::testAndSet(Type expectedValue, Type newValue)
 
     return false;
 }
-
 
 #endif
 

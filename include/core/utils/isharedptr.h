@@ -190,7 +190,7 @@ public:
     bool operator !() const { return isNull(); }
     T *operator->() const { return data(); }
 
-    iSharedPtr() : value(IX_NULLPTR), d(IX_NULLPTR) { }
+    iSharedPtr() : value(IX_NULLPTR), d(IX_NULLPTR) {}
     ~iSharedPtr() { deref(d); }
 
     template <class X>
@@ -317,7 +317,7 @@ public:
     bool isNull() const { return (d == IX_NULLPTR || d->strongCount() == 0 || value == IX_NULLPTR); }
     bool operator !() const { return isNull(); }
 
-    inline iWeakPtr() : d(IX_NULLPTR), value(IX_NULLPTR) { }
+    inline iWeakPtr() : d(IX_NULLPTR), value(IX_NULLPTR) {}
     inline ~iWeakPtr() { if (d) d->weakDeref(); }
 
     template <class X>

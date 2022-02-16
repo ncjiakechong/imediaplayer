@@ -54,10 +54,9 @@ public:
         /// threads to continue their execution.
 
 private:
-    iCondition(const iCondition&);
-    iCondition& operator = (const iCondition&);
-
     iConditionImpl* m_cond;
+
+    IX_DISABLE_COPY(iCondition)
 };
 
 } // namespace iShell

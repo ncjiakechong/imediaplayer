@@ -95,7 +95,7 @@ void iWakeup::signal()
         /* eventfd() case. It requires a 64-bit counter increment value to be
          * written. */
         do {
-            res = write (m_fds[0], &one, sizeof(one));
+            res = write(m_fds[0], &one, sizeof(one));
         }while ((res == -1) && (errno == EINTR));
     } else {
         xuint8 one = 1;
@@ -103,7 +103,7 @@ void iWakeup::signal()
         /* Non-eventfd() case. Only a single byte needs to be written, and it can
          * have an arbitrary value. */
         do {
-            res = write (m_fds[1], &one, sizeof(one));
+            res = write(m_fds[1], &one, sizeof(one));
         } while ((res == -1) && (errno == EINTR));
     }
 }
@@ -113,7 +113,7 @@ void iWakeup::acknowledge()
     char buffer[16];
 
     /* read until it is empty */
-    while (read (m_fds[0], buffer, sizeof(buffer)) == sizeof(buffer));
+    while (read(m_fds[0], buffer, sizeof(buffer)) == sizeof(buffer));
 }
 #endif /* !IX_OS_WIN */
 

@@ -361,14 +361,10 @@ inline void iRect::setSize(const iSize &s)
 }
 
 inline bool iRect::contains(int ax, int ay, bool aproper) const
-{
-    return contains(iPoint(ax, ay), aproper);
-}
+{ return contains(iPoint(ax, ay), aproper); }
 
 inline bool iRect::contains(int ax, int ay) const
-{
-    return contains(iPoint(ax, ay), false);
-}
+{ return contains(iPoint(ax, ay), false); }
 
 inline iRect& iRect::operator|=(const iRect &r)
 {
@@ -383,24 +379,16 @@ inline iRect& iRect::operator&=(const iRect &r)
 }
 
 inline iRect iRect::intersected(const iRect &other) const
-{
-    return *this & other;
-}
+{ return *this & other; }
 
 inline iRect iRect::united(const iRect &r) const
-{
-    return *this | r;
-}
+{ return *this | r; }
 
 inline bool operator==(const iRect &r1, const iRect &r2)
-{
-    return r1.x1==r2.x1 && r1.x2==r2.x2 && r1.y1==r2.y1 && r1.y2==r2.y2;
-}
+{ return r1.x1==r2.x1 && r1.x2==r2.x2 && r1.y1==r2.y1 && r1.y2==r2.y2; }
 
 inline bool operator!=(const iRect &r1, const iRect &r2)
-{
-    return r1.x1!=r2.x1 || r1.x2!=r2.x2 || r1.y1!=r2.y1 || r1.y2!=r2.y2;
-}
+{ return r1.x1!=r2.x1 || r1.x2!=r2.x2 || r1.y1!=r2.y1 || r1.y2!=r2.y2; }
 
 class IX_CORE_EXPORT iRectF
 {
@@ -515,24 +503,19 @@ inline bool operator!=(const iRectF &, const iRectF &);
 
 inline iRectF::iRectF(double aleft, double atop, double awidth, double aheight)
     : xp(aleft), yp(atop), w(awidth), h(aheight)
-{
-}
+{}
 
 inline iRectF::iRectF(const iPointF &atopLeft, const iSizeF &asize)
     : xp(atopLeft.x()), yp(atopLeft.y()), w(asize.width()), h(asize.height())
-{
-}
-
+{}
 
 inline iRectF::iRectF(const iPointF &atopLeft, const iPointF &abottomRight)
     : xp(atopLeft.x()), yp(atopLeft.y()), w(abottomRight.x() - atopLeft.x()), h(abottomRight.y() - atopLeft.y())
-{
-}
+{}
 
 inline iRectF::iRectF(const iRect &r)
     : xp(r.x()), yp(r.y()), w(r.width()), h(r.height())
-{
-}
+{}
 
 inline bool iRectF::isNull() const
 { return w == 0. && h == 0.; }
@@ -713,14 +696,10 @@ inline iRectF& iRectF::operator&=(const iRectF &r)
 }
 
 inline iRectF iRectF::intersected(const iRectF &r) const
-{
-    return *this & r;
-}
+{ return *this & r; }
 
 inline iRectF iRectF::united(const iRectF &r) const
-{
-    return *this | r;
-}
+{ return *this | r; }
 
 inline bool operator==(const iRectF &r1, const iRectF &r2)
 {
@@ -735,9 +714,7 @@ inline bool operator!=(const iRectF &r1, const iRectF &r2)
 }
 
 inline iRect iRectF::toRect() const
-{
-    return iRect(int(std::round(xp)), int(std::round(yp)), int(std::round(w)), int(std::round(h)));
-}
+{ return iRect(int(std::round(xp)), int(std::round(yp)), int(std::round(w)), int(std::round(h))); }
 
 } // namespace iShell
 

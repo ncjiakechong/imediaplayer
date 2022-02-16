@@ -151,14 +151,10 @@ inline const iSize operator/(const iSize &s, double c)
 }
 
 inline iSize iSize::expandedTo(const iSize & otherSize) const
-{
-    return iSize(std::max(wd,otherSize.wd), std::max(ht,otherSize.ht));
-}
+{ return iSize(std::max(wd,otherSize.wd), std::max(ht,otherSize.ht)); }
 
 inline iSize iSize::boundedTo(const iSize & otherSize) const
-{
-    return iSize(std::min(wd,otherSize.wd), std::min(ht,otherSize.ht));
-}
+{ return iSize(std::min(wd,otherSize.wd), std::min(ht,otherSize.ht)); }
 
 class IX_CORE_EXPORT iSizeF
 {
@@ -299,19 +295,13 @@ inline const iSizeF operator/(const iSizeF &s, double c)
 }
 
 inline iSizeF iSizeF::expandedTo(const iSizeF & otherSize) const
-{
-    return iSizeF(std::max(wd,otherSize.wd), std::max(ht,otherSize.ht));
-}
+{ return iSizeF(std::max(wd,otherSize.wd), std::max(ht,otherSize.ht)); }
 
 inline iSizeF iSizeF::boundedTo(const iSizeF & otherSize) const
-{
-    return iSizeF(std::min(wd,otherSize.wd), std::min(ht,otherSize.ht));
-}
+{ return iSizeF(std::min(wd,otherSize.wd), std::min(ht,otherSize.ht)); }
 
 inline iSize iSizeF::toSize() const
-{
-    return iSize(int(std::round(wd)), int(std::round(ht)));
-}
+{ return iSize(int(std::round(wd)), int(std::round(ht))); }
 
 } // namespace iShell
 

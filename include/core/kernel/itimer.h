@@ -41,9 +41,8 @@ public:
 
     // singleShot to a iObject slot
     template <typename Duration, typename Func, typename Object>
-    static inline void singleShot(Duration interval, xintptr userdata, const Object *receiver, Func slot) {
-        singleShot(interval, userdata, defaultTypeFor(interval), receiver, slot);
-    }
+    static inline void singleShot(Duration interval, xintptr userdata, const Object *receiver, Func slot)
+    { singleShot(interval, userdata, defaultTypeFor(interval), receiver, slot); }
     template <typename Duration, typename Func, typename Object>
     static inline typename enable_if< FunctionPointer<Func, -1>::ArgumentCount >= 0, void>::type
         singleShot(Duration interval, xintptr userdata, TimerType timerType, const Object *receiver, Func slot) {
@@ -94,13 +93,12 @@ private:
     static void singleShotImpl(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn);
 
     bool m_single;
-    int m_id;
-    int m_inter;
+    int  m_id;
+    int  m_inter;
     xintptr m_userdata;
     TimerType m_type;
 
-    iTimer(const iTimer &);
-    iTimer &operator=(const iTimer &);
+    IX_DISABLE_COPY(iTimer)
 };
 
 } // namespace iShell

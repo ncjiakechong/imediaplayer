@@ -387,17 +387,11 @@ public:
 
     // note - this are all inline so we can benefit from strlen() compile time optimizations
     static inline iString fromLatin1(const char *str, xsizetype size = -1)
-    {
-        return iString(fromLatin1_helper(str, (str && size == -1)  ? xsizetype(strlen(str)) : size));
-    }
+    { return iString(fromLatin1_helper(str, (str && size == -1)  ? xsizetype(strlen(str)) : size)); }
     static inline iString fromUtf8(const char *str, xsizetype size = -1)
-    {
-        return fromUtf8_helper(str, (str && size == -1) ? xsizetype(strlen(str)) : size);
-    }
+    { return fromUtf8_helper(str, (str && size == -1) ? xsizetype(strlen(str)) : size); }
     static inline iString fromLocal8Bit(const char *str, xsizetype size = -1)
-    {
-        return fromLocal8Bit_helper(str, (str && size == -1) ? xsizetype(strlen(str)) : size);
-    }
+    { return fromLocal8Bit_helper(str, (str && size == -1) ? xsizetype(strlen(str)) : size); }
     static inline iString fromLatin1(const iByteArray &str)
     { return str.isNull() ? iString() : fromLatin1(str.data(), istrnlen(str.constData(), str.size())); }
     static inline iString fromUtf8(const iByteArray &str)
@@ -672,7 +666,7 @@ iString iStringView::toString() const
 // iString inline members
 //
 inline iString::iString(iLatin1String aLatin1) : d(fromLatin1_helper(aLatin1.latin1(), aLatin1.size()))
-{ }
+{}
 inline const iChar iString::at(xsizetype i) const
 { IX_ASSERT(size_t(i) < size_t(size())); return iChar(d.data()[i]); }
 inline const iChar iString::operator[](xsizetype i) const

@@ -207,51 +207,35 @@ private:
   iPointF inline functions
  *****************************************************************************/
 
-inline iPointF::iPointF() : xp(0), yp(0) { }
+inline iPointF::iPointF() : xp(0), yp(0) {}
 
-inline iPointF::iPointF(double xpos, double ypos) : xp(xpos), yp(ypos) { }
+inline iPointF::iPointF(double xpos, double ypos) : xp(xpos), yp(ypos) {}
 
-inline iPointF::iPointF(const iPoint &p) : xp(p.x()), yp(p.y()) { }
+inline iPointF::iPointF(const iPoint &p) : xp(p.x()), yp(p.y()) {}
 
 inline double iPointF::manhattanLength() const
-{
-    return std::abs(x())+std::abs(y());
-}
+{ return std::abs(x())+std::abs(y()); }
 
 inline bool iPointF::isNull() const
-{
-    return iIsNull(xp) && iIsNull(yp);
-}
+{ return iIsNull(xp) && iIsNull(yp); }
 
 inline double iPointF::x() const
-{
-    return xp;
-}
+{ return xp; }
 
 inline double iPointF::y() const
-{
-    return yp;
-}
+{ return yp; }
 
 inline void iPointF::setX(double xpos)
-{
-    xp = xpos;
-}
+{ xp = xpos; }
 
 inline void iPointF::setY(double ypos)
-{
-    yp = ypos;
-}
+{ yp = ypos; }
 
 inline double &iPointF::rx()
-{
-    return xp;
-}
+{ return xp; }
 
 inline double &iPointF::ry()
-{
-    return yp;
-}
+{ return yp; }
 
 inline iPointF &iPointF::operator+=(const iPointF &p)
 {
@@ -261,54 +245,34 @@ inline iPointF &iPointF::operator+=(const iPointF &p)
 }
 
 inline iPointF &iPointF::operator-=(const iPointF &p)
-{
-    xp-=p.xp; yp-=p.yp; return *this;
-}
+{ xp-=p.xp; yp-=p.yp; return *this; }
 
 inline iPointF &iPointF::operator*=(double c)
-{
-    xp*=c; yp*=c; return *this;
-}
+{ xp*=c; yp*=c; return *this; }
 
 inline bool operator==(const iPointF &p1, const iPointF &p2)
-{
-    return iFuzzyIsNull(p1.xp - p2.xp) && iFuzzyIsNull(p1.yp - p2.yp);
-}
+{ return iFuzzyIsNull(p1.xp - p2.xp) && iFuzzyIsNull(p1.yp - p2.yp); }
 
 inline bool operator!=(const iPointF &p1, const iPointF &p2)
-{
-    return !iFuzzyIsNull(p1.xp - p2.xp) || !iFuzzyIsNull(p1.yp - p2.yp);
-}
+{ return !iFuzzyIsNull(p1.xp - p2.xp) || !iFuzzyIsNull(p1.yp - p2.yp); }
 
 inline const iPointF operator+(const iPointF &p1, const iPointF &p2)
-{
-    return iPointF(p1.xp+p2.xp, p1.yp+p2.yp);
-}
+{ return iPointF(p1.xp+p2.xp, p1.yp+p2.yp); }
 
 inline const iPointF operator-(const iPointF &p1, const iPointF &p2)
-{
-    return iPointF(p1.xp-p2.xp, p1.yp-p2.yp);
-}
+{ return iPointF(p1.xp-p2.xp, p1.yp-p2.yp); }
 
 inline const iPointF operator*(const iPointF &p, double c)
-{
-    return iPointF(p.xp*c, p.yp*c);
-}
+{ return iPointF(p.xp*c, p.yp*c); }
 
 inline const iPointF operator*(double c, const iPointF &p)
-{
-    return iPointF(p.xp*c, p.yp*c);
-}
+{ return iPointF(p.xp*c, p.yp*c); }
 
 inline const iPointF operator+(const iPointF &p)
-{
-    return p;
-}
+{ return p; }
 
 inline const iPointF operator-(const iPointF &p)
-{
-    return iPointF(-p.xp, -p.yp);
-}
+{ return iPointF(-p.xp, -p.yp); }
 
 inline iPointF &iPointF::operator/=(double divisor)
 {
@@ -318,14 +282,10 @@ inline iPointF &iPointF::operator/=(double divisor)
 }
 
 inline const iPointF operator/(const iPointF &p, double divisor)
-{
-    return iPointF(p.xp/divisor, p.yp/divisor);
-}
+{ return iPointF(p.xp/divisor, p.yp/divisor); }
 
 inline iPoint iPointF::toPoint() const
-{
-    return iPoint(int(std::round(xp)), int(std::round(yp)));
-}
+{ return iPoint(int(std::round(xp)), int(std::round(yp))); }
 
 } // namespace iShell
 

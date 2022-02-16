@@ -115,14 +115,10 @@ private:
 };
 
 template <class T> inline bool operator==(std::nullptr_t, const iSharedDataPointer<T> &p2)
-{
-    return !p2;
-}
+{ return !p2; }
 
 template <class T> inline bool operator==(const iSharedDataPointer<T> &p1, std::nullptr_t)
-{
-    return !p1;
-}
+{ return !p1; }
 
 /*!
     iExplicitlySharedDataPointer\<T\> makes writing your own explicitly
@@ -193,10 +189,7 @@ public:
     template<class X>
     inline iExplicitlySharedDataPointer(const iExplicitlySharedDataPointer<X> &o)
         : d(static_cast<T *>(o.data()))
-    {
-        if(d)
-            d->ref(true);
-    }
+    { if(d) d->ref(true); }
 
     inline iExplicitlySharedDataPointer<T> & operator=(const iExplicitlySharedDataPointer<T> &o) {
         if (o.d != d) {
@@ -242,9 +235,7 @@ inline iSharedDataPointer<T>::iSharedDataPointer(T *adata)
 
 template <class T>
 inline T *iSharedDataPointer<T>::clone()
-{
-    return new T(*d);
-}
+{ return new T(*d); }
 
 template <class T>
 void iSharedDataPointer<T>::detach_helper()
@@ -257,9 +248,7 @@ void iSharedDataPointer<T>::detach_helper()
 
 template <class T>
 inline T *iExplicitlySharedDataPointer<T>::clone()
-{
-    return new T(*d);
-}
+{ return new T(*d); }
 
 template <class T>
 void iExplicitlySharedDataPointer<T>::detach_helper()
@@ -276,14 +265,10 @@ inline iExplicitlySharedDataPointer<T>::iExplicitlySharedDataPointer(T *adata)
 { if (d) d->ref(true); }
 
 template <class T> inline bool operator==(std::nullptr_t, const iExplicitlySharedDataPointer<T> &p2)
-{
-    return !p2;
-}
+{ return !p2; }
 
 template <class T> inline bool operator==(const iExplicitlySharedDataPointer<T> &p1, std::nullptr_t)
-{
-    return !p1;
-}
+{ return !p1; }
 
 template<typename T> IX_DECLARE_TYPEINFO_BODY(iSharedDataPointer<T>, IX_MOVABLE_TYPE);
 template<typename T> IX_DECLARE_TYPEINFO_BODY(iExplicitlySharedDataPointer<T>, IX_MOVABLE_TYPE);
