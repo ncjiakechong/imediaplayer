@@ -45,7 +45,7 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
     , m_requested(0)
     , m_name(name)
 {
-    ilog_debug("memblockq(", m_name, ") requested: maxlength=", maxlength, 
+    ilog_debug("memblockq[", m_name, "] requested: maxlength=", maxlength, 
                 ", tlength=", tlength, ", base=", base, ", prebuf=", prebuf, 
                 ", minreq=", minreq, " maxrewind=", maxrewind);
 
@@ -55,7 +55,7 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
     setPreBuf(prebuf);
     setMaxRewind(maxrewind);
 
-    ilog_debug("memblockq(", m_name, ") sanitized: maxlength=", m_maxLength, 
+    ilog_debug("memblockq[", m_name, "] sanitized: maxlength=", m_maxLength, 
                 ", tlength=", m_tLength, ", base=", m_base, ", prebuf=", m_preBuf, 
                 ", minreq=", m_minReq, " maxrewind=", m_maxRewind);
 
@@ -198,7 +198,7 @@ void iMemBlockQueue::writeIndexChanged(xint64 oldWriteIndex, bool account)
     else
         m_missing -= delta;
 
-     ilog_verbose("[", m_name, "] pushed/seeked ", delta, 
+     ilog_verbose("memblockq[", m_name, "] pushed/seeked ", delta, 
                   ": requested counter at ", m_requested, ", account=", account);
 }
 
@@ -207,7 +207,7 @@ void iMemBlockQueue::readIndexChanged(xint64 oldReadIndex)
     xint64 delta = m_readIndex - oldReadIndex;
     m_missing += delta;
 
-    ilog_verbose("[", m_name, "] popped ", delta,  ": missing counter at ", m_missing);
+    ilog_verbose("memblockq[", m_name, "] popped ", delta,  ": missing counter at ", m_missing);
 }
 
 int iMemBlockQueue::push(const iMemChunk *uchunk) 
@@ -640,7 +640,7 @@ int iMemBlockQueue::pushAlign(const iMemChunk *chunk)
 
 size_t iMemBlockQueue::popMissing() 
 {
-    ilog_verbose("[", m_name, "] pop: ", m_missing);
+    ilog_verbose("memblockq[", m_name, "] pop: ", m_missing);
 
     if (m_missing <= 0)
         return 0;
@@ -653,7 +653,7 @@ size_t iMemBlockQueue::popMissing()
     m_requested += m_missing;
     m_missing = 0;
 
-    ilog_verbose("[", m_name, "] sent ", l, ": request counter is at ", m_requested);
+    ilog_verbose("memblockq[", m_name, "] sent ", l, ": request counter is at ", m_requested);
 
     return l;
 }

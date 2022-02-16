@@ -127,7 +127,7 @@ public:
     {
         if (d == IX_NULLPTR)
             return 0;
-        return this->ptr - static_cast<T*>(Data::dataStart(d, alignof(typename Data::AlignmentDummy)));
+        return this->ptr - static_cast<T*>(Data::dataStart(d, IX_ALIGNOF(typename Data::AlignmentDummy)));
     }
 
     xsizetype freeSpaceAtEnd() const
