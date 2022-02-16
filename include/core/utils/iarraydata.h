@@ -105,14 +105,14 @@ public:
     class AlignmentDummy { iMemBlock header; T data; };
 
     void updatePtr(T* ptr) {
-        IX_ASSERT((xuintptr(ptr) - xuintptr(dataStart(this, alignof(AlignmentDummy))) + allocatedCapacity() * sizeof(T)) <= length());
+        IX_ASSERT((xuintptr(ptr) - xuintptr(dataStart(this, IX_ALIGNOF(AlignmentDummy))) + allocatedCapacity() * sizeof(T)) <= length());
         safeReservePtr(ptr);
     }
 
     static iTypedArrayData* allocate(xsizetype capacity,
             ArrayOptions options = DefaultAllocationFlags) {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
-        iMemBlock *data = newOne(IX_NULLPTR, capacity, sizeof(T), alignof(AlignmentDummy), options);
+        iMemBlock *data = newOne(IX_NULLPTR, capacity, sizeof(T), IX_ALIGNOF(AlignmentDummy), options);
         iTypedArrayData* ret = static_cast<iTypedArrayData *>(data);
         ret->ref(true);
         return ret;

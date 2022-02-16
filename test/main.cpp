@@ -16,7 +16,7 @@
 #include "core/kernel/ieventsource.h"
 
 #define ILOG_TAG "test"
-
+ 
 extern int test_iconvertible(void);
 extern int test_object(void);
 extern int test_ivariant(void);
@@ -85,6 +85,7 @@ public:
 
 int main(int argc, char **argv)
 {
+    ilog_debug(iStringLiteral("test app"));
     iShell::iCoreApplication app(argc, argv);
 
     iShell::iPollFD wakeupFd = {};

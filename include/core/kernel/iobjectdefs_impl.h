@@ -1998,55 +1998,55 @@ private:
 
 } // namespace iShell
 
-#define IX_OBJECT(TYPE) \
-    inline void _getThisTypeHelper() const; \
-    using IX_ThisType = iShell::FunctionPointer< IX_TYPEOF(&TYPE::_getThisTypeHelper), -1 >::Object; \
-    using IX_BaseType = iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::metaObject), -1 >::Object; \
-    /* Since metaObject for ThisType will be declared later, the pointer to member function will be */ \
-    /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */ \
-public: \
-    virtual const iShell::iMetaObject *metaObject() const { \
-        static iShell::iMetaObject staticMetaObject = iShell::iMetaObject(# TYPE, IX_BaseType::metaObject()); \
-        if (!staticMetaObject.hasProperty()) { \
+#define IX_OBJECT(TYPE)                                                                                                    \
+    inline void _getThisTypeHelper() const;                                                                                \
+    using IX_ThisType = iShell::FunctionPointer< IX_TYPEOF(&TYPE::_getThisTypeHelper), -1 >::Object;                       \
+    using IX_BaseType = iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::metaObject), -1 >::Object;                        \
+    /* Since metaObject for ThisType will be declared later, the pointer to member function will be */                     \
+    /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */                       \
+public:                                                                                                                    \
+    virtual const iShell::iMetaObject *metaObject() const {                                                                \
+        static iShell::iMetaObject staticMetaObject = iShell::iMetaObject(# TYPE, IX_BaseType::metaObject());              \
+        if (!staticMetaObject.hasProperty()) {                                                                             \
             std::unordered_map<iShell::iLatin1String, iShell::iSharedPtr< iShell::_iProperty >, iShell::iKeyHashFunc> ppt; \
-            staticMetaObject.setProperty(ppt); \
-            IX_ThisType::initProperty(&staticMetaObject); \
-            staticMetaObject.setProperty(ppt); \
-        } \
-        return &staticMetaObject; \
-    } \
+            staticMetaObject.setProperty(ppt);                                                                             \
+            IX_ThisType::initProperty(&staticMetaObject);                                                                  \
+            staticMetaObject.setProperty(ppt);                                                                             \
+        }                                                                                                                  \
+        return &staticMetaObject;                                                                                          \
+    }                                                                                                                      \
 private:
 
 #define IREAD iShell::_iProperty::E_READ, &IX_ThisType::
 #define IWRITE iShell::_iProperty::E_WRITE, &IX_ThisType::
 #define INOTIFY iShell::_iProperty::E_NOTIFY, &IX_ThisType::
 
-#define IPROPERTY_BEGIN \
-    void initProperty(iShell::iMetaObject* mobj) const { \
-        const iShell::iMetaObject* _mobj = IX_ThisType::metaObject(); \
-        if (_mobj != mobj) \
-            return; \
-        \
+#define IPROPERTY_BEGIN                                                                                           \
+    void initProperty(iShell::iMetaObject* mobj) const {                                                          \
+        const iShell::iMetaObject* _mobj = IX_ThisType::metaObject();                                             \
+        if (_mobj != mobj)                                                                                        \
+            return;                                                                                               \
+                                                                                                                  \
         std::unordered_map<iShell::iLatin1String, iSharedPtr< iShell::_iProperty >, iShell::iKeyHashFunc> pptImp;
 
 #define IPROPERTY_ITEM(NAME, ...) IPROPERTY_ITEM2(NAME, __VA_ARGS__)
-#define IPROPERTY_ITEM2(NAME, ...) \
-        pptImp.insert(std::pair< iShell::iLatin1String, iShell::iSharedPtr< iShell::_iProperty > >( \
+#define IPROPERTY_ITEM2(NAME, ...)                                                                                     \
+        pptImp.insert(std::pair< iShell::iLatin1String, iShell::iSharedPtr< iShell::_iProperty > >(                    \
                     iShell::iLatin1String(NAME), iShell::iSharedPtr< iShell::_iProperty >(newProperty(__VA_ARGS__))));
 
-#define IPROPERTY_END \
+#define IPROPERTY_END              \
         mobj->setProperty(pptImp); \
     }
 
-#define ISIGNAL(name, ...)  { \
-    typedef iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::name), -1 > ThisFuncitonPointer; \
-    typedef void (IX_ThisType::*SignalFuncAdaptor)(); \
-    typedef typename ThisFuncitonPointer::Arguments Arguments; \
-    \
-    SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(&IX_ThisType::name); \
-    iShell::_iMemberFunction tSignal = static_cast< iShell::_iMemberFunction >(tSignalAdptor); \
-    \
-    Arguments args = Arguments(__VA_ARGS__); \
+#define ISIGNAL(name, ...)  {                                                                                             \
+    typedef iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::name), -1 > ThisFuncitonPointer;                             \
+    typedef void (IX_ThisType::*SignalFuncAdaptor)();                                                                     \
+    typedef typename ThisFuncitonPointer::Arguments Arguments;                                                            \
+                                                                                                                          \
+    SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(&IX_ThisType::name);                            \
+    iShell::_iMemberFunction tSignal = static_cast< iShell::_iMemberFunction >(tSignalAdptor);                            \
+                                                                                                                          \
+    Arguments args = Arguments(__VA_ARGS__);                                                                              \
     return const_cast<IX_ThisType*>(this)->emitHelper<typename ThisFuncitonPointer::ReturnType >(# name, tSignal, &args); \
     }
 

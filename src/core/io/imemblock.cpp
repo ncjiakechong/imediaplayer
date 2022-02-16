@@ -342,7 +342,7 @@ void iMemBlock::doFree()
 void* iMemBlock::dataStart(iMemBlock* block, size_t alignment)
 {
     // Alignment is a power of two
-    IX_ASSERT((alignment >= alignof(iMemBlock)) && !(alignment & (alignment - 1)));
+    IX_ASSERT((alignment >= IX_ALIGNOF(iMemBlock)) && !(alignment & (alignment - 1)));
     return reinterpret_cast<void*>((xuintptr(block) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1)); 
 }
 
@@ -362,16 +362,16 @@ iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t element
         return block;
     
     if (0 == alignment)
-        alignment = alignof(AlignedMemBlock);
+        alignment = IX_ALIGNOF(AlignedMemBlock);
     
     // Alignment is a power of two
-    IX_ASSERT((elementSize > 0) && (alignment >= alignof(iMemBlock)) && !(alignment & (alignment - 1)));
+    IX_ASSERT((elementSize > 0) && (alignment >= IX_ALIGNOF(iMemBlock)) && !(alignment & (alignment - 1)));
 
     size_t headerSize = sizeof(AlignedMemBlock);
-    const size_t headerAlignment = alignof(AlignedMemBlock);
+    const size_t headerAlignment = IX_ALIGNOF(AlignedMemBlock);
 
     if (alignment > headerAlignment) {
-        // Allocate extra (alignment - Q_ALIGNOF(iArrayData)) padding bytes so we
+        // Allocate extra (alignment - IX_ALIGNOF(iArrayData)) padding bytes so we
         // can properly align the data array. This assumes malloc is able to
         // provide appropriate alignment for the header -- as it should!
         headerSize += alignment - headerAlignment;
@@ -395,13 +395,13 @@ iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t element
 iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t elementSize, size_t alignment, ArrayOptions options)
 {
     if (0 == alignment)
-        alignment = alignof(AlignedMemBlock);
+        alignment = IX_ALIGNOF(AlignedMemBlock);
 
     // Alignment is a power of two
-    IX_ASSERT((elementSize > 0) && (alignment >= alignof(iMemBlock)) && !(alignment & (alignment - 1)));
+    IX_ASSERT((elementSize > 0) && (alignment >= IX_ALIGNOF(iMemBlock)) && !(alignment & (alignment - 1)));
 
     size_t headerSize = sizeof(AlignedMemBlock);
-    const size_t headerAlignment = alignof(AlignedMemBlock);
+    const size_t headerAlignment = IX_ALIGNOF(AlignedMemBlock);
 
     if (alignment > headerAlignment) {
         // Allocate extra (alignment - Q_ALIGNOF(iArrayData)) padding bytes so we

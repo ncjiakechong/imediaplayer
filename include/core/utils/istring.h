@@ -662,18 +662,6 @@ private:
     }
 };
 
-// all our supported compilers support Unicode string literals,
-// even if their Q_COMPILER_UNICODE_STRING has been revoked due
-// to lacking stdlib support. But QStringLiteral only needs the
-// core language feature, so just use u"" here unconditionally:
-
-#define IX_UNICODE_LITERAL(str) u"" str
-#define iStringLiteral(str) \
-    (iString(iString::DataPointer(IX_NULLPTR,  \
-                            const_cast<xuint16*>(reinterpret_cast<const xuint16*>(IX_UNICODE_LITERAL(str))), \
-                            sizeof(IX_UNICODE_LITERAL(str))/2 - 1))) \
-    /**/
-
 //
 // iStringView inline members that require iString:
 //
@@ -1073,5 +1061,16 @@ inline bool operator> (iLatin1String lhs, iStringView rhs) { return iPrivate::co
 inline bool operator>=(iLatin1String lhs, iStringView rhs) { return iPrivate::compareStrings(lhs, rhs) >= 0; }
 
 } // namespace iShell
+
+// all our supported compilers support Unicode string literals,
+// But iStringLiteral only needs the
+// core language feature, so just use u"" here unconditionally:
+
+#define IX_UNICODE_LITERAL(str) u"" str
+#define iStringLiteral(str) \
+    (iShell::iString(iShell::iString::DataPointer(IX_NULLPTR,  \
+                            const_cast<xuint16*>(reinterpret_cast<const xuint16*>(IX_UNICODE_LITERAL(str))), \
+                            sizeof(IX_UNICODE_LITERAL(str))/2 - 1))) \
+    /**/
 
 #endif // ISTRING_H
