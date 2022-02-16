@@ -101,19 +101,13 @@ private:
 
     template <typename Char, size_t N>
     static xsizetype lengthHelperArray(const Char (&)[N])
-    {
-        return xsizetype(N - 1);
-    }
+    { return xsizetype(N - 1); }
 
     template <typename Char>
     static xsizetype lengthHelperPointer(const Char *str)
-    {
-        return iPrivate::xustrlen(reinterpret_cast<const xuint16 *>(str));
-    }
+    { return iPrivate::xustrlen(reinterpret_cast<const xuint16 *>(str)); }
     static xsizetype lengthHelperPointer(const iChar *str)
-    {
-        return iPrivate::xustrlen(reinterpret_cast<const xuint16 *>(str));
-    }
+    { return iPrivate::xustrlen(reinterpret_cast<const xuint16 *>(str)); }
 
     template <typename Char>
     static const storage_type *castHelper(const Char *str)
@@ -163,7 +157,6 @@ public:
     //
     // iString API
     //
-
     iByteArray toLatin1() const { return iPrivate::convertToLatin1(*this); }
     iByteArray toUtf8() const { return iPrivate::convertToUtf8(*this); }
     iByteArray toLocal8Bit() const { return iPrivate::convertToLocal8Bit(*this); }

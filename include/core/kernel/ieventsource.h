@@ -30,8 +30,8 @@ class IX_CORE_EXPORT iEventSource
 public:
     iEventSource(int priority);
 
-    void ref();
-    void deref();
+    bool ref();
+    bool deref();
 
     int attach(iEventDispatcher* dispatcher);
     int detach();
@@ -84,7 +84,7 @@ private:
 
     int m_flags;
 
-    iEventDispatcher* m_dispatcher;
+    iEventDispatcher*   m_dispatcher;
     std::list<iPollFD*> m_pollFds;
 };
 

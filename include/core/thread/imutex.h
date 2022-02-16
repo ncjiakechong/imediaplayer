@@ -71,11 +71,10 @@ public:
     inline bool isRecursive() const { return (Recursive == m_recMode); }
 
 private:
-    iMutex(const iMutex&);
-    iMutex& operator = (const iMutex&);
-
     RecursionMode m_recMode;
     iMutexImpl* m_mutex;
+
+    IX_DISABLE_COPY(iMutex)
 };
 
 class IX_CORE_EXPORT iNullMutex
@@ -88,53 +87,23 @@ class IX_CORE_EXPORT iNullMutex
 public:
     typedef iScopedLock<iNullMutex> ScopedLock;
 
-    iNullMutex()
-        /// Creates the iNullMutex.
-    {
-    }
+    iNullMutex() {}
+    ~iNullMutex() {}
 
-    ~iNullMutex()
-        /// Destroys the iNullMutex.
-    {
-    }
-
-    void lock()
-        /// Does nothing.
-    {
-    }
-
-    bool tryLock()
-        /// Does nothing and always returns true.
-    {
-        return true;
-    }
-
-    bool tryLock(long)
-        /// Does nothing and always returns true.
-    {
-        return true;
-    }
-
-    void unlock()
-        /// Does nothing.
-    {
-    }
+    void lock() {}
+    void unlock() {}
+    bool tryLock() { return true; }
+    bool tryLock(long) { return true; }
 };
 
 inline int iMutex::lock()
-{
-    return m_mutex->lockImpl();
-}
+{ return m_mutex->lockImpl(); }
 
 inline int iMutex::tryLock(long milliseconds)
-{
-    return m_mutex->tryLockImpl(milliseconds);
-}
+{ return m_mutex->tryLockImpl(milliseconds); }
 
 inline int iMutex::unlock()
-{
-    return m_mutex->unlockImpl();
-}
+{ return m_mutex->unlockImpl(); }
 
 } // namespace iShell
 

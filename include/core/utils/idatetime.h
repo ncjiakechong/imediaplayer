@@ -76,11 +76,9 @@ private:
 
 class IX_CORE_EXPORT iTime
 {
-    explicit iTime(int ms) : mds(ms)
-    {}
+    explicit iTime(int ms) : mds(ms) {}
 public:
-    iTime(): mds(NullTime)
-    {}
+    iTime(): mds(NullTime) {}
     iTime(int h, int m, int s = 0, int ms = 0);
 
     bool isNull() const { return mds == NullTime; }

@@ -60,8 +60,8 @@ protected:
 class IX_CORE_EXPORT iTimerEvent : public iEvent
 {
 public:
-    explicit iTimerEvent( int timerId, xintptr userdata);
-    ~iTimerEvent();
+    explicit iTimerEvent(int timerId, xintptr userdata);
+    virtual ~iTimerEvent();
     int timerId() const { return id; }
     xintptr userData() const { return userdata; }
 protected:
@@ -74,7 +74,7 @@ class IX_CORE_EXPORT iChildEvent : public iEvent
 {
 public:
     iChildEvent(Type type, iObject *child);
-    ~iChildEvent();
+    virtual ~iChildEvent();
     iObject *child() const { return c; }
     bool added() const { return type() == ChildAdded; }
     bool removed() const { return type() == ChildRemoved; }
@@ -87,7 +87,7 @@ class IX_CORE_EXPORT iDeferredDeleteEvent : public iEvent
 {
 public:
     explicit iDeferredDeleteEvent();
-    ~iDeferredDeleteEvent();
+    virtual ~iDeferredDeleteEvent();
     int loopLevel() const { return level; }
 private:
     int level;

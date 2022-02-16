@@ -11,14 +11,10 @@
 #ifndef IINCGLOBAL_H
 #define IINCGLOBAL_H
 
-namespace iShell {
-
 #if defined(IBUILD_INC_LIB)
 #    define IX_INC_EXPORT IX_DECL_EXPORT
 #else
 #    define IX_INC_EXPORT IX_DECL_IMPORT
 #endif
-
-} // namespace iShell
 
 #endif // IINCGLOBAL_H

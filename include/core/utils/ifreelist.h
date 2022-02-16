@@ -114,9 +114,8 @@ protected:
     }
 
     // take the current serial number from \a o, increment it, and store it in \a n
-    static inline int incrementserial(int o, int n) {
-        return int((uint(n) & ConstantsType::IndexMask) | ((uint(o) + ConstantsType::SerialCounter) & ConstantsType::SerialMask));
-    }
+    static inline int incrementserial(int o, int n)
+    { return int((uint(n) & ConstantsType::IndexMask) | ((uint(o) + ConstantsType::SerialCounter) & ConstantsType::SerialMask)); }
 
     inline iFreeListBase(int size)
         : /*_v{},*/ _stored(ConstantsType::MaxIndex)
@@ -183,9 +182,9 @@ public:
 
     // returns the payload for the given index \a x
     inline typename ParentType::ConstReferenceType at(int x) const 
-        { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
+    { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
     inline typename ParentType::ReferenceType operator[](int x) 
-        { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
+    { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
 
     /*
         Mode 1: 

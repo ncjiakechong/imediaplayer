@@ -37,7 +37,7 @@ public:
 
         inline TimerInfo(int id, int i, TimerType t, xintptr u)
             : timerId(id), interval(i), timerType(t), userdata(u)
-        { }
+        {}
     };
 
     static int allocateTimerId();
@@ -71,10 +71,8 @@ protected:
     virtual int removePoll(iPollFD* fd, iEventSource* source) = 0;
 
 private:
-    iEventDispatcher(const iEventDispatcher &);
-    iEventDispatcher &operator=(const iEventDispatcher &);
-
     friend class iEventSource;
+    IX_DISABLE_COPY(iEventDispatcher)
 };
 
 } // namespace iShell

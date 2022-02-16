@@ -33,24 +33,29 @@ iEventSource::~iEventSource()
         detach();
 }
 
-void iEventSource::ref()
+bool iEventSource::ref()
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
         ilog_warn("in diffrent thread");
     }
 
     ++m_refCount;
+    return true;
 }
 
-void iEventSource::deref()
+bool iEventSource::deref()
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
         ilog_warn("in diffrent thread");
     }
 
     --m_refCount;
-    if (0 == m_refCount)
+    if (0 == m_refCount) {
         delete this;
+        return false;
+    }
+
+    return true;
 }
 
 int iEventSource::attach(iEventDispatcher* dispatcher)

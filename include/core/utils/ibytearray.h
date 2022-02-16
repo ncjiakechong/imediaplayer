@@ -263,9 +263,7 @@ public:
     static iByteArray number(xuint64, int base = 10);
     static iByteArray number(double, char f = 'g', int prec = 6);
     static iByteArray fromRawData(const char * data, xsizetype size, iFreeCb freeCb = IX_NULLPTR, void* freeCbData = IX_NULLPTR)
-    {
-        return iByteArray(DataPointer::fromRawData(data, size, freeCb, freeCbData));
-    }
+    { return iByteArray(DataPointer::fromRawData(data, size, freeCb, freeCbData)); }
     static iByteArray fromBase64(const iByteArray &base64, Base64Options options);
     static iByteArray fromHex(const iByteArray &hexEncoded);
     static iByteArray fromPercentEncoding(const iByteArray &pctEncoded, char percent = '%');
@@ -337,10 +335,6 @@ private:
 
     friend class iString;
 };
-
-#  define iByteArrayLiteral(str) \
-    (iByteArray(iByteArray::DataPointer(IX_NULLPTR, const_cast<char *>(str), sizeof(str) - 1))) \
-    /**/
 
 inline iByteArray::iByteArray() {}
 inline iByteArray::~iByteArray() {}
@@ -518,5 +512,9 @@ inline iByteArray iByteArray::fromStdString(const std::string &s)
 { return iByteArray(s.data(), int(s.size())); }
 
 } // namespace iShell
+
+#  define iByteArrayLiteral(str) \
+    (iShell::iByteArray(iShell::iByteArray::DataPointer(IX_NULLPTR, const_cast<char *>(str), sizeof(str) - 1))) \
+    /**/
 
 #endif // IBYTEARRAY_H

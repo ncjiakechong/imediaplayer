@@ -59,8 +59,8 @@ public:
     iChar(iLatin1Char ch) : ucs(ch.unicode()) {} // implicit
     iChar(char16_t ch) : ucs(xuint16(ch)) {} // implicit
 
-    explicit iChar(char c) : ucs(uchar(c)) { }
-    explicit iChar(uchar c) : ucs(c) { }
+    explicit iChar(char c) : ucs(uchar(c)) {}
+    explicit iChar(uchar c) : ucs(c) {}
 
     // Unicode information
 
@@ -437,41 +437,23 @@ public:
     inline void setRow(uchar arow) { ucs = xuint16((xuint16(arow)<<8) + (ucs&0xff)); }
 
     static inline bool isNonCharacter(xuint32 ucs4)
-    {
-        return ucs4 >= 0xfdd0 && (ucs4 <= 0xfdef || (ucs4 & 0xfffe) == 0xfffe);
-    }
+    { return ucs4 >= 0xfdd0 && (ucs4 <= 0xfdef || (ucs4 & 0xfffe) == 0xfffe); }
     static inline bool isHighSurrogate(xuint32 ucs4)
-    {
-        return ((ucs4 & 0xfffffc00) == 0xd800);
-    }
+    { return ((ucs4 & 0xfffffc00) == 0xd800); }
     static inline bool isLowSurrogate(xuint32 ucs4)
-    {
-        return ((ucs4 & 0xfffffc00) == 0xdc00);
-    }
+    { return ((ucs4 & 0xfffffc00) == 0xdc00); }
     static inline bool isSurrogate(xuint32 ucs4)
-    {
-        return (ucs4 - 0xd800u < 2048u);
-    }
+    { return (ucs4 - 0xd800u < 2048u); }
     static inline bool requiresSurrogates(xuint32 ucs4)
-    {
-        return (ucs4 >= 0x10000);
-    }
+    { return (ucs4 >= 0x10000); }
     static inline xuint32 surrogateToUcs4(xuint16 high, xuint16 low)
-    {
-        return (xuint32(high)<<10) + low - 0x35fdc00;
-    }
+    { return (xuint32(high)<<10) + low - 0x35fdc00; }
     static inline xuint32 surrogateToUcs4(iChar high, iChar low)
-    {
-        return surrogateToUcs4(high.ucs, low.ucs);
-    }
+    { return surrogateToUcs4(high.ucs, low.ucs); }
     static inline xuint16 highSurrogate(xuint32 ucs4)
-    {
-        return xuint16((ucs4>>10) + 0xd7c0);
-    }
+    { return xuint16((ucs4>>10) + 0xd7c0); }
     static inline xuint16 lowSurrogate(xuint32 ucs4)
-    {
-        return xuint16(ucs4%0x400 + 0xdc00);
-    }
+    { return xuint16(ucs4%0x400 + 0xdc00); }
 
     static Category category(xuint32 ucs4);
     static Direction direction(xuint32 ucs4);
@@ -497,8 +479,7 @@ public:
     static UnicodeVersion currentUnicodeVersion();
 
     static bool isPrint(xuint32 ucs4);
-    static inline bool isSpace(xuint32 ucs4)
-    {
+    static inline bool isSpace(xuint32 ucs4) {
         // note that [0x09..0x0d] + 0x85 are exceptional Cc-s and must be handled explicitly
         return ucs4 == 0x20 || (ucs4 <= 0x0d && ucs4 >= 0x09)
                 || (ucs4 > 127 && (ucs4 == 0x85 || ucs4 == 0xa0 || iChar::isSpace_helper(ucs4)));
@@ -506,15 +487,13 @@ public:
     static bool isMark(xuint32 ucs4);
     static bool isPunct(xuint32 ucs4);
     static bool isSymbol(xuint32 ucs4);
-    static inline bool isLetter(xuint32 ucs4)
-    {
+    static inline bool isLetter(xuint32 ucs4) {
         return (ucs4 >= 'A' && ucs4 <= 'z' && (ucs4 >= 'a' || ucs4 <= 'Z'))
                 || (ucs4 > 127 && iChar::isLetter_helper(ucs4));
     }
     static inline bool isNumber(xuint32 ucs4)
     { return (ucs4 <= '9' && ucs4 >= '0') || (ucs4 > 127 && iChar::isNumber_helper(ucs4)); }
-    static inline bool isLetterOrNumber(xuint32 ucs4)
-    {
+    static inline bool isLetterOrNumber(xuint32 ucs4) {
         return (ucs4 >= 'A' && ucs4 <= 'z' && (ucs4 >= 'a' || ucs4 <= 'Z'))
                 || (ucs4 >= '0' && ucs4 <= '9')
                 || (ucs4 > 127 && iChar::isLetterOrNumber_helper(ucs4));
@@ -548,7 +527,6 @@ inline bool operator!=(iChar c1, iChar c2) { return !operator==(c1, c2); }
 inline bool operator>=(iChar c1, iChar c2) { return !operator< (c1, c2); }
 inline bool operator> (iChar c1, iChar c2) { return  operator< (c2, c1); }
 inline bool operator<=(iChar c1, iChar c2) { return !operator< (c2, c1); }
-
 
 inline bool operator==(iChar lhs, std::nullptr_t) { return lhs.isNull(); }
 inline bool operator< (iChar,     std::nullptr_t) { return false; }

@@ -98,10 +98,8 @@ protected:
     mutable iMutex m_mutex;
     iCondition m_doneCond;
 
-    iThread(const iThread&);
-    iThread& operator = (const iThread&);
-
     friend class iThreadImpl;
+    IX_DISABLE_COPY(iThread)
 };
 
 } // namespace iShell

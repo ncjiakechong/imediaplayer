@@ -17,7 +17,7 @@
 namespace iShell {
 
 template <typename ForwardIterator>
- void iDeleteAll(ForwardIterator begin, ForwardIterator end)
+void iDeleteAll(ForwardIterator begin, ForwardIterator end)
 {
     while (begin != end) {
         delete *begin;
@@ -27,9 +27,7 @@ template <typename ForwardIterator>
 
 template <typename Container>
 inline void iDeleteAll(const Container &c)
-{
-    iDeleteAll(c.begin(), c.end());
-}
+{ iDeleteAll(c.begin(), c.end()); }
 
 inline uint iPopulationCount(xuint32 v)
 {

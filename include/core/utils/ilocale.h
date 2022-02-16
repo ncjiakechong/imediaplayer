@@ -970,7 +970,6 @@ public:
     inline iString toCurrencyString(float i, const iString &symbol = iString(), int precision = -1) const
     { return toCurrencyString(double(i), symbol, precision); }
 
-
     iString formattedDataSize(xint64 bytes, int precision = 2, DataSizeFormats format = DataSizeIecFormat) const;
 
     bool operator==(const iLocale &other) const;
@@ -997,20 +996,20 @@ private:
 };
 
 inline iString iLocale::toString(short i) const
-    { return toString(xlonglong(i)); }
+{ return toString(xlonglong(i)); }
 inline iString iLocale::toString(ushort i) const
-    { return toString(xulonglong(i)); }
+{ return toString(xulonglong(i)); }
 inline iString iLocale::toString(int i) const
-    { return toString(xlonglong(i)); }
+{ return toString(xlonglong(i)); }
 inline iString iLocale::toString(uint i) const
-    { return toString(xulonglong(i)); }
+{ return toString(xulonglong(i)); }
 inline iString iLocale::toString(float i, char f, int prec) const
-    { return toString(double(i), f, prec); }
+{ return toString(double(i), f, prec); }
 
 inline iString iLocale::toCurrencyString(short i, const iString &symbol) const
-    { return toCurrencyString(xlonglong(i), symbol); }
+{ return toCurrencyString(xlonglong(i), symbol); }
 inline iString iLocale::toCurrencyString(ushort i, const iString &symbol) const
-    { return toCurrencyString(xulonglong(i), symbol); }
+{ return toCurrencyString(xulonglong(i), symbol); }
 inline iString iLocale::toCurrencyString(int i, const iString &symbol) const
 { return toCurrencyString(xlonglong(i), symbol); }
 inline iString iLocale::toCurrencyString(uint i, const iString &symbol) const

@@ -21,6 +21,9 @@ class IX_CORE_EXPORT iShareMem
 public:
     static iShareMem* create(MemType type, size_t size, mode_t mode);
 
+    iShareMem();
+    ~iShareMem();
+
     int attach(MemType type, uint id, xintptr memfd, bool writable);
     void punch(size_t offset, size_t size);
     int detach();
@@ -30,12 +33,9 @@ public:
     inline size_t size() const { return m_size; }
     inline MemType type() const { return m_type; }
 
-    iShareMem();
-    ~iShareMem();
 private:
     static iShareMem* createPrivateMem(size_t size);
     static iShareMem* createSharedMem(MemType type, size_t size, mode_t mode);
-
     static int cleanup();
 
     int doAttach(MemType type, uint id, xintptr memfd, bool writable, bool for_cleanup);

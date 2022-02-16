@@ -27,22 +27,17 @@ public:
 
     iArrayDataPointer()
         : d(IX_NULLPTR), ptr(IX_NULLPTR), size(0)
-    {
-    }
+    {}
 
     iArrayDataPointer(const iArrayDataPointer &other)
         : d(other.d), ptr(other.ptr), size(other.size)
-    {
-        ref();
-    }
+    { ref(); }
 
     iArrayDataPointer(Data *header, T *adata, xsizetype n = 0)
         : d(header), ptr(adata), size(n)
-    {
-    }
+    {}
 
-    static iArrayDataPointer fromRawData(const T *rawData, xsizetype length, iFreeCb freeCb, void* freeCbData)
-    {
+    static iArrayDataPointer fromRawData(const T *rawData, xsizetype length, iFreeCb freeCb, void* freeCbData) {
         IX_ASSERT(rawData || !length);
         if (length <= 0)
             return { IX_NULLPTR, const_cast<T *>(rawData), length };
@@ -51,24 +46,19 @@ public:
         return { d, const_cast<T *>(rawData), length };
     }
 
-    iArrayDataPointer &operator=(const iArrayDataPointer &other)
-    {
+    iArrayDataPointer &operator=(const iArrayDataPointer &other) {
         iArrayDataPointer tmp(other);
         this->swap(tmp);
         return *this;
     }
 
-    ~iArrayDataPointer()
-    {
+    ~iArrayDataPointer() {
         if (!deref()) {
             destroyAll();
         }
     }
 
-    bool isNull() const
-    {
-        return !ptr;
-    }
+    bool isNull() const { return !ptr; }
 
     T *data() { return ptr; }
     const T *data() const { return ptr; }
@@ -80,21 +70,18 @@ public:
     const_iterator constBegin(const_iterator = const_iterator()) const { return data(); }
     const_iterator constEnd(const_iterator = const_iterator()) const { return data() + size; }
 
-    void swap(iArrayDataPointer &other)
-    {
+    void swap(iArrayDataPointer &other) {
         std::swap(d, other.d);
         std::swap(ptr, other.ptr);
         std::swap(size, other.size);
     }
 
-    void clear()
-    {
+    void clear() {
         iArrayDataPointer tmp;
         swap(tmp);
     }
 
-    bool detach()
-    {
+    bool detach() {
         if (needsDetach()) {
             std::pair<Data *, T *> copy = clone(detachOptions());
             iArrayDataPointer old(d, ptr, size);
@@ -123,15 +110,13 @@ public:
     Data *d_ptr() { return d; }
     void setBegin(T *begin) { ptr = begin; }
 
-    xsizetype freeSpaceAtBegin() const
-    {
+    xsizetype freeSpaceAtBegin() const {
         if (d == IX_NULLPTR)
             return 0;
         return this->ptr - static_cast<T*>(Data::dataStart(d, IX_ALIGNOF(typename Data::AlignmentDummy)));
     }
 
-    xsizetype freeSpaceAtEnd() const
-    {
+    xsizetype freeSpaceAtEnd() const {
         if (d == IX_NULLPTR)
             return 0;
         return d->allocatedCapacity() - freeSpaceAtBegin() - this->size;
@@ -139,13 +124,10 @@ public:
 
     static iArrayDataPointer allocateGrow(const iArrayDataPointer &from,
                                           xsizetype newSize, typename Data::ArrayOptions options)
-    {
-        return allocateGrow(from, from.detachCapacity(newSize), newSize, options);
-    }
+    { return allocateGrow(from, from.detachCapacity(newSize), newSize, options); }
 
     static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype capacity,
-                                          xsizetype newSize, typename Data::ArrayOptions options)
-    {
+                                          xsizetype newSize, typename Data::ArrayOptions options) {
         Data* d = Data::allocate(capacity, options);
         const bool valid = d != IX_NULLPTR && d->data().value() != IX_NULLPTR;
         const bool grows = (options & (Data::GrowsForward | Data::GrowsBackwards));
@@ -172,8 +154,7 @@ public:
         return iArrayDataPointer(d, dataPtr);
     }
 
-    void reallocate(xsizetype alloc, typename Data::ArrayOptions options)
-    {
+    void reallocate(xsizetype alloc, typename Data::ArrayOptions options) {
         // when reallocating, take care of the situation when no growth is
         // happening - need to move the data in this case, unfortunately
         const bool grows = options & (Data::GrowsForward | Data::GrowsBackwards);
@@ -196,8 +177,7 @@ public:
     // into the container. This is a helper function that one can use to
     // theoretically improve average operations performance. Ignoring this
     // function does not affect the correctness of the array operations.
-    bool shouldGrowBeforeInsert(const_iterator where, xsizetype n) const
-    {
+    bool shouldGrowBeforeInsert(const_iterator where, xsizetype n) const {
         if (this->d == IX_NULLPTR)
             return true;
         if (this->d->options() & Data::CapacityReserved)
@@ -226,8 +206,7 @@ public:
         return (freeAtBegin + freeAtEnd) < n || (freeAtBegin < n && freeAtEnd < n);
     }
 
-    void moveInGrowthDirection(size_t futureGrowth)
-    {
+    void moveInGrowthDirection(size_t futureGrowth) {
         IX_ASSERT(this->isMutable());
         IX_ASSERT(!this->isShared());
         IX_ASSERT(futureGrowth <= size_t(this->freeSpaceAtEnd()));
@@ -244,8 +223,7 @@ public:
     // free space at one of the ends is smaller than required. Free space
     // becomes available at the beginning if grows backwards and at the end
     // if grows forward
-    xsizetype prepareFreeSpace(size_t required, size_t moveSize)
-    {
+    xsizetype prepareFreeSpace(size_t required, size_t moveSize) {
         IX_ASSERT(this->isMutable() || required == 0);
         IX_ASSERT(!this->isShared() || required == 0);
         IX_ASSERT(required <= this->allocatedCapacity() - this->size);
@@ -260,17 +238,12 @@ public:
     }
 
     size_t moveSizeForAppend(size_t)
-    {
-        return this->freeSpaceAtBegin();
-    }
+    { return this->freeSpaceAtBegin(); }
 
     void prepareSpaceForAppend(size_t required)
-    {
-        prepareFreeSpace(required, moveSizeForAppend(required));
-    }
+    { prepareFreeSpace(required, moveSizeForAppend(required)); }
 
-    void appendInitialize(size_t newSize)
-    {
+    void appendInitialize(size_t newSize) {
         IX_ASSERT(this->isMutable());
         IX_ASSERT(!this->isShared());
         IX_ASSERT(newSize > size_t(this->size));
@@ -283,8 +256,7 @@ public:
     void moveAppend(T *b, T *e)
     { insert(this->end(), b, e); }
 
-    void truncate(size_t newSize)
-    {
+    void truncate(size_t newSize) {
         IX_ASSERT(this->isMutable());
         IX_ASSERT(!this->isShared());
         IX_ASSERT(newSize < size_t(this->size));
@@ -292,16 +264,14 @@ public:
         this->size = xsizetype(newSize);
     }
 
-    void destroyAll() // Call from destructors, ONLY!
-    {
+    void destroyAll() { // Call from destructors, ONLY!
         IX_ASSERT(this->d);
 
         // As this is to be called only from destructor, it doesn't need to be
         // exception safe; size not updated.
     }
 
-    void insert(T *where, const T *b, const T *e)
-    {
+    void insert(T *where, const T *b, const T *e) {
         IX_ASSERT(this->isMutable() || (b == e && where == this->end()));
         IX_ASSERT(!this->isShared() || (b == e && where == this->end()));
         IX_ASSERT(where >= this->begin() && where <= this->end());
@@ -315,8 +285,7 @@ public:
         this->size += (e - b);
     }
 
-    void insert(T *where, size_t n, T t)
-    {
+    void insert(T *where, size_t n, T t) {
         IX_ASSERT(!this->isShared() || (n == 0 && where == this->end()));
         IX_ASSERT(where >= this->begin() && where <= this->end());
         IX_ASSERT(size_t(this->freeSpaceAtEnd()) >= n);
@@ -328,8 +297,7 @@ public:
             *where++ = t;
     }
 
-    void erase(T *b, T *e)
-    {
+    void erase(T *b, T *e) {
         IX_ASSERT(this->isMutable());
         IX_ASSERT(b < e);
         IX_ASSERT(b >= this->begin() && b < this->end());
@@ -340,8 +308,7 @@ public:
         this->size -= (e - b);
     }
 
-    void assign(T *b, T *e, T t)
-    {
+    void assign(T *b, T *e, T t) {
         IX_ASSERT(b <= e);
         IX_ASSERT(b >= this->begin() && e <= this->end());
 
@@ -350,12 +317,9 @@ public:
     }
 
     bool compare(const T *begin1, const T *begin2, size_t n) const
-    {
-        return ::memcmp(begin1, begin2, n * sizeof(T)) == 0;
-    }
+    { return ::memcmp(begin1, begin2, n * sizeof(T)) == 0; }
 
-    void copyAppend(const T *b, const T *e)
-    {
+    void copyAppend(const T *b, const T *e) {
         IX_ASSERT(this->isMutable() || b == e);
         IX_ASSERT(!this->isShared() || b == e);
         IX_ASSERT(b <= e);
@@ -365,8 +329,7 @@ public:
     }
 
     template<typename It>
-    void copyAppend(It b, It e)
-    {
+    void copyAppend(It b, It e) {
         IX_ASSERT(this->isMutable() || b == e);
         IX_ASSERT(!this->isShared() || b == e);
         const xsizetype distance = std::distance(b, e);
@@ -379,8 +342,7 @@ public:
         }
     }
 
-    void copyAppend(size_t n, T t)
-    {
+    void copyAppend(size_t n, T t) {
         IX_ASSERT(!this->isShared() || n == 0);
         IX_ASSERT(this->allocatedCapacity() - size_t(this->size) >= n);
 
@@ -390,8 +352,7 @@ public:
     }
 
 private:
-    Data* clone(typename Data::ArrayOptions options) const
-    {
+    Data* clone(typename Data::ArrayOptions options) const {
         Data* d = Data::allocate(detachCapacity(size), options);
         iArrayDataPointer copy(d, static_cast<T*>(d->data().value()), 0);
         if (size)
@@ -413,15 +374,11 @@ public:
 
 template <class T>
 inline bool operator==(const iArrayDataPointer<T> &lhs, const iArrayDataPointer<T> &rhs)
-{
-    return lhs.data() == rhs.data() && lhs.size == rhs.size;
-}
+{ return lhs.data() == rhs.data() && lhs.size == rhs.size; }
 
 template <class T>
 inline bool operator!=(const iArrayDataPointer<T> &lhs, const iArrayDataPointer<T> &rhs)
-{
-    return lhs.data() != rhs.data() || lhs.size != rhs.size;
-}
+{ return lhs.data() != rhs.data() || lhs.size != rhs.size; }
 
 } // namespace iShell
 

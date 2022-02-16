@@ -33,10 +33,7 @@ public:
         m_mutex |= xuintptr(1u);
     }
 
-    ~iScopedLock()
-    {
-        unlock();
-    }
+    ~iScopedLock() { unlock(); }
 
     inline void unlock()
     {
@@ -55,16 +52,13 @@ public:
     }
 
     inline M* mutex() const
-    {
-        return reinterpret_cast<M*>(m_mutex & ~xuintptr(1u));
-    }
+    { return reinterpret_cast<M*>(m_mutex & ~xuintptr(1u)); }
 
 private:
     xuintptr m_mutex;
 
     iScopedLock();
-    iScopedLock(const iScopedLock&);
-    iScopedLock& operator = (const iScopedLock&);
+    IX_DISABLE_COPY(iScopedLock)
 };
 
 
@@ -77,21 +71,16 @@ class iScopedUnlock
 {
 public:
     inline iScopedUnlock(M& mutex, bool unlockNow = true): m_mutex(&mutex)
-    {
-        if (unlockNow)
-            m_mutex->unlock();
-    }
+    { if (unlockNow) m_mutex->unlock(); }
+
     inline ~iScopedUnlock()
-    {
-        m_mutex->lock();
-    }
+    { m_mutex->lock(); }
 
 private:
     M* m_mutex;
 
     iScopedUnlock();
-    iScopedUnlock(const iScopedUnlock&);
-    iScopedUnlock& operator = (const iScopedUnlock&);
+    IX_DISABLE_COPY(iScopedUnlock)
 };
 
 } // namespace iShell

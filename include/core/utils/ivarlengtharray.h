@@ -33,9 +33,7 @@ public:
 
     inline iVarLengthArray(const iVarLengthArray<T, Prealloc> &other)
         : a(Prealloc), s(0), ptr(reinterpret_cast<T *>(array))
-    {
-        append(other.constData(), other.size());
-    }
+    { append(other.constData(), other.size()); }
 
     inline ~iVarLengthArray() {
         if (iTypeInfo<T>::isComplex) {
@@ -352,9 +350,7 @@ T iVarLengthArray<T, Prealloc>::value(int i) const
 }
 template <class T, int Prealloc>
 T iVarLengthArray<T, Prealloc>::value(int i, const T &defaultValue) const
-{
-    return (uint(i) >= uint(size())) ? defaultValue : at(i);
-}
+{ return (uint(i) >= uint(size())) ? defaultValue : at(i); }
 
 template <class T, int Prealloc>
 inline void iVarLengthArray<T, Prealloc>::insert(int i, const T &t)
@@ -451,34 +447,23 @@ bool operator==(const iVarLengthArray<T, Prealloc1> &l, const iVarLengthArray<T,
 
 template <typename T, int Prealloc1, int Prealloc2>
 bool operator!=(const iVarLengthArray<T, Prealloc1> &l, const iVarLengthArray<T, Prealloc2> &r)
-{
-    return !(l == r);
-}
+{ return !(l == r); }
 
 template <typename T, int Prealloc1, int Prealloc2>
 bool operator<(const iVarLengthArray<T, Prealloc1> &lhs, const iVarLengthArray<T, Prealloc2> &rhs)
-{
-    return std::lexicographical_compare(lhs.begin(), lhs.end(),
-                                        rhs.begin(), rhs.end());
-}
+{ return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end()); }
 
 template <typename T, int Prealloc1, int Prealloc2>
 inline bool operator>(const iVarLengthArray<T, Prealloc1> &lhs, const iVarLengthArray<T, Prealloc2> &rhs)
-{
-    return rhs < lhs;
-}
+{ return rhs < lhs; }
 
 template <typename T, int Prealloc1, int Prealloc2>
 inline bool operator<=(const iVarLengthArray<T, Prealloc1> &lhs, const iVarLengthArray<T, Prealloc2> &rhs)
-{
-    return !(lhs > rhs);
-}
+{ return !(lhs > rhs); }
 
 template <typename T, int Prealloc1, int Prealloc2>
 inline bool operator>=(const iVarLengthArray<T, Prealloc1> &lhs, const iVarLengthArray<T, Prealloc2> &rhs)
-{
-    return !(lhs < rhs);
-}
+{ return !(lhs < rhs); }
 
 } // namespace iShell
 

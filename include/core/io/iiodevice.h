@@ -110,7 +110,6 @@ public:
     void readChannelFinished() ISIGNAL(readChannelFinished)
 
 protected:
-
     enum AccessMode {
         Unset,
         Sequential,
@@ -205,7 +204,6 @@ private:
 
     mutable AccessMode m_accessMode;
 
-private:
     IX_DISABLE_COPY(iIODevice)
 };
 

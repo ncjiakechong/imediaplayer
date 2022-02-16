@@ -325,11 +325,10 @@
 #  endif
 #endif
 
-/*
-   Some classes do not permit copies to be made of an object. These
-   classes contains a private copy constructor and assignment
-   operator to disable copying (the compiler gives an error message).
-*/
+/* Some classes do not permit copies to be made of an object. These
+ * classes contains a private copy constructor and assignment
+ * operator to disable copying (the compiler gives an error message).
+ */
 #define IX_DISABLE_COPY(Class) \
     Class(const Class &) = delete;\
     Class &operator=(const Class &) = delete;

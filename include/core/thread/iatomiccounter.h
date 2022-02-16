@@ -96,9 +96,6 @@ private:
 };
 
 
-//
-// inlines
-//
 #ifdef IX_HAVE_CXX11
 //
 // C++11 atomics
@@ -106,25 +103,21 @@ private:
 template <typename T>
 iAtomicCounter<T>::iAtomicCounter()
     : m_counter(0)
-{
-}
+{}
 
 template <typename T>
 iAtomicCounter<T>::iAtomicCounter(iAtomicCounter::ValueType initialValue)
     : m_counter(initialValue)
-{
-}
+{}
 
 template <typename T>
 iAtomicCounter<T>::iAtomicCounter(const iAtomicCounter& counter)
     : m_counter(counter.value())
-{
-}
+{}
 
 template <typename T>
 iAtomicCounter<T>::~iAtomicCounter()
-{
-}
+{}
 
 template <typename T>
 iAtomicCounter<T>& iAtomicCounter<T>::operator = (const iAtomicCounter& counter)
@@ -142,33 +135,23 @@ iAtomicCounter<T>& iAtomicCounter<T>::operator = (iAtomicCounter::ValueType valu
 
 template <typename T>
 bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue)
-{
-    return m_counter.compare_exchange_weak(expectedValue, newValue);
-}
+{ return m_counter.compare_exchange_weak(expectedValue, newValue); }
 
 template <typename T>
 inline iAtomicCounter<T>::operator T() const
-{
-    return m_counter.load();
-}
+{ return m_counter.load(); }
 
 template <typename T>
 inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::value() const
-{
-    return m_counter.load();
-}
+{ return m_counter.load(); }
 
 template <typename T>
 inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ () // prefix
-{
-    return ++m_counter;
-}
+{ return ++m_counter; }
 
 template <typename T>
 inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ (int) // postfix
-{
-    return m_counter++;
-}
+{ return m_counter++; }
 
 template <typename T>
 inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (int count)
@@ -179,15 +162,11 @@ inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (int count)
 
 template <typename T>
 inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- () // prefix
-{
-    return --m_counter;
-}
+{ return --m_counter; }
 
 template <typename T>
 inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- (int) // postfix
-{
-    return m_counter--;
-}
+{ return m_counter--; }
 
 template <typename T>
 inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
@@ -198,9 +177,7 @@ inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
 
 template <typename T>
 inline bool iAtomicCounter<T>::operator ! () const
-{
-    return m_counter.load() == 0;
-}
+{ return m_counter.load() == 0; }
 
 #else
 //
@@ -208,26 +185,19 @@ inline bool iAtomicCounter<T>::operator ! () const
 //
 template <typename T>
 iAtomicCounter<T>::iAtomicCounter()
-{
-    m_counter.value = 0;
-}
+{ m_counter.value = 0; }
 
 template <typename T>
 iAtomicCounter<T>::iAtomicCounter(iAtomicCounter::ValueType initialValue)
-{
-    m_counter.value = initialValue;
-}
+{ m_counter.value = initialValue; }
 
 template <typename T>
 iAtomicCounter<T>::iAtomicCounter(const iAtomicCounter& counter)
-{
-    m_counter.value = counter.value();
-}
+{ m_counter.value = counter.value(); }
 
 template <typename T>
 iAtomicCounter<T>::~iAtomicCounter()
-{
-}
+{}
 
 template <typename T>
 iAtomicCounter<T>& iAtomicCounter<T>::operator = (const iAtomicCounter& counter)
