@@ -100,14 +100,10 @@ void iGstAppSrc::setStream(iIODevice *stream)
 }
 
 iIODevice *iGstAppSrc::stream() const
-{
-    return m_stream;
-}
+{ return m_stream; }
 
 GstAppSrc *iGstAppSrc::element()
-{
-    return m_appSrc;
-}
+{ return m_appSrc; }
 
 void iGstAppSrc::onDataReady()
 {

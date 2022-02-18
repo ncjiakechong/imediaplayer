@@ -183,13 +183,10 @@ private:
 
 iCondition::iCondition()
     : m_cond(new platform_cond_imp)
-{
-}
+{}
 
 iCondition::~iCondition()
-{
-    delete m_cond;
-}
+{ delete m_cond; }
 
 int iCondition::wait(iMutex &mutex, long milliseconds)
 {
@@ -203,13 +200,9 @@ int iCondition::wait(iMutex &mutex, long milliseconds)
 }
 
 void iCondition::signal()
-{
-    m_cond->signal();
-}
+{ m_cond->signal(); }
 
 void iCondition::broadcast()
-{
-    m_cond->broadcast();
-}
+{ m_cond->broadcast(); }
 
 } // namespace iShell

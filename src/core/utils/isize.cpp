@@ -14,9 +14,7 @@
 namespace iShell {
 
 void iSize::transpose()
-{
-    std::swap(wd, ht);
-}
+{ std::swap(wd, ht); }
 
 iSize iSize::scaled(const iSize &s, AspectRatioMode mode) const
 {
@@ -42,9 +40,7 @@ iSize iSize::scaled(const iSize &s, AspectRatioMode mode) const
 }
 
 void iSizeF::transpose()
-{
-    std::swap(wd, ht);
-}
+{ std::swap(wd, ht); }
 
 iSizeF iSizeF::scaled(const iSizeF &s, AspectRatioMode mode) const
 {

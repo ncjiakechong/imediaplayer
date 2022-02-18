@@ -15,7 +15,6 @@
 #include "utils/istringalgorithms_p.h"
 #include "utils/istringiterator_p.h"
 
-
 namespace iShell {
 
 enum { Endian = 0, Data = 1 };
@@ -23,14 +22,10 @@ enum { Endian = 0, Data = 1 };
 static const uchar utf8bom[] = { 0xef, 0xbb, 0xbf };
 
 static inline bool simdEncodeAscii(uchar *, const xuint16 *, const xuint16 *, const xuint16 *)
-{
-    return false;
-}
+{ return false; }
 
 static inline bool simdDecodeAscii(xuint16 *, const uchar *, const uchar *, const uchar *)
-{
-    return false;
-}
+{ return false; }
 
 static inline const uchar *simdFindNonAscii(const uchar *src, const uchar *end, const uchar *&nextAscii)
 {

@@ -2106,7 +2106,7 @@ static const iChar *ix_find_nonstd3(const iChar *uc, int len, CaseSensitivity cs
             continue;
         if (c == '-' || (c >= '0' && c <= '9')
             || (c >= 'a' && c <= 'z')
-            //underscore is not supposed to be allowed, but other browser accept it (QTBUG-7434)
+            //underscore is not supposed to be allowed
             || c == '_')
             continue;
 
@@ -2572,8 +2572,6 @@ iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot)
 }
 
 /*!
-    \since 4.2
-
     Returns the current whitelist of top-level domains that are allowed
     to have non-ASCII characters in their compositions.
 
@@ -2593,8 +2591,6 @@ std::list<iString> iUrl::idnWhitelist()
 }
 
 /*!
-    \since 4.2
-
     Sets the whitelist of Top-Level Domains (TLDs) that are allowed to have
     non-ASCII characters in domains to the value of \a list.
 

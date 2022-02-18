@@ -59,7 +59,7 @@ public:
     static bool isLeapYear(int year);
 
     static inline iDate fromJulianDay(xint64 jd_)
-    { return jd_ >= minJd() && jd_ <= maxJd() ? iDate(jd_) : iDate() ; }
+    { return jd_ >= minJd() && jd_ <= maxJd() ? iDate(jd_) : iDate(); }
     inline xint64 toJulianDay() const { return jd; }
 
 private:

@@ -21,12 +21,10 @@ iAUpdate::iAUpdate()
     : m_swapped(false)
     , m_readLock(0)
     , m_semaphore(0)
-{
-}
+{}
 
 iAUpdate::~iAUpdate() 
-{
-}
+{}
 
 uint iAUpdate::readBegin() 
 {

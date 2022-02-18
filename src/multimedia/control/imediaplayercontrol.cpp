@@ -45,16 +45,14 @@ namespace iShell {
     Destroys a media player control.
 */
 iMediaPlayerControl::~iMediaPlayerControl()
-{
-}
+{}
 
 /*!
     Constructs a new media player control with the given \a parent.
 */
 iMediaPlayerControl::iMediaPlayerControl(iObject *parent):
     iObject(parent)
-{
-}
+{}
 
 /*!
     \fn iMediaPlayerControl::state() const

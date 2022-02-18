@@ -31,8 +31,7 @@ iEventLoop::iEventLoop(iObject* parent)
 }
 
 iEventLoop::~iEventLoop()
-{
-}
+{}
 
 bool iEventLoop::processEvents(ProcessEventsFlags flags)
 {

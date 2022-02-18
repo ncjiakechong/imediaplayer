@@ -41,35 +41,23 @@ static inline size_t hash_internal(const iChar *p, size_t len, uint seed)
 }
 
 size_t iKeyHashFunc::operator()(const iChar& key) const
-{
-    return std::hash<xuint16>()(key.unicode());
-}
+{ return std::hash<xuint16>()(key.unicode()); }
 
 size_t iKeyHashFunc::operator()(const iByteArray& key) const
-{
-    return hash_internal(key.constData(), size_t(key.size()), 0);
-}
+{ return hash_internal(key.constData(), size_t(key.size()), 0); }
 
 size_t iKeyHashFunc::operator()(const iString& key) const
-{
-    return hash_internal(key.unicode(), size_t(key.size()), 0);
-}
+{ return hash_internal(key.unicode(), size_t(key.size()), 0); }
 
 size_t iKeyHashFunc::operator()(const iStringView& key) const
-{
-    return hash_internal(key.data(), size_t(key.size()), 0);
-}
+{ return hash_internal(key.data(), size_t(key.size()), 0); }
 
 size_t iKeyHashFunc::operator()(const iLatin1String& key) const
-{
-    return hash_internal(key.data(), size_t(key.size()), 0);
-}
+{ return hash_internal(key.data(), size_t(key.size()), 0); }
 
 template <typename T>
 static size_t hash_combine(size_t seed, const T &t)
-{
-    return seed ^ (std::hash<T>()(t) + 0x9e3779b9 + (seed << 6) + (seed >> 2)) ;
-}
+{ return seed ^ (std::hash<T>()(t) + 0x9e3779b9 + (seed << 6) + (seed >> 2)); }
 
 size_t iKeyHashFunc::operator()(const std::pair<int, int>& key) const
 {

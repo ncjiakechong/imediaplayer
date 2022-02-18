@@ -13,6 +13,7 @@
 #include "iabstractvideobuffer_p.h"
 
 namespace iShell {
+
 /*!
     \class iMemoryVideoBuffer
     \brief The iMemoryVideoBuffer class provides a system memory allocated video data buffer.
@@ -20,10 +21,6 @@ namespace iShell {
 
     iMemoryVideoBuffer is the default video buffer for allocating system memory.  It may be used to
     allocate memory for a iVideoFrame without implementing your own iAbstractVideoBuffer.
-*/
-
-/*!
-    Constructs a video buffer with an image stride of \a bytesPerLine from a byte \a array.
 */
 iMemoryVideoBuffer::iMemoryVideoBuffer(const iByteArray &array, int bytesPerLine)
     : iAbstractVideoBuffer( NoHandle)
@@ -33,24 +30,15 @@ iMemoryVideoBuffer::iMemoryVideoBuffer(const iByteArray &array, int bytesPerLine
 {
 }
 
-/*!
-    Destroys a system memory allocated video buffer.
-*/
 iMemoryVideoBuffer::~iMemoryVideoBuffer()
 {
 }
 
-/*!
-    \reimp
-*/
 iAbstractVideoBuffer::MapMode iMemoryVideoBuffer::mapMode() const
 {
     return m_mapMode;
 }
 
-/*!
-    \reimp
-*/
 uchar *iMemoryVideoBuffer::map(MapMode mode, int *numBytes, int *bytesPerLine)
 {
     if (m_mapMode == NotMapped
@@ -69,9 +57,6 @@ uchar *iMemoryVideoBuffer::map(MapMode mode, int *numBytes, int *bytesPerLine)
     }
 }
 
-/*!
-    \reimp
-*/
 void iMemoryVideoBuffer::unmap()
 {
     m_mapMode = NotMapped;

@@ -61,11 +61,6 @@ double iQNaN() { return ix_qnan(); }
 */
 double iInf() { return ix_inf(); }
 
-
-
-/*!
-   \internal
- */
 static inline xuint32 f2i(float f)
 {
     xuint32 i;
@@ -133,10 +128,6 @@ xuint32 iFloatDistance(float a, float b)
     return a > b ? f2i(a) - f2i(b) : f2i(b) - f2i(a);
 }
 
-
-/*!
-   \internal
- */
 static inline xuint64 d2i(double d)
 {
     xuint64 i;
@@ -150,7 +141,6 @@ static inline xuint64 d2i(double d)
     This function serves the same purpose as \c{iFloatDistance(float, float)}, but
     returns the distance between two \c double numbers. Since the range is larger
     than for two \c float numbers (\c{[-DBL_MAX,DBL_MAX]}), the return type is xuint64.
-
 
     \sa iFuzzyCompare()
 */
@@ -188,6 +178,5 @@ xuint64 iFloatDistance(double a, double b)
     // finally do the common integer subtraction
     return a > b ? d2i(a) - d2i(b) : d2i(b) - d2i(a);
 }
-
 
 } // namespace iShell

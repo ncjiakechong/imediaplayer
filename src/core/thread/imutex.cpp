@@ -88,17 +88,13 @@ public:
         : m_mutex((fast ?
                     std::unique_ptr<MutexImpl_BaseMutex>(new MutexImpl_MutexI<std::timed_mutex>()) :
                     std::unique_ptr<MutexImpl_BaseMutex>(new MutexImpl_MutexI<std::recursive_timed_mutex>())))
-    {
-    }
+    {}
 
     virtual ~platform_lock_imp()
-    {
-    }
+    {}
 
     virtual int lockImpl()
-    {
-        return m_mutex->lock();
-    }
+    { return m_mutex->lock(); }
 
     virtual int tryLockImpl(long milliseconds)
     {
@@ -110,9 +106,7 @@ public:
     }
 
     virtual int unlockImpl()
-    {
-        return m_mutex->unlock();
-    }
+    { return m_mutex->unlock(); }
 
 private:
     std::unique_ptr<MutexImpl_BaseMutex> m_mutex;
@@ -185,18 +179,15 @@ private:
 #endif
 
 iMutexImpl::iMutexImpl()
-{
-}
+{}
 
 iMutexImpl::~iMutexImpl()
-{
-}
+{}
 
 iMutex::iMutex(RecursionMode mode)
     : m_recMode(mode)
     , m_mutex(new platform_lock_imp(NonRecursive == mode))
-{
-}
+{}
 
 iMutex::~iMutex()
 {

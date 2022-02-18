@@ -341,7 +341,6 @@ iVideoFrame::~iVideoFrame()
 
 /*!
     \return underlying video buffer or \c null if there is none.
-    \since 5.13
 */
 iAbstractVideoBuffer *iVideoFrame::buffer() const
 {
@@ -674,7 +673,6 @@ int iVideoFrame::bytesPerLine() const
     This value is only valid while the frame data is \l {map()}{mapped}.
 
     \sa bits(), map(), mappedBytes(), planeCount()
-    \since 5.4
 */
 
 int iVideoFrame::bytesPerLine(int plane) const
@@ -708,7 +706,6 @@ uchar *iVideoFrame::bits()
     buffer has been mapped for writing.
 
     \sa map(), mappedBytes(), bytesPerLine(), planeCount()
-    \since 5.4
 */
 uchar *iVideoFrame::bits(int plane)
 {
@@ -739,7 +736,6 @@ const uchar *iVideoFrame::bits() const
     buffer will initially be uninitialized.
 
     \sa map(), mappedBytes(), bytesPerLine(), planeCount()
-    \since 5.4
 */
 const uchar *iVideoFrame::bits(int plane) const
 {
@@ -764,7 +760,6 @@ int iVideoFrame::mappedBytes() const
     This value is only valid while the frame data is \l {map()}{mapped}.
 
     \sa map()
-    \since 5.4
 */
 
 int iVideoFrame::planeCount() const

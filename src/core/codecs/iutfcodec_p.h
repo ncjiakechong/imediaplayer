@@ -144,9 +144,7 @@ namespace iUtf8Functions
     }
 
     inline bool isContinuationByte(uchar b)
-    {
-        return (b & 0xc0) == 0x80;
-    }
+    { return (b & 0xc0) == 0x80; }
 
     /// returns the number of characters consumed (including \a b) in case of success;
     /// returns negative in case of error: Traits::Error or Traits::EndOfString

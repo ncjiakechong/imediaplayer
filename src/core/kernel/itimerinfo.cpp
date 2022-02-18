@@ -24,8 +24,7 @@ namespace iShell {
 
 iTimerInfoList::iTimerInfoList()
     : firstTimerInfo(IX_NULLPTR)
-{
-}
+{}
 
 iTimerInfoList::~iTimerInfoList()
 {

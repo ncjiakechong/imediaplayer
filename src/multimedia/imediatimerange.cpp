@@ -48,7 +48,6 @@ iMediaTimeInterval::iMediaTimeInterval()
     : s(0)
     , e(0)
 {
-
 }
 
 /*!
@@ -60,7 +59,6 @@ iMediaTimeInterval::iMediaTimeInterval(xint64 start, xint64 end)
     : s(start)
     , e(end)
 {
-
 }
 
 /*!
@@ -72,7 +70,6 @@ iMediaTimeInterval::iMediaTimeInterval(const iMediaTimeInterval &other)
     : s(other.s)
     , e(other.e)
 {
-
 }
 
 /*!
@@ -310,7 +307,6 @@ void iMediaTimeRangePrivate::removeInterval(const iMediaTimeInterval &interval)
 iMediaTimeRange::iMediaTimeRange()
     : d(new iMediaTimeRangePrivate)
 {
-
 }
 
 /*!
@@ -327,7 +323,6 @@ iMediaTimeRange::iMediaTimeRange()
 iMediaTimeRange::iMediaTimeRange(xint64 start, xint64 end)
     : d(new iMediaTimeRangePrivate(iMediaTimeInterval(start, end)))
 {
-
 }
 
 /*!
@@ -343,7 +338,6 @@ iMediaTimeRange::iMediaTimeRange(xint64 start, xint64 end)
 iMediaTimeRange::iMediaTimeRange(const iMediaTimeInterval &interval)
     : d(new iMediaTimeRangePrivate(interval))
 {
-
 }
 
 /*!
@@ -354,7 +348,6 @@ iMediaTimeRange::iMediaTimeRange(const iMediaTimeInterval &interval)
 iMediaTimeRange::iMediaTimeRange(const iMediaTimeRange &range)
     : d(range.d)
 {
-
 }
 
 /*!
@@ -364,7 +357,6 @@ iMediaTimeRange::iMediaTimeRange(const iMediaTimeRange &range)
 */
 iMediaTimeRange::~iMediaTimeRange()
 {
-
 }
 
 /*!

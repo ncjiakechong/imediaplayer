@@ -102,9 +102,7 @@ static inline xsizetype bm_find(iStringView haystack, xsizetype index, iStringVi
 }
 
 void iStringMatcher::updateSkipTable()
-{
-    bm_init_skiptable(ix_sv, ix_skiptable, ix_cs);
-}
+{ bm_init_skiptable(ix_sv, ix_skiptable, ix_cs); }
 
 /*!
     \class iStringMatcher
@@ -134,9 +132,7 @@ void iStringMatcher::updateSkipTable()
 */
 iStringMatcher::iStringMatcher()
     : d_ptr(0), ix_cs(iShell::CaseSensitive)
-{
-    memset(ix_skiptable, 0, sizeof(ix_skiptable));
-}
+{ memset(ix_skiptable, 0, sizeof(ix_skiptable)); }
 
 /*!
     Constructs a string matcher that will search for \a pattern, with
@@ -171,16 +167,13 @@ iStringMatcher::iStringMatcher(iStringView str, iShell::CaseSensitivity cs)
 */
 iStringMatcher::iStringMatcher(const iStringMatcher &other)
     : d_ptr(IX_NULLPTR)
-{
-    operator=(other);
-}
+{ operator=(other); }
 
 /*!
     Destroys the string matcher.
 */
 iStringMatcher::~iStringMatcher()
-{
-}
+{}
 
 /*!
     Assigns the \a other string matcher to this string matcher.
@@ -250,7 +243,6 @@ void iStringMatcher::setCaseSensitivity(iShell::CaseSensitivity cs)
 */
 
 /*! \fn xsizetype iStringMatcher::indexIn(const iChar *str, xsizetype length, xsizetype from) const
-    \since 4.5
 
     Searches the string starting at \a str (of length \a length) from
     character position \a from (default 0, i.e. from the first
@@ -263,8 +255,6 @@ void iStringMatcher::setCaseSensitivity(iShell::CaseSensitivity cs)
 */
 
 /*!
-    \since 5.14
-
     Searches the string \a str from character position \a from
     (default 0, i.e. from the first character), for the string
     pattern() that was set in the constructor or in the most recent

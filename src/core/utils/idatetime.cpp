@@ -130,14 +130,10 @@ static inline iDate fixedDate(int y, int m, int d)
   > 0, so we only have to treat negative numerator, a, specially.
  */
 static inline xint64 floordiv(xint64 a, int b)
-{
-    return (a - (a < 0 ? b - 1 : 0)) / b;
-}
+{ return (a - (a < 0 ? b - 1 : 0)) / b; }
 
 static inline int floordiv(int a, int b)
-{
-    return (a - (a < 0 ? b - 1 : 0)) / b;
-}
+{ return (a - (a < 0 ? b - 1 : 0)) / b; }
 
 static inline xint64 julianDayFromDate(int year, int month, int day)
 {
@@ -183,7 +179,7 @@ static ParsedDate getDateFromJulianDay(xint64 julianDay)
 
     // Adjust for no year 0
     if (year <= 0)
-        --year ;
+        --year;
 
     return { year, month, day };
 }
@@ -212,8 +208,6 @@ static iString toOffsetString(iShell::DateFormat format, int offset)
  *****************************************************************************/
 
 /*!
-    \since 4.5
-
     \enum iDate::MonthNameType
 
     This enum describes the types of the string representation used
@@ -306,7 +300,6 @@ static iString toOffsetString(iShell::DateFormat format, int offset)
 
     \sa isValid()
 */
-
 iDate::iDate(int y, int m, int d)
 {
     setDate(y, m, d);
@@ -406,7 +399,6 @@ int iDate::day() const
 
     \sa day(), dayOfYear(), iShell::DayOfWeek
 */
-
 int iDate::dayOfWeek() const
 {
     if (isNull())
@@ -426,7 +418,6 @@ int iDate::dayOfWeek() const
 
     \sa day(), dayOfWeek()
 */
-
 int iDate::dayOfYear() const
 {
     if (isNull())
@@ -442,7 +433,6 @@ int iDate::dayOfYear() const
 
     \sa day(), daysInYear()
 */
-
 int iDate::daysInMonth() const
 {
     if (isNull())
@@ -462,7 +452,6 @@ int iDate::daysInMonth() const
 
     \sa day(), daysInMonth()
 */
-
 int iDate::daysInYear() const
 {
     if (isNull())
@@ -487,7 +476,6 @@ int iDate::daysInYear() const
 
     \sa isValid()
 */
-
 int iDate::weekNumber(int *yearNumber) const
 {
     if (!isValid())
@@ -535,8 +523,6 @@ int iDate::weekNumber(int *yearNumber) const
 */
 
 /*!
-    \since 4.2
-
     Sets the date's \a year, \a month, and \a day. Returns \c true if
     the date is valid; otherwise returns \c false.
 
@@ -556,8 +542,6 @@ bool iDate::setDate(int year, int month, int day)
 }
 
 /*!
-    \since 4.5
-
     Extracts the date's year, month, and day, and assigns them to
     *\a year, *\a month, and *\a day. The pointers may be null.
 
@@ -588,7 +572,6 @@ void iDate::getDate(int *year, int *month, int *day) const
 
     \sa addMonths(), addYears(), daysTo()
 */
-
 iDate iDate::addDays(xint64 ndays) const
 {
     if (isNull())
@@ -609,7 +592,6 @@ iDate iDate::addDays(xint64 ndays) const
 
     \sa addDays(), addYears()
 */
-
 iDate iDate::addMonths(int nmonths) const
 {
     if (!isValid())
@@ -675,7 +657,6 @@ iDate iDate::addMonths(int nmonths) const
 
     \sa addDays(), addMonths()
 */
-
 iDate iDate::addYears(int nyears) const
 {
     if (!isValid())
@@ -706,7 +687,6 @@ iDate iDate::addYears(int nyears) const
 
     \sa addDays()
 */
-
 xint64 iDate::daysTo(const iDate &d) const
 {
     if (isNull() || d.isNull())
@@ -779,7 +759,6 @@ xint64 iDate::daysTo(const iDate &d) const
 
     \sa isNull(), setDate()
 */
-
 bool iDate::isValid(int year, int month, int day)
 {
     // there is no year 0 in the Gregorian calendar
@@ -796,7 +775,6 @@ bool iDate::isValid(int year, int month, int day)
     Returns \c true if the specified \a year is a leap year; otherwise
     returns \c false.
 */
-
 bool iDate::isLeapYear(int y)
 {
     // No year 0 in Gregorian calendar, so -1, -5, -9 etc are leap years
@@ -888,12 +866,10 @@ bool iDate::isLeapYear(int y)
 
     \sa isValid()
 */
-
 iTime::iTime(int h, int m, int s, int ms)
 {
     setHMS(h, m, s, ms);
 }
-
 
 /*!
     \fn bool iTime::isNull() const
@@ -911,7 +887,6 @@ iTime::iTime(int h, int m, int s, int ms)
 
     \sa isNull()
 */
-
 bool iTime::isValid() const
 {
     return mds > NullTime && mds < MSECS_PER_DAY;
@@ -925,7 +900,6 @@ bool iTime::isValid() const
 
     \sa minute(), second(), msec()
 */
-
 int iTime::hour() const
 {
     if (!isValid())
@@ -941,7 +915,6 @@ int iTime::hour() const
 
     \sa hour(), second(), msec()
 */
-
 int iTime::minute() const
 {
     if (!isValid())
@@ -957,7 +930,6 @@ int iTime::minute() const
 
     \sa hour(), minute(), msec()
 */
-
 int iTime::second() const
 {
     if (!isValid())
@@ -973,7 +945,6 @@ int iTime::second() const
 
     \sa hour(), minute(), second()
 */
-
 int iTime::msec() const
 {
     if (!isValid())
@@ -981,7 +952,6 @@ int iTime::msec() const
 
     return ds() % 1000;
 }
-
 
 /*!
     Sets the time to hour \a h, minute \a m, seconds \a s and
@@ -993,7 +963,6 @@ int iTime::msec() const
 
     \sa isValid()
 */
-
 bool iTime::setHMS(int h, int m, int s, int ms)
 {
     if (!isValid(h,m,s,ms)) {
@@ -1018,7 +987,6 @@ bool iTime::setHMS(int h, int m, int s, int ms)
 
     \sa addMSecs(), secsTo(), iDateTime::addSecs()
 */
-
 iTime iTime::addSecs(int s) const
 {
     s %= SECS_PER_DAY;
@@ -1039,7 +1007,6 @@ iTime iTime::addSecs(int s) const
 
     \sa addSecs(), iDateTime::secsTo()
 */
-
 int iTime::secsTo(const iTime &t) const
 {
     if (!isValid() || !t.isValid())
@@ -1062,7 +1029,6 @@ int iTime::secsTo(const iTime &t) const
 
     \sa addSecs(), msecsTo(), iDateTime::addMSecs()
 */
-
 iTime iTime::addMSecs(int ms) const
 {
     iTime t;
@@ -1091,52 +1057,12 @@ iTime iTime::addMSecs(int ms) const
 
     \sa secsTo(), addMSecs(), iDateTime::msecsTo()
 */
-
 int iTime::msecsTo(const iTime &t) const
 {
     if (!isValid() || !t.isValid())
         return 0;
     return t.ds() - ds();
 }
-
-
-/*!
-    \fn bool iTime::operator==(const iTime &t) const
-
-    Returns \c true if this time is equal to \a t; otherwise returns \c false.
-*/
-
-/*!
-    \fn bool iTime::operator!=(const iTime &t) const
-
-    Returns \c true if this time is different from \a t; otherwise returns \c false.
-*/
-
-/*!
-    \fn bool iTime::operator<(const iTime &t) const
-
-    Returns \c true if this time is earlier than \a t; otherwise returns \c false.
-*/
-
-/*!
-    \fn bool iTime::operator<=(const iTime &t) const
-
-    Returns \c true if this time is earlier than or equal to \a t;
-    otherwise returns \c false.
-*/
-
-/*!
-    \fn bool iTime::operator>(const iTime &t) const
-
-    Returns \c true if this time is later than \a t; otherwise returns \c false.
-*/
-
-/*!
-    \fn bool iTime::operator>=(const iTime &t) const
-
-    Returns \c true if this time is later than or equal to \a t;
-    otherwise returns \c false.
-*/
 
 /*!
     \fn iTime iTime::fromMSecsSinceStartOfDay(int msecs)
@@ -1180,7 +1106,6 @@ int iTime::msecsTo(const iTime &t) const
 
     \snippet code/src_corelib_tools_qdatetime.cpp 9
 */
-
 bool iTime::isValid(int h, int m, int s, int ms)
 {
     return (uint)h < 24 && (uint)m < 60 && (uint)s < 60 && (uint)ms < 1000;
@@ -1194,7 +1119,6 @@ bool iTime::isValid(int h, int m, int s, int ms)
 
     \sa restart(), elapsed(), currentTime()
 */
-
 void iTime::start()
 {
     *this = currentTime();
@@ -1219,7 +1143,6 @@ void iTime::start()
 
     \sa start(), elapsed(), currentTime()
 */
-
 int iTime::restart()
 {
     iTime t = currentTime();
@@ -1247,7 +1170,6 @@ int iTime::restart()
 
     \sa start(), restart()
 */
-
 int iTime::elapsed() const
 {
     int n = msecsTo(currentTime());
@@ -1295,7 +1217,6 @@ static iString ix_tzname(iDateTimePrivate::DaylightStatus daylightStatus)
 #endif
 
 }
-
 
 // Calls the platform variant of mktime for the given date, time and daylightStatus,
 // and updates the date, time, daylightStatus and abbreviation with the returned values
@@ -1985,9 +1906,6 @@ iDateTime::Data iDateTimePrivate::create(const iDate &toDate, const iTime &toTim
  *****************************************************************************/
 
 /*!
-    \class iDateTime
-    \ingroup shared
-    \reentrant
     \brief The iDateTime class provides date and time functions.
 
 
@@ -2101,9 +2019,7 @@ iDateTime::Data iDateTimePrivate::create(const iDate &toDate, const iTime &toTim
     \sa isValid()
 */
 iDateTime::iDateTime()
-{
-}
-
+{}
 
 /*!
     Constructs a datetime with the given \a date, a valid
@@ -2112,12 +2028,9 @@ iDateTime::iDateTime()
 
 iDateTime::iDateTime(const iDate &date)
     : d(iDateTimePrivate::create(date, iTime(0, 0, 0), iShell::LocalTime, 0))
-{
-}
+{}
 
 /*!
-    \since 5.2
-
     Constructs a datetime with the given \a date and \a time, using
     the time specification defined by \a spec and \a offsetSeconds seconds.
 
@@ -2132,44 +2045,26 @@ iDateTime::iDateTime(const iDate &date)
     i.e. the current system time zone.  To create a iShell::TimeZone datetime
     use the correct constructor.
 */
-
 iDateTime::iDateTime(const iDate &date, const iTime &time, iShell::TimeSpec spec, int offsetSeconds)
          : d(iDateTimePrivate::create(date, time, spec, offsetSeconds))
-{
-}
+{}
 
-/*!
-    Constructs a copy of the \a other datetime.
-*/
 iDateTime::iDateTime(const iDateTime &other)
     : d(other.d)
-{
-}
+{}
 
-/*!
-    Destroys the datetime.
-*/
 iDateTime::~iDateTime()
-{
-}
+{}
 
 /*!
     Makes a copy of the \a other datetime and returns a reference to the
     copy.
 */
-
 iDateTime &iDateTime::operator=(const iDateTime &other)
 {
     d = other.d;
     return *this;
 }
-/*!
-    \fn void iDateTime::swap(iDateTime &other)
-    \since 5.0
-
-    Swaps this datetime with \a other. This operation is very fast
-    and never fails.
-*/
 
 /*!
     Returns \c true if both the date and the time are null; otherwise
@@ -2177,7 +2072,6 @@ iDateTime &iDateTime::operator=(const iDateTime &other)
 
     \sa iDate::isNull(), iTime::isNull(), isValid()
 */
-
 bool iDateTime::isNull() const
 {
     iDateTimePrivate::StatusFlags status = getStatus(d);
@@ -2196,7 +2090,6 @@ bool iDateTime::isNull() const
 
     \sa iDate::isValid(), iTime::isValid()
 */
-
 bool iDateTime::isValid() const
 {
     iDateTimePrivate::StatusFlags status = getStatus(d);
@@ -2208,7 +2101,6 @@ bool iDateTime::isValid() const
 
     \sa setDate(), time(), timeSpec()
 */
-
 iDate iDateTime::date() const
 {
     iDateTimePrivate::StatusFlags status = getStatus(d);
@@ -2224,7 +2116,6 @@ iDate iDateTime::date() const
 
     \sa setTime(), date(), timeSpec()
 */
-
 iTime iDateTime::time() const
 {
     iDateTimePrivate::StatusFlags status = getStatus(d);
@@ -2240,15 +2131,10 @@ iTime iDateTime::time() const
 
     \sa setTimeSpec(), date(), time(), iShell::TimeSpec
 */
-
 iShell::TimeSpec iDateTime::timeSpec() const
-{
-    return getSpec(d);
-}
+{ return getSpec(d); }
 
 /*!
-    \since 5.2
-
     Returns the current Offset From UTC in seconds.
 
     If the timeSpec() is iShell::OffsetFromUTC this will be the value originally set.
@@ -2263,7 +2149,6 @@ iShell::TimeSpec iDateTime::timeSpec() const
 
     \sa setOffsetFromUtc()
 */
-
 int iDateTime::offsetFromUtc() const
 {
     if (!d.isShort())
@@ -2283,8 +2168,6 @@ int iDateTime::offsetFromUtc() const
 }
 
 /*!
-    \since 5.2
-
     Returns the Time Zone Abbreviation for the datetime.
 
     If the timeSpec() is iShell::UTC this will be "UTC".
@@ -2302,7 +2185,6 @@ int iDateTime::offsetFromUtc() const
 
     \sa timeSpec()
 */
-
 iString iDateTime::timeZoneAbbreviation() const
 {
     switch (getSpec(d)) {
@@ -2323,8 +2205,6 @@ iString iDateTime::timeZoneAbbreviation() const
 }
 
 /*!
-    \since 5.2
-
     Returns if this datetime falls in Daylight-Saving Time.
 
     If the iShell::TimeSpec is not iShell::LocalTime or iShell::TimeZone then will always
@@ -2332,7 +2212,6 @@ iString iDateTime::timeZoneAbbreviation() const
 
     \sa timeSpec()
 */
-
 bool iDateTime::isDaylightTime() const
 {
     switch (getSpec(d)) {
@@ -2357,11 +2236,8 @@ bool iDateTime::isDaylightTime() const
 
     \sa date(), setTime(), setTimeSpec()
 */
-
 void iDateTime::setDate(const iDate &date)
-{
-    setDateTime(d, date, time());
-}
+{ setDateTime(d, date, time()); }
 
 /*!
     Sets the time part of this datetime to \a time. If \a time is not valid,
@@ -2375,11 +2251,8 @@ void iDateTime::setDate(const iDate &date)
 
     \sa time(), setDate(), setTimeSpec()
 */
-
 void iDateTime::setTime(const iTime &time)
-{
-    setDateTime(d, date(), time);
-}
+{ setDateTime(d, date(), time); }
 
 /*!
     Sets the time specification used in this datetime to \a spec.
@@ -2404,8 +2277,6 @@ void iDateTime::setTimeSpec(iShell::TimeSpec spec)
 }
 
 /*!
-    \since 5.2
-
     Sets the timeSpec() to iShell::OffsetFromUTC and the offset to \a offsetSeconds.
     The datetime will refer to a different point in time.
 
@@ -2417,7 +2288,6 @@ void iDateTime::setTimeSpec(iShell::TimeSpec spec)
 
     \sa isValid(), offsetFromUtc()
 */
-
 void iDateTime::setOffsetFromUtc(int offsetSeconds)
 {
     ::iShell::setTimeSpec(d, iShell::OffsetFromUTC, offsetSeconds);
@@ -2425,8 +2295,6 @@ void iDateTime::setOffsetFromUtc(int offsetSeconds)
 }
 
 /*!
-    \since 4.7
-
     Returns the datetime as the number of milliseconds that have passed
     since 1970-01-01T00:00:00.000, Coordinated Universal Time (iShell::UTC).
 
@@ -2462,8 +2330,6 @@ xint64 iDateTime::toMSecsSinceEpoch() const
 }
 
 /*!
-    \since 5.8
-
     Returns the datetime as the number of seconds that have passed since
     1970-01-01T00:00:00.000, Coordinated Universal Time (iShell::UTC).
 
@@ -2477,13 +2343,9 @@ xint64 iDateTime::toMSecsSinceEpoch() const
     \sa toMSecsSinceEpoch(), setSecsSinceEpoch()
 */
 xint64 iDateTime::toSecsSinceEpoch() const
-{
-    return toMSecsSinceEpoch() / 1000;
-}
+{ return toMSecsSinceEpoch() / 1000; }
 
 /*!
-    \since 4.7
-
     Sets the date and time given the number of milliseconds \a msecs that have
     passed since 1970-01-01T00:00:00.000, Coordinated Universal Time
     (iShell::UTC). On systems that do not support time zones this function
@@ -2545,8 +2407,6 @@ void iDateTime::setMSecsSinceEpoch(xint64 msecs)
 }
 
 /*!
-    \since 5.8
-
     Sets the date and time given the number of seconds \a secs that have
     passed since 1970-01-01T00:00:00.000, Coordinated Universal Time
     (iShell::UTC). On systems that do not support time zones this function
@@ -2555,10 +2415,7 @@ void iDateTime::setMSecsSinceEpoch(xint64 msecs)
     \sa toSecsSinceEpoch(), setMSecsSinceEpoch()
 */
 void iDateTime::setSecsSinceEpoch(xint64 secs)
-{
-    setMSecsSinceEpoch(secs * 1000);
-}
-
+{ setMSecsSinceEpoch(secs * 1000); }
 
 static inline void massageAdjustedDateTime(const iDateTimeData &d, iDate *date, iTime *time)
 {
@@ -2594,7 +2451,6 @@ static inline void massageAdjustedDateTime(const iDateTimeData &d, iDate *date, 
 
     \sa daysTo(), addMonths(), addYears(), addSecs()
 */
-
 iDateTime iDateTime::addDays(xint64 ndays) const
 {
     iDateTime dt(*this);
@@ -2620,7 +2476,6 @@ iDateTime iDateTime::addDays(xint64 ndays) const
 
     \sa daysTo(), addDays(), addYears(), addSecs()
 */
-
 iDateTime iDateTime::addMonths(int nmonths) const
 {
     iDateTime dt(*this);
@@ -2646,7 +2501,6 @@ iDateTime iDateTime::addMonths(int nmonths) const
 
     \sa daysTo(), addDays(), addMonths(), addSecs()
 */
-
 iDateTime iDateTime::addYears(int nyears) const
 {
     iDateTime dt(*this);
@@ -2668,11 +2522,8 @@ iDateTime iDateTime::addYears(int nyears) const
 
     \sa addMSecs(), secsTo(), addDays(), addMonths(), addYears()
 */
-
 iDateTime iDateTime::addSecs(xint64 s) const
-{
-    return addMSecs(s * 1000);
-}
+{ return addMSecs(s * 1000); }
 
 /*!
     Returns a iDateTime object containing a datetime \a msecs miliseconds
@@ -2727,11 +2578,8 @@ iDateTime iDateTime::addMSecs(xint64 msecs) const
 
     \sa addDays(), secsTo(), msecsTo()
 */
-
 xint64 iDateTime::daysTo(const iDateTime &other) const
-{
-    return date().daysTo(other.date());
-}
+{ return date().daysTo(other.date()); }
 
 /*!
     Returns the number of seconds from this datetime to the \a other
@@ -2749,11 +2597,8 @@ xint64 iDateTime::daysTo(const iDateTime &other) const
 
     \sa addSecs(), daysTo(), iTime::secsTo()
 */
-
 xint64 iDateTime::secsTo(const iDateTime &other) const
-{
-    return (msecsTo(other) / 1000);
-}
+{ return (msecsTo(other) / 1000); }
 
 /*!
     Returns the number of milliseconds from this datetime to the \a other
@@ -2768,7 +2613,6 @@ xint64 iDateTime::secsTo(const iDateTime &other) const
 
     \sa addMSecs(), daysTo(), iTime::msecsTo()
 */
-
 xint64 iDateTime::msecsTo(const iDateTime &other) const
 {
     if (!isValid() || !other.isValid())
@@ -2794,7 +2638,6 @@ xint64 iDateTime::msecsTo(const iDateTime &other) const
 
     \sa timeSpec(), toTimeZone(), toUTC(), toLocalTime()
 */
-
 iDateTime iDateTime::toTimeSpec(iShell::TimeSpec spec) const
 {
     if (getSpec(d) == spec && (spec == iShell::UTC || spec == iShell::LocalTime))
@@ -2810,8 +2653,6 @@ iDateTime iDateTime::toTimeSpec(iShell::TimeSpec spec) const
 }
 
 /*!
-    \since 5.2
-
     \fn iDateTime iDateTime::toOffsetFromUtc(int offsetSeconds) const
 
     Returns a copy of this datetime converted to a spec of iShell::OffsetFromUTC
@@ -2821,7 +2662,6 @@ iDateTime iDateTime::toTimeSpec(iShell::TimeSpec spec) const
 
     \sa setOffsetFromUtc(), offsetFromUtc(), toTimeSpec()
 */
-
 iDateTime iDateTime::toOffsetFromUtc(int offsetSeconds) const
 {
     if (getSpec(d) == iShell::OffsetFromUTC
@@ -2844,7 +2684,6 @@ iDateTime iDateTime::toOffsetFromUtc(int offsetSeconds) const
 
     \sa operator!=()
 */
-
 bool iDateTime::operator==(const iDateTime &other) const
 {
     if (getSpec(d) == iShell::LocalTime
@@ -2871,7 +2710,6 @@ bool iDateTime::operator==(const iDateTime &other) const
     Returns \c true if this datetime is earlier than the \a other
     datetime; otherwise returns \c false.
 */
-
 bool iDateTime::operator<(const iDateTime &other) const
 {
     if (getSpec(d) == iShell::LocalTime
@@ -2913,7 +2751,6 @@ bool iDateTime::operator<(const iDateTime &other) const
 
 /*!
     \fn iDateTime iDateTime::currentDateTimeUtc()
-    \since 4.7
     Returns the current datetime, as reported by the system clock, in
     UTC.
 
@@ -2922,7 +2759,6 @@ bool iDateTime::operator<(const iDateTime &other) const
 
 /*!
     \fn xint64 iDateTime::currentMSecsSinceEpoch()
-    \since 4.7
 
     Returns the number of milliseconds since 1970-01-01T00:00:00 Universal
     Coordinated Time. This number is like the POSIX time_t variable, but
@@ -2933,39 +2769,27 @@ bool iDateTime::operator<(const iDateTime &other) const
 
 /*!
     \fn xint64 iDateTime::currentSecsSinceEpoch()
-    \since 5.8
 
     Returns the number of seconds since 1970-01-01T00:00:00 Universal
     Coordinated Time.
 
     \sa currentMSecsSinceEpoch()
 */
-
 iDate iDate::currentDate()
-{
-    return iDateTime::currentDateTime().date();
-}
+{ return iDateTime::currentDateTime().date(); }
 
 iTime iTime::currentTime()
-{
-    return iDateTime::currentDateTime().time();
-}
+{ return iDateTime::currentDateTime().time(); }
 
 iDateTime iDateTime::currentDateTime()
-{
-    return fromMSecsSinceEpoch(currentMSecsSinceEpoch(), iShell::LocalTime);
-}
+{ return fromMSecsSinceEpoch(currentMSecsSinceEpoch(), iShell::LocalTime); }
 
 iDateTime iDateTime::currentDateTimeUtc()
-{
-    return fromMSecsSinceEpoch(currentMSecsSinceEpoch(), iShell::UTC);
-}
+{ return fromMSecsSinceEpoch(currentMSecsSinceEpoch(), iShell::UTC); }
 
 #if defined(IX_OS_WIN)
 static inline uint msecsFromDecomposed(int hour, int minute, int sec, int msec = 0)
-{
-    return MSECS_PER_HOUR * hour + MSECS_PER_MIN * minute + 1000 * sec + msec;
-}
+{ return MSECS_PER_HOUR * hour + MSECS_PER_MIN * minute + 1000 * sec + msec; }
 
 xint64 iDateTime::currentMSecsSinceEpoch()
 {
@@ -3010,10 +2834,7 @@ xint64 iDateTime::currentSecsSinceEpoch()
 #error "What system is this?"
 #endif
 
-
 /*!
-  \since 5.2
-
   Returns a datetime whose date and time are the number of milliseconds \a msecs
   that have passed since 1970-01-01T00:00:00.000, Coordinated Universal
   Time (iShell::UTC) and converted to the given \a spec.
@@ -3040,8 +2861,6 @@ iDateTime iDateTime::fromMSecsSinceEpoch(xint64 msecs, iShell::TimeSpec spec, in
 }
 
 /*!
-  \since 5.8
-
   Returns a datetime whose date and time are the number of seconds \a secs
   that have passed since 1970-01-01T00:00:00.000, Coordinated Universal
   Time (iShell::UTC) and converted to the given \a spec.
@@ -3060,9 +2879,7 @@ iDateTime iDateTime::fromMSecsSinceEpoch(xint64 msecs, iShell::TimeSpec spec, in
   \sa toSecsSinceEpoch(), setSecsSinceEpoch()
 */
 iDateTime iDateTime::fromSecsSinceEpoch(xint64 secs, iShell::TimeSpec spec, int offsetSeconds)
-{
-    return fromMSecsSinceEpoch(secs * 1000, spec, offsetSeconds);
-}
+{ return fromMSecsSinceEpoch(secs * 1000, spec, offsetSeconds); }
 
 
 /*!

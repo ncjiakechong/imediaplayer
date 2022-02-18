@@ -28,13 +28,10 @@ public:
         : mtx1((m1 == m2) ? m1 : (std::less<iMutex *>()(m1, m2) ? m1 : m2)),
           mtx2((m1 == m2) ? IX_NULLPTR : (std::less<iMutex *>()(m1, m2) ? m2 : m1)),
           locked(false)
-    {
-        relock();
-    }
+    { relock(); }
+
     ~iOrderedMutexLocker()
-    {
-        unlock();
-    }
+    { unlock(); }
 
     void relock()
     {

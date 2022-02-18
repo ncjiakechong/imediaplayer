@@ -414,8 +414,6 @@ void iVideoSurfaceFormat::setYCbCrColorSpace(iVideoSurfaceFormat::YCbCrColorSpac
 
     \note The mirroring here differs from iImage::mirrored, as a vertically mirrored iImage
     will be mirrored around its x-axis.
-
-    \since 5.11
  */
 bool iVideoSurfaceFormat::isMirrored() const
 {
@@ -429,8 +427,6 @@ bool iVideoSurfaceFormat::isMirrored() const
 
     \note The mirroring here differs from iImage::mirrored, as a vertically mirrored iImage
     will be mirrored around its x-axis.
-
-    \since 5.11
  */
 void iVideoSurfaceFormat::setMirrored(bool mirrored)
 {

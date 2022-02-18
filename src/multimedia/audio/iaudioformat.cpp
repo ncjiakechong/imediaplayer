@@ -92,8 +92,7 @@ iAudioFormat::iAudioFormat()
     , m_sampleRate(-1)
     , m_channels(-1)
     , m_sampleSize(-1)
-{
-}
+{}
 
 /*!
     Construct a new audio format using \a other.
@@ -105,15 +104,13 @@ iAudioFormat::iAudioFormat(const iAudioFormat &other)
     , m_sampleRate(other.m_sampleRate)
     , m_channels(other.m_channels)
     , m_sampleSize(other.m_sampleSize)
-{
-}
+{}
 
 /*!
     Destroy this audio format.
 */
 iAudioFormat::~iAudioFormat()
-{
-}
+{}
 
 /*!
     Assigns \a other to this iAudioFormat implementation.
@@ -153,9 +150,7 @@ bool iAudioFormat::operator==(const iAudioFormat &other) const
   All elements of iAudioFormat are used for the comparison.
 */
 bool iAudioFormat::operator!=(const iAudioFormat& other) const
-{
-    return !(*this == other);
-}
+{ return !(*this == other); }
 
 /*!
     Returns true if all of the parameters are valid.
@@ -165,27 +160,6 @@ bool iAudioFormat::isValid() const
     return m_sampleRate != -1 && m_channels != -1 && m_sampleSize != -1 &&
             m_sampleType != iAudioFormat::Unknown && !m_codec.isEmpty();
 }
-
-/*!
-   Sets the sample rate to \a samplerate Hertz.
-
-*/
-
-/*!
-    Returns the current sample rate in Hertz.
-
-*/
-
-
-/*!
-   Sets the channel count to \a channels.
-
-*/
-
-/*!
-    Returns the current channel count value.
-
-*/
 
 /*!
    Sets the sample size to the \a sampleSize specified, in bits.
@@ -242,9 +216,7 @@ bool iAudioFormat::isValid() const
     \sa durationForBytes()
  */
 xint32 iAudioFormat::bytesForDuration(xint64 duration) const
-{
-    return bytesPerFrame() * framesForDuration(duration);
-}
+{ return bytesPerFrame() * framesForDuration(duration); }
 
 /*!
     Returns the number of microseconds represented by \a bytes in this format.
@@ -273,9 +245,7 @@ xint64 iAudioFormat::durationForBytes(xint32 bytes) const
     \sa bytesForDuration()
 */
 xint32 iAudioFormat::bytesForFrames(xint32 frameCount) const
-{
-    return frameCount * bytesPerFrame();
-}
+{ return frameCount * bytesPerFrame(); }
 
 /*!
     Returns the number of frames represented by \a byteCount in this format.

@@ -37,9 +37,7 @@ protected:
     typedef typename std::make_unsigned<T>::type UT;
 
     static UT mask()
-    {
-        return ((UT(1) << width) - 1) << pos;
-    }
+    { return ((UT(1) << width) - 1) << pos; }
 
     UT val;
 
@@ -66,30 +64,30 @@ public:
 
     bool operator !() const { return !(val & S::toSpecial(mask())); }
     bool operator ==(iSpecialIntegerBitfield<S, pos, width> i) const
-    {   return ((val ^ i.val) & S::toSpecial(mask())) == 0; }
+    { return ((val ^ i.val) & S::toSpecial(mask())) == 0; }
     bool operator !=(iSpecialIntegerBitfield<S, pos, width> i) const
-    {   return ((val ^ i.val) & S::toSpecial(mask())) != 0; }
+    { return ((val ^ i.val) & S::toSpecial(mask())) != 0; }
 
     iSpecialIntegerBitfield &operator +=(T i)
-    {   return (*this = (T(*this) + i)); }
+    { return (*this = (T(*this) + i)); }
     iSpecialIntegerBitfield &operator -=(T i)
-    {   return (*this = (T(*this) - i)); }
+    { return (*this = (T(*this) - i)); }
     iSpecialIntegerBitfield &operator *=(T i)
-    {   return (*this = (T(*this) * i)); }
+    { return (*this = (T(*this) * i)); }
     iSpecialIntegerBitfield &operator /=(T i)
-    {   return (*this = (T(*this) / i)); }
+    { return (*this = (T(*this) / i)); }
     iSpecialIntegerBitfield &operator %=(T i)
-    {   return (*this = (T(*this) % i)); }
+    { return (*this = (T(*this) % i)); }
     iSpecialIntegerBitfield &operator |=(T i)
-    {   return (*this = (T(*this) | i)); }
+    { return (*this = (T(*this) | i)); }
     iSpecialIntegerBitfield &operator &=(T i)
-    {   return (*this = (T(*this) & i)); }
+    { return (*this = (T(*this) & i)); }
     iSpecialIntegerBitfield &operator ^=(T i)
-    {   return (*this = (T(*this) ^ i)); }
+    { return (*this = (T(*this) ^ i)); }
     iSpecialIntegerBitfield &operator >>=(T i)
-    {   return (*this = (T(*this) >> i)); }
+    { return (*this = (T(*this) >> i)); }
     iSpecialIntegerBitfield &operator <<=(T i)
-    {   return (*this = (T(*this) << i)); }
+    { return (*this = (T(*this) << i)); }
 };
 
 template<typename T, int pos, int width>
@@ -106,7 +104,6 @@ template<int pos, int width>
 using xint32_be_bitfield = iBEIntegerBitfield<int, pos, width>;
 template<int pos, int width>
 using xuint32_be_bitfield = iBEIntegerBitfield<uint, pos, width>;
-
 
 } // namespace iShell
 

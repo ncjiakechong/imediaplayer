@@ -37,32 +37,25 @@ public:
         : i(string.begin()),
           pos(i + idx),
           e(string.end())
-    {
-    }
+    {}
 
     inline explicit iStringIterator(const iChar *begin, const iChar *end)
         : i(begin),
           pos(begin),
           e(end)
-    {
-    }
+    {}
 
     inline explicit iStringIterator(const iChar *begin, int idx, const iChar *end)
         : i(begin),
           pos(begin + idx),
           e(end)
-    {
-    }
+    {}
 
     inline iString::const_iterator position() const
-    {
-        return pos;
-    }
+    { return pos; }
 
     inline int index() const
-    {
-        return int(pos - i);
-    }
+    { return int(pos - i); }
 
     inline void setPosition(iString::const_iterator position)
     {
@@ -73,9 +66,7 @@ public:
     // forward iteration
 
     inline bool hasNext() const
-    {
-        return pos < e;
-    }
+    { return pos < e; }
 
     inline void advance()
     {
@@ -148,9 +139,7 @@ public:
     // backwards iteration
 
     inline bool hasPrevious() const
-    {
-        return pos > i;
-    }
+    { return pos > i; }
 
     inline void recede()
     {

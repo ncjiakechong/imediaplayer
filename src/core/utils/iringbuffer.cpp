@@ -55,8 +55,6 @@ iByteArray iRingChunk::toByteArray()
 }
 
 /*!
-    \internal
-
     Access the bytes at a specified position the out-variable length will
     contain the amount of bytes readable from there, e.g. the amount still
     the same iByteArray
@@ -137,8 +135,6 @@ char *IRingBuffer::reserve(xint64 bytes)
 }
 
 /*!
-    \internal
-
     Allocate data at buffer head
 */
 char *IRingBuffer::reserveFront(xint64 bytes)
@@ -259,8 +255,6 @@ xint64 IRingBuffer::read(char *data, xint64 maxLength)
 }
 
 /*!
-    \internal
-
     Read an unspecified amount (will read the first buffer)
 */
 iByteArray IRingBuffer::read()
@@ -275,8 +269,6 @@ iByteArray IRingBuffer::read()
 }
 
 /*!
-    \internal
-
     Peek the bytes from a specified position
 */
 xint64 IRingBuffer::peek(char *data, xint64 maxLength, xint64 pos) const
@@ -303,8 +295,6 @@ xint64 IRingBuffer::peek(char *data, xint64 maxLength, xint64 pos) const
 }
 
 /*!
-    \internal
-
     Append bytes from data to the end
 */
 void IRingBuffer::append(const char *data, xint64 size)
@@ -322,8 +312,6 @@ void IRingBuffer::append(const char *data, xint64 size)
 }
 
 /*!
-    \internal
-
     Append a new buffer to the end
 */
 void IRingBuffer::append(const iByteArray &qba)

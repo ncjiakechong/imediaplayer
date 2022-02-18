@@ -178,9 +178,7 @@ iMediaPlayer::~iMediaPlayer()
 }
 
 iUrl iMediaPlayer::media() const
-{
-    return m_rootMedia;
-}
+{ return m_rootMedia; }
 
 /*!
     Returns the stream source of media data.
@@ -222,9 +220,7 @@ iMediaPlayer::State iMediaPlayer::state() const
 }
 
 iMediaPlayer::MediaStatus iMediaPlayer::mediaStatus() const
-{
-    return m_status;
-}
+{ return m_status; }
 
 xint64 iMediaPlayer::duration() const
 {
@@ -303,14 +299,10 @@ xreal iMediaPlayer::playbackRate() const
 */
 
 iMediaPlayer::Error iMediaPlayer::error() const
-{
-    return m_error;
-}
+{ return m_error; }
 
 iString iMediaPlayer::errorString() const
-{
-    return m_errorString;
-}
+{ return m_errorString; }
 
 /*!
     Start or resume playing the current source.
@@ -422,18 +414,14 @@ void iMediaPlayer::setMedia(const iUrl &media, iIODevice *stream)
 */
 
 bool iMediaPlayer::bind(iObject *obj)
-{
-    return iMediaObject::bind(obj);
-}
+{ return iMediaObject::bind(obj); }
 
 /*!
     \internal
 */
 
 void iMediaPlayer::unbind(iObject *obj)
-{
-    iMediaObject::unbind(obj);
-}
+{ iMediaObject::unbind(obj); }
 
 /*!
     Returns the level of support a media player has for a \a mimeType and a set of \a codecs.
@@ -587,16 +575,12 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
     \fn void iMediaPlayer::audioRoleChanged(iAudio::Role role)
 
     Signals that the audio \a role of the media player has changed.
-
-    \since 5.6
 */
 
 /*!
     \fn void iMediaPlayer::customAudioRoleChanged(const iString &role)
 
     Signals that the audio \a role of the media player has changed.
-
-    \since 5.11
 */
 
 // Properties
@@ -784,7 +768,6 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
     customAudioRole is cleared when this property is set to anything other than
     iAudio::CustomRole.
 
-    \since 5.6
     \sa supportedAudioRoles()
 */
 
@@ -800,7 +783,6 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
 
     audioRole is set to iAudio::CustomRole when this property is set.
 
-    \since 5.11
     \sa supportedCustomAudioRoles()
 */
 

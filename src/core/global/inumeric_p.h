@@ -65,34 +65,22 @@ inline double ix_qnan()
 }
 
 inline bool ix_is_inf(double d)
-{
-    return inumeric_std_wrapper::isinf(d);
-}
+{ return inumeric_std_wrapper::isinf(d); }
 
 inline bool ix_is_nan(double d)
-{
-    return inumeric_std_wrapper::isnan(d);
-}
+{ return inumeric_std_wrapper::isnan(d); }
 
 inline bool ix_is_finite(double d)
-{
-    return inumeric_std_wrapper::isfinite(d);
-}
+{ return inumeric_std_wrapper::isfinite(d); }
 
 inline bool ix_is_inf(float f)
-{
-    return inumeric_std_wrapper::isinf(f);
-}
+{ return inumeric_std_wrapper::isinf(f); }
 
 inline bool ix_is_nan(float f)
-{
-    return inumeric_std_wrapper::isnan(f);
-}
+{ return inumeric_std_wrapper::isnan(f); }
 
 inline bool ix_is_finite(float f)
-{
-    return inumeric_std_wrapper::isfinite(f);
-}
+{ return inumeric_std_wrapper::isfinite(f); }
 
 /*!
     Returns true if the double \a v can be converted to type \c T, false if

@@ -31,14 +31,10 @@ namespace iShell {
 
 namespace iMiscUtils {
 inline char toHexUpper(uint value)
-{
-    return "0123456789ABCDEF"[value & 0xF];
-}
+{ return "0123456789ABCDEF"[value & 0xF]; }
 
 inline char toHexLower(uint value)
-{
-    return "0123456789abcdef"[value & 0xF];
-}
+{ return "0123456789abcdef"[value & 0xF]; }
 
 inline int fromHex(uint c)
 {
@@ -49,14 +45,10 @@ inline int fromHex(uint c)
 }
 
 inline char toOct(uint value)
-{
-    return char('0' + (value & 0x7));
-}
+{ return char('0' + (value & 0x7)); }
 
 inline int fromOct(uint c)
-{
-    return ((c >= '0') && (c <= '7')) ? int(c - '0') : -1;
-}
+{ return ((c >= '0') && (c <= '7')) ? int(c - '0') : -1; }
 }
 
 // We typically need an extra bit for iNextPowerOfTwo when determining the next allocation size.

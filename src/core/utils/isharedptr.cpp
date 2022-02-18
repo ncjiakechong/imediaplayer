@@ -37,9 +37,7 @@ bool ExternalRefCountData::strongDeref()
 }
 
 bool ExternalRefCountData::testAndSetStrong(int expectedValue, int newValue)
-{
-    return  _strongRef.testAndSet(expectedValue, newValue);
-}
+{ return _strongRef.testAndSet(expectedValue, newValue); }
 
 bool ExternalRefCountData::weakDeref()
 {

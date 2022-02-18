@@ -171,8 +171,6 @@ iAbstractVideoBuffer::HandleType iAbstractVideoBuffer::handleType() const
 
     To implement this function create a derivative of iAbstractPlanarVideoBuffer and implement
     its map function instance instead.
-
-    \since 5.4
 */
 int iAbstractVideoBuffer::mapPlanes(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4])
 {
@@ -220,7 +218,6 @@ iVariant iAbstractVideoBuffer::handle() const
     which would interfere with calculating offsets from the bytes per line and frame height.
 
     \sa iAbstractVideoBuffer::mapPlanes()
-    \since 5.4
 */
 
 /*!
