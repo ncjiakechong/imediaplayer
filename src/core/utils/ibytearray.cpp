@@ -43,25 +43,18 @@ namespace iShell {
  * and will surely cause a IX_NULLPTR return (there's no way you can allocate a
  * memory block the size of your entire VM space).
  */
-
 template <typename T, typename Cmp = std::less<const T *>>
 static bool points_into_range(const T *p, const T *b, const T *e, Cmp less = {})
-{
-    return !less(p, b) && less(p, e);
-}
+{ return !less(p, b) && less(p, e); }
 
 const char iByteArray::_empty = '\0';
 
 // ASCII case system, used by iByteArray::to{Upper,Lower}() and qstr(n)icmp():
 static inline uchar asciiUpper(uchar c)
-{
-    return c >= 'a' && c <= 'z' ? c & ~0x20 : c;
-}
+{ return c >= 'a' && c <= 'z' ? c & ~0x20 : c; }
 
 static inline uchar asciiLower(uchar c)
-{
-    return c >= 'A' && c <= 'Z' ? c | 0x20 : c;
-}
+{ return c >= 'A' && c <= 'Z' ? c | 0x20 : c; }
 
 xsizetype iFindByteArray(
     const char *haystack0, xsizetype haystackLen, xsizetype from,
@@ -82,7 +75,6 @@ xsizetype iFindByteArray(
     Ownership is passed to the caller, so the returned string must be
     deleted using \c delete[].
 */
-
 char *istrdup(const char *src)
 {
     if (!src)
@@ -104,7 +96,6 @@ char *istrdup(const char *src)
 
     \sa istrncpy()
 */
-
 char *istrcpy(char *dst, const char *src)
 {
     if (!src)
@@ -133,7 +124,6 @@ char *istrcpy(char *dst, const char *src)
 
     \sa istrcpy()
 */
-
 char *istrncpy(char *dst, const char *src, size_t len)
 {
     if (!src || !dst)
@@ -184,10 +174,7 @@ char *istrncpy(char *dst, const char *src, size_t len)
         iByteArray::compare()
 */
 int istrcmp(const char *str1, const char *str2)
-{
-    return (str1 && str2) ? strcmp(str1, str2)
-        : (str1 ? 1 : (str2 ? -1 : 0));
-}
+{ return (str1 && str2) ? strcmp(str1, str2) : (str1 ? 1 : (str2 ? -1 : 0)); }
 
 /*! \fn int istrncmp(const char *str1, const char *str2, uint len);
 
@@ -451,15 +438,6 @@ xuint16 iChecksum(const char *data, xsizetype len, iShell::ChecksumType standard
 }
 
 /*!
-    \class iByteArray
-    \brief The iByteArray class provides an array of bytes.
-
-    \ingroup tools
-    \ingroup shared
-    \ingroup string-processing
-
-    \reentrant
-
     iByteArray can be used to store both raw bytes (including '\\0's)
     and traditional 8-bit '\\0'-terminated strings. Using iByteArray
     is much more convenient than using \c{const char *}. Behind the
@@ -839,13 +817,6 @@ iByteArray &iByteArray::operator=(const iByteArray & other)
     return *this;
 }
 
-
-/*!
-    \overload
-
-    Assigns \a str to this byte array.
-*/
-
 iByteArray &iByteArray::operator=(const char *str)
 {
     if (!str) {
@@ -1197,7 +1168,6 @@ void iByteArray::truncate(xsizetype pos)
 
     \sa truncate(), resize(), left()
 */
-
 void iByteArray::chop(xsizetype n)
 {
     if (n > 0)
@@ -1287,7 +1257,6 @@ void iByteArray::chop(xsizetype n)
 
     \sa fromRawData()
 */
-
 iByteArray::iByteArray(const char *data, xsizetype size)
 {
     if (!data) {
@@ -1312,7 +1281,6 @@ iByteArray::iByteArray(const char *data, xsizetype size)
 
     \sa fill()
 */
-
 iByteArray::iByteArray(xsizetype size, char ch)
 {
     if (size <= 0) {
@@ -1326,11 +1294,8 @@ iByteArray::iByteArray(xsizetype size, char ch)
 }
 
 /*!
-    \internal
-
     Constructs a byte array of size \a size with uninitialized contents.
 */
-
 iByteArray::iByteArray(xsizetype size, iShell::Initialization)
 {
     if (size <= 0) {
@@ -1377,7 +1342,6 @@ void iByteArray::resize(xsizetype size)
 
     \sa resize()
 */
-
 iByteArray &iByteArray::fill(char ch, xsizetype size)
 {
     resize(size < 0 ? this->size() : size);
@@ -1432,7 +1396,6 @@ void iByteArray::expand(xsizetype i)
 }
 
 /*!
-   \internal
    Return a iByteArray that is sure to be '\\0'-terminated.
 
    By default, all iByteArray have an extra NUL at the end,
@@ -1577,7 +1540,6 @@ iByteArray iByteArray::nulTerminated() const
 
     \sa append(), prepend(), replace(), remove()
 */
-
 iByteArray &iByteArray::insert(xsizetype i, const iByteArray &ba)
 {
     return insert(i, ba.d.data(), ba.d.size);
@@ -1602,14 +1564,11 @@ iByteArray &iByteArray::insert(xsizetype i, const iByteArray &ba)
 */
 
 /*!
-    \overload
-
     Inserts the string \a str at position \a i in the byte array.
 
     If \a i is greater than size(), the array is first extended using
     resize().
 */
-
 iByteArray &iByteArray::insert(xsizetype i, const char *str)
 {
     return insert(i, str, istrlen(str));
@@ -1625,7 +1584,6 @@ iByteArray &iByteArray::insert(xsizetype i, const char *str)
     If \a i is greater than size(), the array is first extended using
     resize().
 */
-
 iByteArray &iByteArray::insert(xsizetype i, const char *str, xsizetype len)
 {
     if (i < 0 || str == IX_NULLPTR || len <= 0)
@@ -1664,7 +1622,6 @@ iByteArray &iByteArray::insert(xsizetype i, const char *str, xsizetype len)
     If \a i is greater than size(), the array is first extended using
     resize().
 */
-
 iByteArray &iByteArray::insert(xsizetype i, char ch)
 {
     return insert(i, &ch, 1);
@@ -1680,7 +1637,6 @@ iByteArray &iByteArray::insert(xsizetype i, char ch)
 
     If \a i is greater than size(), the array is first extended using resize().
 */
-
 iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
 {
     if (i < 0 || count <= 0)
@@ -1719,7 +1675,6 @@ iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
 
     \sa insert(), replace()
 */
-
 iByteArray &iByteArray::remove(xsizetype pos, xsizetype len)
 {
     if (len <= 0  || pos < 0 || size_t(pos) >= size_t(size()))
@@ -1739,7 +1694,6 @@ iByteArray &iByteArray::remove(xsizetype pos, xsizetype len)
 
     \sa insert(), remove()
 */
-
 iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const iByteArray &after)
 {
     if (points_into_range<char>(after.data(), d.data(), d.data() + d.size)) {
@@ -1797,15 +1751,12 @@ iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const char *after,
 // iByteArray::replace(const char *before, int blen, const char *after, int alen)
 
 /*!
-    \overload
-
     Replaces every occurrence of the byte array \a before with the
     byte array \a after.
 
     Example:
     \snippet code/src_corelib_tools_iByteArray.cpp 20
 */
-
 iByteArray &iByteArray::replace(const iByteArray &before, const iByteArray &after)
 {
     if (isNull() || before.d == after.d)
@@ -1825,7 +1776,6 @@ iByteArray &iByteArray::replace(const iByteArray &before, const iByteArray &afte
     Replaces every occurrence of the string \a before with the
     byte array \a after.
 */
-
 iByteArray &iByteArray::replace(const char *c, const iByteArray &after)
 {
     iByteArray aft = after;
@@ -1843,7 +1793,6 @@ iByteArray &iByteArray::replace(const char *c, const iByteArray &after)
     Since the sizes of the strings are given by \a bsize and \a asize, they
     may contain zero characters and do not need to be '\\0'-terminated.
 */
-
 iByteArray &iByteArray::replace(const char *before, int bsize, const char *after, xsizetype asize)
 {
     if (isNull() || (before == after && bsize == asize))
@@ -2002,7 +1951,6 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
     Replaces every occurrence of the character \a before with the
     byte array \a after.
 */
-
 iByteArray &iByteArray::replace(char before, const iByteArray &after)
 {
     char b[2] = { before, '\0' };
@@ -2033,12 +1981,9 @@ iByteArray &iByteArray::replace(char before, const iByteArray &after)
 */
 
 /*!
-    \overload
-
     Replaces every occurrence of the character \a before with the
     character \a after.
 */
-
 iByteArray &iByteArray::replace(char before, char after)
 {
     if (!isEmpty()) {
@@ -2057,7 +2002,6 @@ iByteArray &iByteArray::replace(char before, char after)
     anywhere in the byte array, split() returns a single-element list
     containing this byte array.
 */
-
 std::list<iByteArray> iByteArray::split(char sep) const
 {
     std::list<iByteArray> list;
@@ -2132,7 +2076,6 @@ iByteArray iByteArray::repeated(xsizetype times) const
 
     \sa lastIndexOf(), contains(), count()
 */
-
 xsizetype iByteArray::indexOf(const iByteArray &ba, xsizetype from) const
 {
     const xsizetype ol = ba.d.size;
@@ -2200,7 +2143,6 @@ xsizetype iByteArray::indexOf(const char *c, xsizetype from) const
 
     \sa lastIndexOf(), contains()
 */
-
 xsizetype iByteArray::indexOf(char ch, xsizetype from) const
 {
     if (from < 0)
@@ -2210,7 +2152,7 @@ xsizetype iByteArray::indexOf(char ch, xsizetype from) const
         const char *e = d.data() + d.size;
         while (++n != e)
         if (*n == ch)
-            return  n - d.data();
+            return n - d.data();
     }
     return -1;
 }
@@ -2262,7 +2204,6 @@ static xsizetype lastIndexOfHelper(const char *haystack, xsizetype l, const char
 
     \sa indexOf(), contains(), count()
 */
-
 xsizetype iByteArray::lastIndexOf(const iByteArray &ba, xsizetype from) const
 {
     const xsizetype ol = ba.d.size;
@@ -2320,7 +2261,6 @@ xsizetype iByteArray::lastIndexOf(const char *str, xsizetype from) const
 
     \sa indexOf(), contains()
 */
-
 xsizetype iByteArray::lastIndexOf(char ch, xsizetype from) const
 {
     if (from < 0)
@@ -2332,7 +2272,7 @@ xsizetype iByteArray::lastIndexOf(char ch, xsizetype from) const
         const char *n = d.data() + from + 1;
         while (n-- != b)
             if (*n == ch)
-                return  n - b;
+                return n - b;
     }
     return -1;
 }
@@ -2343,7 +2283,6 @@ xsizetype iByteArray::lastIndexOf(char ch, xsizetype from) const
 
     \sa contains(), indexOf()
 */
-
 xsizetype iByteArray::count(const iByteArray &ba) const
 {
     xsizetype num = 0;
@@ -2365,21 +2304,17 @@ xsizetype iByteArray::count(const iByteArray &ba) const
     Returns the number of (potentially overlapping) occurrences of
     string \a str in the byte array.
 */
-
 xsizetype iByteArray::count(const char *str) const
 {
     return count(fromRawData(str, istrlen(str)));
 }
 
 /*!
-    \overload
-
     Returns the number of occurrences of character \a ch in the byte
     array.
 
     \sa contains(), indexOf()
 */
-
 xsizetype iByteArray::count(char ch) const
 {
     xsizetype num = 0;
@@ -2441,8 +2376,7 @@ bool iByteArray::startsWith(const iByteArray &ba) const
     return memcmp(d.data(), ba.d.data(), ba.d.size) == 0;
 }
 
-/*! \overload
-
+/*! 
     Returns \c true if this byte array starts with string \a str;
     otherwise returns \c false.
 */
@@ -2543,8 +2477,6 @@ static inline bool isLowerCaseAscii(char c)
 /*!
     Returns \c true if this byte array contains only lowercase ASCII letters,
     otherwise returns \c false.
-    \since 5.12
-
 
     \sa isUpper(), toLower()
  */
@@ -2632,7 +2564,6 @@ iByteArray iByteArray::right(xsizetype len) const
 
     \sa left(), right(), chopped(), chop(), truncate()
 */
-
 iByteArray iByteArray::mid(xsizetype pos, xsizetype len) const
 {
     xsizetype p = pos;
@@ -2746,7 +2677,6 @@ iByteArray iByteArray::toUpper_helper(iByteArray &a)
 
     \sa resize(), isNull()
 */
-
 void iByteArray::clear()
 {
     d.clear();
@@ -3220,14 +3150,10 @@ bool iByteArray::isNull() const
 }
 
 static xint64 toIntegral_helper(const char *data, bool *ok, int base, xint64)
-{
-    return iLocaleData::bytearrayToLongLong(data, base, ok);
-}
+{ return iLocaleData::bytearrayToLongLong(data, base, ok); }
 
 static xuint64 toIntegral_helper(const char *data, bool *ok, int base, xuint64)
-{
-    return iLocaleData::bytearrayToUnsLongLong(data, base, ok);
-}
+{ return iLocaleData::bytearrayToUnsLongLong(data, base, ok); }
 
 template <typename T> static inline
 T toIntegral_helper(const char *data, bool *ok, int base)
@@ -3273,11 +3199,8 @@ T toIntegral_helper(const char *data, bool *ok, int base)
 
     \sa number()
 */
-
 xint64 iByteArray::toLongLong(bool *ok, int base) const
-{
-    return toIntegral_helper<xint64>(nulTerminated().constData(), ok, base);
-}
+{ return toIntegral_helper<xint64>(nulTerminated().constData(), ok, base); }
 
 /*!
     Returns the byte array converted to an \c {unsigned long long}
@@ -3299,11 +3222,8 @@ xint64 iByteArray::toLongLong(bool *ok, int base) const
 
     \sa number()
 */
-
 xuint64 iByteArray::toULongLong(bool *ok, int base) const
-{
-    return toIntegral_helper<xuint64>(nulTerminated().constData(), ok, base);
-}
+{ return toIntegral_helper<xuint64>(nulTerminated().constData(), ok, base); }
 
 /*!
     Returns the byte array converted to an \c int using base \a
@@ -3326,11 +3246,8 @@ xuint64 iByteArray::toULongLong(bool *ok, int base) const
 
     \sa number()
 */
-
 int iByteArray::toInt(bool *ok, int base) const
-{
-    return toIntegral_helper<int>(nulTerminated().constData(), ok, base);
-}
+{ return toIntegral_helper<int>(nulTerminated().constData(), ok, base); }
 
 /*!
     Returns the byte array converted to an \c {unsigned int} using base \a
@@ -3351,11 +3268,8 @@ int iByteArray::toInt(bool *ok, int base) const
 
     \sa number()
 */
-
 uint iByteArray::toUInt(bool *ok, int base) const
-{
-    return toIntegral_helper<uint>(nulTerminated().constData(), ok, base);
-}
+{ return toIntegral_helper<uint>(nulTerminated().constData(), ok, base); }
 
 /*!
 
@@ -3381,13 +3295,9 @@ uint iByteArray::toUInt(bool *ok, int base) const
     \sa number()
 */
 long iByteArray::toLong(bool *ok, int base) const
-{
-    return toIntegral_helper<long>(nulTerminated().constData(), ok, base);
-}
+{ return toIntegral_helper<long>(nulTerminated().constData(), ok, base); }
 
 /*!
-
-
     Returns the byte array converted to an \c {unsigned long int} using base \a
     base, which is 10 by default and must be between 2 and 36, or 0.
 
@@ -3407,9 +3317,7 @@ long iByteArray::toLong(bool *ok, int base) const
     \sa number()
 */
 ulong iByteArray::toULong(bool *ok, int base) const
-{
-    return toIntegral_helper<ulong>(nulTerminated().constData(), ok, base);
-}
+{ return toIntegral_helper<ulong>(nulTerminated().constData(), ok, base); }
 
 /*!
     Returns the byte array converted to a \c short using base \a
@@ -3430,11 +3338,8 @@ ulong iByteArray::toULong(bool *ok, int base) const
 
     \sa number()
 */
-
 short iByteArray::toShort(bool *ok, int base) const
-{
-    return toIntegral_helper<short>(nulTerminated().constData(), ok, base);
-}
+{ return toIntegral_helper<short>(nulTerminated().constData(), ok, base); }
 
 /*!
     Returns the byte array converted to an \c {unsigned short} using base \a
@@ -3455,12 +3360,8 @@ short iByteArray::toShort(bool *ok, int base) const
 
     \sa number()
 */
-
 ushort iByteArray::toUShort(bool *ok, int base) const
-{
-    return toIntegral_helper<ushort>(nulTerminated().constData(), ok, base);
-}
-
+{ return toIntegral_helper<ushort>(nulTerminated().constData(), ok, base); }
 
 /*!
     Returns the byte array converted to a \c double value.
@@ -3485,7 +3386,6 @@ ushort iByteArray::toUShort(bool *ok, int base) const
 
     \sa number()
 */
-
 double iByteArray::toDouble(bool *ok) const
 {
     bool nonNullOk = false;
@@ -3520,11 +3420,8 @@ double iByteArray::toDouble(bool *ok) const
 
     \sa number()
 */
-
 float iByteArray::toFloat(bool *ok) const
-{
-    return iLocaleData::convertDoubleToFloat(toDouble(ok), ok);
-}
+{ return iLocaleData::convertDoubleToFloat(toDouble(ok), ok); }
 
 /*!
 
@@ -3609,27 +3506,6 @@ iByteArray iByteArray::toBase64(Base64Options options) const
     \sa number(), toInt()
 */
 
-/*!
-    \fn iByteArray &iByteArray::setNum(uint n, int base)
-    \overload
-
-    \sa toUInt()
-*/
-
-/*!
-    \fn iByteArray &iByteArray::setNum(short n, int base)
-    \overload
-
-    \sa toShort()
-*/
-
-/*!
-    \fn iByteArray &iByteArray::setNum(ushort n, int base)
-    \overload
-
-    \sa toUShort()
-*/
-
 static char *xulltoa2(char *p, xuint64 n, int base)
 {
     if (base < 2 || base > 36) {
@@ -3647,11 +3523,6 @@ static char *xulltoa2(char *p, xuint64 n, int base)
     return p;
 }
 
-/*!
-    \overload
-
-    \sa toLongLong()
-*/
 iByteArray &iByteArray::setNum(xint64 n, int base)
 {
     const int buffsize = 66; // big enough for MAX_ULLONG in base 2
@@ -3670,12 +3541,6 @@ iByteArray &iByteArray::setNum(xint64 n, int base)
     return *this;
 }
 
-/*!
-    \overload
-
-    \sa toULongLong()
-*/
-
 iByteArray &iByteArray::setNum(xuint64 n, int base)
 {
     const int buffsize = 66; // big enough for MAX_ULLONG in base 2
@@ -3688,8 +3553,6 @@ iByteArray &iByteArray::setNum(xuint64 n, int base)
 }
 
 /*!
-    \overload
-
     Sets the byte array to the printed value of \a n, formatted in format
     \a f with precision \a prec, and returns a reference to the
     byte array.
@@ -3714,7 +3577,6 @@ iByteArray &iByteArray::setNum(xuint64 n, int base)
 
     \sa toDouble()
 */
-
 iByteArray &iByteArray::setNum(double n, char f, int prec)
 {
     iLocaleData::DoubleForm form = iLocaleData::DFDecimal;
@@ -3778,11 +3640,6 @@ iByteArray iByteArray::number(int n, int base)
     return s;
 }
 
-/*!
-    \overload
-
-    \sa toUInt()
-*/
 iByteArray iByteArray::number(uint n, int base)
 {
     iByteArray s;
@@ -3790,11 +3647,6 @@ iByteArray iByteArray::number(uint n, int base)
     return s;
 }
 
-/*!
-    \overload
-
-    \sa toLongLong()
-*/
 iByteArray iByteArray::number(xint64 n, int base)
 {
     iByteArray s;
@@ -3802,11 +3654,6 @@ iByteArray iByteArray::number(xint64 n, int base)
     return s;
 }
 
-/*!
-    \overload
-
-    \sa toULongLong()
-*/
 iByteArray iByteArray::number(xuint64 n, int base)
 {
     iByteArray s;
@@ -3815,8 +3662,6 @@ iByteArray iByteArray::number(xuint64 n, int base)
 }
 
 /*!
-    \overload
-
     Returns a byte array that contains the printed value of \a n,
     formatted in format \a f with precision \a prec.
 
@@ -3883,8 +3728,6 @@ iByteArray iByteArray::number(double n, char f, int prec)
 */
 
 /*!
-
-
     Resets the iByteArray to use the first \a size bytes of the
     \a data array. The bytes are \e not copied. The iByteArray will
     contain the \a data pointer. The caller guarantees that \a data
@@ -4015,8 +3858,6 @@ static FromBase64Result fromBase64Encoding(const iByteArray &base64, iByteArray:
 }
 
 /*!
-    \since 5.2
-
     Returns a decoded copy of the Base64 array \a base64, using the options
     defined by \a options. If \a options contains \c{IgnoreBase64DecodingErrors}
     (the default), the input is not checked for validity; invalid
@@ -4081,9 +3922,7 @@ iByteArray iByteArray::fromHex(const iByteArray &hexEncoded)
     return res;
 }
 
-/*! \overload
-
-
+/*!
     Returns a hex encoded copy of the byte array. The hex encoding uses the numbers 0-9 and
     the letters a-f.
 
@@ -4159,8 +3998,6 @@ void ix_fromPercentEncoding(iByteArray *ba)
 }
 
 /*!
-
-
     Returns a decoded copy of the URI/URL-style percent-encoded \a input.
     The \a percent parameter allows you to replace the '%' character for
     another (for instance, '_' or '=').
@@ -4206,7 +4043,6 @@ iByteArray iByteArray::fromPercentEncoding(const iByteArray &input, char percent
 
     \sa fromStdString(), iString::toStdString()
 */
-
 static inline bool ix_strchr(const char str[], char chr)
 {
     if (!str) return false;
@@ -4271,8 +4107,6 @@ void ix_normalizePercentEncoding(iByteArray *ba, const char *exclude)
 }
 
 /*!
-
-
     Returns a URI/URL-style percent-encoded copy of this byte array. The
     \a percent parameter allows you to override the default '%'
     character for another.
@@ -4355,39 +4189,6 @@ iByteArray iByteArray::toPercentEncoding(const iByteArray &exclude, const iByteA
     This typedef provides an STL-style non-const reverse iterator for iByteArray.
 
     \sa iByteArray::const_reverse_iterator, iByteArray::iterator
-*/
-
-/*! \typedef iByteArray::size_type
-    \internal
-*/
-
-/*! \typedef iByteArray::difference_type
-    \internal
-*/
-
-/*! \typedef iByteArray::const_reference
-    \internal
-*/
-
-/*! \typedef iByteArray::reference
-    \internal
-*/
-
-/*! \typedef iByteArray::const_pointer
-    \internal
-*/
-
-/*! \typedef iByteArray::pointer
-    \internal
-*/
-
-/*! \typedef iByteArray::value_type
-  \internal
- */
-
-/*!
-    \typedef iByteArray::DataPtr
-    \internal
 */
 
 /*!

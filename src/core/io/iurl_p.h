@@ -27,18 +27,18 @@
 namespace iShell {
 
 // in iurlrecode.cpp
-extern int ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
+int ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
                                           iUrl::ComponentFormattingOptions encoding, const xuint16 *tableModifications = 0);
 
 // in iurlidna.cpp
 enum AceLeadingDot { AllowLeadingDot, ForbidLeadingDot };
 enum AceOperation { ToAceOnly, NormalizeAce };
-extern iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot);
-extern bool ix_nameprep(iString *source, int from);
-extern bool ix_check_std3rules(const iChar *uc, int len);
-extern void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output);
-extern iString ix_punycodeDecoder(const iString &pc);
-extern iString ix_urlRecodeByteArray(const iByteArray &ba);
+iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot);
+bool ix_nameprep(iString *source, int from);
+bool ix_check_std3rules(const iChar *uc, int len);
+void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output);
+iString ix_punycodeDecoder(const iString &pc);
+iString ix_urlRecodeByteArray(const iByteArray &ba);
 
 } // namespace iShell
 

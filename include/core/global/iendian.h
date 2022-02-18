@@ -292,29 +292,29 @@ public:
     bool operator !=(iSpecialInteger<S> i) const { return val != i.val; }
 
     iSpecialInteger &operator +=(T i)
-    {   return (*this = S::fromSpecial(val) + i); }
+    { return (*this = S::fromSpecial(val) + i); }
     iSpecialInteger &operator -=(T i)
-    {   return (*this = S::fromSpecial(val) - i); }
+    { return (*this = S::fromSpecial(val) - i); }
     iSpecialInteger &operator *=(T i)
-    {   return (*this = S::fromSpecial(val) * i); }
+    { return (*this = S::fromSpecial(val) * i); }
     iSpecialInteger &operator >>=(T i)
-    {   return (*this = S::fromSpecial(val) >> i); }
+    { return (*this = S::fromSpecial(val) >> i); }
     iSpecialInteger &operator <<=(T i)
-    {   return (*this = S::fromSpecial(val) << i); }
+    { return (*this = S::fromSpecial(val) << i); }
     iSpecialInteger &operator /=(T i)
-    {   return (*this = S::fromSpecial(val) / i); }
+    { return (*this = S::fromSpecial(val) / i); }
     iSpecialInteger &operator %=(T i)
-    {   return (*this = S::fromSpecial(val) % i); }
+    { return (*this = S::fromSpecial(val) % i); }
     iSpecialInteger &operator |=(T i)
-    {   return (*this = S::fromSpecial(val) | i); }
+    { return (*this = S::fromSpecial(val) | i); }
     iSpecialInteger &operator &=(T i)
-    {   return (*this = S::fromSpecial(val) & i); }
+    { return (*this = S::fromSpecial(val) & i); }
     iSpecialInteger &operator ^=(T i)
-    {   return (*this = S::fromSpecial(val) ^ i); }
+    { return (*this = S::fromSpecial(val) ^ i); }
     iSpecialInteger &operator ++()
-    {   return (*this = S::fromSpecial(val) + 1); }
+    { return (*this = S::fromSpecial(val) + 1); }
     iSpecialInteger &operator --()
-    {   return (*this = S::fromSpecial(val) - 1); }
+    { return (*this = S::fromSpecial(val) - 1); }
     iSpecialInteger operator ++(int)
     {
         iSpecialInteger<S> pre = *this;

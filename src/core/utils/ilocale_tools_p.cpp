@@ -33,13 +33,10 @@
 namespace iShell {
 
 inline int iDoubleSscanf(const char *buf, int, const char *format, double *d, int *processed)
-{
-    return sscanf(buf, format, d, processed);
-}
+{ return sscanf(buf, format, d, processed); }
+
 inline int xDoubleSnprintf(char *buf, size_t buflen, int, const char *format, double d)
-{
-    return snprintf(buf, buflen, format, d);
-}
+{ return snprintf(buf, buflen, format, d); }
 
 /*
  * Convert a string to a long long integer.
@@ -391,7 +388,6 @@ double ix_asciiToDouble(const char *num, int numLen, bool &ok, int &processed,
         return d;
     }
 
-
     // Otherwise we would have gotten NaN or sorted it out above.
     IX_ASSERT(strayCharMode == TrailingJunkAllowed || processed == numLen);
 
@@ -409,7 +405,6 @@ double ix_asciiToDouble(const char *num, int numLen, bool &ok, int &processed,
     }
     return d;
 }
-
 
 /*
  * Convert a string to an unsigned long long integer.
@@ -645,8 +640,6 @@ double istrtod(const char *s00, const char **se, bool *ok)
 }
 
 /*!
-  \internal
-
   Converts the initial portion of the string pointed to by \a s00 to a double, using the 'C' locale.
  */
 double istrntod(const char *s00, int len, const char **se, bool *ok)

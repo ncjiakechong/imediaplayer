@@ -23,12 +23,12 @@
 namespace iShell {
 
 /*
- * This pair of functions is declared in qtools_p.h and is used by the Qt
+ * This pair of functions is declared in itools_p.h and is used by the
  * containers to allocate memory and grow the memory block during append
  * operations.
  *
  * They take xsizetype parameters and return xsizetype so they will change sizes
- * according to the pointer width. However, knowing Qt containers store the
+ * according to the pointer width. However, knowing containers store the
  * container size and element indexes in ints, these functions never return a
  * size larger than INT_MAX. This is done by casting the element count and
  * memory block size to int in several comparisons: the check for negative is

@@ -25,7 +25,6 @@
 
 namespace iShell {
 
-
 class iPostEventSource : public iEventSource
 {
 public:

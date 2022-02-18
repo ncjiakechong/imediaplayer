@@ -37,20 +37,19 @@ public:
     // initialization and cleanup
     inline iRingChunk() :
         headOffset(0), tailOffset(0)
-    {
-    }
+    {}
+
     inline iRingChunk(const iRingChunk &other) :
         chunk(other.chunk), headOffset(other.headOffset), tailOffset(other.tailOffset)
-    {
-    }
+    {}
+
     explicit inline iRingChunk(int alloc) :
         chunk(alloc, iShell::Uninitialized), headOffset(0), tailOffset(0)
-    {
-    }
+    {}
+
     explicit inline iRingChunk(const iByteArray &qba) :
         chunk(qba), headOffset(0), tailOffset(qba.size())
-    {
-    }
+    {}
 
     inline iRingChunk &operator=(const iRingChunk &other)
     {
@@ -59,11 +58,11 @@ public:
         tailOffset = other.tailOffset;
         return *this;
     }
+
     inline iRingChunk(iRingChunk &&other) :
         chunk(other.chunk), headOffset(other.headOffset), tailOffset(other.tailOffset)
-    {
-        other.headOffset = other.tailOffset = 0;
-    }
+    { other.headOffset = other.tailOffset = 0; }
+
     inline iRingChunk &operator=(iRingChunk &&other)
     {
         swap(other);
@@ -80,33 +79,22 @@ public:
     // allocating and sharing
     void allocate(int alloc);
     inline bool isShared() const
-    {
-        return !chunk.isDetached();
-    }
+    { return !chunk.isDetached(); }
+
     void detach();
     iByteArray toByteArray();
 
     // getters
     inline int head() const
-    {
-        return headOffset;
-    }
+    { return headOffset; }
     inline int size() const
-    {
-        return tailOffset - headOffset;
-    }
+    { return tailOffset - headOffset; }
     inline int capacity() const
-    {
-        return chunk.size();
-    }
+    { return chunk.size(); }
     inline int available() const
-    {
-        return chunk.size() - tailOffset;
-    }
+    { return chunk.size() - tailOffset; }
     inline const char *data() const
-    {
-        return chunk.constData() + headOffset;
-    }
+    { return chunk.constData() + headOffset; }
     inline char *data()
     {
         if (isShared())
@@ -136,13 +124,9 @@ public:
         tailOffset = qba.size();
     }
     inline void reset()
-    {
-        headOffset = tailOffset = 0;
-    }
+    { headOffset = tailOffset = 0; }
     inline void clear()
-    {
-        assign(iByteArray());
-    }
+    { assign(iByteArray()); }
 
 private:
     iByteArray chunk;
@@ -153,23 +137,19 @@ class IRingBuffer
 {
 public:
     explicit inline IRingBuffer(int growth = IRINGBUFFER_CHUNKSIZE) :
-        bufferSize(0), basicBlockSize(growth) { }
+        bufferSize(0), basicBlockSize(growth) {}
 
-    inline void setChunkSize(int size) {
-        basicBlockSize = size;
-    }
+    inline void setChunkSize(int size) 
+    { basicBlockSize = size; }
 
-    inline int chunkSize() const {
-        return basicBlockSize;
-    }
+    inline int chunkSize() const 
+    { return basicBlockSize; }
 
-    inline xint64 nextDataBlockSize() const {
-        return bufferSize == 0 ? IX_INT64_C(0) : buffers.front().size();
-    }
+    inline xint64 nextDataBlockSize() const 
+    { return bufferSize == 0 ? IX_INT64_C(0) : buffers.front().size(); }
 
-    inline const char *readPointer() const {
-        return bufferSize == 0 ? IX_NULLPTR : buffers.front().data();
-    }
+    inline const char *readPointer() const 
+    { return bufferSize == 0 ? IX_NULLPTR : buffers.front().data(); }
 
     const char *readPointerAtPosition(xint64 pos, xint64 &length) const;
     void free(xint64 bytes);
@@ -184,9 +164,8 @@ public:
 
     void chop(xint64 bytes);
 
-    inline bool isEmpty() const {
-        return bufferSize == 0;
-    }
+    inline bool isEmpty() const 
+    { return bufferSize == 0; }
 
     inline int getChar() {
         if (isEmpty())
@@ -201,16 +180,13 @@ public:
         *ptr = c;
     }
 
-    void ungetChar(char c)
-    {
+    void ungetChar(char c) {
         char *ptr = reserveFront(1);
         *ptr = c;
     }
 
-
-    inline xint64 size() const {
-        return bufferSize;
-    }
+    inline xint64 size() const 
+    { return bufferSize; }
 
     void clear();
     inline xint64 indexOf(char c) const { return indexOf(c, size()); }
@@ -230,9 +206,8 @@ public:
 
     xint64 readLine(char *data, xint64 maxLength);
 
-    inline bool canReadLine() const {
-        return indexOf('\n') >= 0;
-    }
+    inline bool canReadLine() const 
+    { return indexOf('\n') >= 0; }
 
 private:
     std::vector<iRingChunk> buffers;

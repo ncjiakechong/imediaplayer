@@ -195,7 +195,6 @@ xsizetype iByteArrayMatcher::indexIn(const char *str, xsizetype len, xsizetype f
     \sa setPattern()
 */
 
-
 static int findChar(const char *str, xsizetype len, char ch, xsizetype from)
 {
     const uchar *s = (const uchar *)str;
@@ -207,7 +206,7 @@ static int findChar(const char *str, xsizetype len, char ch, xsizetype from)
         const uchar *e = s + len;
         while (++n != e)
             if (*n == c)
-                return  n - s;
+                return n - s;
     }
     return -1;
 }
@@ -367,9 +366,6 @@ xsizetype iFindByteArray(
     \sa iByteArrayMatcher::setPattern()
 */
 
-/*!
-    \internal
-*/
 int iStaticByteArrayMatcherBase::indexOfIn(const char *needle, uint nlen, const char *haystack, int hlen, int from) const
 {
     if (from < 0)
@@ -377,11 +373,6 @@ int iStaticByteArrayMatcherBase::indexOfIn(const char *needle, uint nlen, const 
     return bm_find(reinterpret_cast<const uchar *>(haystack), hlen, from,
                    reinterpret_cast<const uchar *>(needle),   nlen, m_skiptable.data);
 }
-
-/*!
-    \fn template <uint N> iStaticByteArrayMatcher<N>::iStaticByteArrayMatcher(const char (&pattern)[N])
-    \internal
-*/
 
 /*!
     \fn template <uint N> iStaticByteArrayMatcher iMakeStaticByteArrayMatcher(const char (&pattern)[N])
@@ -396,6 +387,5 @@ int iStaticByteArrayMatcherBase::indexOfIn(const char *needle, uint nlen, const 
 
     \snippet code/src_corelib_tools_qbytearraymatcher.cpp 1
 */
-
 
 } // namespace iShell

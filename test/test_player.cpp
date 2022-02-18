@@ -97,9 +97,7 @@ public:
         return len;
     }
     virtual xint64 writeData(const char *data, xint64 len)
-    {   
-        return 0;
-    }
+    { return 0; }
 
     void noMoreData() const ISIGNAL(noMoreData)
 };

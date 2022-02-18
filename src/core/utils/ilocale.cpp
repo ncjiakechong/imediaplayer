@@ -11,7 +11,6 @@
 
 #include <cmath>
 
-
 #include "core/utils/ilocale.h"
 #include "utils/ilocale_p.h"
 #include "utils/ilocale_tools_p.h"
@@ -117,7 +116,6 @@ iLatin1String iLocalePrivate::languageToCode(iLocale::Language language)
     const unsigned char *c = language_code_list + 3*(uint(language));
 
     return iLatin1String(reinterpret_cast<const char*>(c), c[2] == 0 ? 2 : 3);
-
 }
 
 iLatin1String iLocalePrivate::scriptToCode(iLocale::Script script)
@@ -134,7 +132,6 @@ iLatin1String iLocalePrivate::countryToCode(iLocale::Country country)
         return iLatin1String();
 
     const unsigned char *c = country_code_list + 3*(uint(country));
-
     return iLatin1String(reinterpret_cast<const char*>(c), c[2] == 0 ? 2 : 3);
 }
 
@@ -508,8 +505,6 @@ iString ix_readEscapedFormatString(iStringView format, int *idx)
 }
 
 /*!
-    \internal
-
     Counts the number of identical leading characters in \a s.
 
     If \a s is empty, returns 0.
@@ -545,9 +540,7 @@ static iLocalePrivate *c_private()
 }
 
 static const iLocaleData *systemData()
-{
-    return locale_data;
-}
+{ return locale_data; }
 
 static const iLocaleData *defaultData()
 {
@@ -563,9 +556,7 @@ const iLocaleData *iLocaleData::c()
 }
 
 static inline iString getLocaleData(const xuint16 *data, int size)
-{
-    return size > 0 ? iString::fromRawData(reinterpret_cast<const iChar *>(data), size) : iString();
-}
+{ return size > 0 ? iString::fromRawData(reinterpret_cast<const iChar *>(data), size) : iString(); }
 
 static iString getLocaleListData(const xuint16 *data, int size, int index)
 {
@@ -617,10 +608,6 @@ static iLocalePrivate *findLocalePrivate(iLocale::Language language, iLocale::Sc
     return iLocalePrivate::create(data, numberOptions);
 }
 
-
-/*!
- \internal
-*/
 iLocale::iLocale(iLocalePrivate &dd)
     : d(&dd)
 {}
@@ -654,11 +641,9 @@ iLocale::iLocale(iLocalePrivate &dd)
 
     \sa bcp47Name()
 */
-
 iLocale::iLocale(const iString &name)
     : d(localePrivateByName(name))
-{
-}
+{}
 
 /*!
     Constructs a iLocale object initialized with the default locale. If
@@ -667,7 +652,6 @@ iLocale::iLocale(const iString &name)
 
     \sa setDefault()
 */
-
 iLocale::iLocale()
     : d(*defaultLocalePrivate)
 {
@@ -693,15 +677,11 @@ iLocale::iLocale()
 
     \sa setDefault(), language(), country()
 */
-
 iLocale::iLocale(Language language, Country country)
     : d(findLocalePrivate(language, iLocale::AnyScript, country))
-{
-}
+{}
 
 /*!
-
-
     Constructs a iLocale object with the specified \a language, \a script and
     \a country.
 
@@ -722,34 +702,20 @@ iLocale::iLocale(Language language, Country country)
 
     \sa setDefault(), language(), script(), country()
 */
-
 iLocale::iLocale(Language language, Script script, Country country)
     : d(findLocalePrivate(language, script, country))
-{
-}
-
-/*!
-    Constructs a iLocale object as a copy of \a other.
-*/
+{}
 
 iLocale::iLocale(const iLocale &other)
-{
-    d = other.d;
-}
-
-/*!
-    Destructor
-*/
+{ d = other.d; }
 
 iLocale::~iLocale()
-{
-}
+{}
 
 /*!
     Assigns \a other to this iLocale object and returns a reference
     to this iLocale object.
 */
-
 iLocale &iLocale::operator=(const iLocale &other)
 {
     d = other.d;
@@ -757,50 +723,35 @@ iLocale &iLocale::operator=(const iLocale &other)
 }
 
 bool iLocale::operator==(const iLocale &other) const
-{
-    return d->m_data == other.d->m_data && d->m_numberOptions == other.d->m_numberOptions;
-}
+{ return d->m_data == other.d->m_data && d->m_numberOptions == other.d->m_numberOptions; }
 
 bool iLocale::operator!=(const iLocale &other) const
-{
-    return d->m_data != other.d->m_data || d->m_numberOptions != other.d->m_numberOptions;
-}
+{ return d->m_data != other.d->m_data || d->m_numberOptions != other.d->m_numberOptions; }
 
 /*!
     \fn void iLocale::swap(iLocale &other)
-
 
     Swaps locale \a other with this locale. This operation is very fast and
     never fails.
 */
 
 /*!
-
-
     Sets the \a options related to number conversions for this
     iLocale instance.
 */
 void iLocale::setNumberOptions(NumberOptions options)
-{
-    d->m_numberOptions = options;
-}
+{ d->m_numberOptions = options; }
 
 /*!
-
-
     Returns the options related to number conversions for this
     iLocale instance.
 
     By default, no options are set for the standard locales.
 */
 iLocale::NumberOptions iLocale::numberOptions() const
-{
-    return static_cast<NumberOptions>(d->m_numberOptions);
-}
+{ return static_cast<NumberOptions>(d->m_numberOptions); }
 
 /*!
-
-
     Returns a string that represents a join of a given \a list of strings with
     a separator defined by the locale.
 */
@@ -856,7 +807,6 @@ iString iLocale::createSeparatedList(const std::list<iString> &list) const
 
     \sa system(), c()
 */
-
 void iLocale::setDefault(const iLocale &locale)
 {
     default_data = locale.d->m_data;
@@ -874,21 +824,15 @@ void iLocale::setDefault(const iLocale &locale)
     \sa script(), country(), languageToString(), bcp47Name()
 */
 iLocale::Language iLocale::language() const
-{
-    return Language(d->languageId());
-}
+{ return Language(d->languageId()); }
 
 /*!
-
-
     Returns the script of this locale.
 
     \sa language(), country(), languageToString(), scriptToString(), bcp47Name()
 */
 iLocale::Script iLocale::script() const
-{
-    return Script(d->m_data->m_script_id);
-}
+{ return Script(d->m_data->m_script_id); }
 
 /*!
     Returns the country of this locale.
@@ -896,9 +840,7 @@ iLocale::Script iLocale::script() const
     \sa language(), script(), countryToString(), bcp47Name()
 */
 iLocale::Country iLocale::country() const
-{
-    return Country(d->countryId());
-}
+{ return Country(d->countryId()); }
 
 /*!
     Returns the language and country of this locale as a
@@ -912,7 +854,6 @@ iLocale::Country iLocale::country() const
 
     \sa iLocale(), language(), script(), country(), bcp47Name()
 */
-
 iString iLocale::name() const
 {
     Language l = language();
@@ -928,15 +869,11 @@ iString iLocale::name() const
 
 static xlonglong toIntegral_helper(const iLocaleData *d, iStringView str, bool *ok,
                                    iLocale::NumberOptions mode, xlonglong)
-{
-    return d->stringToLongLong(str, 10, ok, mode);
-}
+{ return d->stringToLongLong(str, 10, ok, mode); }
 
 static xulonglong toIntegral_helper(const iLocaleData *d, iStringView str, bool *ok,
                                     iLocale::NumberOptions mode, xulonglong)
-{
-    return d->stringToUnsLongLong(str, 10, ok, mode);
-}
+{ return d->stringToUnsLongLong(str, 10, ok, mode); }
 
 template <typename T> static inline
 T toIntegral_helper(const iLocalePrivate *d, iStringView str, bool *ok)
@@ -955,8 +892,6 @@ T toIntegral_helper(const iLocalePrivate *d, iStringView str, bool *ok)
 
 
 /*!
-
-
     Returns the dash-separated language, script and country (and possibly other BCP47 fields)
     of this locale as a string.
 
@@ -969,16 +904,13 @@ T toIntegral_helper(const iLocalePrivate *d, iStringView str, bool *ok)
     \sa language(), country(), script(), uiLanguages()
 */
 iString iLocale::bcp47Name() const
-{
-    return iString::fromLatin1(d->bcp47Name());
-}
+{ return iString::fromLatin1(d->bcp47Name()); }
 
 /*!
     Returns a iString containing the name of \a language.
 
     \sa countryToString(), scriptToString(), bcp47Name()
 */
-
 iString iLocale::languageToString(Language language)
 {
     if (uint(language) > uint(iLocale::LastLanguage))
@@ -991,7 +923,6 @@ iString iLocale::languageToString(Language language)
 
     \sa languageToString(), scriptToString(), country(), bcp47Name()
 */
-
 iString iLocale::countryToString(Country country)
 {
     if (uint(country) > uint(iLocale::LastCountry))
@@ -1000,8 +931,6 @@ iString iLocale::countryToString(Country country)
 }
 
 /*!
-
-
     Returns a iString containing the name of \a script.
 
     \sa languageToString(), countryToString(), script(), bcp47Name()
@@ -1025,11 +954,8 @@ iString iLocale::scriptToString(iLocale::Script script)
 
     \sa toUShort(), toString()
 */
-
 short iLocale::toShort(const iString &s, bool *ok) const
-{
-    return toIntegral_helper<short>(d.data(), s, ok);
-}
+{ return toIntegral_helper<short>(d.data(), s, ok); }
 
 /*!
     Returns the unsigned short int represented by the localized string \a s.
@@ -1043,11 +969,8 @@ short iLocale::toShort(const iString &s, bool *ok) const
 
     \sa toShort(), toString()
 */
-
 ushort iLocale::toUShort(const iString &s, bool *ok) const
-{
-    return toIntegral_helper<ushort>(d.data(), s, ok);
-}
+{ return toIntegral_helper<ushort>(d.data(), s, ok); }
 
 /*!
     Returns the int represented by the localized string \a s.
@@ -1061,11 +984,8 @@ ushort iLocale::toUShort(const iString &s, bool *ok) const
 
     \sa toUInt(), toString()
 */
-
 int iLocale::toInt(const iString &s, bool *ok) const
-{
-    return toIntegral_helper<int>(d.data(), s, ok);
-}
+{ return toIntegral_helper<int>(d.data(), s, ok); }
 
 /*!
     Returns the unsigned int represented by the localized string \a s.
@@ -1079,11 +999,8 @@ int iLocale::toInt(const iString &s, bool *ok) const
 
     \sa toInt(), toString()
 */
-
 uint iLocale::toUInt(const iString &s, bool *ok) const
-{
-    return toIntegral_helper<uint>(d.data(), s, ok);
-}
+{ return toIntegral_helper<uint>(d.data(), s, ok); }
 
 /*!
  Returns the long int represented by the localized string \a s.
@@ -1096,15 +1013,9 @@ uint iLocale::toUInt(const iString &s, bool *ok) const
  This function ignores leading and trailing whitespace.
 
  \sa toInt(), toULong(), toDouble(), toString()
-
-
  */
-
-
 long iLocale::toLong(const iString &s, bool *ok) const
-{
-    return toIntegral_helper<long>(d.data(), s, ok);
-}
+{ return toIntegral_helper<long>(d.data(), s, ok); }
 
 /*!
  Returns the unsigned long int represented by the localized
@@ -1118,14 +1029,9 @@ long iLocale::toLong(const iString &s, bool *ok) const
  This function ignores leading and trailing whitespace.
 
  \sa toLong(), toInt(), toDouble(), toString()
-
-
 */
-
 ulong iLocale::toULong(const iString &s, bool *ok) const
-{
-    return toIntegral_helper<ulong>(d.data(), s, ok);
-}
+{ return toIntegral_helper<ulong>(d.data(), s, ok); }
 
 /*!
     Returns the long long int represented by the localized string \a s.
@@ -1139,12 +1045,8 @@ ulong iLocale::toULong(const iString &s, bool *ok) const
 
     \sa toInt(), toULongLong(), toDouble(), toString()
 */
-
-
 xlonglong iLocale::toLongLong(const iString &s, bool *ok) const
-{
-    return toIntegral_helper<xlonglong>(d.data(), s, ok);
-}
+{ return toIntegral_helper<xlonglong>(d.data(), s, ok); }
 
 /*!
     Returns the unsigned long long int represented by the localized
@@ -1161,9 +1063,7 @@ xlonglong iLocale::toLongLong(const iString &s, bool *ok) const
 */
 
 xulonglong iLocale::toULongLong(const iString &s, bool *ok) const
-{
-    return toIntegral_helper<xulonglong>(d.data(), s, ok);
-}
+{ return toIntegral_helper<xulonglong>(d.data(), s, ok); }
 
 /*!
     Returns the float represented by the localized string \a s.
@@ -1181,11 +1081,8 @@ xulonglong iLocale::toULongLong(const iString &s, bool *ok) const
 
     \sa toDouble(), toInt(), toString()
 */
-
 float iLocale::toFloat(const iString &s, bool *ok) const
-{
-    return iLocaleData::convertDoubleToFloat(toDouble(s, ok), ok);
-}
+{ return iLocaleData::convertDoubleToFloat(toDouble(s, ok), ok); }
 
 /*!
     Returns the double represented by the localized string \a s.
@@ -1208,11 +1105,8 @@ float iLocale::toFloat(const iString &s, bool *ok) const
 
     \sa toFloat(), toInt(), toString()
 */
-
 double iLocale::toDouble(const iString &s, bool *ok) const
-{
-    return d->m_data->stringToDouble(s, ok, d->m_numberOptions);
-}
+{ return d->m_data->stringToDouble(s, ok, d->m_numberOptions); }
 
 /*!
     Returns the short int represented by the localized string \a s.
@@ -1225,14 +1119,9 @@ double iLocale::toDouble(const iString &s, bool *ok) const
     This function ignores leading and trailing whitespace.
 
     \sa toUShort(), toString()
-
-
 */
-
 short iLocale::toShort(iStringView s, bool *ok) const
-{
-    return toIntegral_helper<short>(d.data(), s, ok);
-}
+{ return toIntegral_helper<short>(d.data(), s, ok); }
 
 /*!
     Returns the unsigned short int represented by the localized string \a s.
@@ -1245,14 +1134,9 @@ short iLocale::toShort(iStringView s, bool *ok) const
     This function ignores leading and trailing whitespace.
 
     \sa toShort(), toString()
-
-
 */
-
 ushort iLocale::toUShort(iStringView s, bool *ok) const
-{
-    return toIntegral_helper<ushort>(d.data(), s, ok);
-}
+{ return toIntegral_helper<ushort>(d.data(), s, ok); }
 
 /*!
     Returns the int represented by the localized string \a s.
@@ -1265,14 +1149,9 @@ ushort iLocale::toUShort(iStringView s, bool *ok) const
     This function ignores leading and trailing whitespace.
 
     \sa toUInt(), toString()
-
-
 */
-
 int iLocale::toInt(iStringView s, bool *ok) const
-{
-    return toIntegral_helper<int>(d.data(), s, ok);
-}
+{ return toIntegral_helper<int>(d.data(), s, ok); }
 
 /*!
     Returns the unsigned int represented by the localized string \a s.
@@ -1285,14 +1164,10 @@ int iLocale::toInt(iStringView s, bool *ok) const
     This function ignores leading and trailing whitespace.
 
     \sa toInt(), toString()
-
-
 */
 
 uint iLocale::toUInt(iStringView s, bool *ok) const
-{
-    return toIntegral_helper<uint>(d.data(), s, ok);
-}
+{ return toIntegral_helper<uint>(d.data(), s, ok); }
 
 /*!
  Returns the long int represented by the localized string \a s.
@@ -1305,15 +1180,9 @@ uint iLocale::toUInt(iStringView s, bool *ok) const
  This function ignores leading and trailing whitespace.
 
  \sa toInt(), toULong(), toDouble(), toString()
-
-
  */
-
-
 long iLocale::toLong(iStringView s, bool *ok) const
-{
-    return toIntegral_helper<long>(d.data(), s, ok);
-}
+{ return toIntegral_helper<long>(d.data(), s, ok); }
 
 /*!
  Returns the unsigned long int represented by the localized
@@ -1327,14 +1196,9 @@ long iLocale::toLong(iStringView s, bool *ok) const
  This function ignores leading and trailing whitespace.
 
  \sa toLong(), toInt(), toDouble(), toString()
-
-
  */
-
 ulong iLocale::toULong(iStringView s, bool *ok) const
-{
-    return toIntegral_helper<ulong>(d.data(), s, ok);
-}
+{ return toIntegral_helper<ulong>(d.data(), s, ok); }
 
 /*!
     Returns the long long int represented by the localized string \a s.
@@ -1347,15 +1211,9 @@ ulong iLocale::toULong(iStringView s, bool *ok) const
     This function ignores leading and trailing whitespace.
 
     \sa toInt(), toULongLong(), toDouble(), toString()
-
-
 */
-
-
 xlonglong iLocale::toLongLong(iStringView s, bool *ok) const
-{
-    return toIntegral_helper<xlonglong>(d.data(), s, ok);
-}
+{ return toIntegral_helper<xlonglong>(d.data(), s, ok); }
 
 /*!
     Returns the unsigned long long int represented by the localized
@@ -1369,14 +1227,9 @@ xlonglong iLocale::toLongLong(iStringView s, bool *ok) const
     This function ignores leading and trailing whitespace.
 
     \sa toLongLong(), toInt(), toDouble(), toString()
-
-
 */
-
 xulonglong iLocale::toULongLong(iStringView s, bool *ok) const
-{
-    return toIntegral_helper<xulonglong>(d.data(), s, ok);
-}
+{ return toIntegral_helper<xulonglong>(d.data(), s, ok); }
 
 /*!
     Returns the float represented by the localized string \a s.
@@ -1390,14 +1243,9 @@ xulonglong iLocale::toULongLong(iStringView s, bool *ok) const
     This function ignores leading and trailing whitespace.
 
     \sa toDouble(), toInt(), toString()
-
-
 */
-
 float iLocale::toFloat(iStringView s, bool *ok) const
-{
-    return iLocaleData::convertDoubleToFloat(toDouble(s, ok), ok);
-}
+{ return iLocaleData::convertDoubleToFloat(toDouble(s, ok), ok); }
 
 /*!
     Returns the double represented by the localized string \a s.
@@ -1420,21 +1268,13 @@ float iLocale::toFloat(iStringView s, bool *ok) const
     This function ignores leading and trailing whitespace.
 
     \sa toFloat(), toInt(), toString()
-
-
 */
-
 double iLocale::toDouble(iStringView s, bool *ok) const
-{
-    return d->m_data->stringToDouble(s, ok, d->m_numberOptions);
-}
+{ return d->m_data->stringToDouble(s, ok, d->m_numberOptions); }
 
 /*!
     Returns a localized string representation of \a i.
-
-    \sa toLongLong()
 */
-
 iString iLocale::toString(xlonglong i) const
 {
     int flags = d->m_numberOptions & OmitGroupSeparator
@@ -1443,12 +1283,6 @@ iString iLocale::toString(xlonglong i) const
 
     return d->m_data->longLongToString(i, -1, 10, -1, flags);
 }
-
-/*!
-    \overload
-
-    \sa toULongLong()
-*/
 
 iString iLocale::toString(xulonglong i) const
 {
@@ -1460,14 +1294,11 @@ iString iLocale::toString(xulonglong i) const
 }
 
 /*!
-
-
     Returns the date format used for the current locale.
 
     If \a format is LongFormat the format will be a long version.
     Otherwise it uses a shorter version.
 */
-
 iString iLocale::dateFormat(FormatType format) const
 {
     xuint32 idx, size;
@@ -1485,14 +1316,11 @@ iString iLocale::dateFormat(FormatType format) const
 }
 
 /*!
-
-
     Returns the time format used for the current locale.
 
     If \a format is LongFormat the format will be a long version.
     Otherwise it uses a shorter version.
 */
-
 iString iLocale::timeFormat(FormatType format) const
 {
     xuint32 idx, size;
@@ -1510,93 +1338,58 @@ iString iLocale::timeFormat(FormatType format) const
 }
 
 /*!
-
-
     Returns the date time format used for the current locale.
 
     If \a format is ShortFormat the format will be a short version.
     Otherwise it uses a longer version.
 */
-
 iString iLocale::dateTimeFormat(FormatType format) const
-{
-    return dateFormat(format) + iLatin1Char(' ') + timeFormat(format);
-}
+{ return dateFormat(format) + iLatin1Char(' ') + timeFormat(format); }
 
 /*!
-
-
     Returns the decimal point character of this locale.
 */
 iChar iLocale::decimalPoint() const
-{
-    return d->decimal();
-}
+{ return d->decimal(); }
 
 /*!
-
-
     Returns the group separator character of this locale.
 */
 iChar iLocale::groupSeparator() const
-{
-    return d->group();
-}
+{ return d->group(); }
 
 /*!
-
-
     Returns the percent character of this locale.
 */
 iChar iLocale::percent() const
-{
-    return d->percent();
-}
+{ return d->percent(); }
 
 /*!
-
-
     Returns the zero digit character of this locale.
 */
 iChar iLocale::zeroDigit() const
-{
-    return d->zero();
-}
+{ return d->zero(); }
 
 /*!
-
-
     Returns the negative sign character of this locale.
 */
 iChar iLocale::negativeSign() const
-{
-    return d->minus();
-}
+{ return d->minus(); }
 
 /*!
-
-
     Returns the positive sign character of this locale.
 */
 iChar iLocale::positiveSign() const
-{
-    return d->plus();
-}
+{ return d->plus(); }
 
 /*!
-
-
     Returns the exponential character of this locale.
 */
 iChar iLocale::exponential() const
-{
-    return d->exponential();
-}
+{ return d->exponential(); }
 
 static bool iIsUpper(char c)
-{
-    return c >= 'A' && c <= 'Z';
-}
+{ return c >= 'A' && c <= 'Z'; }
 
 static char iToLower(char c)
 {
@@ -1607,8 +1400,6 @@ static char iToLower(char c)
 }
 
 /*!
-    \overload
-
     \a f and \a prec have the same meaning as in iString::number(double, char, int).
 
     \sa toDouble()
@@ -1670,10 +1461,7 @@ iString iLocale::toString(double i, char f, int prec) const
 
     On Windows and Mac, this locale will use the decimal/grouping characters and date/time
     formats specified in the system configuration panel.
-
-    \sa c()
 */
-
 iLocale iLocale::system()
 {
     if (systemLocalePrivate.isDestroyed())
@@ -1681,10 +1469,7 @@ iLocale iLocale::system()
     return iLocale(*systemLocalePrivate->data());
 }
 
-
 /*!
-
-
     Returns the localized name of \a month, in the format specified
     by \a type.
 
@@ -1716,8 +1501,6 @@ iString iLocale::monthName(int month, FormatType type) const
 }
 
 /*!
-
-
     Returns the localized name of \a month that is used as a
     standalone text, in the format specified by \a type.
 
@@ -1755,8 +1538,6 @@ iString iLocale::standaloneMonthName(int month, FormatType type) const
 }
 
 /*!
-
-
     Returns the localized name of the \a day (where 1 represents
     Monday, 2 represents Tuesday and so on), in the format specified
     by \a type.
@@ -1792,8 +1573,6 @@ iString iLocale::dayName(int day, FormatType type) const
 }
 
 /*!
-
-
     Returns the localized name of the \a day (where 1 represents
     Monday, 2 represents Tuesday and so on) that is used as a
     standalone text, in the format specified by \a type.
@@ -1846,8 +1625,6 @@ iLocale::MeasurementSystem iLocalePrivate::measurementSystem() const
 }
 
 /*!
-
-
     Returns the measurement system for the locale.
 */
 iLocale::MeasurementSystem iLocale::measurementSystem() const
@@ -1856,8 +1633,6 @@ iLocale::MeasurementSystem iLocale::measurementSystem() const
 }
 
 /*!
-
-
   Returns the text direction of the language.
 */
 iShell::LayoutDirection iLocale::textDirection() const
@@ -1899,8 +1674,6 @@ iShell::LayoutDirection iLocale::textDirection() const
 }
 
 /*!
-
-
   Returns an uppercase copy of \a str.
 
   If iShell Core is using the ICU libraries, they will be used to perform
@@ -1911,13 +1684,9 @@ iShell::LayoutDirection iLocale::textDirection() const
   \sa iString::toUpper()
 */
 iString iLocale::toUpper(const iString &str) const
-{
-    return str.toUpper();
-}
+{ return str.toUpper(); }
 
 /*!
-
-
   Returns a lowercase copy of \a str.
 
   If iShell Core is using the ICU libraries, they will be used to perform
@@ -1928,36 +1697,26 @@ iString iLocale::toUpper(const iString &str) const
   \sa iString::toLower()
 */
 iString iLocale::toLower(const iString &str) const
-{
-    return str.toLower();
-}
+{ return str.toLower(); }
 
 
 /*!
-
-
     Returns the localized name of the "AM" suffix for times specified using
     the conventions of the 12-hour clock.
 
     \sa pmText()
 */
 iString iLocale::amText() const
-{
-    return getLocaleData(am_data + d->m_data->m_am_idx, d->m_data->m_am_size);
-}
+{ return getLocaleData(am_data + d->m_data->m_am_idx, d->m_data->m_am_size); }
 
 /*!
-
-
     Returns the localized name of the "PM" suffix for times specified using
     the conventions of the 12-hour clock.
 
     \sa amText()
 */
 iString iLocale::pmText() const
-{
-    return getLocaleData(pm_data + d->m_data->m_pm_idx, d->m_data->m_pm_size);
-}
+{ return getLocaleData(pm_data + d->m_data->m_pm_idx, d->m_data->m_pm_size); }
 
 iString iLocaleData::doubleToString(double d, int precision, DoubleForm form,
                                     int width, unsigned flags) const
@@ -2082,10 +1841,7 @@ iString iLocaleData::doubleToString(const iChar _zero, const iChar plus, const i
 iString iLocaleData::longLongToString(xlonglong l, int precision,
                                             int base, int width,
                                             unsigned flags) const
-{
-    return longLongToString(m_zero, m_group, m_plus, m_minus,
-                                            l, precision, base, width, flags);
-}
+{ return longLongToString(m_zero, m_group, m_plus, m_minus, l, precision, base, width, flags); }
 
 iString iLocaleData::longLongToString(const iChar zero, const iChar group,
                                          const iChar plus, const iChar minus,
@@ -2177,10 +1933,7 @@ iString iLocaleData::longLongToString(const iChar zero, const iChar group,
 iString iLocaleData::unsLongLongToString(xulonglong l, int precision,
                                             int base, int width,
                                             unsigned flags) const
-{
-    return unsLongLongToString(m_zero, m_group, m_plus,
-                                               l, precision, base, width, flags);
-}
+{ return unsLongLongToString(m_zero, m_group, m_plus, l, precision, base, width, flags); }
 
 iString iLocaleData::unsLongLongToString(const iChar zero, const iChar group,
                                             const iChar plus,
@@ -2606,8 +2359,6 @@ xulonglong iLocaleData::bytearrayToUnsLongLong(const char *num, int base, bool *
 }
 
 /*!
-
-
     \enum iLocale::CurrencySymbolFormat
 
     Specifies the format of the currency symbol.
@@ -2618,7 +2369,6 @@ xulonglong iLocaleData::bytearrayToUnsLongLong(const char *num, int base, bool *
 */
 
 /*!
-
     Returns a currency symbol according to the \a format.
 */
 iString iLocale::currencySymbol(iLocale::CurrencySymbolFormat format) const
@@ -2646,8 +2396,6 @@ iString iLocale::currencySymbol(iLocale::CurrencySymbolFormat format) const
 }
 
 /*!
-
-
     Returns a localized string representation of \a value as a currency.
     If the \a symbol is provided it is used instead of the default currency symbol.
 
@@ -2671,10 +2419,6 @@ iString iLocale::toCurrencyString(xlonglong value, const iString &symbol) const
     return format.arg(str, sym);
 }
 
-/*!
-
-    \overload
-*/
 iString iLocale::toCurrencyString(xulonglong value, const iString &symbol) const
 {
     const iLocaleData *data = this->d->m_data;
@@ -2689,9 +2433,6 @@ iString iLocale::toCurrencyString(xulonglong value, const iString &symbol) const
 }
 
 /*!
-
-    \overload toCurrencyString()
-
     Returns a localized string representation of \a value as a currency.
     If the \a symbol is provided it is used instead of the default currency symbol.
     If the \a precision is provided it is used to set the precision of the currency value.
@@ -2723,8 +2464,6 @@ iString iLocale::toCurrencyString(double value, const iString &symbol, int preci
 */
 
 /*!
-
-
     \enum iLocale::DataSizeFormat
 
     Specifies the format for representation of data quantities.
@@ -2740,8 +2479,6 @@ iString iLocale::toCurrencyString(double value, const iString &symbol, int preci
 
 
 /*!
-
-
     Converts a size in bytes to a human-readable localized string, comprising a
     number and a quantified unit. The quantifier is chosen such that the number
     is at least one, and as small as possible. For example if \a bytes is
@@ -2793,29 +2530,21 @@ iString iLocale::formattedDataSize(xint64 bytes, int precision, DataSizeFormats 
 }
 
 /*!
-
-
     Returns a native name of the language for the locale. For example
     "Schwiizertüütsch" for Swiss-German locale.
 
     \sa nativeCountryName(), languageToString()
 */
 iString iLocale::nativeLanguageName() const
-{
-    return getLocaleData(endonyms_data + d->m_data->m_language_endonym_idx, d->m_data->m_language_endonym_size);
-}
+{ return getLocaleData(endonyms_data + d->m_data->m_language_endonym_idx, d->m_data->m_language_endonym_size); }
 
 /*!
-
-
     Returns a native name of the country for the locale. For example
     "España" for Spanish/Spain locale.
 
     \sa nativeLanguageName(), countryToString()
 */
 iString iLocale::nativeCountryName() const
-{
-    return getLocaleData(endonyms_data + d->m_data->m_country_endonym_idx, d->m_data->m_country_endonym_size);
-}
+{ return getLocaleData(endonyms_data + d->m_data->m_country_endonym_idx, d->m_data->m_country_endonym_size); }
 
 } // namespace iShell

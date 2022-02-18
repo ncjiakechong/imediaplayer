@@ -121,7 +121,7 @@ protected:
         : /*_v{},*/ _stored(ConstantsType::MaxIndex)
         , _empty(ConstantsType::InitialNextValue)
         , _maxIndex((size <= 0) ? ConstantsType::MaxIndex : std::min<int>(std::max(ConstantsType::InitialNextValue + 1, ConstantsType::InitialNextValue + size), ConstantsType::MaxIndex)) 
-        {}
+    {}
 
     inline ~iFreeListBase() {
         for (int i = 0; i < ConstantsType::BlockCount; ++i)

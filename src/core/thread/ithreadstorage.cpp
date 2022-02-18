@@ -163,7 +163,7 @@ void iThreadStorageData::finish(void **p)
                 ilog_warn("Thread[", iThread::currentThreadId(), "] exited after iThreadStorage", i, " destroyed");
             continue;
         }
-        destructor(q); //crash here might mean the thread exited after qthreadstorage was destroyed
+        destructor(q); //crash here might mean the thread exited after threadstorage was destroyed
 
         if (tls->size() > i) {
             //re reset the tls in case it has been recreated by its own destructor.
@@ -177,7 +177,6 @@ void iThreadStorageData::finish(void **p)
 
 /*!
     \class iThreadStorage
-    \inmodule QtCore
     \brief The iThreadStorage class provides per-thread data storage.
 
     \threadsafe

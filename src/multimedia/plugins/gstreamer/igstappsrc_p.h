@@ -50,10 +50,7 @@ public:
     unsigned int& dataRequestSize() { return m_dataRequestSize; }
 
     bool isStreamValid() const
-    {
-        return m_stream != IX_NULLPTR &&
-               m_stream->isOpen();
-    }
+    { return m_stream != IX_NULLPTR && m_stream->isOpen(); }
 
 private:
     void pushDataToAppSrc();

@@ -35,7 +35,7 @@ static inline int registerEventTypeZeroBased(int id)
 int iEvent::registerEventType(int hint)
 {
     const int result = registerEventTypeZeroBased(iEvent::MaxUser - hint);
-    return result < 0 ? -1 : iEvent::MaxUser - result ;
+    return result < 0 ? -1 : iEvent::MaxUser - result;
 }
 
 iEvent::iEvent(unsigned short type)
@@ -44,8 +44,7 @@ iEvent::iEvent(unsigned short type)
 
 iEvent::iEvent(const iEvent &other)
     : m_type(other.m_type), m_posted(other.m_posted), m_accept(other.m_accept)
-{
-}
+{}
 
 iEvent& iEvent::operator=(const iEvent &other)
 {
@@ -59,38 +58,34 @@ iEvent& iEvent::operator=(const iEvent &other)
 }
 
 iEvent::~iEvent()
-{
-}
+{}
 
 iTimerEvent::iTimerEvent(int timerId, xintptr u)
     : iEvent(Timer)
     , id(timerId)
     , userdata(u)
-{
-}
+{}
+
 iTimerEvent::~iTimerEvent()
-{
-}
+{}
 
 iChildEvent::iChildEvent(Type type, iObject *child)
     : iEvent(type)
     , c(child)
-{
-}
+{}
 
 iChildEvent::~iChildEvent()
-{
-}
+{}
 
 iDeferredDeleteEvent::iDeferredDeleteEvent()
     : iEvent(iEvent::DeferredDelete)
     , level(0)
-{ }
+{}
 
 /*!
     \internal
 */
 iDeferredDeleteEvent::~iDeferredDeleteEvent()
-{ }
+{}
 
 } // namespace iShell

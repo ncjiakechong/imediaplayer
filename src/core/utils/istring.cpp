@@ -455,9 +455,7 @@ static int ix_compare_strings(iStringView lhs, iLatin1String rhs, iShell::CaseSe
 }
 
 static int ix_compare_strings(iLatin1String lhs, iStringView rhs, iShell::CaseSensitivity cs)
-{
-    return -ix_compare_strings(rhs, lhs, cs);
-}
+{ return -ix_compare_strings(rhs, lhs, cs); }
 
 static int ix_compare_strings(iLatin1String lhs, iLatin1String rhs, iShell::CaseSensitivity cs)
 {
@@ -472,8 +470,6 @@ static int ix_compare_strings(iLatin1String lhs, iLatin1String rhs, iShell::Case
 
 /*!
     \relates iStringView
-    \internal
-
 
     Returns an integer that compares to 0 as \a lhs compares to \a rhs.
 
@@ -485,15 +481,10 @@ static int ix_compare_strings(iLatin1String lhs, iLatin1String rhs, iShell::Case
     Consider sorting user-visible strings with iString::localeAwareCompare().
 */
 int iPrivate::compareStrings(iStringView lhs, iStringView rhs, iShell::CaseSensitivity cs)
-{
-    return ix_compare_strings(lhs, rhs, cs);
-}
+{ return ix_compare_strings(lhs, rhs, cs); }
 
 /*!
     \relates iStringView
-    \internal
-
-    \overload
 
     Returns an integer that compares to 0 as \a lhs compares to \a rhs.
 
@@ -505,15 +496,10 @@ int iPrivate::compareStrings(iStringView lhs, iStringView rhs, iShell::CaseSensi
     Consider sorting user-visible strings with iString::localeAwareCompare().
 */
 int iPrivate::compareStrings(iStringView lhs, iLatin1String rhs, iShell::CaseSensitivity cs)
-{
-    return ix_compare_strings(lhs, rhs, cs);
-}
+{ return ix_compare_strings(lhs, rhs, cs); }
 
 /*!
     \relates iStringView
-    \internal
-
-    \overload
 
     Returns an integer that compares to 0 as \a lhs compares to \a rhs.
 
@@ -525,15 +511,10 @@ int iPrivate::compareStrings(iStringView lhs, iLatin1String rhs, iShell::CaseSen
     Consider sorting user-visible strings with iString::localeAwareCompare().
 */
 int iPrivate::compareStrings(iLatin1String lhs, iStringView rhs, iShell::CaseSensitivity cs)
-{
-    return ix_compare_strings(lhs, rhs, cs);
-}
+{ return ix_compare_strings(lhs, rhs, cs); }
 
 /*!
     \relates iStringView
-    \internal
-
-    \overload
 
     Returns an integer that compares to 0 as \a lhs compares to \a rhs.
 
@@ -545,9 +526,7 @@ int iPrivate::compareStrings(iLatin1String lhs, iStringView rhs, iShell::CaseSen
     Consider sorting user-visible strings with iString::localeAwareCompare().
 */
 int iPrivate::compareStrings(iLatin1String lhs, iLatin1String rhs, iShell::CaseSensitivity cs)
-{
-    return ix_compare_strings(lhs, rhs, cs);
-}
+{ return ix_compare_strings(lhs, rhs, cs); }
 
 #define REHASH(a) \
     if (sl_minus_1 < sizeof(std::size_t) * CHAR_BIT)  \
@@ -555,14 +534,10 @@ int iPrivate::compareStrings(iLatin1String lhs, iLatin1String rhs, iShell::CaseS
     hashHaystack <<= 1
 
 inline bool iIsUpper(char ch)
-{
-    return ch >= 'A' && ch <= 'Z';
-}
+{ return ch >= 'A' && ch <= 'Z'; }
 
 inline bool iIsDigit(char ch)
-{
-    return ch >= '0' && ch <= '9';
-}
+{ return ch >= '0' && ch <= '9'; }
 
 inline char iToLower(char ch)
 {
@@ -624,7 +599,6 @@ inline char iToLower(char ch)
 
 /*!
     \class iString
-    \inmodule QtCore
     \reentrant
 
     \brief The iString class provides a Unicode character string.
@@ -803,7 +777,7 @@ inline char iToLower(char ch)
     function is usually a better choice for sorting user-interface
     strings, when such a comparison is available.
 
-    On Unix-like platforms (including Linux, \macos and iOS), when Qt
+    On Unix-like platforms (including Linux, \macos and iOS), when it
     is linked with the ICU library (which it usually is), its
     locale-aware sorting is used.  Otherwise, on \macos and iOS, \l
     localeAwareCompare() compares according the "Order for sorted
@@ -979,13 +953,13 @@ inline char iToLower(char ch)
     \c{iStringBuilder} wherever you want to use it, and use the
     \c{'%'} operator instead of \c{'+'} when concatenating strings:
 
-    \snippet istring/stringbuilder.cpp 5
+    \snippet istring/stringbuilder.cpp
 
     A more global approach which is the most convenient but
     not entirely source compatible, is to this define in your
     .pro file:
 
-    \snippet istring/stringbuilder.cpp 3
+    \snippet istring/stringbuilder.cpp
 
     and the \c{'+'} will automatically be performed as the
     \c{iStringBuilder} \c{'%'} everywhere.
@@ -993,13 +967,13 @@ inline char iToLower(char ch)
     \section1 Maximum size and out-of-memory conditions
 
     In case memory allocation fails, iString will throw a \c std::bad_alloc
-    exception. Out of memory conditions in the Qt containers are the only case
-    where Qt will throw exceptions.
+    exception. Out of memory conditions in the containers are the only case
+    where it will throw exceptions.
 
     Note that the operating system may impose further limits on applications
     holding a lot of allocated memory, especially large, contiguous blocks.
     Such considerations, the configuration of such behavior or any mitigation
-    are outside the scope of the Qt API.
+    are outside the scope of the API.
 
     \sa split()
 */
@@ -1273,7 +1247,6 @@ inline char iToLower(char ch)
 
     \sa utf16(), toLatin1(), toUtf8(), toLocal8Bit(), toStdU16String(), toStdU32String()
 */
-
 xsizetype iString::toUcs4_helper(const xuint16 *uc, xsizetype length, xuint32 *out)
 {
     xsizetype count = 0;
@@ -1375,7 +1348,6 @@ iString::iString(xsizetype size, iChar ch)
 }
 
 /*! \fn iString::iString(int size, iShell::Initialization)
-  \internal
 
   Constructs a string of the given \a size without initializing the
   characters. This is only used in \c iStringBuilder::toString().
@@ -1442,7 +1414,6 @@ iString::iString(iChar ch)
     Destroys the string.
 */
 
-
 /*! \fn void iString::swap(iString &other)
 
 
@@ -1492,7 +1463,6 @@ iString::iString(iChar ch)
 
     \sa truncate(), reserve()
 */
-
 void iString::resize(xsizetype size)
 {
     if (size < 0)
@@ -1507,15 +1477,11 @@ void iString::resize(xsizetype size)
 }
 
 /*!
-    \overload
-
-
     Unlike \l {iString::}{resize(int)}, this overload
     initializes the new characters to \a fillChar:
 
     \snippet istring/main.cpp 46
 */
-
 void iString::resize(xsizetype size, iChar fillChar)
 {
     const xsizetype oldSize = length();
@@ -1558,7 +1524,7 @@ void iString::resize(xsizetype size, iChar fillChar)
     we're fairly sure that size is large enough to make a call to
     reserve() worthwhile:
 
-    \snippet istring/main.cpp 44
+    \snippet istring/main.cpp
 
     \sa squeeze(), capacity()
 */
@@ -1709,8 +1675,6 @@ iString &iString::operator=(iLatin1String other)
 */
 
 /*!
-    \overload operator=()
-
     Sets the string to contain the single character \a ch.
 */
 iString &iString::operator=(iChar ch)
@@ -1742,8 +1706,6 @@ iString &iString::operator=(iChar ch)
 
     \sa append(), prepend(), replace(), remove()
 */
-
-
 
 /*!
     \fn iString& iString::insert(int position, const char *str)
@@ -1880,14 +1842,6 @@ iString& iString::insert(xsizetype i, iChar ch)
 /*!
     Appends the string \a str onto the end of this string.
 
-    Example:
-
-    \snippet istring/main.cpp 9
-
-    This is the same as using the insert() function:
-
-    \snippet istring/main.cpp 10
-
     The append() function is typically very fast (\l{constant time}),
     because iString preallocates extra space at the end of the string
     data so it can grow without reallocating the entire string each
@@ -1913,9 +1867,6 @@ iString &iString::append(const iString &str)
 }
 
 /*!
-  \overload append()
-
-
   Appends \a len characters from the iChar array \a str to this string.
 */
 iString &iString::append(const iChar *str, xsizetype len)
@@ -1934,8 +1885,6 @@ iString &iString::append(const iChar *str, xsizetype len)
 }
 
 /*!
-  \overload append()
-
   Appends the Latin-1 string \a str to this string.
 */
 iString &iString::append(iLatin1String str)
@@ -2151,9 +2100,6 @@ iString &iString::remove(const iString &str, iShell::CaseSensitivity cs)
 }
 
 /*!
-
-  \overload
-
   Removes every occurrence of the given \a str string in this
   string, and returns a reference to this string.
 
@@ -2245,9 +2191,7 @@ iString &iString::remove(iChar ch, iShell::CaseSensitivity cs)
   \sa insert(), remove()
 */
 iString &iString::replace(xsizetype pos, xsizetype len, const iString &after)
-{
-    return replace(pos, len, after.constData(), after.length());
-}
+{ return replace(pos, len, after.constData(), after.length()); }
 
 /*!
   \fn iString &iString::replace(int position, int n, const iChar *unicode, int size)
@@ -2276,9 +2220,7 @@ iString &iString::replace(xsizetype pos, xsizetype len, const iChar *unicode, xs
   character \a after and returns a reference to this string.
 */
 iString &iString::replace(xsizetype pos, xsizetype len, iChar after)
-{
-    return replace(pos, len, &after, 1);
-}
+{ return replace(pos, len, &after, 1); }
 
 /*!
   \overload replace()
@@ -2299,9 +2241,7 @@ iString &iString::replace(xsizetype pos, xsizetype len, iChar after)
   \snippet istring/main.cpp 86
 */
 iString &iString::replace(const iString &before, const iString &after, iShell::CaseSensitivity cs)
-{
-    return replace(before.constData(), before.size(), after.constData(), after.size(), cs);
-}
+{ return replace(before.constData(), before.size(), after.constData(), after.size(), cs); }
 
 namespace { // helpers for replace and its helper:
 iChar *textCopy(const iChar *start, xsizetype len)
@@ -2383,9 +2323,6 @@ void iString::replace_helper(size_t *indices, xsizetype nIndices, xsizetype blen
 }
 
 /*!
-
-  \overload replace()
-
   Replaces each occurrence in this string of the first \a blen
   characters of \a before with the first \a alen characters of \a
   after and returns a reference to this string.
@@ -2543,9 +2480,6 @@ iString& iString::replace(iChar before, iChar after, iShell::CaseSensitivity cs)
 }
 
 /*!
-
-  \overload replace()
-
   Replaces every occurrence of the string \a before with the string \a
   after and returns a reference to this string.
 
@@ -2566,9 +2500,6 @@ iString &iString::replace(iLatin1String before, iLatin1String after, iShell::Cas
 }
 
 /*!
-
-  \overload replace()
-
   Replaces every occurrence of the string \a before with the string \a
   after and returns a reference to this string.
 
@@ -2586,9 +2517,6 @@ iString &iString::replace(iLatin1String before, const iString &after, iShell::Ca
 }
 
 /*!
-
-  \overload replace()
-
   Replaces every occurrence of the string \a before with the string \a
   after and returns a reference to this string.
 
@@ -2606,9 +2534,6 @@ iString &iString::replace(const iString &before, iLatin1String after, iShell::Ca
 }
 
 /*!
-
-  \overload replace()
-
   Replaces every occurrence of the character \a c with the string \a
   after and returns a reference to this string.
 
@@ -2702,9 +2627,7 @@ bool iString::operator==(iLatin1String other) const
     iString::localeAwareCompare() function.
 */
 bool operator<(const iString &s1, const iString &s2)
-{
-    return ix_compare_strings(s1, s2, iShell::CaseSensitive) < 0;
-}
+{ return ix_compare_strings(s1, s2, iShell::CaseSensitive) < 0; }
 
 /*!
    \overload operator<()
@@ -2713,9 +2636,7 @@ bool operator<(const iString &s1, const iString &s2)
     string called \a other; otherwise returns \c false.
 */
 bool iString::operator<(iLatin1String other) const
-{
-    return ix_compare_strings(*this, other, iShell::CaseSensitive) < 0;
-}
+{ return ix_compare_strings(*this, other, iShell::CaseSensitive) < 0; }
 
 /*! \fn bool iString::operator<(const iByteArray &other) const
 
@@ -2822,9 +2743,7 @@ bool iString::operator<(iLatin1String other) const
     string \a other; otherwise returns \c false.
 */
 bool iString::operator>(iLatin1String other) const
-{
-    return ix_compare_strings(*this, other, iShell::CaseSensitive) > 0;
-}
+{ return ix_compare_strings(*this, other, iShell::CaseSensitive) > 0; }
 
 /*! \fn bool iString::operator>(const iByteArray &other) const
 
@@ -2977,16 +2896,12 @@ bool iString::operator>(iLatin1String other) const
   \sa lastIndexOf(), contains(), count()
 */
 xsizetype iString::indexOf(const iString &str, xsizetype from, iShell::CaseSensitivity cs) const
-{
-    return iPrivate::findString(iStringView(unicode(), length()), from, iStringView(str.unicode(), str.length()), cs);
-}
+{ return iPrivate::findString(iStringView(unicode(), length()), from, iStringView(str.unicode(), str.length()), cs); }
 
 xsizetype iString::indexOf(iStringView s, xsizetype from, iShell::CaseSensitivity cs) const
-{ 
-    return iPrivate::findString(*this, from, s, cs); 
-}
-/*!
+{ return iPrivate::findString(*this, from, s, cs); }
 
+/*!
   Returns the index position of the first occurrence of the string \a
   str in this string, searching forward from index position \a
   from. Returns -1 if \a str is not found.
@@ -3005,9 +2920,7 @@ xsizetype iString::indexOf(iStringView s, xsizetype from, iShell::CaseSensitivit
 */
 
 xsizetype iString::indexOf(iLatin1String str, xsizetype from, iShell::CaseSensitivity cs) const
-{
-    return iPrivate::findString(iStringView(unicode(), size()), from, str, cs);
-}
+{ return iPrivate::findString(iStringView(unicode(), size()), from, str, cs); }
 
 /*!
     \overload indexOf()
@@ -3017,9 +2930,7 @@ xsizetype iString::indexOf(iLatin1String str, xsizetype from, iShell::CaseSensit
     position \a from. Returns -1 if \a ch could not be found.
 */
 xsizetype iString::indexOf(iChar ch, xsizetype from, iShell::CaseSensitivity cs) const
-{
-    return xFindChar(iStringView(unicode(), length()), ch, from, cs);
-}
+{ return xFindChar(iStringView(unicode(), length()), ch, from, cs); }
 
 /*!
   Returns the index position of the last occurrence of the string \a
@@ -3031,16 +2942,10 @@ xsizetype iString::indexOf(iChar ch, xsizetype from, iShell::CaseSensitivity cs)
   If \a cs is iShell::CaseSensitive (default), the search is case
   sensitive; otherwise the search is case insensitive.
 
-  Example:
-
-  \snippet istring/main.cpp 29
-
   \sa indexOf(), contains(), count()
 */
 xsizetype iString::lastIndexOf(const iString &str, xsizetype from, iShell::CaseSensitivity cs) const
-{
-    return iPrivate::lastIndexOf(iStringView(*this), from, str, cs);
-}
+{ return iPrivate::lastIndexOf(iStringView(*this), from, str, cs); }
 
 /*!
 
@@ -3055,16 +2960,10 @@ xsizetype iString::lastIndexOf(const iString &str, xsizetype from, iShell::CaseS
   If \a cs is iShell::CaseSensitive (default), the search is case
   sensitive; otherwise the search is case insensitive.
 
-  Example:
-
-  \snippet istring/main.cpp 29
-
   \sa indexOf(), contains(), count()
 */
 xsizetype iString::lastIndexOf(iLatin1String str, xsizetype from, iShell::CaseSensitivity cs) const
-{
-    return iPrivate::lastIndexOf(*this, from, str, cs);
-}
+{ return iPrivate::lastIndexOf(*this, from, str, cs); }
 
 /*!
   \overload lastIndexOf()
@@ -3073,9 +2972,7 @@ xsizetype iString::lastIndexOf(iLatin1String str, xsizetype from, iShell::CaseSe
   \a ch, searching backward from position \a from.
 */
 xsizetype iString::lastIndexOf(iChar ch, xsizetype from, iShell::CaseSensitivity cs) const
-{
-    return xLastIndexOf(iStringView(*this), ch, from, cs);
-}
+{ return xLastIndexOf(iStringView(*this), ch, from, cs); }
 
 struct iStringCapture
 {
@@ -3222,11 +3119,8 @@ iString &iString::replace(const iRegularExpression &re, const iString &after)
 
     \sa contains(), indexOf()
 */
-
 xsizetype iString::count(const iString &str, iShell::CaseSensitivity cs) const
-{
-    return iPrivate::count(iStringView(unicode(), size()), iStringView(str.unicode(), str.size()), cs);
-}
+{ return iPrivate::count(iStringView(unicode(), size()), iStringView(str.unicode(), str.size()), cs); }
 
 /*!
     \overload count()
@@ -3238,14 +3132,10 @@ xsizetype iString::count(const iString &str, iShell::CaseSensitivity cs) const
 
     \sa contains(), indexOf()
 */
-
 xsizetype iString::count(iChar ch, iShell::CaseSensitivity cs) const
-{
-    return iPrivate::count(iStringView(unicode(), size()), ch, cs);
-}
+{ return iPrivate::count(iStringView(unicode(), size()), ch, cs); }
 
 /*!
-    \since 6.0
     \overload count()
     Returns the number of (potentially overlapping) occurrences of the
     string reference \a str in this string.
@@ -3256,9 +3146,8 @@ xsizetype iString::count(iChar ch, iShell::CaseSensitivity cs) const
     \sa contains(), indexOf()
 */
 xsizetype iString::count(iStringView str, iShell::CaseSensitivity cs) const
-{
-    return iPrivate::count(*this, str, cs);
-}
+{ return iPrivate::count(*this, str, cs); }
+
 /*! \fn bool iString::contains(const iString &str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
 
     Returns \c true if this string contains an occurrence of the string
@@ -3418,7 +3307,6 @@ bool iString::contains(const iRegularExpression &re, iRegularExpressionMatch *rm
     below, there are four instances of "ana" or "ama":
 
     \snippet istring/main.cpp 18
-
 */
 xsizetype iString::count(const iRegularExpression &re) const
 {
@@ -3438,14 +3326,6 @@ xsizetype iString::count(const iRegularExpression &re) const
     }
     return count;
 }
-
-/*! \fn int iString::count() const
-
-    \overload count()
-
-    Same as size().
-*/
-
 
 /*!
     \enum iString::SectionFlag
@@ -3771,18 +3651,13 @@ iString iString::mid(xsizetype position, xsizetype n) const
     \sa endsWith()
 */
 bool iString::startsWith(const iString& s, iShell::CaseSensitivity cs) const
-{
-    return ix_starts_with(*this, s, cs);
-}
-
+{ return ix_starts_with(*this, s, cs); }
 
 /*!
   \overload startsWith()
  */
 bool iString::startsWith(iLatin1String s, iShell::CaseSensitivity cs) const
-{
-    return ix_starts_with(*this, s, cs);
-}
+{ return ix_starts_with(*this, s, cs); }
 
 /*!
   \overload startsWith()
@@ -3791,9 +3666,7 @@ bool iString::startsWith(iLatin1String s, iShell::CaseSensitivity cs) const
   \c false.
 */
 bool iString::startsWith(iChar c, iShell::CaseSensitivity cs) const
-{
-    return ix_starts_with(*this, c, cs);
-}
+{ return ix_starts_with(*this, c, cs); }
 
 /*!
     \fn bool iString::startsWith(iStringView str, iShell::CaseSensitivity cs) const
@@ -3821,9 +3694,7 @@ bool iString::startsWith(iChar c, iShell::CaseSensitivity cs) const
     \sa startsWith()
 */
 bool iString::endsWith(const iString &s, iShell::CaseSensitivity cs) const
-{
-    return ix_ends_with(*this, s, cs);
-}
+{ return ix_ends_with(*this, s, cs); }
 
 /*!
     \fn bool iString::endsWith(iStringView str, iShell::CaseSensitivity cs) const
@@ -3842,9 +3713,7 @@ bool iString::endsWith(const iString &s, iShell::CaseSensitivity cs) const
     \overload endsWith()
 */
 bool iString::endsWith(iLatin1String s, iShell::CaseSensitivity cs) const
-{
-    return ix_ends_with(*this, s, cs);
-}
+{ return ix_ends_with(*this, s, cs); }
 
 /*!
   Returns \c true if the string ends with \a c; otherwise returns
@@ -3853,9 +3722,7 @@ bool iString::endsWith(iLatin1String s, iShell::CaseSensitivity cs) const
   \overload endsWith()
  */
 bool iString::endsWith(iChar c, iShell::CaseSensitivity cs) const
-{
-    return ix_ends_with(*this, c, cs);
-}
+{ return ix_ends_with(*this, c, cs); }
 
 /*!
     Returns \c true if the string only contains uppercase letters,
@@ -3883,7 +3750,6 @@ bool iString::isUpper() const
     Returns \c true if the string only contains lowercase letters,
     otherwise returns \c false.
 
-
     \sa iChar::isLower(), isUpper()
  */
 bool iString::isLower() const
@@ -3904,15 +3770,9 @@ bool iString::isLower() const
 static iByteArray ix_convert_to_latin1(iStringView string);
 
 iByteArray iString::toLatin1_helper(const iString &string)
-{
-    return ix_convert_to_latin1(string);
-}
+{ return ix_convert_to_latin1(string); }
 
 /*!
-
-    \internal
-    \relates iStringView
-
     Returns a Latin-1 representation of \a string as a iByteArray.
 
     The behavior is undefined if \a string contains non-Latin1 characters.
@@ -3921,9 +3781,7 @@ iByteArray iString::toLatin1_helper(const iString &string)
     iPrivate::convertToLocal8Bit(), iPrivate::convertToUcs4()
 */
 iByteArray iPrivate::convertToLatin1(iStringView string)
-{
-    return ix_convert_to_latin1(string);
-}
+{ return ix_convert_to_latin1(string); }
 
 static iByteArray ix_convert_to_latin1(iStringView string)
 {
@@ -4013,9 +3871,7 @@ static iByteArray ix_convert_to_local_8bit(iStringView string);
 */
 
 iByteArray iString::toLocal8Bit_helper(const iChar *data, xsizetype size)
-{
-    return ix_convert_to_local_8bit(iStringView(data, size));
-}
+{ return ix_convert_to_local_8bit(iStringView(data, size)); }
 
 static iByteArray ix_convert_to_local_8bit(iStringView string)
 {
@@ -4026,10 +3882,6 @@ static iByteArray ix_convert_to_local_8bit(iStringView string)
 }
 
 /*!
-
-    \internal
-    \relates iStringView
-
     Returns a local 8-bit representation of \a string as a iByteArray.
 
     iTextCodec::codecForLocale() is used to perform the conversion from
@@ -4041,9 +3893,7 @@ static iByteArray ix_convert_to_local_8bit(iStringView string)
     \sa iString::toLocal8Bit(), iStringView::toLocal8Bit()
 */
 iByteArray iPrivate::convertToLocal8Bit(iStringView string)
-{
-    return ix_convert_to_local_8bit(string);
-}
+{ return ix_convert_to_local_8bit(string); }
 
 static iByteArray ix_convert_to_utf8(iStringView str);
 
@@ -4059,9 +3909,7 @@ static iByteArray ix_convert_to_utf8(iStringView str);
 */
 
 iByteArray iString::toUtf8_helper(const iString &str)
-{
-    return ix_convert_to_utf8(str);
-}
+{ return ix_convert_to_utf8(str); }
 
 static iByteArray ix_convert_to_utf8(iStringView str)
 {
@@ -4072,10 +3920,6 @@ static iByteArray ix_convert_to_utf8(iStringView str)
 }
 
 /*!
-
-    \internal
-    \relates iStringView
-
     Returns a UTF-8 representation of \a string as a iByteArray.
 
     UTF-8 is a Unicode codec and can represent all characters in a Unicode
@@ -4084,15 +3928,11 @@ static iByteArray ix_convert_to_utf8(iStringView str)
     \sa iString::toUtf8(), iStringView::toUtf8()
 */
 iByteArray iPrivate::convertToUtf8(iStringView string)
-{
-    return ix_convert_to_utf8(string);
-}
+{ return ix_convert_to_utf8(string); }
 
 static std::list<xuint32> ix_convert_to_ucs4(iStringView string);
 
 /*!
-
-
     Returns a UCS-4/UTF-32 representation of the string as a std::vector<xuint32>.
 
     UCS-4 is a Unicode codec and therefore it is lossless. All characters from
@@ -4105,9 +3945,7 @@ static std::list<xuint32> ix_convert_to_ucs4(iStringView string);
     \sa fromUtf8(), toUtf8(), toLatin1(), toLocal8Bit(), iTextCodec, fromUcs4(), toWCharArray()
 */
 std::list<xuint32> iString::toUcs4() const
-{
-    return ix_convert_to_ucs4(*this);
-}
+{ return ix_convert_to_ucs4(*this); }
 
 static std::list<xuint32> ix_convert_to_ucs4(iStringView string)
 {
@@ -4124,10 +3962,6 @@ static std::list<xuint32> ix_convert_to_ucs4(iStringView string)
 }
 
 /*!
-
-    \internal
-    \relates iStringView
-
     Returns a UCS-4/UTF-32 representation of \a string as a std::vector<xuint32>.
 
     UCS-4 is a Unicode codec and therefore it is lossless. All characters from
@@ -4141,9 +3975,7 @@ static std::list<xuint32> ix_convert_to_ucs4(iStringView string)
     iPrivate::convertToLocal8Bit(), iPrivate::convertToUtf8()
 */
 std::list<xuint32> iPrivate::convertToUcs4(iStringView string)
-{
-    return ix_convert_to_ucs4(string);
-}
+{ return ix_convert_to_ucs4(string); }
 
 iString::DataPointer iString::fromLatin1_helper(const char *str, xsizetype size)
 {
@@ -4407,14 +4239,10 @@ iString& iString::setUnicode(const iChar *unicode, xsizetype size)
     \sa trimmed()
 */
 iString iString::simplified_helper(const iString &str)
-{
-    return iStringAlgorithms<const iString>::simplified_helper(str);
-}
+{ return iStringAlgorithms<const iString>::simplified_helper(str); }
 
 iString iString::simplified_helper(iString &str)
-{
-    return iStringAlgorithms<iString>::simplified_helper(str);
-}
+{ return iStringAlgorithms<iString>::simplified_helper(str); }
 
 namespace {
     template <typename StringView>
@@ -4443,14 +4271,10 @@ namespace {
     \sa iString::trimmed(), iStringView::trimmed(), iLatin1String::trimmed()
 */
 iStringView iPrivate::trimmed(iStringView s)
-{
-    return ix_trimmed(s);
-}
+{ return ix_trimmed(s); }
 
 iLatin1String iPrivate::trimmed(iLatin1String s)
-{
-    return ix_trimmed(s);
-}
+{ return ix_trimmed(s); }
 
 /*!
     \fn iString iString::trimmed() const
@@ -4471,14 +4295,10 @@ iLatin1String iPrivate::trimmed(iLatin1String s)
     \sa simplified()
 */
 iString iString::trimmed_helper(const iString &str)
-{
-    return iStringAlgorithms<const iString>::trimmed_helper(str);
-}
+{ return iStringAlgorithms<const iString>::trimmed_helper(str); }
 
 iString iString::trimmed_helper(iString &str)
-{
-    return iStringAlgorithms<iString>::trimmed_helper(str);
-}
+{ return iStringAlgorithms<iString>::trimmed_helper(str); }
 
 /*! \fn const iChar iString::at(int position) const
 
@@ -4643,7 +4463,6 @@ void iString::chop(xsizetype n)
 
     \sa resize()
 */
-
 iString& iString::fill(iChar ch, xsizetype size)
 {
     resize(size < 0 ? d.size : size);
@@ -4959,7 +4778,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 /*!
     \fn int iString::compare(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
 
-
     \overload compare()
 
     Performs a comparison of this with \a s, using the case
@@ -4967,9 +4785,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 */
 
 /*!
-    \overload compare()
-
-
     Lexically compares this string with the \a other string and
     returns an integer less than, equal to, or greater than zero if
     this string is less than, equal to, or greater than the other
@@ -4978,15 +4793,8 @@ iString& iString::fill(iChar ch, xsizetype size)
     Same as compare(*this, \a other, \a cs).
 */
 int iString::compare(const iString &other, iShell::CaseSensitivity cs) const
-{
-    return ix_compare_strings(*this, other, cs);
-}
+{ return ix_compare_strings(*this, other, cs); }
 
-
-/*!
-    \internal
-
-*/
 int iString::compare_helper(const iChar *data1, xsizetype length1, const iChar *data2, xsizetype length2,
                             iShell::CaseSensitivity cs)
 {
@@ -4998,15 +4806,10 @@ int iString::compare_helper(const iChar *data1, xsizetype length1, const iChar *
 }
 
 /*!
-    \overload compare()
-
-
     Same as compare(*this, \a other, \a cs).
 */
 int iString::compare(iLatin1String other, iShell::CaseSensitivity cs) const
-{
-    return ix_compare_strings(*this, other, cs);
-}
+{ return ix_compare_strings(*this, other, cs); }
 
 /*!
     \internal
@@ -5060,14 +4863,8 @@ int iString::compare_helper(const iChar *data1, xsizetype length1, iLatin1String
     Same as \c {localeAwareCompare(*this, other)}.
 */
 int iString::localeAwareCompare(const iString &other) const
-{
-    return localeAwareCompare_helper(constData(), length(), other.constData(), other.length());
-}
+{ return localeAwareCompare_helper(constData(), length(), other.constData(), other.length()); }
 
-/*!
-    \internal
-
-*/
 int iString::localeAwareCompare_helper(const iChar *data1, xsizetype length1,
                                        const iChar *data2, xsizetype length2)
 {
@@ -5110,7 +4907,6 @@ int iString::localeAwareCompare_helper(const iChar *data1, xsizetype length1,
 
     \sa unicode()
 */
-
 const xuint16 *iString::utf16() const
 {
     if (!d.isMutable()) {
@@ -5137,7 +4933,6 @@ const xuint16 *iString::utf16() const
 
     \sa rightJustified()
 */
-
 iString iString::leftJustified(xsizetype width, iChar fill, bool truncate) const
 {
     iString result;
@@ -5176,7 +4971,6 @@ iString iString::leftJustified(xsizetype width, iChar fill, bool truncate) const
 
     \sa leftJustified()
 */
-
 iString iString::rightJustified(xsizetype width, iChar fill, bool truncate) const
 {
     iString result;
@@ -5210,7 +5004,6 @@ iString iString::rightJustified(xsizetype width, iChar fill, bool truncate) cons
 
     \sa toUpper(), iLocale::toLower()
 */
-
 namespace iUnicodeTables {
 /*
     \internal
@@ -5349,14 +5142,10 @@ static iString convertCase(T &str, iUnicodeTables::Case which)
 } // namespace iUnicodeTables
 
 iString iString::toLower_helper(const iString &str)
-{
-    return iUnicodeTables::convertCase(str, iUnicodeTables::LowerCase);
-}
+{ return iUnicodeTables::convertCase(str, iUnicodeTables::LowerCase); }
 
 iString iString::toLower_helper(iString &str)
-{
-    return iUnicodeTables::convertCase(str, iUnicodeTables::LowerCase);
-}
+{ return iUnicodeTables::convertCase(str, iUnicodeTables::LowerCase); }
 
 /*!
     \fn iString iString::toCaseFolded() const
@@ -5364,16 +5153,11 @@ iString iString::toLower_helper(iString &str)
     Returns the case folded equivalent of the string. For most Unicode
     characters this is the same as toLower().
 */
-
 iString iString::toCaseFolded_helper(const iString &str)
-{
-    return iUnicodeTables::convertCase(str, iUnicodeTables::CaseFold);
-}
+{ return iUnicodeTables::convertCase(str, iUnicodeTables::CaseFold); }
 
 iString iString::toCaseFolded_helper(iString &str)
-{
-    return iUnicodeTables::convertCase(str, iUnicodeTables::CaseFold);
-}
+{ return iUnicodeTables::convertCase(str, iUnicodeTables::CaseFold); }
 
 /*!
     \fn iString iString::toUpper() const
@@ -5389,20 +5173,11 @@ iString iString::toCaseFolded_helper(iString &str)
 */
 
 iString iString::toUpper_helper(const iString &str)
-{
-    return iUnicodeTables::convertCase(str, iUnicodeTables::UpperCase);
-}
+{ return iUnicodeTables::convertCase(str, iUnicodeTables::UpperCase); }
 
 iString iString::toUpper_helper(iString &str)
-{
-    return iUnicodeTables::convertCase(str, iUnicodeTables::UpperCase);
-}
+{ return iUnicodeTables::convertCase(str, iUnicodeTables::UpperCase); }
 
-/*!
-    \obsolete
-
-    Use asprintf(), arg() instead.
-*/
 iString &iString::sprintf(const char *cformat, ...)
 {
     va_list ap;
@@ -5413,8 +5188,6 @@ iString &iString::sprintf(const char *cformat, ...)
 }
 
 /*!
-
-
     Safely builds a formatted string from the format string \a cformat
     and an arbitrary list of arguments.
 
@@ -5444,7 +5217,6 @@ iString &iString::sprintf(const char *cformat, ...)
 
     \sa arg()
 */
-
 iString iString::asprintf(const char *cformat, ...)
 {
     va_list ap;
@@ -5454,15 +5226,8 @@ iString iString::asprintf(const char *cformat, ...)
     return s;
 }
 
-/*!
-    \obsolete
-
-    Use vasprintf(), arg() instead.
-*/
 iString &iString::vsprintf(const char *cformat, va_list ap)
-{
-    return *this = vasprintf(cformat, ap);
-}
+{ return *this = vasprintf(cformat, ap); }
 
 static void append_utf8(iString &qs, const char *cs, int len)
 {
@@ -5814,11 +5579,8 @@ iString iString::vasprintf(const char *cformat, va_list ap)
 
     \sa number(), toULongLong(), toInt(), iLocale::toLongLong()
 */
-
 xint64 iString::toLongLong(bool *ok, int base) const
-{
-    return toIntegral_helper<xlonglong>(*this, ok, base);
-}
+{ return toIntegral_helper<xlonglong>(*this, ok, base); }
 
 xlonglong iString::toIntegral_helper(iStringView string, bool *ok, int base)
 {
@@ -5856,9 +5618,7 @@ xlonglong iString::toIntegral_helper(iStringView string, bool *ok, int base)
 */
 
 xuint64 iString::toULongLong(bool *ok, int base) const
-{
-    return toIntegral_helper<xulonglong>(*this, ok, base);
-}
+{ return toIntegral_helper<xulonglong>(*this, ok, base); }
 
 xulonglong iString::toIntegral_helper(iStringView string, bool *ok, uint base)
 {
@@ -5895,11 +5655,8 @@ xulonglong iString::toIntegral_helper(iStringView string, bool *ok, uint base)
 
     \sa number(), toULong(), toInt(), iLocale::toInt()
 */
-
 long iString::toLong(bool *ok, int base) const
-{
-    return toIntegral_helper<long>(*this, ok, base);
-}
+{ return toIntegral_helper<long>(*this, ok, base); }
 
 /*!
     \fn ulong iString::toULong(bool *ok, int base) const
@@ -5928,9 +5685,7 @@ long iString::toLong(bool *ok, int base) const
 */
 
 ulong iString::toULong(bool *ok, int base) const
-{
-    return toIntegral_helper<ulong>(*this, ok, base);
-}
+{ return toIntegral_helper<ulong>(*this, ok, base); }
 
 
 /*!
@@ -5956,11 +5711,8 @@ ulong iString::toULong(bool *ok, int base) const
 
     \sa number(), toUInt(), toDouble(), iLocale::toInt()
 */
-
 int iString::toInt(bool *ok, int base) const
-{
-    return toIntegral_helper<int>(*this, ok, base);
-}
+{ return toIntegral_helper<int>(*this, ok, base); }
 
 /*!
     Returns the string converted to an \c{unsigned int} using base \a
@@ -5985,11 +5737,8 @@ int iString::toInt(bool *ok, int base) const
 
     \sa number(), toInt(), iLocale::toUInt()
 */
-
 uint iString::toUInt(bool *ok, int base) const
-{
-    return toIntegral_helper<uint>(*this, ok, base);
-}
+{ return toIntegral_helper<uint>(*this, ok, base); }
 
 /*!
     Returns the string converted to a \c short using base \a
@@ -6014,11 +5763,8 @@ uint iString::toUInt(bool *ok, int base) const
 
     \sa number(), toUShort(), toInt(), iLocale::toShort()
 */
-
 short iString::toShort(bool *ok, int base) const
-{
-    return toIntegral_helper<short>(*this, ok, base);
-}
+{ return toIntegral_helper<short>(*this, ok, base); }
 
 /*!
     Returns the string converted to an \c{unsigned short} using base \a
@@ -6043,12 +5789,8 @@ short iString::toShort(bool *ok, int base) const
 
     \sa number(), toShort(), iLocale::toUShort()
 */
-
 ushort iString::toUShort(bool *ok, int base) const
-{
-    return toIntegral_helper<ushort>(*this, ok, base);
-}
-
+{ return toIntegral_helper<ushort>(*this, ok, base); }
 
 /*!
     Returns the string converted to a \c double value.
@@ -6085,9 +5827,7 @@ ushort iString::toUShort(bool *ok, int base) const
 */
 
 double iString::toDouble(bool *ok) const
-{
-    return iLocaleData::c()->stringToDouble(*this, ok, iLocale::RejectGroupSeparator);
-}
+{ return iLocaleData::c()->stringToDouble(*this, ok, iLocale::RejectGroupSeparator); }
 
 /*!
     Returns the string converted to a \c float value.
@@ -6118,11 +5858,8 @@ double iString::toDouble(bool *ok) const
 
     \sa number(), toDouble(), toInt(), iLocale::toFloat(), trimmed()
 */
-
 float iString::toFloat(bool *ok) const
-{
-    return iLocaleData::convertDoubleToFloat(toDouble(ok), ok);
-}
+{ return iLocaleData::convertDoubleToFloat(toDouble(ok), ok); }
 
 /*! \fn iString &iString::setNum(int n, int base)
 
@@ -6138,47 +5875,11 @@ float iString::toFloat(bool *ok) const
    To get a localized string representation of a number, use
    iLocale::toString() with the appropriate locale.
 */
-
-/*! \fn iString &iString::setNum(uint n, int base)
-
-    \overload
-*/
-
-/*! \fn iString &iString::setNum(long n, int base)
-
-    \overload
-*/
-
-/*! \fn iString &iString::setNum(ulong n, int base)
-
-    \overload
-*/
-
-/*!
-    \overload
-*/
 iString &iString::setNum(xlonglong n, int base)
-{
-    return *this = number(n, base);
-}
+{ return *this = number(n, base); }
 
-/*!
-    \overload
-*/
 iString &iString::setNum(xulonglong n, int base)
-{
-    return *this = number(n, base);
-}
-
-/*! \fn iString &iString::setNum(short n, int base)
-
-    \overload
-*/
-
-/*! \fn iString &iString::setNum(ushort n, int base)
-
-    \overload
-*/
+{ return *this = number(n, base); }
 
 /*!
     \fn iString &iString::setNum(double n, char format, int precision)
@@ -6197,9 +5898,7 @@ iString &iString::setNum(xulonglong n, int base)
 */
 
 iString &iString::setNum(double n, char f, int prec)
-{
-    return *this = number(n, f, prec);
-}
+{ return *this = number(n, f, prec); }
 
 /*!
     \fn iString &iString::setNum(float n, char format, int precision)
@@ -6213,26 +5912,12 @@ iString &iString::setNum(double n, char f, int prec)
     To get a localized string representation of a number, use
     iLocale::toString() with the appropriate locale.
 */
-
-/*!
-    \overload
-*/
 iString iString::number(int n, int base)
-{
-    return number(xlonglong(n), base);
-}
+{ return number(xlonglong(n), base); }
 
-/*!
-    \overload
-*/
 iString iString::number(uint n, int base)
-{
-    return number(xulonglong(n), base);
-}
+{ return number(xulonglong(n), base); }
 
-/*!
-    \overload
-*/
 iString iString::number(xlonglong n, int base)
 {
     if (base < 2 || base > 36) {
@@ -6243,9 +5928,6 @@ iString iString::number(xlonglong n, int base)
     return iLocaleData::c()->longLongToString(n, -1, base);
 }
 
-/*!
-    \overload
-*/
 iString iString::number(xulonglong n, int base)
 {
     if (base < 2 || base > 36) {
@@ -6346,27 +6028,16 @@ static ResultList splitString(const StringSource &source, iStringView sep,
     \sa std::list<iString>::join(), section()
 */
 std::list<iString> iString::split(const iString &sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
-{
-    return splitString< std::list<iString> >(*this, sep, behavior, cs);
-}
+{ return splitString< std::list<iString> >(*this, sep, behavior, cs); }
 
-/*!
-    \overload
-*/
 std::list<iString> iString::split(iChar sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
-{
-    return splitString< std::list<iString> >(*this, iStringView(&sep, 1), behavior, cs);
-}
+{ return splitString< std::list<iString> >(*this, iStringView(&sep, 1), behavior, cs); }
 
 std::list<iStringView> iStringView::split(iStringView sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
-{
-    return splitString< std::list<iStringView> >(iStringView(*this), sep, behavior, cs);
-}
+{ return splitString< std::list<iStringView> >(iStringView(*this), sep, behavior, cs); }
 
 std::list<iStringView> iStringView::split(iChar sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
-{
-    return split(iStringView(&sep, 1), behavior, cs);
-}
+{ return split(iStringView(&sep, 1), behavior, cs); }
 
 namespace {
 template<class ResultList, typename String>
@@ -6424,9 +6095,7 @@ static ResultList splitString(const String &source, const iRegularExpression &re
     \sa std::list<iString>::join(), section()
 */
 std::list<iString> iString::split(const iRegularExpression &re, iShell::SplitBehavior behavior) const
-{
-    return splitString< std::list<iString> >(*this, re, behavior);
-}
+{ return splitString< std::list<iString> >(*this, re, behavior); }
 
 /*!
     \enum iString::NormalizationForm
@@ -6755,9 +6424,7 @@ static iString replaceArgEscapes(iStringView s, const ArgEscapeData &d, int fiel
   in the range 1 to 99.
 */
 iString iString::arg(const iString &a, int fieldWidth, iChar fillChar) const
-{
-    return arg(iToStringViewIgnoringNull(a), fieldWidth, fillChar);
-}
+{ return arg(iToStringViewIgnoringNull(a), fieldWidth, fillChar); }
 
 /*!
     \overload
@@ -7151,9 +6818,7 @@ iString iString::arg(iChar a, int fieldWidth, iChar fillChar) const
   The \a a argument is interpreted as a Latin-1 character.
 */
 iString iString::arg(char a, int fieldWidth, iChar fillChar) const
-{
-    return arg(iLatin1Char(a), fieldWidth, fillChar);
-}
+{ return arg(iLatin1Char(a), fieldWidth, fillChar); }
 
 /*!
   \fn iString iString::arg(double a, int fieldWidth, char format, int precision, iChar fillChar) const
@@ -7439,9 +7104,7 @@ bool iString::isSimpleText() const
     Returns \c true if the string is read right to left.
 */
 bool iString::isRightToLeft() const
-{
-    return iPrivate::isRightToLeft(iStringView(*this));
-}
+{ return iPrivate::isRightToLeft(iStringView(*this)); }
 
 /*! \fn iChar *iString::data()
 
@@ -8570,24 +8233,16 @@ static inline bool ix_starts_with(iStringView haystack, iChar needle, iShell::Ca
 */
 
 bool iPrivate::startsWith(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-{
-    return ix_starts_with_impl(haystack, needle, cs);
-}
+{ return ix_starts_with_impl(haystack, needle, cs); }
 
 bool iPrivate::startsWith(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-{
-    return ix_starts_with_impl(haystack, needle, cs);
-}
+{ return ix_starts_with_impl(haystack, needle, cs); }
 
 bool iPrivate::startsWith(iLatin1String haystack, iStringView needle, iShell::CaseSensitivity cs)
-{
-    return ix_starts_with_impl(haystack, needle, cs);
-}
+{ return ix_starts_with_impl(haystack, needle, cs); }
 
 bool iPrivate::startsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-{
-    return ix_starts_with_impl(haystack, needle, cs);
-}
+{ return ix_starts_with_impl(haystack, needle, cs); }
 
 template <typename Haystack, typename Needle>
 bool ix_ends_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity cs)
@@ -8605,14 +8260,10 @@ bool ix_ends_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity
 }
 
 static inline bool ix_ends_with(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-{
-    return ix_ends_with_impl(haystack, needle, cs);
-}
+{ return ix_ends_with_impl(haystack, needle, cs); }
 
 static inline bool ix_ends_with(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-{
-    return ix_ends_with_impl(haystack, needle, cs);
-}
+{ return ix_ends_with_impl(haystack, needle, cs); }
 
 static inline bool ix_ends_with(iStringView haystack, iChar needle, iShell::CaseSensitivity cs)
 {
@@ -8639,24 +8290,16 @@ static inline bool ix_ends_with(iStringView haystack, iChar needle, iShell::Case
 */
 
 bool iPrivate::endsWith(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-{
-    return ix_ends_with_impl(haystack, needle, cs);
-}
+{ return ix_ends_with_impl(haystack, needle, cs); }
 
 bool iPrivate::endsWith(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-{
-    return ix_ends_with_impl(haystack, needle, cs);
-}
+{ return ix_ends_with_impl(haystack, needle, cs); }
 
 bool iPrivate::endsWith(iLatin1String haystack, iStringView needle, iShell::CaseSensitivity cs)
-{
-    return ix_ends_with_impl(haystack, needle, cs);
-}
+{ return ix_ends_with_impl(haystack, needle, cs); }
 
 bool iPrivate::endsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-{
-    return ix_ends_with_impl(haystack, needle, cs);
-}
+{ return ix_ends_with_impl(haystack, needle, cs); }
 
 namespace {
 template <typename Pointer>
@@ -8664,31 +8307,22 @@ char32_t foldCaseHelper(Pointer ch, Pointer start) = delete;
 
 template <>
 char32_t foldCaseHelper<const iChar*>(const iChar* ch, const iChar* start)
-{
-    return foldCase(reinterpret_cast<const xuint16*>(ch),
-                    reinterpret_cast<const xuint16*>(start));
-}
+{ return foldCase(reinterpret_cast<const xuint16*>(ch), reinterpret_cast<const xuint16*>(start)); }
 
 template <>
 char32_t foldCaseHelper<const char*>(const char* ch, const char*)
-{
-    return foldCase(xuint16(uchar(*ch)));
-}
+{ return foldCase(xuint16(uchar(*ch))); }
 
 template <typename T>
 xuint16 valueTypeToUtf16(T t) = delete;
 
 template <>
 xuint16 valueTypeToUtf16<iChar>(iChar t)
-{
-    return t.unicode();
-}
+{ return t.unicode(); }
 
 template <>
 xuint16 valueTypeToUtf16<char>(char t)
-{
-    return xuint16{uchar(t)};
-}
+{ return xuint16{uchar(t)}; }
 }
 
 /*!
@@ -8753,7 +8387,7 @@ xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringVie
         We use some hashing for efficiency's sake. Instead of
         comparing strings, we compare the hash value of str with that
         of a part of this iString. Only if that matches, we call
-        qt_string_compare().
+        ix_string_compare().
     */
     const xuint16 *needle = needle0.utf16();
     const xuint16 *haystack = haystack0.utf16() + from;
@@ -8924,24 +8558,16 @@ xsizetype iPrivate::findString(iLatin1String haystack, xsizetype from, iLatin1St
 }
 
 xsizetype iPrivate::lastIndexOf(iStringView haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs)
-{
-    return xLastIndexOf(haystack, from, needle, cs);
-}
+{ return xLastIndexOf(haystack, from, needle, cs); }
 
 xsizetype iPrivate::lastIndexOf(iStringView haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs)
-{
-    return xLastIndexOf(haystack, from, needle, cs);
-}
+{ return xLastIndexOf(haystack, from, needle, cs); }
 
 xsizetype iPrivate::lastIndexOf(iLatin1String haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs)
-{
-    return xLastIndexOf(haystack, from, needle, cs);
-}
+{ return xLastIndexOf(haystack, from, needle, cs); }
 
 xsizetype iPrivate::lastIndexOf(iLatin1String haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs)
-{
-    return xLastIndexOf(haystack, from, needle, cs);
-}
+{ return xLastIndexOf(haystack, from, needle, cs); }
 
 /*!
     Converts a plain text string to an HTML string with
@@ -9018,63 +8644,39 @@ iString iString::toHtmlEscaped() const
 */
 
 iString iString::trimmed() const
-{
-    return trimmed_helper(*this);
-}
+{ return trimmed_helper(*this); }
 
 iString iString::simplified() const
-{
-    return simplified_helper(*this);
-}
+{ return simplified_helper(*this); }
 
 iString iString::toLower() const
-{
-    return toLower_helper(*this);
-}
+{ return toLower_helper(*this); }
 
 iString iString::toCaseFolded() const
-{
-    return toCaseFolded_helper(*this);
-}
+{ return toCaseFolded_helper(*this); }
 
 iString iString::toUpper() const
-{
-    return toUpper_helper(*this);
-}
+{ return toUpper_helper(*this); }
 
 iByteArray iString::toLatin1() const
-{
-    return toLatin1_helper(*this);
-}
+{ return toLatin1_helper(*this); }
 
 iByteArray iString::toLocal8Bit() const
-{
-    return toLocal8Bit_helper(isNull() ? IX_NULLPTR : constData(), size());
-}
+{ return toLocal8Bit_helper(isNull() ? IX_NULLPTR : constData(), size()); }
 
 iByteArray iString::toUtf8() const
-{
-    return toUtf8_helper(*this);
-}
+{ return toUtf8_helper(*this); }
 
 iByteArray iByteArray::toLower() const
-{
-    return toLower_helper(*this);
-}
+{ return toLower_helper(*this); }
 
 iByteArray iByteArray::toUpper() const
-{
-    return toUpper_helper(*this);
-}
+{ return toUpper_helper(*this); }
 
 iByteArray iByteArray::trimmed() const
-{
-    return trimmed_helper(*this);
-}
+{ return trimmed_helper(*this); }
 
 iByteArray iByteArray::simplified() const
-{
-    return simplified_helper(*this);
-}
+{ return simplified_helper(*this); }
 
 } // namespace iShell

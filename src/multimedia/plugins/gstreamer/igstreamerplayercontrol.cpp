@@ -21,8 +21,6 @@
 
 #define ILOG_TAG "ix_media"
 
-//#define DEBUG_PLAYBIN
-
 namespace iShell {
 
 iGstreamerPlayerControl::iGstreamerPlayerControl(iGstreamerPlayerSession *session, iObject *parent)

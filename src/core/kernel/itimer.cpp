@@ -169,8 +169,6 @@ bool iSingleShotTimer::event(iEvent *e)
     \a slotObj the slot object
  */
 void iTimer::singleShotImpl(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn)
-{
-    new iSingleShotTimer(msec, userdata, timerType, receiver, conn);
-}
+{ new iSingleShotTimer(msec, userdata, timerType, receiver, conn); }
 
 } // namespace iShell

@@ -440,7 +440,6 @@ using namespace iUnicodeTables;
 
 /*!
     \enum iChar::JoiningType
-    since 5.3
 
     This enum type defines the Unicode joining type attributes. See the
     \l{http://www.unicode.org/}{Unicode Standard} for a description of the values.
@@ -668,9 +667,6 @@ bool iChar::isPrint(xuint32 ucs4)
     from Other_Control category); otherwise returns \c false.
 */
 
-/*!
-    \internal
-*/
 bool iChar::isSpace_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
@@ -691,9 +687,6 @@ bool iChar::isSpace_helper(xuint32 ucs4)
 */
 
 /*!
-    \overload
-
-
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a mark (Mark_* categories); otherwise returns \c false.
 */
@@ -715,9 +708,6 @@ bool iChar::isMark(xuint32 ucs4)
 */
 
 /*!
-    \overload
-
-
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a punctuation mark (Punctuation_* categories); otherwise returns \c false.
 */
@@ -743,9 +733,6 @@ bool iChar::isPunct(xuint32 ucs4)
 */
 
 /*!
-    \overload
-
-
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a symbol (Symbol_* categories); otherwise returns \c false.
 */
@@ -776,9 +763,6 @@ bool iChar::isSymbol(xuint32 ucs4)
     a letter (Letter_* categories); otherwise returns \c false.
 */
 
-/*!
-    \internal
-*/
 bool iChar::isLetter_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
@@ -811,9 +795,6 @@ bool iChar::isLetter_helper(xuint32 ucs4)
     \sa isDigit()
 */
 
-/*!
-    \internal
-*/
 bool iChar::isNumber_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
@@ -840,9 +821,6 @@ bool iChar::isNumber_helper(xuint32 ucs4)
     a letter or number (Letter_* or Number_* categories); otherwise returns \c false.
 */
 
-/*!
-    \internal
-*/
 bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
@@ -1056,9 +1034,6 @@ iChar::Direction iChar::direction(xuint32 ucs4)
 */
 
 /*!
-    \overload
-
-
     Returns information about the joining type attributes of the UCS-4-encoded
     character specified by \a ucs4
     (needed for certain languages such as Arabic or Syriac).
@@ -1082,9 +1057,6 @@ iChar::JoiningType iChar::joiningType(xuint32 ucs4)
 */
 
 /*!
-    \overload
-
-
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     should be reversed if the text direction is reversed; otherwise returns \c false.
 
@@ -1299,9 +1271,6 @@ unsigned char iChar::combiningClass(xuint32 ucs4)
 */
 
 /*!
-    \overload
-
-
     Returns the Unicode script property value for the character specified in
     its UCS-4-encoded form as \a ucs4.
 */

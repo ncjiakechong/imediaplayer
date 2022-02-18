@@ -191,7 +191,7 @@ public:
         const xsizetype capacity = this->allocatedCapacity();
 
         if (this->size > 0 && where == this->begin()) {  // prepend
-            // Qt5 QList in prepend: not enough space at begin && 33% full
+            //iList in prepend: not enough space at begin && 33% full
             // Now (below):
             return freeAtBegin < n && (this->size >= (capacity / 3));
         }
@@ -232,7 +232,7 @@ public:
         // move is performed in an inverse direction
         if (size_t(this->freeSpaceAtEnd()) < required) {
             moveInGrowthDirection(moveSize);
-            return  xsizetype(moveSize);  // moving data to the right
+            return xsizetype(moveSize);  // moving data to the right
         }
         return 0;
     }

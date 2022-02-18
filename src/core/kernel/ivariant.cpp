@@ -106,32 +106,25 @@ void iVariant::unregisterConverterFunction(int from, int to)
 
 iVariant::iAbstractVariantImpl::iAbstractVariantImpl(void* ptr, ImplFn impl)
     : _data(ptr), _impl(impl)
-{
-}
+{}
 
 iVariant::iAbstractVariantImpl::~iAbstractVariantImpl()
-{
-}
+{}
 
 void iVariant::iAbstractVariantImpl::free()
-{
-    _impl(Destroy, this, IX_NULLPTR);
-}
+{ _impl(Destroy, this, IX_NULLPTR); }
 
 iVariant::iVariant()
     : m_typeId(-1)
-{
-}
+{}
 
 iVariant::~iVariant()
-{
-}
+{}
 
 iVariant::iVariant(const iVariant &other)
     : m_typeId(other.m_typeId)
     , m_dataImpl(other.m_dataImpl)
-{
-}
+{}
 
 iVariant& iVariant::operator=(const iVariant &other)
 {

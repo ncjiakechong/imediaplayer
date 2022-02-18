@@ -30,8 +30,7 @@ public:
 
     xsizetype indexIn(const iByteArray &ba, xsizetype from = 0) const;
     xsizetype indexIn(const char *str, xsizetype len, xsizetype from = 0) const;
-    inline iByteArray pattern() const
-    {
+    inline iByteArray pattern() const {
         if (ix_pattern.isNull())
             return iByteArray(reinterpret_cast<const char*>(p.p), p.l);
         return ix_pattern;

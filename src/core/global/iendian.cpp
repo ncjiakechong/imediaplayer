@@ -700,9 +700,7 @@ namespace iShell {
 
 template <typename T>
 static inline size_t simdSwapLoop(const uchar *, size_t, uchar *)
-{
-    return 0;
-}
+{ return 0; }
 
 template <typename T>
 static inline void *bswapLoop(const uchar *src, size_t n, uchar *dst)

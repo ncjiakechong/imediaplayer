@@ -165,9 +165,7 @@ static gboolean postEventSourcePrepare(GSource *s, gint *timeout)
 }
 
 static gboolean postEventSourceCheck(GSource *source)
-{
-    return postEventSourcePrepare(source, IX_NULLPTR);
-}
+{ return postEventSourcePrepare(source, IX_NULLPTR); }
 
 static gboolean postEventSourceDispatch(GSource *s, GSourceFunc, gpointer)
 {
@@ -394,9 +392,7 @@ int iEventDispatcher_Glib::remainingTime(int timerId)
 }
 
 void iEventDispatcher_Glib::interrupt()
-{
-    wakeUp();
-}
+{ wakeUp(); }
 
 void iEventDispatcher_Glib::wakeUp()
 {
@@ -520,4 +516,3 @@ int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource* source)
 }
 
 } // namespace iShell
-

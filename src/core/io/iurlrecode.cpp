@@ -457,9 +457,6 @@ static bool simdCheckNonEncoded(...)
 }
 
 /*!
-    \since 5.0
-    \internal
-
     This function decodes a percent-encoded string located from \a begin to \a
     end, by appending each character to \a appendTo. It returns the number of
     characters appended. Each percent-encoded sequence is decoded as follows:
@@ -533,8 +530,6 @@ static void maskTable(uchar (&table)[N], const uchar (&mask)[N])
 }
 
 /*!
-    \internal
-
     Recodes the string from \a begin to \a end. If any transformations are
     done, append them to \a appendTo and return the number of characters added.
     If no transformations were required, return 0.
@@ -566,8 +561,7 @@ static void maskTable(uchar (&table)[N], const uchar (&mask)[N])
     meaning "%25" (all percents in the same content).
  */
 
-int
-ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
+int ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
              iUrl::ComponentFormattingOptions encoding, const xuint16 *tableModifications)
 {
     uchar actionTable[sizeof defaultActionTable];
@@ -594,9 +588,6 @@ ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
 bool ix_is_ascii(const char *&ptr, const char *end);
 
 /*!
-    \internal
-    \since 5.0
-
     \a ba contains an 8-bit form of the component and it might be
     percent-encoded already. We can't use iString::fromUtf8 because it might
     contain non-UTF8 sequences. We can't use iByteArray::toPercentEncoding

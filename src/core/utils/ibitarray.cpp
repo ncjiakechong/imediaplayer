@@ -279,8 +279,6 @@ void iBitArray::fill(bool value, int begin, int end)
  */
 
 /*!
-
-
     Creates a iBitArray with the dense bit array located at \a data, with \a
     size bits. The byte array at \a data must be at least \a size / 8 (rounded up)
     bytes long.
@@ -308,16 +306,6 @@ iBitArray iBitArray::fromBits(const char *data, xsizetype size)
     *bits = result.d.size() * 8 - size;
     return result;
 }
-
-/*! \fn bool iBitArray::isDetached() const
-
-    \internal
-*/
-
-/*! \fn void iBitArray::detach()
-
-    \internal
-*/
 
 /*! \fn void iBitArray::clear()
 

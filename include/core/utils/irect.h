@@ -204,10 +204,10 @@ inline iPoint iRect::center() const
 { return iPoint(int((xint64(x1)+x2)/2), int((xint64(y1)+y2)/2)); } // cast avoids overflow on addition
 
 inline int iRect::width() const
-{ return  x2 - x1 + 1; }
+{ return x2 - x1 + 1; }
 
 inline int iRect::height() const
-{ return  y2 - y1 + 1; }
+{ return y2 - y1 + 1; }
 
 inline iSize iRect::size() const
 { return iSize(width(), height()); }

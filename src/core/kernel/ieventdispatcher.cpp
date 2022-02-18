@@ -65,14 +65,10 @@ typedef iFreeList<void, iTimerIdFreeListConstants> iTimerIdFreeList;
 static iTimerIdFreeList timerIdFreeList;
 
 int iEventDispatcher::allocateTimerId()
-{
-    return timerIdFreeList.next();
-}
+{ return timerIdFreeList.next(); }
 
 void iEventDispatcher::releaseTimerId(int timerId)
-{
-    timerIdFreeList.release(timerId);
-}
+{ timerIdFreeList.release(timerId); }
 
 iEventDispatcher* iEventDispatcher::instance(iThread *thread)
 {
@@ -83,12 +79,10 @@ iEventDispatcher* iEventDispatcher::instance(iThread *thread)
 
 iEventDispatcher::iEventDispatcher(iObject *parent)
     : iObject(parent)
-{
-}
+{}
 
 iEventDispatcher::~iEventDispatcher()
-{
-}
+{}
 
 int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *object, xintptr userdata)
 {
@@ -106,11 +100,9 @@ int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *
 }
 
 void iEventDispatcher::startingUp()
-{
-}
+{}
 
 void iEventDispatcher::closingDown()
-{
-}
+{}
 
 } // namespace iShell

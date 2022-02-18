@@ -16,11 +16,6 @@
 
 namespace iShell {
 
-/*!
-    \class iGstreamerMessage
-    \internal
-*/
-
 iGstreamerMessage::iGstreamerMessage():
     m_message(IX_NULLPTR)
 {

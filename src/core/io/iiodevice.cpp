@@ -422,8 +422,7 @@ iIODevice::iIODevice()
     , m_transactionStarted(false)
     , m_baseReadLineDataCalled(false)
     , m_accessMode(Unset)
-{
-}
+{}
 
 /*!
     Constructs a iIODevice object with the given \a parent.
@@ -444,8 +443,7 @@ iIODevice::iIODevice(iObject *parent)
     , m_transactionStarted(false)
     , m_baseReadLineDataCalled(false)
     , m_accessMode(Unset)
-{
-}
+{}
 
 
 /*!
@@ -455,8 +453,7 @@ iIODevice::iIODevice(iObject *parent)
   destroying the iIODevice.
 */
 iIODevice::~iIODevice()
-{
-}
+{}
 
 /*!
     Returns \c true if this device is sequential; otherwise returns
@@ -580,8 +577,6 @@ bool iIODevice::isWritable() const
 }
 
 /*!
-    \since 5.7
-
     Returns the number of available read channels if the device is open;
     otherwise returns 0.
 
@@ -593,8 +588,6 @@ int iIODevice::readChannelCount() const
 }
 
 /*!
-    \since 5.7
-
     Returns the number of available write channels if the device is open;
     otherwise returns 0.
 
@@ -606,8 +599,6 @@ int iIODevice::writeChannelCount() const
 }
 
 /*!
-    \since 5.7
-
     Returns the index of the current read channel.
 
     \sa setCurrentReadChannel(), readChannelCount(), iProcess
@@ -618,8 +609,6 @@ int iIODevice::currentReadChannel() const
 }
 
 /*!
-    \since 5.7
-
     Sets the current read channel of the iIODevice to the given \a
     channel. The current input channel is used by the functions
     read(), readAll(), readLine(), and getChar(). It also determines
@@ -638,9 +627,6 @@ void iIODevice::setCurrentReadChannel(int channel)
     m_currentReadChannel = channel;
 }
 
-/*!
-    \internal
-*/
 void iIODevice::setReadChannelCount(int count)
 {
     if (count > m_readBuffers.size()) {
@@ -654,8 +640,6 @@ void iIODevice::setReadChannelCount(int count)
 }
 
 /*!
-    \since 5.7
-
     Returns the the index of the current write channel.
 
     \sa setCurrentWriteChannel(), writeChannelCount()
@@ -666,8 +650,6 @@ int iIODevice::currentWriteChannel() const
 }
 
 /*!
-    \since 5.7
-
     Sets the current write channel of the iIODevice to the given \a
     channel. The current output channel is used by the functions
     write(), putChar(). It also determines  which channel triggers
@@ -681,9 +663,6 @@ void iIODevice::setCurrentWriteChannel(int channel)
     m_currentWriteChannel = channel;
 }
 
-/*!
-    \internal
-*/
 void iIODevice::setWriteChannelCount(int count)
 {
     if (count > m_writeBuffers.size()) {
@@ -706,9 +685,6 @@ bool iIODevice::isBufferEmpty() const
                                 && m_transactionPos == m_buffer.size());
 }
 
-/*!
-    \internal
-*/
 bool iIODevice::allWriteBuffersEmpty() const
 {
     for (const IRingBuffer &ringBuffer : m_writeBuffers) {
@@ -826,9 +802,6 @@ bool iIODevice::seek(xint64 pos)
     return true;
 }
 
-/*!
-    \internal
-*/
 void iIODevice::seekBuffer(xint64 newPos)
 {
     const xint64 offset = newPos - m_pos;
@@ -1080,8 +1053,6 @@ xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
 }
 
 /*!
-    \overload
-
     Reads at most \a maxSize bytes from the device, and returns the
     data read as a iByteArray.
 
@@ -1285,8 +1256,6 @@ xint64 iIODevice::readLine(char *data, xint64 maxSize)
 }
 
 /*!
-    \overload
-
     Reads a line from the device, but no more than \a maxSize characters,
     and returns the result as a byte array.
 
@@ -1389,8 +1358,6 @@ bool iIODevice::canReadLine() const
 }
 
 /*!
-    \since 5.7
-
     Starts a new read transaction on the device.
 
     Defines a restorable point within the sequence of read operations. For
@@ -1414,8 +1381,6 @@ void iIODevice::startTransaction()
 }
 
 /*!
-    \since 5.7
-
     Completes a read transaction.
 
     For sequential devices, all data recorded in the internal buffer during
@@ -1436,8 +1401,6 @@ void iIODevice::commitTransaction()
 }
 
 /*!
-    \since 5.7
-
     Rolls back a read transaction.
 
     Restores the input stream to the point of the startTransaction() call.
@@ -1459,8 +1422,6 @@ void iIODevice::rollbackTransaction()
 }
 
 /*!
-    \since 5.7
-
     Returns \c true if a transaction is in progress on the device, otherwise
     \c false.
 
@@ -1498,10 +1459,6 @@ xint64 iIODevice::write(const char *data, xint64 maxSize)
 }
 
 /*!
-    \since 4.5
-
-    \overload
-
     Writes data from a zero-terminated string of 8-bit characters to the
     device. Returns the number of bytes that were actually written, or
     -1 if an error occurred. This is equivalent to
@@ -1582,8 +1539,6 @@ bool iIODevice::getChar(char *c)
 }
 
 /*!
-    \since 4.1
-
     Reads at most \a maxSize bytes from the device into \a data, without side
     effects (i.e., if you call read() after peek(), you will get the same
     data).  Returns the number of bytes read. If an error occurs, such as
@@ -1607,9 +1562,6 @@ xint64 iIODevice::peek(char *data, xint64 maxSize)
 }
 
 /*!
-    \since 4.1
-    \overload
-
     Peeks at most \a maxSize bytes from the device, returning the data peeked
     as a iByteArray.
 
@@ -1644,8 +1596,6 @@ iByteArray iIODevice::peek(xint64 maxSize)
 }
 
 /*!
-    \since 5.10
-
     Skips up to \a maxSize bytes from the device. Returns the number of bytes
     actually skipped, or -1 on error.
 
@@ -1717,9 +1667,6 @@ xint64 iIODevice::skip(xint64 maxSize)
     return skippedSoFar + skipResult;
 }
 
-/*!
-    \internal
-*/
 xint64 iIODevice::skipByReading(xint64 maxSize)
 {
     xint64 readSoFar = 0;
@@ -1746,9 +1693,6 @@ xint64 iIODevice::skipByReading(xint64 maxSize)
     return readSoFar;
 }
 
-/*!
-    \internal
-*/
 xint64 iIODevice::skipData(xint64 maxSize)
 {
     // Base implementation discards the data by reading into the dummy buffer.
@@ -1885,4 +1829,3 @@ iString iIODevice::errorString() const
 */
 
 } // namespace iShell
-

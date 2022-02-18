@@ -24,8 +24,7 @@ iEventSource::iEventSource(int priority)
     , m_refCount(1)
     , m_flags(0)
     , m_dispatcher(IX_NULLPTR)
-{
-}
+{}
 
 iEventSource::~iEventSource()
 {
@@ -127,18 +126,12 @@ int iEventSource::removePoll(iPollFD* fd)
 }
 
 bool iEventSource::prepare(int*)
-{
-    return false;
-}
+{ return false; }
 
 bool iEventSource::check()
-{
-    return false;
-}
+{ return false; }
 
 bool iEventSource::dispatch()
-{
-    return true;
-}
+{ return true; }
 
 } // namespace iShell

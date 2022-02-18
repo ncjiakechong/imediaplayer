@@ -237,7 +237,6 @@
 
 /*!
     \enum iUrl::ComponentFormattingOption
-    \since 5.0
 
     The component formatting options define how the components of an URL will
     be formatted when written out as text. They can be combined with the
@@ -337,7 +336,6 @@
 
 /*!
     \enum iUrl::UserInputResolutionOption
-    \since 5.4
 
     The user input resolution options define how fromUserInput() should
     interpret strings that could either be a relative path or the short
@@ -363,16 +361,12 @@
 
     Move-constructs a iUrl instance, making it point at the same
     object that \a other was pointing to.
-
-    \since 5.2
 */
 
 /*!
     \fn iUrl &iUrl::operator=(iUrl &&other)
 
     Move-assigns \a other to this iUrl instance.
-
-    \since 5.2
 */
 
 #include <core/utils/ivarlengtharray.h>
@@ -2374,7 +2368,6 @@ iString iUrl::userName(ComponentFormattingOptions options) const
 /*!
     \fn void iUrl::setEncodedUserName(const iByteArray &userName)
     \deprecated
-    \since 4.4
 
     Sets the URL's user name to the percent-encoded \a userName. The \a
     userName is part of the user info element in the authority of the
@@ -2388,7 +2381,6 @@ iString iUrl::userName(ComponentFormattingOptions options) const
 /*!
     \fn iByteArray iUrl::encodedUserName() const
     \deprecated
-    \since 4.4
 
     Returns the user name of the URL if it is defined; otherwise
     an empty string is returned. The returned value will have its
@@ -2466,7 +2458,6 @@ iString iUrl::password(ComponentFormattingOptions options) const
 /*!
     \fn void iUrl::setEncodedPassword(const iByteArray &password)
     \deprecated
-    \since 4.4
 
     Sets the URL's password to the percent-encoded \a password. The \a
     password is part of the user info element in the authority of the
@@ -2480,7 +2471,6 @@ iString iUrl::password(ComponentFormattingOptions options) const
 /*!
     \fn iByteArray iUrl::encodedPassword() const
     \deprecated
-    \since 4.4
 
     Returns the password of the URL if it is defined; otherwise an
     empty string is returned. The returned value will have its
@@ -2576,7 +2566,6 @@ iString iUrl::host(ComponentFormattingOptions options) const
 /*!
     \fn void iUrl::setEncodedHost(const iByteArray &host)
     \deprecated
-    \since 4.4
 
     Sets the URL's host to the ACE- or percent-encoded \a host. The \a
     host is part of the user info element in the authority of the
@@ -2590,7 +2579,6 @@ iString iUrl::host(ComponentFormattingOptions options) const
 /*!
     \fn iByteArray iUrl::encodedHost() const
     \deprecated
-    \since 4.4
 
     Returns the host part of the URL if it is defined; otherwise
     an empty string is returned.
@@ -2630,8 +2618,6 @@ void iUrl::setPort(int port)
 }
 
 /*!
-    \since 4.1
-
     Returns the port of the URL, or \a defaultPort if the port is
     unspecified.
 
@@ -2735,7 +2721,6 @@ iString iUrl::path(ComponentFormattingOptions options) const
 /*!
     \fn void iUrl::setEncodedPath(const iByteArray &path)
     \deprecated
-    \since 4.4
 
     Sets the URL's path to the percent-encoded \a path.  The path is
     the part of the URL that comes after the authority but before the
@@ -2756,7 +2741,6 @@ iString iUrl::path(ComponentFormattingOptions options) const
 /*!
     \fn iByteArray iUrl::encodedPath() const
     \deprecated
-    \since 4.4
 
     Returns the path of the URL if it is defined; otherwise an
     empty string is returned. The returned value will have its
@@ -2769,8 +2753,6 @@ iString iUrl::path(ComponentFormattingOptions options) const
 */
 
 /*!
-    \since 5.2
-
     Returns the name of the file, excluding the directory path.
 
     Note that, if this iUrl object is given a path ending in a slash, the name of the file is considered empty.
@@ -2799,8 +2781,6 @@ iString iUrl::fileName(ComponentFormattingOptions options) const
 }
 
 /*!
-    \since 4.2
-
     Returns \c true if this URL contains a Query (i.e., if ? was seen on it).
 
     \sa setQuery(), query(), hasFragment()
@@ -2905,7 +2885,6 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 /*!
     \fn void iUrl::setEncodedQueryItems(const std::list<std::pair<iByteArray, iByteArray> > &query)
     \deprecated
-    \since 4.4
 
     Sets the query string of the URL to the encoded version of \a
     query. The contents of \a query are converted to a string
@@ -2944,7 +2923,6 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 /*!
     \fn void iUrl::addEncodedQueryItem(const iByteArray &key, const iByteArray &value)
     \deprecated
-    \since 4.4
 
     Inserts the pair \a key = \a value into the query string of the
     URL.
@@ -2972,7 +2950,6 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 /*!
     \fn std::list<std::pair<iByteArray, iByteArray> > iUrl::encodedQueryItems() const
     \deprecated
-    \since 4.4
 
     Returns the query string of the URL, as a map of encoded keys and values.
 
@@ -2996,7 +2973,6 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 /*!
     \fn bool iUrl::hasEncodedQueryItem(const iByteArray &key) const
     \deprecated
-    \since 4.4
 
     Returns \c true if there is a query string pair whose key is equal
     to \a key from the URL.
@@ -3025,7 +3001,6 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 /*!
     \fn iByteArray iUrl::encodedQueryItemValue(const iByteArray &key) const
     \deprecated
-    \since 4.4
 
     Returns the first query string value whose key is equal to \a key
     from the URL.
@@ -3054,7 +3029,6 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 /*!
     \fn std::list<iByteArray> iUrl::allEncodedQueryItemValues(const iByteArray &key) const
     \deprecated
-    \since 4.4
 
     Returns the a list of query string values whose key is equal to
     \a key from the URL.
@@ -3079,7 +3053,6 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 /*!
     \fn void iUrl::removeEncodedQueryItem(const iByteArray &key)
     \deprecated
-    \since 4.4
 
     Removes the first query string pair whose key is equal to \a key
     from the URL.
@@ -3104,7 +3077,6 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 /*!
     \fn void iUrl::removeAllEncodedQueryItems(const iByteArray &key)
     \deprecated
-    \since 4.4
 
     Removes all the query string pairs whose key is equal to \a key
     from the URL.
@@ -3229,7 +3201,6 @@ iString iUrl::fragment(ComponentFormattingOptions options) const
 /*!
     \fn void iUrl::setEncodedFragment(const iByteArray &fragment)
     \deprecated
-    \since 4.4
 
     Sets the URL's fragment to the percent-encoded \a fragment. The fragment is the
     last part of the URL, represented by a '#' followed by a string of
@@ -3253,7 +3224,6 @@ iString iUrl::fragment(ComponentFormattingOptions options) const
 /*!
     \fn iByteArray iUrl::encodedFragment() const
     \deprecated
-    \since 4.4
 
     Returns the fragment of the URL if it is defined; otherwise an
     empty string is returned. The returned value will have its
@@ -3266,8 +3236,6 @@ iString iUrl::fragment(ComponentFormattingOptions options) const
 */
 
 /*!
-    \since 4.2
-
     Returns \c true if this URL contains a fragment (i.e., if # was seen on it).
 
     \sa fragment(), setFragment()
@@ -3458,8 +3426,6 @@ iString iUrl::toString(FormattingOptions options) const
 }
 
 /*!
-    \since 5.0
-
     Returns a human-displayable string representation of the URL.
     The output can be customized by passing flags with \a options.
     The option RemovePassword is always enabled, since passwords
@@ -3478,8 +3444,6 @@ iString iUrl::toDisplayString(FormattingOptions options) const
 }
 
 /*!
-    \since 5.2
-
     Returns an adjusted version of the URL.
     The output can be customized by passing flags with \a options.
 
@@ -3588,7 +3552,6 @@ iByteArray iUrl::toPercentEncoding(const iString &input, const iByteArray &exclu
 
 /*!
     \internal
-    \since 5.0
     Used in the setEncodedXXX compatibility functions. Converts \a ba to
     iString form.
 */
@@ -3619,8 +3582,6 @@ iString iUrl::fromEncodedComponent_helper(const iByteArray &ba)
 */
 
 /*!
-    \since 4.2
-
     Returns the Unicode form of the given domain name
     \a domain, which is encoded in the ASCII Compatible Encoding (ACE).
     The result of this function is considered equivalent to \a domain.
@@ -3640,8 +3601,6 @@ iString iUrl::fromAce(const iByteArray &domain)
 }
 
 /*!
-    \since 4.2
-
     Returns the ASCII Compatible Encoding of the given domain name \a domain.
     The result of this function is considered equivalent to \a domain.
 
@@ -3746,14 +3705,11 @@ bool iUrl::operator ==(const iUrl &url) const
 }
 
 /*!
-    \since 5.2
-
     Returns \c true if this URL and the given \a url are equal after
     applying \a options to both; otherwise returns \c false.
 
     This is equivalent to calling adjusted(options) on both URLs
     and comparing the resulting urls, but faster.
-
 */
 bool iUrl::matches(const iUrl &url, FormattingOptions options) const
 {
@@ -3865,17 +3821,11 @@ iUrl &iUrl::operator =(const iString &url)
 
 /*!
     \fn void iUrl::swap(iUrl &other)
-    \since 4.8
 
     Swaps URL \a other with this URL. This operation is very
     fast and never fails.
 */
 
-/*!
-    \internal
-
-    Forces a detach.
-*/
 void iUrl::detach()
 {
     if (!d)
@@ -3918,7 +3868,6 @@ iString iUrl::toLocalFile() const
 }
 
 /*!
-    \since 4.8
     Returns \c true if this URL is pointing to a local file path. A URL is a
     local file path if the scheme is "file".
 
@@ -4038,8 +3987,6 @@ static inline void appendComponentIfPresent(iString &msg, bool present, const ch
 }
 
 /*!
-    \since 4.2
-
     Returns an error message if the last operation that modified this iUrl
     object ran into a parsing error. If no error was detected, this function
     returns an empty string and isValid() returns \c true.
@@ -4086,8 +4033,6 @@ iString iUrl::errorString() const
 }
 
 /*!
-    \since 5.1
-
     Converts a list of \a urls into a list of iString objects, using toString(\a options).
 */
 std::list<iString> iUrl::toStringList(const std::list<iUrl> &urls, FormattingOptions options)
@@ -4100,8 +4045,6 @@ std::list<iString> iUrl::toStringList(const std::list<iUrl> &urls, FormattingOpt
 }
 
 /*!
-    \since 5.1
-
     Converts a list of strings representing \a urls into a list of urls, using iUrl(str, \a mode).
     Note that this means all strings must be urls, not for instance local paths.
 */

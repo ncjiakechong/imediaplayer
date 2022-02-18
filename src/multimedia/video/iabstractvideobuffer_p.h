@@ -29,18 +29,10 @@ namespace iShell {
 class iAbstractVideoBufferPrivate
 {
 public:
-    iAbstractVideoBufferPrivate()
-        : q_ptr(IX_NULLPTR)
-    {}
+    iAbstractVideoBufferPrivate() : q_ptr(IX_NULLPTR) {}
+    virtual ~iAbstractVideoBufferPrivate() {}
 
-    virtual ~iAbstractVideoBufferPrivate()
-    {}
-
-    virtual int map(
-            iAbstractVideoBuffer::MapMode mode,
-            int *numBytes,
-            int bytesPerLine[4],
-            uchar *data[4]);
+    virtual int map(iAbstractVideoBuffer::MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]);
 
     iAbstractVideoBuffer *q_ptr;
 };
@@ -48,8 +40,7 @@ public:
 class iAbstractPlanarVideoBufferPrivate : iAbstractVideoBufferPrivate
 {
 public:
-    iAbstractPlanarVideoBufferPrivate()
-    {}
+    iAbstractPlanarVideoBufferPrivate() {}
 
     int map(iAbstractVideoBuffer::MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) override;
 

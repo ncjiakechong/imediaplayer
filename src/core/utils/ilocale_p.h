@@ -32,7 +32,6 @@
 #include <core/global/inumeric.h>
 #include <core/kernel/ivariant.h>
 
-
 namespace iShell {
 
 struct iLocaleId
@@ -224,12 +223,10 @@ public:
     static iLocalePrivate *create(
             const iLocaleData *data,
             iLocale::NumberOptions numberOptions = iLocale::DefaultNumberOptions)
-    {
-        return new iLocalePrivate(data, numberOptions);
-    }
+    { return new iLocalePrivate(data, numberOptions); }
 
     static iLocalePrivate *get(iLocale &l) { return l.d.data(); }
-    static const    iLocalePrivate *get(const iLocale &l) { return l.d.data(); }
+    static const iLocalePrivate *get(const iLocale &l) { return l.d.data(); }
 
     iLocalePrivate(const iLocaleData *data, iLocale::NumberOptions numberOptions) 
         : m_data(data), m_numberOptions(numberOptions) {}
@@ -312,9 +309,7 @@ enum { AsciiSpaceMask = (1u << (' ' - 1)) |
                         (1u << ('\f' - 1)) |   // 12: FF - form feed
                         (1u << ('\r' - 1)) };  // 13: CR - carriage return
 inline bool ascii_isspace(uchar c)
-{
-    return c >= 1u && c <= 32u && (AsciiSpaceMask >> uint(c - 1)) & 1u;
-}
+{ return c >= 1u && c <= 32u && (AsciiSpaceMask >> uint(c - 1)) & 1u; }
 } // namespace iShell
 
 #endif // ILOCALE_P_H

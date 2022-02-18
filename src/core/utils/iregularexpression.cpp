@@ -28,16 +28,9 @@ namespace iShell {
 
 /*!
     \class iRegularExpression
-    \inmodule QtCore
-    \reentrant
 
     \brief The iRegularExpression class provides pattern matching using regular
     expressions.
-
-    \since 5.0
-
-    \ingroup tools
-    \ingroup shared
 
     \keyword regular expression
 
@@ -397,8 +390,6 @@ namespace iShell {
     duplicated names for capturing groups are not supported, and using them can
     lead to undefined behavior.
 
-    This may change in a future version of Qt.
-
     \section1 Debugging Code that Uses iRegularExpression
 
     iRegularExpression internally uses a just in time compiler (JIT) to
@@ -409,10 +400,10 @@ namespace iShell {
     \c{--smc-check} command line option). The downside of enabling such checks
     is that your program will run considerably slower.
 
-    To avoid that, the JIT is disabled by default if you compile Qt in debug
+    To avoid that, the JIT is disabled by default if you compile in debug
     mode. It is possible to override the default and enable or disable the JIT
     usage (both in debug or release mode) by setting the
-    \c{QT_ENABLE_REGEXP_JIT} environment variable to a non-zero or zero value
+    \c{_ENABLE_REGEXP_JIT} environment variable to a non-zero or zero value
     respectively.
 
     \sa iRegularExpressionMatch, iRegularExpressionMatchIterator
@@ -420,13 +411,10 @@ namespace iShell {
 
 /*!
     \class iRegularExpressionMatch
-    \inmodule QtCore
     \reentrant
 
     \brief The iRegularExpressionMatch class provides the results of a matching
     a iRegularExpression against a string.
-
-    \since 5.0
 
     \ingroup tools
     \ingroup shared
@@ -465,20 +453,17 @@ namespace iShell {
     the matchType() and the matchOptions() respectively.
 
     Please refer to the iRegularExpression documentation for more information
-    about the Qt regular expression classes.
+    about the regular expression classes.
 
     \sa iRegularExpression
 */
 
 /*!
     \class iRegularExpressionMatchIterator
-    \inmodule QtCore
     \reentrant
 
     \brief The iRegularExpressionMatchIterator class provides an iterator on
     the results of a global match of a iRegularExpression object against a string.
-
-    \since 5.0
 
     \ingroup tools
     \ingroup shared
@@ -509,7 +494,7 @@ namespace iShell {
     the matchType() and the matchOptions() respectively.
 
     Please refer to the iRegularExpression documentation for more information
-    about the Qt regular expression classes.
+    about the regular expression classes.
 
     \sa iRegularExpression, iRegularExpressionMatch
 */
@@ -610,7 +595,7 @@ namespace iShell {
         default constructed iRegularExpressionMatch or
         iRegularExpressionMatchIterator. Using this match type is not very
         useful for the user, as no matching ever happens. This enum value
-        has been introduced in Qt 5.1.
+        has been introduced
 */
 
 /*!
@@ -629,18 +614,13 @@ namespace iShell {
         Note that passing this option does not anchor the end of the match
         to the end of the subject; if you want to fully anchor a regular
         expression, use anchoredPattern().
-        This enum value has been introduced in Qt 6.0.
+        This enum value has been introduced
 
     \value DontCheckSubjectStringMatchOption
         The subject string is not checked for UTF-16 validity before
         attempting a match. Use this option with extreme caution, as
         attempting to match an invalid string may crash the program and/or
-        constitute a security issue. This enum value has been introduced in
-        Qt 5.4.
-*/
-
-/*!
-    \internal
+        constitute a security issue. This enum value has been introduced
 */
 static int convertToPcreOptions4Pattern(iRegularExpression::PatternOptions patternOptions)
 {
@@ -664,9 +644,6 @@ static int convertToPcreOptions4Pattern(iRegularExpression::PatternOptions patte
     return options;
 }
 
-/*!
-    \internal
-*/
 static int convertToPcreOptions4Match(iRegularExpression::MatchOptions matchOptions)
 {
     int options = 0;
@@ -771,17 +748,10 @@ public:
     const iRegularExpression::MatchOptions matchOptions;
 };
 
-/*!
-    \internal
-*/
 iRegularExpression::iRegularExpression(iRegularExpressionPrivate &dd)
     : d(&dd)
-{
-}
+{}
 
-/*!
-    \internal
-*/
 iRegularExpressionPrivate::iRegularExpressionPrivate()
     : patternOptions(iRegularExpression::NoPatternOption),
       compiledPattern(IX_NULLPTR),
@@ -790,20 +760,12 @@ iRegularExpressionPrivate::iRegularExpressionPrivate()
       capturingCount(0),
       usingCrLfNewlines(false),
       isDirty(true)
-{
-}
+{}
 
-/*!
-    \internal
-*/
 iRegularExpressionPrivate::~iRegularExpressionPrivate()
-{
-    cleanCompiledPattern();
-}
+{ cleanCompiledPattern(); }
 
 /*!
-    \internal
-
     Copies the private, which means copying only the pattern and the pattern
     options. The compiledPattern pointer is NOT copied (we
     do not own it any more), and in general all the members set when
@@ -820,12 +782,8 @@ iRegularExpressionPrivate::iRegularExpressionPrivate(const iRegularExpressionPri
       capturingCount(0),
       usingCrLfNewlines(false),
       isDirty(true)
-{
-}
+{}
 
-/*!
-    \internal
-*/
 void iRegularExpressionPrivate::cleanCompiledPattern()
 {
     pcre2_code_free_16(compiledPattern);
@@ -836,9 +794,6 @@ void iRegularExpressionPrivate::cleanCompiledPattern()
     usingCrLfNewlines = false;
 }
 
-/*!
-    \internal
-*/
 void iRegularExpressionPrivate::compilePattern()
 {
     const iMutex::ScopedLock lock(mutex);
@@ -872,9 +827,6 @@ void iRegularExpressionPrivate::compilePattern()
     getPatternInfo();
 }
 
-/*!
-    \internal
-*/
 void iRegularExpressionPrivate::getPatternInfo()
 {
     IX_ASSERT(compiledPattern);
@@ -899,7 +851,6 @@ void iRegularExpressionPrivate::getPatternInfo()
     }
 }
 
-
 /*
     Simple "smartpointer" wrapper around a pcre2_jit_stack_16, to be used with
     iThreadStorage.
@@ -909,18 +860,13 @@ class iPcreJitStackPointer
     IX_DISABLE_COPY(iPcreJitStackPointer)
 
 public:
-    /*!
-        \internal
-    */
     iPcreJitStackPointer()
     {
         // The default JIT stack size in PCRE is 32K,
         // we allocate from 32K up to 512K.
         stack = pcre2_jit_stack_create_16(32 * 1024, 512 * 1024, IX_NULLPTR);
     }
-    /*!
-        \internal
-    */
+
     ~iPcreJitStackPointer()
     {
         if (stack)
@@ -932,9 +878,6 @@ public:
 
 IX_GLOBAL_STATIC(iThreadStorage<iPcreJitStackPointer *>, jitStacks)
 
-/*!
-    \internal
-*/
 static pcre2_jit_stack_16 *ixPcreCallback(void *)
 {
     if (jitStacks()->hasLocalData())
@@ -953,13 +896,9 @@ static pcre2_jit_stack_16 *ixPcreCallback(void *)
     is that your program will run considerably slower.
 */
 static bool isJitEnabled()
-{
-    return false;
-}
+{ return false; }
 
 /*!
-    \internal
-
     The purpose of the function is to call pcre2_jit_compile_16, which
     JIT-compiles the pattern.
 
@@ -976,8 +915,6 @@ void iRegularExpressionPrivate::optimizePattern()
 }
 
 /*!
-    \internal
-
     Returns the capturing group number for the given name. Duplicated names for
     capturing groups are not supported.
 */
@@ -1011,8 +948,6 @@ int iRegularExpressionPrivate::captureIndexForName(iStringView name) const
 }
 
 /*!
-    \internal
-
     This is a simple wrapper for pcre2_match_16 for handling the case in which the
     JIT runs out of memory. In that case, we allocate a thread-local JIT stack
     and re-run pcre2_match_16.
@@ -1038,8 +973,6 @@ static int safe_pcre2_match_16(const pcre2_code_16 *code,
 }
 
 /*!
-    \internal
-
     Performs a match on the subject string view held by \a priv. The
     match will be of type priv->matchType and using the options
     priv->matchOptions; the matching \a offset is relative the
@@ -1210,9 +1143,6 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
     pcre2_match_context_free_16(matchContext);
 }
 
-/*!
-    \internal
-*/
 iRegularExpressionMatchPrivate::iRegularExpressionMatchPrivate(const iRegularExpression &re,
                                                                const iString &subjectStorage,
                                                                iStringView subject,
@@ -1227,12 +1157,8 @@ iRegularExpressionMatchPrivate::iRegularExpressionMatchPrivate(const iRegularExp
       hasMatch(false),
       hasPartialMatch(false),
       isValid(false)
-{
-}
+{}
 
-/*!
-    \internal
-*/
 iRegularExpressionMatch iRegularExpressionMatchPrivate::nextMatch() const
 {
     IX_ASSERT(isValid);
@@ -1257,9 +1183,6 @@ iRegularExpressionMatch iRegularExpressionMatchPrivate::nextMatch() const
     return iRegularExpressionMatch(*nextPrivate);
 }
 
-/*!
-    \internal
-*/
 iRegularExpressionMatchIteratorPrivate::iRegularExpressionMatchIteratorPrivate(const iRegularExpression &re,
                                                                                iRegularExpression::MatchType matchType,
                                                                                iRegularExpression::MatchOptions matchOptions,
@@ -1267,16 +1190,10 @@ iRegularExpressionMatchIteratorPrivate::iRegularExpressionMatchIteratorPrivate(c
     : next(next),
       regularExpression(re),
       matchType(matchType), matchOptions(matchOptions)
-{
-}
+{}
 
-/*!
-    \internal
-*/
 bool iRegularExpressionMatchIteratorPrivate::hasNext() const
-{
-    return next.isValid() && (next.hasMatch() || next.hasPartialMatch());
-}
+{ return next.isValid() && (next.hasMatch() || next.hasPartialMatch()); }
 
 // PUBLIC API
 
@@ -1288,8 +1205,7 @@ bool iRegularExpressionMatchIteratorPrivate::hasNext() const
 */
 iRegularExpression::iRegularExpression()
     : d(new iRegularExpressionPrivate)
-{
-}
+{}
 
 /*!
     Constructs a iRegularExpression object using the given \a pattern as
@@ -1306,20 +1222,13 @@ iRegularExpression::iRegularExpression(const iString &pattern, PatternOptions op
 
 /*!
     Constructs a iRegularExpression object as a copy of \a re.
-
-    \sa operator=()
 */
 iRegularExpression::iRegularExpression(const iRegularExpression &re)
     : d(re.d)
-{
-}
+{}
 
-/*!
-    Destroys the iRegularExpression object.
-*/
 iRegularExpression::~iRegularExpression()
-{
-}
+{}
 
 /*!
     Assigns the regular expression \a re to this object, and returns a reference
@@ -1344,9 +1253,7 @@ iRegularExpression &iRegularExpression::operator=(const iRegularExpression &re)
     \sa setPattern(), patternOptions()
 */
 iString iRegularExpression::pattern() const
-{
-    return d->pattern;
-}
+{ return d->pattern; }
 
 /*!
     Sets the pattern string of the regular expression to \a pattern. The
@@ -1367,9 +1274,7 @@ void iRegularExpression::setPattern(const iString &pattern)
     \sa setPatternOptions(), pattern()
 */
 iRegularExpression::PatternOptions iRegularExpression::patternOptions() const
-{
-    return d->patternOptions;
-}
+{ return d->patternOptions; }
 
 /*!
     Sets the given \a options as the pattern options of the regular expression.
@@ -1400,8 +1305,6 @@ int iRegularExpression::captureCount() const
 }
 
 /*!
-    \since 5.1
-
     Returns a list of captureCount() + 1 elements, containing the names of the
     named capturing groups in the pattern string. The list is sorted such that
     the element of the list at position \c{i} is the name of the \c{i}-th
@@ -1535,9 +1438,6 @@ iRegularExpressionMatch iRegularExpression::match(const iString &subject,
 }
 
 /*!
-    \since 6.0
-    \overload
-
     Attempts to match the regular expression against the given \a subjectView
     string view, starting at the position \a offset inside the subject, using a
     match of type \a matchType and honoring the given \a matchOptions.
@@ -1591,9 +1491,6 @@ iRegularExpressionMatchIterator iRegularExpression::globalMatch(const iString &s
 }
 
 /*!
-    \since 6.0
-    \overload
-
     Attempts to perform a global match of the regular expression against the
     given \a subjectView string view, starting at the position \a offset inside the
     subject, using a match of type \a matchType and honoring the given \a
@@ -1623,17 +1520,13 @@ iRegularExpressionMatchIterator iRegularExpression::globalMatch(iStringView subj
 }
 
 /*!
-    \since 5.4
-
     Compiles the pattern immediately, including JIT compiling it (if
     the JIT is enabled) for optimization.
 
     \sa isValid(), {Debugging Code that Uses iRegularExpression}
 */
 void iRegularExpression::optimize() const
-{
-    d.data()->compilePattern();
-}
+{ d.data()->compilePattern(); }
 
 /*!
     Returns \c true if the regular expression is equal to \a re, or false
@@ -1665,8 +1558,6 @@ bool iRegularExpression::operator==(const iRegularExpression &re) const
 */
 
 /*!
-    \since 5.15
-
     Escapes all characters of \a str so that they no longer have any special
     meaning when used as a regular expression pattern string, and returns
     the escaped string. For instance:
@@ -1720,7 +1611,6 @@ iString iRegularExpression::escape(iStringView str)
 }
 
 /*!
-    \since 6.0
     \enum iRegularExpression::WildcardConversionOption
 
     The WildcardConversionOption enum defines modifiers to the way a wildcard glob
@@ -1735,8 +1625,6 @@ iString iRegularExpression::escape(iStringView str)
 */
 
 /*!
-    \since 5.15
-
     Returns a regular expression representation of the given glob \a pattern.
     The transformation is targeting file path globbing, which means in particular
     that path separators receive special treatment. This implies that it is not
@@ -1793,15 +1681,15 @@ iString iRegularExpression::wildcardToRegularExpression(iStringView pattern, Wil
     xsizetype i = 0;
     const iChar *wc = pattern.data();
 
-#ifdef Q_OS_WIN
+    #ifdef IX_OS_WIN
     const iLatin1Char nativePathSeparator('\\');
     const iLatin1String starEscape("[^/\\\\]*");
     const iLatin1String questionMarkEscape("[^/\\\\]");
-#else
+    #else
     const iLatin1Char nativePathSeparator('/');
     const iLatin1String starEscape("[^/]*");
     const iLatin1String questionMarkEscape("[^/]");
-#endif
+    #endif
 
     while (i < wclen) {
         const iChar c = wc[i++];
@@ -1813,11 +1701,11 @@ iString iRegularExpression::wildcardToRegularExpression(iStringView pattern, Wil
             rx += questionMarkEscape;
             break;
         case '\\':
-#ifdef Q_OS_WIN
+        #ifdef IX_OS_WIN
         case '/':
             rx += iLatin1String("[/\\\\]");
             break;
-#endif
+        #endif
         case '$':
         case '(':
         case ')':
@@ -1867,7 +1755,6 @@ iString iRegularExpression::wildcardToRegularExpression(iStringView pattern, Wil
 }
 
 /*!
-  \since 6.0
   Returns a regular expression of the glob pattern \a pattern. The regular expression
   will be case sensitive if \a cs is \l{iShell::CaseSensitive}, and converted according to
   \a options.
@@ -1888,8 +1775,6 @@ iRegularExpression iRegularExpression::fromWildcard(iStringView pattern, iShell:
 }
 
 /*!
-    \since 5.15
-
     Returns the \a expression wrapped between the \c{\A} and \c{\z} anchors to
     be used for exact matching.
 */
@@ -1902,8 +1787,6 @@ iString iRegularExpression::anchoredPattern(iStringView expression)
 }
 
 /*!
-    \since 5.1
-
     Constructs a valid, empty iRegularExpressionMatch object. The regular
     expression is set to a default-constructed one; the match type to
     iRegularExpression::NoMatch and the match options to
@@ -1918,26 +1801,17 @@ iRegularExpressionMatch::iRegularExpressionMatch()
                                            iStringView(),
                                            iRegularExpression::NoMatch,
                                            iRegularExpression::NoMatchOption))
-{
-    d->isValid = true;
-}
+{ d->isValid = true; }
 
-/*!
-    Destroys the match result.
-*/
 iRegularExpressionMatch::~iRegularExpressionMatch()
-{
-}
+{}
 
 /*!
     Constructs a match result by copying the result of the given \a match.
-
-    \sa operator=()
 */
 iRegularExpressionMatch::iRegularExpressionMatch(const iRegularExpressionMatch &match)
     : d(match.d)
-{
-}
+{}
 
 /*!
     Assigns the match result \a match to this object, and returns a reference
@@ -1963,13 +1837,9 @@ iRegularExpressionMatch &iRegularExpressionMatch::operator=(const iRegularExpres
     operation is very fast and never fails.
 */
 
-/*!
-    \internal
-*/
 iRegularExpressionMatch::iRegularExpressionMatch(iRegularExpressionMatchPrivate &dd)
     : d(&dd)
-{
-}
+{}
 
 /*!
     Returns the iRegularExpression object whose match() function returned this
@@ -1978,9 +1848,7 @@ iRegularExpressionMatch::iRegularExpressionMatch(iRegularExpressionMatchPrivate 
     \sa iRegularExpression::match(), matchType(), matchOptions()
 */
 iRegularExpression iRegularExpressionMatch::regularExpression() const
-{
-    return d->regularExpression;
-}
+{ return d->regularExpression; }
 
 
 /*!
@@ -1991,9 +1859,7 @@ iRegularExpression iRegularExpressionMatch::regularExpression() const
     \sa iRegularExpression::match(), regularExpression(), matchOptions()
 */
 iRegularExpression::MatchType iRegularExpressionMatch::matchType() const
-{
-    return d->matchType;
-}
+{ return d->matchType; }
 
 /*!
     Returns the match options that were used to get this
@@ -2003,9 +1869,7 @@ iRegularExpression::MatchType iRegularExpressionMatch::matchType() const
     \sa iRegularExpression::match(), regularExpression(), matchType()
 */
 iRegularExpression::MatchOptions iRegularExpressionMatch::matchOptions() const
-{
-    return d->matchOptions;
-}
+{ return d->matchOptions; }
 
 /*!
     Returns the index of the last capturing group that captured something,
@@ -2022,9 +1886,7 @@ iRegularExpression::MatchOptions iRegularExpressionMatch::matchOptions() const
     \sa captured(), capturedStart(), capturedEnd(), capturedLength()
 */
 int iRegularExpressionMatch::lastCapturedIndex() const
-{
-    return d->capturedCount - 1;
-}
+{ return d->capturedCount - 1; }
 
 /*!
     Returns the substring captured by the \a nth capturing group.
@@ -2039,13 +1901,9 @@ int iRegularExpressionMatch::lastCapturedIndex() const
     capturedLength(), iString::isNull()
 */
 iString iRegularExpressionMatch::captured(int nth) const
-{
-    return capturedView(nth).toString();
-}
+{ return capturedView(nth).toString(); }
 
 /*!
-    \since 5.10
-
     Returns a view of the substring captured by the \a nth capturing group.
 
     If the \a nth capturing group did not capture a string, or if there is no
@@ -2071,8 +1929,6 @@ iStringView iRegularExpressionMatch::capturedView(int nth) const
 }
 
 /*!
-    \since 5.10
-
     Returns the substring captured by the capturing group named \a name.
 
     If the named capturing group \a name did not capture a string, or if
@@ -2092,8 +1948,6 @@ iString iRegularExpressionMatch::captured(iStringView name) const
 }
 
 /*!
-    \since 5.10
-
     Returns a view of the string captured by the capturing group named \a
     name.
 
@@ -2179,8 +2033,6 @@ xsizetype iRegularExpressionMatch::capturedEnd(int nth) const
 }
 
 /*!
-    \since 5.10
-
     Returns the offset inside the subject string corresponding to the starting
     position of the substring captured by the capturing group named \a name.
     If the capturing group named \a name did not capture a string or doesn't
@@ -2201,8 +2053,6 @@ xsizetype iRegularExpressionMatch::capturedStart(iStringView name) const
 }
 
 /*!
-    \since 5.10
-
     Returns the length of the substring captured by the capturing group named
     \a name.
 
@@ -2224,8 +2074,6 @@ xsizetype iRegularExpressionMatch::capturedLength(iStringView name) const
 }
 
 /*!
-    \since 5.10
-
     Returns the offset inside the subject string immediately after the ending
     position of the substring captured by the capturing group named \a name. If
     the capturing group named \a name did not capture a string or doesn't
@@ -2252,9 +2100,7 @@ xsizetype iRegularExpressionMatch::capturedEnd(iStringView name) const
     \sa iRegularExpression::match(), hasPartialMatch()
 */
 bool iRegularExpressionMatch::hasMatch() const
-{
-    return d->hasMatch;
-}
+{ return d->hasMatch; }
 
 /*!
     Returns \c true if the regular expression partially matched against the
@@ -2267,9 +2113,7 @@ bool iRegularExpressionMatch::hasMatch() const
     \sa iRegularExpression::match(), iRegularExpression::MatchType, hasMatch()
 */
 bool iRegularExpressionMatch::hasPartialMatch() const
-{
-    return d->hasPartialMatch;
-}
+{ return d->hasPartialMatch; }
 
 /*!
     Returns \c true if the match object was obtained as a result from the
@@ -2279,21 +2123,13 @@ bool iRegularExpressionMatch::hasPartialMatch() const
     \sa iRegularExpression::match(), iRegularExpression::isValid()
 */
 bool iRegularExpressionMatch::isValid() const
-{
-    return d->isValid;
-}
+{ return d->isValid; }
 
-/*!
-    \internal
-*/
 iRegularExpressionMatchIterator::iRegularExpressionMatchIterator(iRegularExpressionMatchIteratorPrivate &dd)
     : d(&dd)
-{
-}
+{}
 
 /*!
-    \since 5.1
-
     Constructs an empty, valid iRegularExpressionMatchIterator object. The
     regular expression is set to a default-constructed one; the match type to
     iRegularExpression::NoMatch and the match options to
@@ -2308,26 +2144,14 @@ iRegularExpressionMatchIterator::iRegularExpressionMatchIterator()
                                                    iRegularExpression::NoMatch,
                                                    iRegularExpression::NoMatchOption,
                                                    iRegularExpressionMatch()))
-{
-}
+{}
 
-/*!
-    Destroys the iRegularExpressionMatchIterator object.
-*/
 iRegularExpressionMatchIterator::~iRegularExpressionMatchIterator()
-{
-}
+{}
 
-/*!
-    Constructs a iRegularExpressionMatchIterator object as a copy of \a
-    iterator.
-
-    \sa operator=()
-*/
 iRegularExpressionMatchIterator::iRegularExpressionMatchIterator(const iRegularExpressionMatchIterator &iterator)
     : d(iterator.d)
-{
-}
+{}
 
 /*!
     Assigns the iterator \a iterator to this object, and returns a reference to
@@ -2361,9 +2185,7 @@ iRegularExpressionMatchIterator &iRegularExpressionMatchIterator::operator=(cons
     \sa iRegularExpression::globalMatch(), iRegularExpression::isValid()
 */
 bool iRegularExpressionMatchIterator::isValid() const
-{
-    return d->next.isValid();
-}
+{ return d->next.isValid(); }
 
 /*!
     Returns \c true if there is at least one match result ahead of the iterator;
@@ -2372,9 +2194,7 @@ bool iRegularExpressionMatchIterator::isValid() const
     \sa next()
 */
 bool iRegularExpressionMatchIterator::hasNext() const
-{
-    return d->hasNext();
-}
+{ return d->hasNext(); }
 
 /*!
     Returns the next match result without moving the iterator.
@@ -2415,9 +2235,7 @@ iRegularExpressionMatch iRegularExpressionMatchIterator::next()
     \sa iRegularExpression::globalMatch(), matchType(), matchOptions()
 */
 iRegularExpression iRegularExpressionMatchIterator::regularExpression() const
-{
-    return d->regularExpression;
-}
+{ return d->regularExpression; }
 
 /*!
     Returns the match type that was used to get this
@@ -2427,9 +2245,7 @@ iRegularExpression iRegularExpressionMatchIterator::regularExpression() const
     \sa iRegularExpression::globalMatch(), regularExpression(), matchOptions()
 */
 iRegularExpression::MatchType iRegularExpressionMatchIterator::matchType() const
-{
-    return d->matchType;
-}
+{ return d->matchType; }
 
 /*!
     Returns the match options that were used to get this
@@ -2439,8 +2255,6 @@ iRegularExpression::MatchType iRegularExpressionMatchIterator::matchType() const
     \sa iRegularExpression::globalMatch(), regularExpression(), matchType()
 */
 iRegularExpression::MatchOptions iRegularExpressionMatchIterator::matchOptions() const
-{
-    return d->matchOptions;
-}
+{ return d->matchOptions; }
 
 } // namespace iShell

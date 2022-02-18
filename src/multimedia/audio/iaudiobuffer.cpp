@@ -13,7 +13,6 @@
 
 namespace iShell {
 
-
 // Required for iDoc workaround
 class iString;
 
@@ -61,9 +60,7 @@ public:
     }
 
     void ref()
-    {
-        mCount.ref();
-    }
+    { mCount.ref(); }
 
     void deref()
     {
