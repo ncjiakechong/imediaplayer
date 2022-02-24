@@ -63,7 +63,6 @@ public:
     explicit iChar(uchar c) : ucs(c) {}
 
     // Unicode information
-
     enum Category
     {
         Mark_NonSpacing,          //   Mn

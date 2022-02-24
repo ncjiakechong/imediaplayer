@@ -47,13 +47,11 @@ public:
 class IX_CORE_EXPORT iMemGuard
 {
     friend class iMemBlock;
-
     struct ExternalData
     {
         iRefCount  _weakreef;
         iMemBlock* _block;
-    };
-    ExternalData* _d;
+    } *_d;
 
     iMemGuard(ExternalData* data);
 public:

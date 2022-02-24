@@ -21,88 +21,46 @@ namespace iShell {
 extern const xreal ix_sine_table[IX_SINE_TABLE_SIZE];
 
 inline int iCeil(xreal v)
-{
-    using std::ceil;
-    return int(ceil(v));
-}
+{ return int(std::ceil(v)); }
 
 inline int iFloor(xreal v)
-{
-    using std::floor;
-    return int(floor(v));
-}
+{ return int(std::floor(v)); }
 
 inline xreal iFabs(xreal v)
-{
-    using std::fabs;
-    return fabs(v);
-}
+{ return std::fabs(v); }
 
 inline xreal iSin(xreal v)
-{
-    using std::sin;
-    return sin(v);
-}
+{ return std::sin(v); }
 
 inline xreal iCos(xreal v)
-{
-    using std::cos;
-    return cos(v);
-}
+{ return std::cos(v); }
 
 inline xreal iTan(xreal v)
-{
-    using std::tan;
-    return tan(v);
-}
+{ return std::tan(v); }
 
 inline xreal iAcos(xreal v)
-{
-    using std::acos;
-    return acos(v);
-}
+{ return std::acos(v); }
 
 inline xreal iAsin(xreal v)
-{
-    using std::asin;
-    return asin(v);
-}
+{ return std::asin(v); }
 
 inline xreal iAtan(xreal v)
-{
-    using std::atan;
-    return atan(v);
-}
+{ return std::atan(v); }
 
 inline xreal iAtan2(xreal y, xreal x)
-{
-    using std::atan2;
-    return atan2(y, x);
-}
+{ return std::atan2(y, x); }
 
 inline xreal iSqrt(xreal v)
-{
-    using std::sqrt;
-    return sqrt(v);
-}
+{ return std::sqrt(v); }
 
 inline xreal iLn(xreal v)
-{
-    using std::log;
-    return log(v);
-}
+{ return std::log(v); }
 
 inline xreal iExp(xreal v)
-{
-    using std::exp;
-    return exp(v);
-}
+{ return std::exp(v); }
 
 inline xreal iPow(xreal x, xreal y)
-{
-    using std::pow;
-    return pow(x, y);
-}
+{ return std::pow(x, y); }
 
 #ifndef M_PI
 #define M_PI (3.14159265358979323846)
@@ -129,24 +87,16 @@ inline xreal iFastCos(xreal x)
 }
 
 inline float iDegreesToRadians(float degrees)
-{
-    return degrees * float(M_PI/180);
-}
+{ return degrees * float(M_PI/180); }
 
 inline double iDegreesToRadians(double degrees)
-{
-    return degrees * (M_PI / 180);
-}
+{ return degrees * (M_PI / 180); }
 
 inline float iRadiansToDegrees(float radians)
-{
-    return radians * float(180/M_PI);
-}
+{ return radians * float(180/M_PI); }
 
 inline double iRadiansToDegrees(double radians)
-{
-    return radians * (180 / M_PI);
-}
+{ return radians * (180 / M_PI); }
 
 inline xuint32 iNextPowerOfTwo(xuint32 v)
 {
@@ -172,14 +122,10 @@ inline xuint64 iNextPowerOfTwo(xuint64 v)
 }
 
 inline xuint32 iNextPowerOfTwo(xint32 v)
-{
-    return iNextPowerOfTwo(xuint32(v));
-}
+{ return iNextPowerOfTwo(xuint32(v)); }
 
 inline xuint64 iNextPowerOfTwo(xint64 v)
-{
-    return iNextPowerOfTwo(xuint64(v));
-}
+{ return iNextPowerOfTwo(xuint64(v)); }
 
 } // namespace iShell
 #endif // IMATH_H
