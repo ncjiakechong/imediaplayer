@@ -28,21 +28,17 @@ IX_CORE_EXPORT double iInf();
 IX_CORE_EXPORT xuint32 iFloatDistance(float a, float b);
 IX_CORE_EXPORT xuint64 iFloatDistance(double a, double b);
 
-inline bool iFuzzyCompare(double p1, double p2) {
-    return (std::abs(p1 - p2) * 1000000000000. <= std::min(std::abs(p1), std::abs(p2)));
-}
+inline bool iFuzzyCompare(double p1, double p2)
+{ return (std::abs(p1 - p2) * 1000000000000. <= std::min(std::abs(p1), std::abs(p2))); }
 
-inline bool iFuzzyCompare(float p1, float p2) {
-    return (std::abs(p1 - p2) * 100000.f <= std::min(std::abs(p1), std::abs(p2)));
-}
+inline bool iFuzzyCompare(float p1, float p2)
+{ return (std::abs(p1 - p2) * 100000.f <= std::min(std::abs(p1), std::abs(p2))); }
 
-inline bool iFuzzyIsNull(double d) {
-    return std::abs(d) <= 0.000000000001;
-}
+inline bool iFuzzyIsNull(double d)
+{ return std::abs(d) <= 0.000000000001; }
 
-inline bool iFuzzyIsNull(float f) {
-    return std::abs(f) <= 0.00001f;
-}
+inline bool iFuzzyIsNull(float f)
+{ return std::abs(f) <= 0.00001f; }
 
 /*
  * This function tests a double for a null value. It doesn't

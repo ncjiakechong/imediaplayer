@@ -199,14 +199,10 @@ private:
 };
 
 inline bool operator==(const iVariant &v1, const iVariantComparisonHelper &v2)
-{
-    return v1.equal(*v2.v);
-}
+{ return v1.equal(*v2.v); }
 
 inline bool operator!=(const iVariant &v1, const iVariantComparisonHelper &v2)
-{
-    return !operator==(v1, v2);
-}
+{ return !operator==(v1, v2); }
 
 template<typename From, typename To>
 struct iConverterMemberFunction : public iAbstractConverterFunction

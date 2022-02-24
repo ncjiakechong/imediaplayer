@@ -44,8 +44,7 @@ public:
         if (ptr != reinterpret_cast<T *>(array))
             free(ptr);
     }
-    inline iVarLengthArray<T, Prealloc> &operator=(const iVarLengthArray<T, Prealloc> &other)
-    {
+    inline iVarLengthArray<T, Prealloc> &operator=(const iVarLengthArray<T, Prealloc> &other) {
         if (this != &other) {
             clear();
             append(other.constData(), other.size());
@@ -182,8 +181,7 @@ private:
         double ix_for_alignment_2;
     };
 
-    bool isValidIterator(const const_iterator &i) const
-    {
+    bool isValidIterator(const const_iterator &i) const {
         const std::less<const T*> less = {};
         return !less(cend(), i) && !less(i, cbegin());
     }

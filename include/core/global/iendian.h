@@ -84,30 +84,20 @@ template <> inline xuint16 ibswap<xuint16>(xuint16 source)
 }
 
 template <> inline xuint8 ibswap<xuint8>(xuint8 source)
-{
-    return source;
-}
+{ return source; }
 
 // signed specializations
 template <> inline xint64 ibswap<xint64>(xint64 source)
-{
-    return xint64(ibswap<xuint64>(xuint64(source)));
-}
+{ return xint64(ibswap<xuint64>(xuint64(source))); }
 
 template <> inline xint32 ibswap<xint32>(xint32 source)
-{
-    return xint32(ibswap<xuint32>(xuint32(source)));
-}
+{ return xint32(ibswap<xuint32>(xuint32(source))); }
 
 template <> inline xint16 ibswap<xint16>(xint16 source)
-{
-    return xint16(ibswap<xuint16>(xuint16(source)));
-}
+{ return xint16(ibswap<xuint16>(xuint16(source))); }
 
 template <> inline xint8 ibswap<xint8>(xint8 source)
-{
-    return source;
-}
+{ return source; }
 
 // floating specializations
 template<typename Float>
@@ -120,14 +110,10 @@ Float ibswapFloatHelper(Float source)
 }
 
 inline float ibswap(float source)
-{
-    return ibswapFloatHelper(source);
-}
+{ return ibswapFloatHelper(source); }
 
 inline double ibswap(double source)
-{
-    return ibswapFloatHelper(source);
-}
+{ return ibswapFloatHelper(source); }
 
 /*
  * ibswap(const T src, const void *dest);
@@ -136,15 +122,11 @@ inline double ibswap(double source)
  * There is no alignment requirements for \a dest.
  */
 template <typename T> inline void ibswap(const T src, void *dest)
-{
-    iToUnaligned<T>(ibswap(src), dest);
-}
+{ iToUnaligned<T>(ibswap(src), dest); }
 
 template <int Size> void *ibswap(const void *source, xsizetype count, void *dest);
 template<> inline void *ibswap<1>(const void *source, xsizetype count, void *dest)
-{
-    return source != dest ? memcpy(dest, source, size_t(count)) : dest;
-}
+{ return source != dest ? memcpy(dest, source, size_t(count)) : dest; }
 template<> IX_CORE_EXPORT void *ibswap<2>(const void *source, xsizetype count, void *dest);
 template<> IX_CORE_EXPORT void *ibswap<4>(const void *source, xsizetype count, void *dest);
 template<> IX_CORE_EXPORT void *ibswap<8>(const void *source, xsizetype count, void *dest);
@@ -253,9 +235,7 @@ template <typename T> inline void iFromLittleEndian(const void *source, xsizetyp
  * There is no requirement that \a src must be aligned.
  */
 template <typename T> inline T iFromLittleEndian(const void *src)
-{
-    return iFromLittleEndian(iFromUnaligned<T>(src));
-}
+{ return iFromLittleEndian(iFromUnaligned<T>(src)); }
 
 template <> inline xuint8 iFromLittleEndian<xuint8>(const void *src)
 { return static_cast<const xuint8 *>(src)[0]; }
@@ -267,9 +247,7 @@ template <> inline xint8 iFromLittleEndian<xint8>(const void *src)
  * There is no requirement that \a src must be aligned.
  */
 template <class T> inline T iFromBigEndian(const void *src)
-{
-    return iFromBigEndian(iFromUnaligned<T>(src));
-}
+{ return iFromBigEndian(iFromUnaligned<T>(src)); }
 
 template <> inline xuint8 iFromBigEndian<xuint8>(const void *src)
 { return static_cast<const xuint8 *>(src)[0]; }

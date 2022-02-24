@@ -186,39 +186,27 @@ struct type_wrapper<T&>
 template <class T>
 struct class_wrapper
     /// Use the calass wrapper if you want to get class info
-{
-    typedef T CLASSTYPE;
-};
+{ typedef T CLASSTYPE; };
 
 template <typename T>
 struct class_wrapper<const T>
-{
-    typedef T CLASSTYPE;
-};
+{ typedef T CLASSTYPE; };
 
 template <typename T>
 struct class_wrapper<const T&>
-{
-    typedef T CLASSTYPE;
-};
+{ typedef T CLASSTYPE; };
 
 template <typename T>
 struct class_wrapper<T&>
-{
-    typedef T CLASSTYPE;
-};
+{ typedef T CLASSTYPE; };
 
 template <typename T>
 struct class_wrapper<const T*>
-{
-    typedef T CLASSTYPE;
-};
+{ typedef T CLASSTYPE; };
 
 template <typename T>
 struct class_wrapper<T*>
-{
-    typedef T CLASSTYPE;
-};
+{ typedef T CLASSTYPE; };
 
 template <typename T1, typename T2>
 struct is_convertible
@@ -266,11 +254,9 @@ struct iAlignOfHelper
 
 template <class T>
 struct iAlignOf_Default
-{
-    enum { Value = sizeof(iAlignOfHelper<T>) - sizeof(T) };
-};
+{ enum { Value = sizeof(iAlignOfHelper<T>) - sizeof(T) }; };
 
-template <class T> struct iAlignOf : iAlignOf_Default<T> { };
+template <class T> struct iAlignOf : iAlignOf_Default<T> {};
 template <class T> struct iAlignOf<T &> : iAlignOf<T> {};
 template <size_t N, class T> struct iAlignOf<T[N]> : iAlignOf<T> {};
 

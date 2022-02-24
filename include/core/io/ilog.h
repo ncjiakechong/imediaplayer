@@ -85,7 +85,6 @@ class IX_CORE_EXPORT iLogger{
     ~iLogger();
 
     bool start(const char *tag, ilog_level_t level, const char* file, const char* function, int line);
-
     void end();
 
     // for bool

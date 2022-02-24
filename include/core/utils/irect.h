@@ -260,16 +260,10 @@ inline void iRect::moveTop(int pos)
 { y2 += (pos - y1); y1 = pos; }
 
 inline void iRect::moveRight(int pos)
-{
-    x1 += (pos - x2);
-    x2 = pos;
-}
+{ x1 += (pos - x2); x2 = pos; }
 
 inline void iRect::moveBottom(int pos)
-{
-    y1 += (pos - y2);
-    y2 = pos;
-}
+{ y1 += (pos - y2); y2 = pos; }
 
 inline void iRect::moveTopLeft(const iPoint &p)
 {
