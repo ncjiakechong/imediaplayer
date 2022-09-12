@@ -30,6 +30,14 @@ struct ExternalRefCountData;
 
 /**
  * @brief object base
+ * iObject support metaObject/Property/Signal->Slot/invoke method and so on,
+ * more detail info for Signal->Slot:
+ * - Args number is adapted from Signal to Slot, E.g signal(A, B) -> slot(A)
+ * - Args type is adapted from Signal to Slot, E.g signal(float) -> slot(int)
+ * - Return value from Slot to Signal
+ * - Slot support override function
+ * - Slot also support lambda and unary function
+ * - Support signal forward
  */
 class IX_CORE_EXPORT iObject
 {
