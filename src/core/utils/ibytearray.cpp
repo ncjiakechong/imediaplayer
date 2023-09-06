@@ -2573,9 +2573,7 @@ iByteArray iByteArray::mid(xsizetype pos, xsizetype len) const
     case iContainerImplHelper::Null:
         return iByteArray();
     case iContainerImplHelper::Empty:
-    {
         return iByteArray(DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR));
-    }
     case iContainerImplHelper::Full:
         return *this;
     case iContainerImplHelper::Subset:
