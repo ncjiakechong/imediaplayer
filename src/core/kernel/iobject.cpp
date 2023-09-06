@@ -947,14 +947,12 @@ bool iObject::event(iEvent *e)
     }
 
     case iEvent::ChildAdded:
-    case iEvent::ChildRemoved: {
+    case iEvent::ChildRemoved:
         break;
-    }
 
-    case iEvent::DeferredDelete: {
+    case iEvent::DeferredDelete:
         iDeleteInEventHandler(this);
         break;
-    }
 
     default:
         return false;

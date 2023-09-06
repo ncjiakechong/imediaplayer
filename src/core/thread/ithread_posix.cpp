@@ -271,10 +271,8 @@ bool iThreadImpl::start()
     iThread::Priority priority = m_thread->m_priority;
     switch (priority) {
     case iThread::InheritPriority:
-        {
             pthread_attr_setinheritsched(&attr, PTHREAD_INHERIT_SCHED);
             break;
-        }
 
     default:
         {

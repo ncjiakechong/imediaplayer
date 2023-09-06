@@ -1715,10 +1715,6 @@ class _iConnectionHelper : public _iConnection
 
     static _iConnection* impl(int which, const _iConnection* _this, const _iConnection* _other, void* args, void* ret) {
         switch (which) {
-        case Destroy:
-            delete static_cast<const _iConnectionHelper*>(_this);
-            break;
-
         case Compare:
             {
             const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
@@ -1764,6 +1760,9 @@ class _iConnectionHelper : public _iConnection
             const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
             return new _iConnectionHelper(*_thisObj);
             }
+
+        case Destroy:
+            delete static_cast<const _iConnectionHelper*>(_this);
             break;
         }
 

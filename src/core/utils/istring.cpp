@@ -8122,8 +8122,7 @@ bool iPrivate::isRightToLeft(iStringView string)
                 ++p;
             }
         }
-        switch (iChar::direction(ucs4))
-        {
+        switch (iChar::direction(ucs4)) {
         case iChar::DirRLI:
         case iChar::DirLRI:
         case iChar::DirFSI:
