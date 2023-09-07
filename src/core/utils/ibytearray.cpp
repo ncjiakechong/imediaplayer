@@ -3159,7 +3159,9 @@ T toIntegral_helper(const char *data, bool *ok, int base)
     using Int64 = typename std::conditional<std::is_unsigned<T>::value, xuint64, xint64>::type;
 
     if (base != 0 && (base < 2 || base > 36)) {
-        ilog_warn("Invalid base ", base);
+        // avoid recursion
+        iLogger::asprintf(ILOG_TAG, iShell::ILOG_WARN, __FILE__, __FUNCTION__, __LINE__,
+                        "Invalid base %d", base);
         base = 10;
     }
     if (!data) {
@@ -3507,7 +3509,9 @@ iByteArray iByteArray::toBase64(Base64Options options) const
 static char *xulltoa2(char *p, xuint64 n, int base)
 {
     if (base < 2 || base > 36) {
-        ilog_warn("Invalid base ", base);
+        // avoid recursion
+        iLogger::asprintf(ILOG_TAG, iShell::ILOG_WARN, __FILE__, __FUNCTION__, __LINE__,
+                        "Invalid base %d", base);
         base = 10;
     }
 
@@ -3596,7 +3600,9 @@ iByteArray &iByteArray::setNum(double n, char f, int prec)
             form = iLocaleData::DFSignificantDigits;
             break;
         default:
-            ilog_warn("Invalid format char ", f);
+            // avoid recursion
+            iLogger::asprintf(ILOG_TAG, iShell::ILOG_WARN, __FILE__, __FUNCTION__, __LINE__,
+                        "Invalid format char %c", f);
             break;
     }
 

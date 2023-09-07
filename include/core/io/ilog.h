@@ -26,12 +26,12 @@
 #define ilog_warn(...)    iShell::iLogMeta(ILOG_TAG, iShell::ILOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define ilog_error(...)   iShell::iLogMeta(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
-#define ilog_data_verbose(...) iShell::iLogData(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_debug(...)   iShell::iLogData(ILOG_TAG, iShell::ILOG_DEBUG, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_info(...)    iShell::iLogData(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_notice(...)  iShell::iLogData(ILOG_TAG, iShell::ILOG_NOTICE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_warn(...)    iShell::iLogData(ILOG_TAG, iShell::ILOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
-#define ilog_data_error(...)   iShell::iLogData(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_verbose(...) iShell::iLogger::binaryData(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_debug(...)   iShell::iLogger::binaryData(ILOG_TAG, iShell::ILOG_DEBUG, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_info(...)    iShell::iLogger::binaryData(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_notice(...)  iShell::iLogger::binaryData(ILOG_TAG, iShell::ILOG_NOTICE, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_warn(...)    iShell::iLogger::binaryData(ILOG_TAG, iShell::ILOG_WARN, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define ilog_data_error(...)   iShell::iLogger::binaryData(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 
 namespace iShell {
 
@@ -75,11 +75,16 @@ struct iHexUInt64 {
     xuint64 value;
 };
 
-class IX_CORE_EXPORT iLogger{
+class IX_CORE_EXPORT iLogger {
  public:
     /* Set a log target. */
     static iLogTarget setDefaultTarget(const iLogTarget& target);
     static void setThreshold(const char* patterns, bool reset);
+
+    static void asprintf(const char* tag, ilog_level_t level, const char* file, const char* function, int line, 
+                         const char *format, ...) IX_GCC_PRINTF_ATTR(6, 7);
+    static void binaryData(const char* tag, ilog_level_t level, const char* file, const char* function, int line, 
+                           const void* data, int size);
 
     iLogger();
     ~iLogger();
@@ -160,6 +165,8 @@ class IX_CORE_EXPORT iLogger{
     ilog_level_t m_level;
     int m_line;
     iByteArray m_buff;
+
+    static iLogTarget s_target;
 };
 
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, bool);
@@ -431,8 +438,6 @@ void iLogMeta(const char* tag, ilog_level_t level, const char* file, const char*
     logger.end();
 }
 
-IX_CORE_EXPORT void iLogData(const char* tag, ilog_level_t level, const char* file, const char* function, int line, 
-                             const void* data, int size);
 } // namespace iShell
 
 #endif // ILOG_H
