@@ -514,6 +514,11 @@ void iMemBlock::statAdd()
 
     m_pool->m_stat.nAllocatedByType[m_type] ++;
     m_pool->m_stat.nAccumulatedByType[m_type] ++;
+
+    // iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
+    //                     "pool %s: allocatedSize %d, accumulatedSize %d", 
+    //                     m_pool->m_name, m_pool->m_stat.allocatedSize.value(), 
+    //                     m_pool->m_stat.accumulatedSize.value());
 }
 
 /* No lock necessary */
@@ -702,7 +707,7 @@ void iMemBlock::replaceImport()
  *
  * TODO-1: Transform the global core mempool to a per-client one
  * TODO-2: Remove global mempools support */
-iMemPool* iMemPool::create(MemType type, size_t size, bool perClient)
+iMemPool* iMemPool::create(const char* name, MemType type, size_t size, bool perClient)
 {
     const size_t page_size = ix_page_size();
     size_t block_size = ix_page_align(IX_MEMPOOL_SLOT_SIZE);
@@ -723,7 +728,7 @@ iMemPool* iMemPool::create(MemType type, size_t size, bool perClient)
     if (IX_NULLPTR == memory)
         return IX_NULLPTR;
 
-    iMemPool* pool = new iMemPool(memory, block_size, n_blocks, perClient);
+    iMemPool* pool = new iMemPool(name, memory, block_size, n_blocks, perClient);
     ilog_debug("Using ", type, " memory pool with ", pool->m_nBlocks, 
                " slots of size ", pool->m_blockSize, 
                " each, total size is ", pool->m_nBlocks * pool->m_blockSize, 
@@ -734,15 +739,16 @@ iMemPool* iMemPool::create(MemType type, size_t size, bool perClient)
 
 iMemPool* iMemPool::fakeAdaptor() 
 {
-    static iExplicitlySharedDataPointer<iMemPool> s_fakeMemPool(new iMemPool(new iShareMem(), 1024, 0, false));
+    static iExplicitlySharedDataPointer<iMemPool> s_fakeMemPool(new iMemPool("FakePool", new iShareMem(), 1024, 0, false));
     return s_fakeMemPool.data();
 }
 
-iMemPool::iMemPool(iShareMem* memory, size_t block_size, xuint32 n_blocks, bool perClient)
+iMemPool::iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint32 n_blocks, bool perClient)
     : m_global(!perClient)
     , m_isRemoteWritable(false)
     , m_blockSize(block_size)
     , m_nBlocks(n_blocks)
+    , m_name(name)
     , m_memory(memory)
     , m_imports(IX_NULLPTR)
     , m_exports(IX_NULLPTR)

@@ -229,7 +229,7 @@ public:
         iAtomicCounter<int> nAccumulatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
     };
 
-    static iMemPool* create(MemType type, size_t size, bool perClient);
+    static iMemPool* create(const char* name, MemType type, size_t size, bool perClient);
 
     inline const Stat& getStat() const { return m_stat; }
     void vacuum();
@@ -245,7 +245,7 @@ private:
     struct Slot;
     static iMemPool* fakeAdaptor();
 
-    iMemPool(iShareMem* memory, size_t block_size, xuint32 n_blocks, bool perClient);
+    iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint32 n_blocks, bool perClient);
     virtual ~iMemPool();
 
     Slot* allocateSlot();
@@ -259,6 +259,7 @@ private:
     size_t m_blockSize;
     xuint32 m_nBlocks;
 
+    const char* m_name;
     iShareMem* m_memory;
     iMemImport* m_imports;
     iMemExport* m_exports;
