@@ -39,7 +39,7 @@ private:
     static int cleanup();
 
     int doAttach(MemType type, uint id, xintptr memfd, bool writable, bool for_cleanup);
-    void FreePrivateMem();
+    void freePrivateMem();
 
     MemType  m_type;
     uint     m_id;

@@ -237,7 +237,7 @@ int iShareMem::detach()
 
     do {
         if (MEMTYPE_PRIVATE == m_type) {
-            FreePrivateMem();
+            freePrivateMem();
             break;
         }
 
@@ -265,7 +265,7 @@ int iShareMem::detach()
     return 0;
 }
 
-void iShareMem::FreePrivateMem() 
+void iShareMem::freePrivateMem() 
 {
     #if defined(MAP_ANONYMOUS)
     if (munmap(m_ptr, m_size) < 0)
