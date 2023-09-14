@@ -13,6 +13,7 @@
 #include <cstring>
 #include <cstdlib>
 
+#include "core/io/imemchunk.h"
 #include "core/utils/ibytearray.h"
 #include "utils/ibytearraymatcher.h"
 #include "utils/istringalgorithms_p.h"

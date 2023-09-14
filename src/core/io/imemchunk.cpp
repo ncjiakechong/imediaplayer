@@ -94,20 +94,20 @@ iMCAlign::~iMCAlign()
         m_current.m_memblock.block()->deref();
 }
 
-void iMCAlign::push(const iMemChunk *c) 
+void iMCAlign::push(const iMemChunk& c) 
 {
-    IX_ASSERT(c && c->m_memblock.block() && (c->m_length > 0));
+    IX_ASSERT(c.m_memblock.block() && (c.m_length > 0));
     IX_ASSERT(!m_current.m_memblock.block());
 
     /* Append to the leftover memory block */
     if (m_leftover.m_memblock.block()) {
 
         /* Try to merge */
-        if (m_leftover.m_memblock.block() == c->m_memblock.block() &&
-            m_leftover.m_index + m_leftover.m_length == c->m_index) {
+        if (m_leftover.m_memblock.block() == c.m_memblock.block() &&
+            m_leftover.m_index + m_leftover.m_length == c.m_index) {
 
             /* Merge */
-            m_leftover.m_length += c->m_length;
+            m_leftover.m_length += c.m_length;
 
             /* If the new chunk is larger than m_base, move it to current */
             if (m_leftover.m_length >= m_base) {
@@ -120,21 +120,21 @@ void iMCAlign::push(const iMemChunk *c)
             IX_ASSERT(m_leftover.m_length < m_base);
             size_t l = m_base - m_leftover.m_length;
 
-            if (l > c->m_length)
-                l = c->m_length;
+            if (l > c.m_length)
+                l = c.m_length;
 
             /* Can we use the current block? */
             m_leftover.makeWritable(m_base);
             memcpy((xuint8*) m_leftover.m_memblock.block()->data().value() + m_leftover.m_index + m_leftover.m_length, 
-                    (xuint8*) c->m_memblock.block()->data().value() + c->m_index, l);
+                    (xuint8*) c.m_memblock.block()->data().value() + c.m_index, l);
             m_leftover.m_length += l;
 
             IX_ASSERT(m_leftover.m_length <= m_base);
             IX_ASSERT(m_leftover.m_length <= m_leftover.m_memblock.block()->length());
 
-            if (c->m_length > l) {
+            if (c.m_length > l) {
                 /* Save the remainder of the memory block */
-                m_current = *c;
+                m_current = c;
                 m_current.m_index += l;
                 m_current.m_length -= l;
                 m_current.m_memblock.block()->ref();
@@ -142,19 +142,17 @@ void iMCAlign::push(const iMemChunk *c)
         }
     } else {
         /* Nothing to merge or copy, just store it */
-        if (c->m_length >= m_base)
-            m_current = *c;
+        if (c.m_length >= m_base)
+            m_current = c;
         else
-            m_leftover = *c;
+            m_leftover = c;
         
-        c->m_memblock.block()->ref();
+        c.m_memblock.block()->ref();
     }
 }
 
-int iMCAlign::pop(iMemChunk *c) 
+int iMCAlign::pop(iMemChunk& c) 
 {
-    IX_ASSERT(c);
-
     /* First test if there's a leftover memory block available */
     if (m_leftover.m_memblock.block()) {
         IX_ASSERT(m_leftover.m_length > 0);
@@ -165,7 +163,7 @@ int iMCAlign::pop(iMemChunk *c)
             return -1;
 
         /* Return the leftover memory block */
-        *c = m_leftover;
+        c = m_leftover;
         m_leftover.reset();
 
         /* If the current memblock is too small move it the leftover */
@@ -188,9 +186,9 @@ int iMCAlign::pop(iMemChunk *c)
         IX_ASSERT(l > 0);
 
         /* Prepare the returned block */
-        *c = m_current;
-        c->m_length = l;
-        c->m_memblock.block()->ref();
+        c = m_current;
+        c.m_length = l;
+        c.m_memblock.block()->ref();
 
         /* Drop that from the current memory block */
         IX_ASSERT(l <= m_current.m_length);
@@ -228,7 +226,7 @@ size_t iMCAlign::csize(size_t l) const
 void iMCAlign::flush() 
 {
     iMemChunk chunk;
-    while (pop(&chunk) >= 0) {
+    while (pop(chunk) >= 0) {
         chunk.m_memblock.block()->deref();
     }
 }

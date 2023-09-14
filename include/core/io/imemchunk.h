@@ -49,6 +49,9 @@ public:
     /// Return true if any field is set != 0
     inline bool isValid() const { return (IX_NULLPTR != m_memblock.block()) || (m_index > 0) || (m_length > 0); }
 
+    //TODO: remove and replace with copy
+    iMemDataWraper data() const { if (isValid()) return m_memblock.block()->data4Chunk(*this); return iMemDataWraper(IX_NULLPTR, 0);}
+
 private:
     iMemGuard  m_memblock;
     size_t     m_index;
@@ -81,11 +84,11 @@ public:
 
     /// Push a new memchunk into the aligner. The caller of this routine
     /// has to free the memchunk by himself.
-    void push(const iMemChunk *c);
+    void push(const iMemChunk& c);
 
     /// Pop a new memchunk from the aligner. Returns 0 when successful,
     /// nonzero otherwise.
-    int pop(iMemChunk *c);
+    int pop(iMemChunk& c);
 
     /// Flush what's still stored in the aligner
     void flush();

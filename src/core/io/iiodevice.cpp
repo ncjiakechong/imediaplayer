@@ -11,8 +11,8 @@
 
 #include "core/io/iiodevice.h"
 #include "utils/itools_p.h"
-#include "utils/iringbuffer.h"
 #include "core/io/ilog.h"
+#include "core/io/imemblockq.h"
 
 #define ILOG_TAG "ix_io"
 
@@ -320,94 +320,154 @@ namespace iShell {
 
     \sa atEnd(), read()
 */
-iIODevice::iRingBufferRef::iRingBufferRef() : m_buf(IX_NULLPTR) 
+iIODevice::iMBQueueRef::iMBQueueRef() : m_buf(IX_NULLPTR) 
 {}
 
-iIODevice::iRingBufferRef::~iRingBufferRef() 
+iIODevice::iMBQueueRef::~iMBQueueRef() 
 {}
 
-void iIODevice::iRingBufferRef::setChunkSize(int size) 
-{ IX_ASSERT(m_buf); m_buf->setChunkSize(size); }
+xint64 iIODevice::iMBQueueRef::nextDataBlockSize() const 
+{ return (m_buf ? m_buf->length() : IX_INT64_C(0)); }
 
-int iIODevice::iRingBufferRef::chunkSize() const 
-{ IX_ASSERT(m_buf); return m_buf->chunkSize(); }
+void iIODevice::iMBQueueRef::free(xint64 bytes) 
+{ IX_ASSERT(m_buf); m_buf->drop(bytes); }
 
-xint64 iIODevice::iRingBufferRef::nextDataBlockSize() const 
-{ return (m_buf ? m_buf->nextDataBlockSize() : IX_INT64_C(0)); }
-
-const char * iIODevice::iRingBufferRef::readPointer() const 
-{ return (m_buf ? m_buf->readPointer() : IX_NULLPTR); }
-
-const char * iIODevice::iRingBufferRef::readPointerAtPosition(xint64 pos, xint64 &length) const 
-{ IX_ASSERT(m_buf); return m_buf->readPointerAtPosition(pos, length); }
-
-void iIODevice::iRingBufferRef::free(xint64 bytes) 
-{ IX_ASSERT(m_buf); m_buf->free(bytes); }
-
-char * iIODevice::iRingBufferRef::reserve(xint64 bytes) 
-{ IX_ASSERT(m_buf); return m_buf->reserve(bytes); }
-
-char * iIODevice::iRingBufferRef::reserveFront(xint64 bytes) 
-{ IX_ASSERT(m_buf); return m_buf->reserveFront(bytes); }
-
-void iIODevice::iRingBufferRef::truncate(xint64 pos) 
-{ IX_ASSERT(m_buf); m_buf->truncate(pos); }
-
-void iIODevice::iRingBufferRef::chop(xint64 bytes) 
-{ IX_ASSERT(m_buf); m_buf->chop(bytes); }
-
-bool iIODevice::iRingBufferRef::isEmpty() const 
+bool iIODevice::iMBQueueRef::isEmpty() const 
 { return !m_buf || m_buf->isEmpty(); }
 
-int iIODevice::iRingBufferRef::getChar() 
-{ return (m_buf ? m_buf->getChar() : -1); }
+int iIODevice::iMBQueueRef::getChar() 
+{
+    iMemChunk tchunk;
+    if (!m_buf || (m_buf->peek(tchunk) < 0))
+        return -1;
 
-void iIODevice::iRingBufferRef::putChar(char c) 
-{ IX_ASSERT(m_buf); m_buf->putChar(c); }
+    char* data = (char*)tchunk.data().value();
+    int ret = uchar(*data);
+    m_buf->drop(1);
 
-void iIODevice::iRingBufferRef::ungetChar(char c) 
-{ IX_ASSERT(m_buf); m_buf->ungetChar(c); }
+    //TODO: chunk block deref
+    return ret;
+}
+void iIODevice::iMBQueueRef::putChar(char c) 
+{ 
+    IX_ASSERT(m_buf); 
+    iMemBlock* block = iMemBlock::newOne(IX_NULLPTR, m_buf->getBase());
+    iMemChunk tchunk(block, 0, 1);
+    char* data = (char*)tchunk.data().value();
+    *data = c;
 
-xint64 iIODevice::iRingBufferRef::size() const 
-{ return (m_buf ? m_buf->size() : IX_INT64_C(0)); }
+    m_buf->pushAlign(tchunk);
+}
 
-void iIODevice::iRingBufferRef::clear() 
-{ if (m_buf) m_buf->clear(); }
+xint64 iIODevice::iMBQueueRef::size() const 
+{ return (m_buf ? m_buf->length() : IX_INT64_C(0)); }
 
-xint64 iIODevice::iRingBufferRef::indexOf(char c) const 
-{ return (m_buf ? m_buf->indexOf(c, m_buf->size()) : IX_INT64_C(-1)); }
+void iIODevice::iMBQueueRef::clear() 
+{ if (m_buf) m_buf->flushWrite(false); }
 
-xint64 iIODevice::iRingBufferRef::indexOf(char c, xint64 maxLength, xint64 pos) const 
-{ return (m_buf ? m_buf->indexOf(c, maxLength, pos) : IX_INT64_C(-1)); }
+xint64 iIODevice::iMBQueueRef::indexOf(char c) const 
+{ return indexOf(c, m_buf->length()); }
 
-xint64 iIODevice::iRingBufferRef::read(char *data, xint64 maxLength) 
-{ return (m_buf ? m_buf->read(data, maxLength) : IX_INT64_C(0)); }
+// TODO: implement
+xint64 iIODevice::iMBQueueRef::indexOf(char c, xint64 maxLength, xint64 pos) const 
+{ return /*(m_buf ? m_buf->indexOf(c, maxLength, pos) : */ IX_INT64_C(-1); }
 
-iByteArray iIODevice::iRingBufferRef::read() 
-{ return (m_buf ? m_buf->read() : iByteArray()); }
+xint64 iIODevice::iMBQueueRef::read(char *data, xint64 maxLength) 
+{
+    if (!m_buf)
+        return 0;
 
-xint64 iIODevice::iRingBufferRef::peek(char *data, xint64 maxLength, xint64 pos) const 
-{ return (m_buf ? m_buf->peek(data, maxLength, pos) : IX_INT64_C(0)); }
+    xint64 readSoFar = 0;
+    const xint64 bytesToRead = std::min<xint64>(m_buf->length(), maxLength);
+    while (readSoFar < bytesToRead) {
+        iMemChunk tchunk;
+        if (m_buf->peek(tchunk) < 0)
+            break;
+        
+        const xint64 bytesToReadFromThisBlock = std::min<xint64>(bytesToRead - readSoFar, tchunk.length());
+        char* readPointer = (char*)tchunk.data().value();
+        memcpy(data + readSoFar, readPointer, bytesToReadFromThisBlock);
+        readSoFar += bytesToReadFromThisBlock;
+        m_buf->drop(bytesToReadFromThisBlock);
 
-void iIODevice::iRingBufferRef::append(const char *data, xint64 size) 
-{ IX_ASSERT(m_buf); m_buf->append(data, size); }
+        //TODO: chunk block deref
+    }
 
-void iIODevice::iRingBufferRef::append(const iByteArray &qba) 
-{ IX_ASSERT(m_buf); m_buf->append(qba); }
+    return bytesToRead;
+}
 
-xint64 iIODevice::iRingBufferRef::skip(xint64 length) 
-{ return (m_buf ? m_buf->skip(length) : IX_INT64_C(0)); }
+// TODO: memchunk should deref
+iMemChunk iIODevice::iMBQueueRef::read()
+{
+    iMemChunk tchunk;
+    if (!m_buf)
+        return tchunk;
 
-xint64 iIODevice::iRingBufferRef::readLine(char *data, xint64 maxLength) 
-{ return (m_buf ? m_buf->readLine(data, maxLength) : IX_INT64_C(-1)); }
+    m_buf->peek(tchunk);
+    m_buf->drop(tchunk.length());
+    //TODO: chunk block deref
 
-bool iIODevice::iRingBufferRef::canReadLine() const 
-{ return m_buf && m_buf->canReadLine(); }
+    return tchunk;
+}
+
+xint64 iIODevice::iMBQueueRef::peek(char *data, xint64 maxLength, xint64 offset) const 
+{
+    if (!m_buf)
+        return 0;
+    
+    iMemChunk tchunk;
+    m_buf->peekFixedSize(std::min<xint64>(maxLength + offset, m_buf->length()), tchunk);
+    IX_ASSERT(tchunk.length() >= offset);
+    char* readPointer = (char*)tchunk.data().value();
+    memcpy(data, readPointer + offset, tchunk.length() - offset);
+    return tchunk.length() - offset;
+}
+
+void iIODevice::iMBQueueRef::append(const char *data, xint64 size) 
+{
+    IX_ASSERT(m_buf && size >= 0);
+    if (0 == size)
+        return;
+
+    iMemBlock* block = iMemBlock::newOne(IX_NULLPTR, std::min<xint64>(m_buf->getBase(), size));
+    iMemChunk tchunk(block, 0, size);
+    char* writePointer = (char*)tchunk.data().value();
+    if (size == 1)
+        *writePointer = *data;
+    else
+        ::memcpy(writePointer, data, size);
+
+    m_buf->pushAlign(tchunk);
+}
+
+void iIODevice::iMBQueueRef::append(const iMemChunk& chunk)
+{
+    IX_ASSERT(m_buf);
+    m_buf->pushAlign(chunk);
+}
+
+xint64 iIODevice::iMBQueueRef::skip(xint64 length) 
+{ return (m_buf ? m_buf->drop(length) : IX_INT64_C(0)); }
+
+xint64 iIODevice::iMBQueueRef::readLine(char *data, xint64 maxLength) 
+{
+    IX_ASSERT(data != IX_NULLPTR && maxLength > 1);
+
+    --maxLength;
+    xint64 idx = indexOf('\n', maxLength);
+    idx = read(data, idx >= 0 ? (idx + 1) : maxLength);
+
+    // Terminate it.
+    data[idx] = '\0';
+    return idx;
+}
+
+bool iIODevice::iMBQueueRef::canReadLine() const 
+{ return indexOf('\n') >= 0; }
         
 /*!
     Constructs a iIODevice object.
 */
-
 iIODevice::iIODevice()
     : m_openMode(iIODevice::NotOpen)
     , m_pos(0)
@@ -477,18 +537,6 @@ bool iIODevice::isSequential() const
 {
     return false;
 }
-
-/*!
-    Returns the mode in which the device has been opened;
-    i.e. ReadOnly or WriteOnly.
-
-    \sa OpenMode
-*/
-iIODevice::OpenMode iIODevice::openMode() const
-{
-    return m_openMode;
-}
-
 /*!
     Sets the OpenMode of the device to \a openMode. Call this
     function to set the open mode if the flags change after the device
@@ -526,89 +574,6 @@ void iIODevice::setTextModeEnabled(bool enabled)
 }
 
 /*!
-    Returns \c true if the \l Text flag is enabled; otherwise returns \c false.
-
-    \sa setTextModeEnabled()
-*/
-bool iIODevice::isTextModeEnabled() const
-{
-    return m_openMode & Text;
-}
-
-/*!
-    Returns \c true if the device is open; otherwise returns \c false. A
-    device is open if it can be read from and/or written to. By
-    default, this function returns \c false if openMode() returns
-    \c NotOpen.
-
-    \sa openMode(), OpenMode
-*/
-bool iIODevice::isOpen() const
-{
-    return m_openMode != NotOpen;
-}
-
-/*!
-    Returns \c true if data can be read from the device; otherwise returns
-    false. Use bytesAvailable() to determine how many bytes can be read.
-
-    This is a convenience function which checks if the OpenMode of the
-    device contains the ReadOnly flag.
-
-    \sa openMode(), OpenMode
-*/
-bool iIODevice::isReadable() const
-{
-    return (openMode() & ReadOnly) != 0;
-}
-
-/*!
-    Returns \c true if data can be written to the device; otherwise returns
-    false.
-
-    This is a convenience function which checks if the OpenMode of the
-    device contains the WriteOnly flag.
-
-    \sa openMode(), OpenMode
-*/
-bool iIODevice::isWritable() const
-{
-    return (openMode() & WriteOnly) != 0;
-}
-
-/*!
-    Returns the number of available read channels if the device is open;
-    otherwise returns 0.
-
-    \sa writeChannelCount()
-*/
-int iIODevice::readChannelCount() const
-{
-    return m_readChannelCount;
-}
-
-/*!
-    Returns the number of available write channels if the device is open;
-    otherwise returns 0.
-
-    \sa readChannelCount()
-*/
-int iIODevice::writeChannelCount() const
-{
-    return m_writeChannelCount;
-}
-
-/*!
-    Returns the index of the current read channel.
-
-    \sa setCurrentReadChannel(), readChannelCount(), iProcess
-*/
-int iIODevice::currentReadChannel() const
-{
-    return m_currentReadChannel;
-}
-
-/*!
     Sets the current read channel of the iIODevice to the given \a
     channel. The current input channel is used by the functions
     read(), readAll(), readLine(), and getChar(). It also determines
@@ -623,30 +588,24 @@ void iIODevice::setCurrentReadChannel(int channel)
         return;
     }
 
-    m_buffer.m_buf = (channel < int(m_readBuffers.size()) ? &m_readBuffers[size_t(channel)] : IX_NULLPTR);
+    m_buffer.m_buf = (channel < !m_readBuffers.empty() ? m_readBuffers.find(channel)->second : IX_NULLPTR);
     m_currentReadChannel = channel;
 }
 
 void iIODevice::setReadChannelCount(int count)
 {
-    if (count > m_readBuffers.size()) {
-        m_readBuffers.insert(m_readBuffers.end(), count - m_readBuffers.size(),
-                           IRingBuffer(m_readBufferChunkSize));
-    } else {
-        m_readBuffers.resize(count);
+    int step = (count > m_readBuffers.size()) ? 1 : -1;
+    int distance = std::abs(count - (int)m_readBuffers.size());
+    for (int idx = 0; idx < distance; ++idx) {
+        if (count > m_readBuffers.size()) {
+            m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceRead"), 0, std::numeric_limits<size_t>::max(), 0, m_readBufferChunkSize, -1, 0, 0, IX_NULLPTR)));
+        } else {
+            m_readBuffers.erase(count + distance - idx);
+        }
     }
+
     m_readChannelCount = count;
     setCurrentReadChannel(m_currentReadChannel);
-}
-
-/*!
-    Returns the the index of the current write channel.
-
-    \sa setCurrentWriteChannel(), writeChannelCount()
-*/
-int iIODevice::currentWriteChannel() const
-{
-    return m_currentWriteChannel;
 }
 
 /*!
@@ -659,22 +618,22 @@ int iIODevice::currentWriteChannel() const
 */
 void iIODevice::setCurrentWriteChannel(int channel)
 {
-    m_writeBuffer.m_buf = (channel < int(m_writeBuffers.size()) ? &m_writeBuffers[size_t(channel)] : IX_NULLPTR);
+    m_writeBuffer.m_buf = (channel < !m_writeBuffers.empty() ? m_writeBuffers.find(channel)->second : IX_NULLPTR);
     m_currentWriteChannel = channel;
 }
 
 void iIODevice::setWriteChannelCount(int count)
 {
-    if (count > m_writeBuffers.size()) {
-        // If writeBufferChunkSize is zero (default value), we don't use
-        // iIODevice's write buffers.
-        if (m_writeBufferChunkSize != 0) {
-            m_writeBuffers.insert(m_writeBuffers.end(), count - m_writeBuffers.size(),
-                                IRingBuffer(m_writeBufferChunkSize));
+    int step = (count > m_writeBuffers.size()) ? 1 : -1;
+    int distance = std::abs(count - (int)m_writeBuffers.size());
+    for (int idx = 0; idx < distance; ++idx) {
+        if (count > m_writeBuffers.size()) {
+            m_writeBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceWrite"), 0, std::numeric_limits<size_t>::max(), 0, m_writeBufferChunkSize, -1, 0, 0, IX_NULLPTR)));
+        } else {
+            m_writeBuffers.erase(count + distance - idx);
         }
-    } else {
-        m_writeBuffers.resize(count);
     }
+
     m_writeChannelCount = count;
     setCurrentWriteChannel(m_currentWriteChannel);
 }
@@ -687,8 +646,8 @@ bool iIODevice::isBufferEmpty() const
 
 bool iIODevice::allWriteBuffersEmpty() const
 {
-    for (const IRingBuffer &ringBuffer : m_writeBuffers) {
-        if (!ringBuffer.isEmpty())
+    for (std::unordered_map<int, iMemBlockQueue*>::const_iterator it = m_writeBuffers.cbegin(); it != m_writeBuffers.cend(); ++it) {
+        if (it->second->length() > 0)
             return false;
     }
     return true;
@@ -706,8 +665,16 @@ bool iIODevice::open(OpenMode mode)
     m_openMode = mode;
     m_pos = (mode & Append) ? size() : xint64(0);
     m_accessMode = iIODevice::Unset;
-    m_readBuffers.clear();
-    m_writeBuffers.clear();
+    while (!m_readBuffers.empty()) {
+        iMemBlockQueue* queue = m_readBuffers.begin()->second;
+        m_readBuffers.erase(m_readBuffers.begin());
+        delete queue;
+    }
+    while (!m_writeBuffers.empty()) {
+        iMemBlockQueue* queue = m_writeBuffers.begin()->second;
+        m_writeBuffers.erase(m_writeBuffers.begin());
+        delete queue;
+    }
     setReadChannelCount(isReadable() ? 1 : 0);
     setWriteChannelCount(isWritable() ? 1 : 0);
     m_errorString.clear();
@@ -735,24 +702,6 @@ void iIODevice::close()
     setReadChannelCount(0);
     // Do not clear write buffers to allow delayed close in sockets
     m_writeChannelCount = 0;
-}
-
-/*!
-    For random-access devices, this function returns the position that
-    data is written to or read from. For sequential devices or closed
-    devices, where there is no concept of a "current position", 0 is
-    returned.
-
-    The current read/write position of the device is maintained internally by
-    iIODevice, so reimplementing this function is not necessary. When
-    subclassing iIODevice, use iIODevice::seek() to notify iIODevice about
-    changes in the device position.
-
-    \sa isSequential(), seek()
-*/
-xint64 iIODevice::pos() const
-{
-    return m_pos;
 }
 
 /*!
@@ -984,9 +933,11 @@ xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
                             ? xint64(m_readBufferChunkSize)
                             : maxSize;
                     // Try to fill iIODevice buffer by single read
-                    readFromDevice = readData(m_buffer.reserve(bytesToBuffer), bytesToBuffer);
+                    iMemBlock* block = iMemBlock::newOne(IX_NULLPTR, std::max<xint64>(m_readBufferChunkSize, bytesToBuffer));
+                    readFromDevice = readData((char*)block->data().value(), bytesToBuffer);
+
                     deviceAtEof = (readFromDevice != bytesToBuffer);
-                    m_buffer.chop(bytesToBuffer - std::max(IX_INT64_C(0), readFromDevice));
+                    m_buffer.append(iMemChunk(block, 0, readFromDevice));
                     if (readFromDevice > 0) {
                         if (!sequential)
                             m_devicePos += readFromDevice;
@@ -1069,7 +1020,8 @@ iByteArray iIODevice::read(xint64 maxSize)
     // with the same size in the read buffer.
     if (maxSize == m_buffer.nextDataBlockSize() && !m_transactionStarted
         && (m_openMode & (iIODevice::ReadOnly | iIODevice::Text)) == iIODevice::ReadOnly) {
-        result = m_buffer.read();
+        iMemChunk chunk = m_buffer.read();
+        result = iByteArray((char*)chunk.data().value(), chunk.length());
         if (!isSequential4Mode())
             m_pos += maxSize;
         if (m_buffer.isEmpty())
@@ -1200,7 +1152,7 @@ xint64 iIODevice::readLine(char *data, xint64 maxSize)
                 readData(data, 0);
         }
     } else if (!m_buffer.isEmpty()) {
-        // IRingBuffer::readLine() terminates the line with '\0'
+        // readLine() terminates the line with '\0'
         readSoFar = m_buffer.readLine(data, maxSize + 1);
         if (m_buffer.isEmpty())
             readData(data,0);
@@ -1211,7 +1163,7 @@ xint64 iIODevice::readLine(char *data, xint64 maxSize)
     if (readSoFar) {
         if (data[readSoFar - 1] == '\n') {
             if (m_openMode & Text) {
-                // IRingBuffer::readLine() isn't Text aware.
+                // readLine() isn't Text aware.
                 if (readSoFar > 1 && data[readSoFar - 2] == '\r') {
                     --readSoFar;
                     data[readSoFar - 1] = '\n';
@@ -1485,38 +1437,12 @@ xint64 iIODevice::write(const char *data)
     \sa read(), writeData()
 */
 
-/*!
-    Puts the character \a c back into the device, and decrements the
-    current position unless the position is 0. This function is
-    usually called to "undo" a getChar() operation, such as when
-    writing a backtracking parser.
-
-    If \a c was not previously read from the device, the behavior is
-    undefined.
-
-    \note This function is not available while a transaction is in progress.
-*/
-void iIODevice::ungetChar(char c)
-{
-    CHECK_READABLE(read, IX_VOID);
-
-    if (m_transactionStarted) {
-        ilog_warn("Called while transaction is in progress");
-        return;
-    }
-
-
-    m_buffer.ungetChar(c);
-    if (!isSequential4Mode())
-        --m_pos;
-}
-
 /*! \fn bool iIODevice::putChar(char c)
 
     Writes the character \a c to the device. Returns \c true on success;
     otherwise returns \c false.
 
-    \sa write(), getChar(), ungetChar()
+    \sa write(), getChar()
 */
 bool iIODevice::putChar(char c)
 {
@@ -1529,7 +1455,7 @@ bool iIODevice::putChar(char c)
     is 0, the character is discarded. Returns \c true on success;
     otherwise returns \c false.
 
-    \sa read(), putChar(), ungetChar()
+    \sa read(), putChar(),
 */
 bool iIODevice::getChar(char *c)
 {
