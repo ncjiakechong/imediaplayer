@@ -52,7 +52,6 @@ set (ComSource
 	utils/ilocale.cpp
 	utils/irect.cpp
 	utils/iregularexpression.cpp
-	utils/iringbuffer.cpp
 	utils/ishareddata.cpp
 	utils/isharedptr.cpp
 	utils/isize.cpp

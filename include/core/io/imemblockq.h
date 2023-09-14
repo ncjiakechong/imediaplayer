@@ -133,12 +133,12 @@ public:
     ~iMemBlockQueue();
 
     /// Push a new memory chunk into the queue.
-    int push(const iMemChunk *chunk);
+    xint64 push(const iMemChunk& chunk);
 
     /// Push a new memory chunk into the queue, but filter it through a
     /// pa_mcalign object. Don't mix this with seek() unless
     /// you know what you do.
-    int pushAlign(const iMemChunk *chunk);
+    int pushAlign(const iMemChunk& chunk);
 
     /// Manipulate the write pointer
     enum SeekMode {
@@ -162,18 +162,18 @@ public:
     /// memblock was passed at initialization. If the queue is not empty,
     /// but we're currently at a hole in the queue and no silence memblock
     /// was passed we return the length of the hole in chunk->length.
-    int peek(iMemChunk *chunk);
+    int peek(iMemChunk& chunk);
 
     /// Much like pa_memblockq_peek, but guarantees that the returned chunk
     /// will have a length of the block size passed. You must configure a
     /// silence memchunk for this memblockq if you use this call.
-    int peekFixedSize(size_t block_size, iMemChunk *chunk);
+    int peekFixedSize(size_t block_size, iMemChunk& chunk);
 
     /// Drop the specified bytes from the queue.
-    void drop(size_t length);
+    xint64 drop(size_t length);
 
     /// Rewind the read index. If the history is shorter than the specified length we'll point to silence afterwards.
-    void rewind(size_t length);
+    xint64 rewind(size_t length);
 
     /// Test if the pa_memblockq is currently readable, that is, more data than base
     bool isReadable() const;
@@ -196,7 +196,7 @@ public:
     /// Set the queue to silence, set write index to read index
     void flushWrite(bool account);
 
-    /// Set the queue to silence, set write read index to write index*/
+    /// Set the queue to silence, set read index to write index*/
     void flushRead();
 
     /// Ignore prebuf for now
@@ -263,8 +263,8 @@ private:
     void dropBacklog();
     bool updatePreBuf();
 
-    void writeIndexChanged(xint64 oldWriteIndex, bool account);
-    void readIndexChanged(xint64 oldReadIndex);
+    xint64 writeIndexChanged(xint64 oldWriteIndex, bool account);
+    xint64 readIndexChanged(xint64 oldReadIndex);
 
     iMBQListItem* m_blocks;
     iMBQListItem* m_blocksTail;
@@ -286,6 +286,8 @@ private:
     xint64     m_requested;
 
     iLatin1String m_name;
+
+    IX_DISABLE_COPY(iMemBlockQueue)
 };
 
 } // namespace iShell

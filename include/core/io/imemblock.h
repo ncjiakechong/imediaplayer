@@ -114,6 +114,7 @@ public:
     inline iExplicitlySharedDataPointer<iMemPool> pool() const { return m_pool; }
 
     inline iMemDataWraper data() const { return iMemDataWraper(this, 0); }
+    //TODO: remove and add offset argument for data function
     iMemDataWraper data4Chunk(const iMemChunk& c) const;
 
     // Returns true if a detach is necessary before modifying the data

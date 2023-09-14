@@ -18,7 +18,7 @@
 namespace iShell {
 
 class iByteArray;
-class IRingBuffer;
+class iMemBlockQueue;
 
 class IX_CORE_EXPORT iIODevice : public iObject
 {
@@ -42,27 +42,27 @@ public:
     explicit iIODevice(iObject *parent);
     virtual ~iIODevice();
 
-    OpenMode openMode() const;
+    OpenMode openMode() const { return m_openMode; }
 
     void setTextModeEnabled(bool enabled);
-    bool isTextModeEnabled() const;
+    bool isTextModeEnabled() const { return m_openMode & Text; }
 
-    bool isOpen() const;
-    bool isReadable() const;
-    bool isWritable() const;
+    bool isOpen() const { return m_openMode != NotOpen; }
+    bool isReadable() const { return (openMode() & ReadOnly) != 0; }
+    bool isWritable() const { return (openMode() & WriteOnly) != 0; }
     virtual bool isSequential() const;
 
-    int readChannelCount() const;
-    int writeChannelCount() const;
-    int currentReadChannel() const;
+    int readChannelCount() const { return m_readChannelCount; }
+    int writeChannelCount() const { return m_writeChannelCount; }
+    int currentReadChannel() const { return m_currentReadChannel; }
     void setCurrentReadChannel(int channel);
-    int currentWriteChannel() const;
+    int currentWriteChannel() const { return m_currentWriteChannel; }
     void setCurrentWriteChannel(int channel);
 
     virtual bool open(OpenMode mode);
     virtual void close();
 
-    xint64 pos() const;
+    xint64 pos() const { return m_pos; }
     bool seek(xint64 pos);
     virtual xint64 size() const;
     virtual bool atEnd() const;
@@ -95,7 +95,6 @@ public:
     virtual bool waitForReadyRead(int msecs);
     virtual bool waitForBytesWritten(int msecs);
 
-    void ungetChar(char c);
     bool putChar(char c);
     bool getChar(char *c);
 
@@ -116,25 +115,17 @@ protected:
         RandomAccess
     };
 
-    class iRingBufferRef {
-        IRingBuffer *m_buf;
+    class iMBQueueRef {
+        iMemBlockQueue* m_buf;
 
-        iRingBufferRef();
-        ~iRingBufferRef();
+        iMBQueueRef();
+        ~iMBQueueRef();
         friend class iIODevice;
 
     public:
-        // wrap functions from IRingBuffer
-        void setChunkSize(int size);
-        int chunkSize() const;
+        // wrap functions from iMemBlockQueue
         xint64 nextDataBlockSize() const;
-        const char *readPointer() const;
-        const char *readPointerAtPosition(xint64 pos, xint64 &length) const;
         void free(xint64 bytes);
-        char *reserve(xint64 bytes);
-        char *reserveFront(xint64 bytes);
-        void truncate(xint64 pos);
-        void chop(xint64 bytes);
         bool isEmpty() const;
         int getChar();
         void putChar(char c);
@@ -144,10 +135,10 @@ protected:
         xint64 indexOf(char c) const;
         xint64 indexOf(char c, xint64 maxLength, xint64 pos = 0) const;
         xint64 read(char *data, xint64 maxLength);
-        iByteArray read();
-        xint64 peek(char *data, xint64 maxLength, xint64 pos = 0) const;
+        iMemChunk read();
+        xint64 peek(char *data, xint64 maxLength, xint64 offset = 0) const;
         void append(const char *data, xint64 size);
-        void append(const iByteArray &qba);
+        void append(const iMemChunk& chunk);
         xint64 skip(xint64 length);
         xint64 readLine(char *data, xint64 maxLength);
         bool canReadLine() const;
@@ -180,15 +171,15 @@ protected:
     xint64 skipByReading(xint64 maxSize);
 
 protected:
-    iRingBufferRef m_buffer;
-    iRingBufferRef m_writeBuffer;
+    iMBQueueRef m_buffer;
+    iMBQueueRef m_writeBuffer;
 
 private:
     iIODevice::OpenMode m_openMode;
     iString m_errorString;
 
-    std::vector<IRingBuffer> m_readBuffers;
-    std::vector<IRingBuffer> m_writeBuffers;
+    std::unordered_map<int, iMemBlockQueue*> m_readBuffers;
+    std::unordered_map<int, iMemBlockQueue*> m_writeBuffers;
 
     xint64 m_pos;
     xint64 m_devicePos;
