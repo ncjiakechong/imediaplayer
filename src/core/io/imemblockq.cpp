@@ -375,14 +375,14 @@ bool iMemBlockQueue::updatePreBuf()
 
         m_inPreBuf = false;
         return false;
-    } else {
-        if (m_preBuf > 0 && m_readIndex >= m_writeIndex) {
-            m_inPreBuf = true;
-            return true;
-        }
-
-        return false;
     }
+    
+    if (m_preBuf > 0 && m_readIndex >= m_writeIndex) {
+        m_inPreBuf = true;
+        return true;
+    }
+
+    return false;
 }
 
 // TODO: memchunk should deref
@@ -456,7 +456,7 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk& chunk)
     }
 
     iMemChunk rchunk(iMemBlock::newOne(tchunk.m_memblock.block()->pool().data(), block_size), 0, tchunk.m_length);
-    rchunk.copy(&tchunk);
+    rchunk.copy(tchunk);
     rchunk.m_index += tchunk.m_length;
     rchunk.m_memblock.block()->ref();
     tchunk.m_memblock.block()->deref();
@@ -490,7 +490,7 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk& chunk)
         }
 
         rchunk.m_length = tchunk.m_length = std::min<size_t>(tchunk.m_length, block_size - rchunk.m_index);
-        rchunk.copy(&tchunk);
+        rchunk.copy(tchunk);
 
         rchunk.m_index += rchunk.m_length;
         ri += rchunk.m_length;
@@ -500,6 +500,38 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk& chunk)
     rchunk.m_length = block_size;
 
     chunk = rchunk;
+    return 0;
+}
+
+int iMemBlockQueue::peekIterator(IteratorFunc func, void* userdata)
+{
+        /* We need to pre-buffer */
+    if (updatePreBuf())
+        return -1;
+
+    fixCurrentRead();
+
+    /* We don't need to call fix_current_read() here, since
+     * pa_memblock_peek() already did that */
+    iMBQListItem* item = m_currentRead;
+    xint64 ri = m_readIndex;
+
+    while (item) {
+        /* We can append real data! */
+        iMemChunk tchunk = item->chunk;
+
+        xint64 d = ri - item->index;
+        tchunk.m_index += (size_t) d;
+        tchunk.m_length -= (size_t) d;
+
+        if (!func(tchunk, item->index + d, ri - m_readIndex, userdata))
+            break;
+
+        /* Go to _next item for the _next iteration */
+        item = item->_next;
+        ri += tchunk.m_length;
+    }
+
     return 0;
 }
 
@@ -702,7 +734,7 @@ void iMemBlockQueue::setMinReq(size_t minreq)
 
 void iMemBlockQueue::setPreBuf(size_t prebuf) 
 {
-    if (prebuf == (size_t) -1)
+    if ((size_t)-1 == prebuf)
         prebuf = m_tLength + m_base - m_minReq;
 
     m_preBuf = ((prebuf + m_base - 1) / m_base) * m_base;

@@ -133,7 +133,7 @@ protected:
         xint64 size() const;
         void clear();
         xint64 indexOf(char c) const;
-        xint64 indexOf(char c, xint64 maxLength, xint64 pos = 0) const;
+        xint64 indexOf(char c, xint64 maxLength, xint64 offset = 0) const;
         xint64 read(char *data, xint64 maxLength);
         iMemChunk read();
         xint64 peek(char *data, xint64 maxLength, xint64 offset = 0) const;

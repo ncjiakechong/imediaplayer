@@ -1309,6 +1309,20 @@ iByteArray::iByteArray(xsizetype size, iShell::Initialization)
 }
 
 /*!
+    Constructs a chunk size
+*/
+iByteArray::iByteArray(const iMemChunk& chunk)
+{
+    if (chunk.length() == 0) {
+        d = DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR);
+    } else {
+        Data* td = static_cast<Data *>(chunk.m_memblock.block());
+        d = DataPointer(td, static_cast<char*>(td->data().value()), chunk.length());
+        td->ref(true);
+    }
+}
+
+/*!
     Sets the size of the byte array to \a size bytes.
 
     If \a size is greater than the current size, the byte array is

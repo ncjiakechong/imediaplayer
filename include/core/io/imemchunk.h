@@ -39,18 +39,18 @@ public:
 
     /// Invalidate a memchunk. This does not free the containing memblock,
     /// but sets all members to zero.
-    iMemChunk& reset();
+    iMemChunk& reset(bool lifecycle = false);
 
     /// Copy the data in the src memchunk to the dst memchunk
-    iMemChunk& copy(iMemChunk *src);
+    iMemChunk& copy(const iMemChunk& src, size_t offset = 0);
+
+    /// indexof for sepcial char
+    xint64 indexOf(unsigned int c, size_t offset = 0) const;
 
     inline size_t length() const { return m_length; }
 
     /// Return true if any field is set != 0
     inline bool isValid() const { return (IX_NULLPTR != m_memblock.block()) || (m_index > 0) || (m_length > 0); }
-
-    //TODO: remove and replace with copy
-    iMemDataWraper data() const { if (isValid()) return m_memblock.block()->data4Chunk(*this); return iMemDataWraper(IX_NULLPTR, 0);}
 
 private:
     iMemGuard  m_memblock;
@@ -59,6 +59,7 @@ private:
 
     friend class iMCAlign;
     friend class iMemBlock;
+    friend class iByteArray;
     friend class iMemBlockQueue;
 };
 

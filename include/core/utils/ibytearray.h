@@ -93,6 +93,7 @@ public:
     };
 
     inline iByteArray();
+    iByteArray(const iMemChunk& chunk);
     iByteArray(const char *, xsizetype size = -1);
     iByteArray(xsizetype size, char c);
     iByteArray(xsizetype size, iShell::Initialization);
