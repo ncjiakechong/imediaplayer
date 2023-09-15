@@ -341,22 +341,24 @@ int iIODevice::iMBQueueRef::getChar()
     if (!m_buf || (m_buf->peek(tchunk) < 0))
         return -1;
 
-    char* data = (char*)tchunk.data().value();
-    int ret = uchar(*data);
+    int ret = 0;
+    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::new4Fixed(IX_NULLPTR, &ret, 1, false));
+    iMemChunk rchunk(block.data(), 0, 1);
+    rchunk.copy(tchunk);
     m_buf->drop(1);
 
-    //TODO: chunk block deref
+    //TODO-done: chunk block deref
     return ret;
 }
 void iIODevice::iMBQueueRef::putChar(char c) 
 { 
-    IX_ASSERT(m_buf); 
-    iMemBlock* block = iMemBlock::newOne(IX_NULLPTR, m_buf->getBase());
-    iMemChunk tchunk(block, 0, 1);
-    char* data = (char*)tchunk.data().value();
+    IX_ASSERT(m_buf);
+    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::newOne(IX_NULLPTR, m_buf->getBase()));
+    char* data = (char*)block->data().value();
     *data = c;
 
-    m_buf->pushAlign(tchunk);
+    //TODO-done: chuck block ref?
+    m_buf->pushAlign(iMemChunk(block.data(), 0, 1));
 }
 
 xint64 iIODevice::iMBQueueRef::size() const 
@@ -368,35 +370,64 @@ void iIODevice::iMBQueueRef::clear()
 xint64 iIODevice::iMBQueueRef::indexOf(char c) const 
 { return indexOf(c, m_buf->length()); }
 
-// TODO: implement
-xint64 iIODevice::iMBQueueRef::indexOf(char c, xint64 maxLength, xint64 pos) const 
-{ return /*(m_buf ? m_buf->indexOf(c, maxLength, pos) : */ IX_INT64_C(-1); }
+struct _IndexOfData {
+    char c;
+    xint64 pos;
+    xint64 offset;
+    xint64 maxLength;
+};
+
+static bool _IndexofFunc(const iMemChunk& chunk, xint64 pos, xint64 distance, void* userdata)
+{
+    _IndexOfData* data = static_cast<_IndexOfData*>(userdata);
+    if (distance + chunk.length() <= data->offset)
+        return true;
+    if (distance >= data->maxLength + data->offset)
+        return false;
+
+    pos = chunk.indexOf(data->c, (distance < data->offset ? 0 : distance - data->offset));
+    if (pos >= 0) {
+        data->pos = pos + distance + (distance < data->offset ? data->offset : 0);
+        return false;
+    }
+
+    return true;
+}
+
+xint64 iIODevice::iMBQueueRef::indexOf(char c, xint64 maxLength, xint64 offset) const 
+{
+    _IndexOfData userdata = {c, -1, offset, maxLength};
+    m_buf->peekIterator(_IndexofFunc, &userdata);
+    return userdata.pos;
+}
 
 xint64 iIODevice::iMBQueueRef::read(char *data, xint64 maxLength) 
 {
-    if (!m_buf)
+    if (!m_buf || maxLength <= 0)
         return 0;
 
     xint64 readSoFar = 0;
-    const xint64 bytesToRead = std::min<xint64>(m_buf->length(), maxLength);
+    const xint64 bytesToRead = std::min<xint64>(m_buf->getMaxLength(), maxLength);
+    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::new4Fixed(IX_NULLPTR, data, maxLength, false));
     while (readSoFar < bytesToRead) {
         iMemChunk tchunk;
         if (m_buf->peek(tchunk) < 0)
             break;
-        
+
         const xint64 bytesToReadFromThisBlock = std::min<xint64>(bytesToRead - readSoFar, tchunk.length());
-        char* readPointer = (char*)tchunk.data().value();
-        memcpy(data + readSoFar, readPointer, bytesToReadFromThisBlock);
+        iMemChunk rchunk(block.data(), readSoFar, bytesToReadFromThisBlock);
+        rchunk.copy(tchunk);
+
         readSoFar += bytesToReadFromThisBlock;
         m_buf->drop(bytesToReadFromThisBlock);
-
-        //TODO: chunk block deref
+        tchunk.reset(true);
+        //TODO-done: chunk block deref
     }
 
-    return bytesToRead;
+    return readSoFar;
 }
 
-// TODO: memchunk should deref
+// TODO-done: memchunk should deref
 iMemChunk iIODevice::iMBQueueRef::read()
 {
     iMemChunk tchunk;
@@ -405,9 +436,29 @@ iMemChunk iIODevice::iMBQueueRef::read()
 
     m_buf->peek(tchunk);
     m_buf->drop(tchunk.length());
-    //TODO: chunk block deref
-
     return tchunk;
+}
+
+struct _PeekMaxData {
+    xint64 offset;
+    xint64 maxLength;
+    xint64 lastDistance;
+    iMemBlock* block;
+};
+
+static bool _PeekMaxFunc(const iMemChunk& chunk, xint64, xint64 distance, void* userdata)
+{
+    _PeekMaxData* data = static_cast<_PeekMaxData*>(userdata);
+    if (distance + chunk.length() <= data->offset)
+        return true;
+    if (distance >= data->maxLength + data->offset)
+        return false;
+
+    IX_ASSERT(data->lastDistance = distance);
+    iMemChunk rchunk(data->block, (distance < data->offset ? 0 : distance - data->offset), data->maxLength + data->offset - distance);
+    rchunk.copy(chunk, distance < data->offset ? data->offset : 0);
+    data->lastDistance = distance + chunk.length();
+    return true;
 }
 
 xint64 iIODevice::iMBQueueRef::peek(char *data, xint64 maxLength, xint64 offset) const 
@@ -415,12 +466,11 @@ xint64 iIODevice::iMBQueueRef::peek(char *data, xint64 maxLength, xint64 offset)
     if (!m_buf)
         return 0;
     
-    iMemChunk tchunk;
-    m_buf->peekFixedSize(std::min<xint64>(maxLength + offset, m_buf->length()), tchunk);
-    IX_ASSERT(tchunk.length() >= offset);
-    char* readPointer = (char*)tchunk.data().value();
-    memcpy(data, readPointer + offset, tchunk.length() - offset);
-    return tchunk.length() - offset;
+    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::new4Fixed(IX_NULLPTR, data, maxLength, false));
+    _PeekMaxData userdata = {offset, maxLength, 0, block.data()};
+    m_buf->peekIterator(_PeekMaxFunc, &userdata);
+
+    return (userdata.lastDistance > offset ? userdata.lastDistance - offset : 0);
 }
 
 void iIODevice::iMBQueueRef::append(const char *data, xint64 size) 
@@ -429,15 +479,15 @@ void iIODevice::iMBQueueRef::append(const char *data, xint64 size)
     if (0 == size)
         return;
 
-    iMemBlock* block = iMemBlock::newOne(IX_NULLPTR, std::min<xint64>(m_buf->getBase(), size));
-    iMemChunk tchunk(block, 0, size);
-    char* writePointer = (char*)tchunk.data().value();
+    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::newOne(IX_NULLPTR, std::max<xint64>(m_buf->getBase(), size)));
+    char* writePointer = (char*)block->data().value();
     if (size == 1)
         *writePointer = *data;
     else
         ::memcpy(writePointer, data, size);
 
-    m_buf->pushAlign(tchunk);
+    // TODO-done: chunk block ref?
+    m_buf->pushAlign(iMemChunk(block.data(), 0, size));
 }
 
 void iIODevice::iMBQueueRef::append(const iMemChunk& chunk)
@@ -598,7 +648,7 @@ void iIODevice::setReadChannelCount(int count)
     int distance = std::abs(count - (int)m_readBuffers.size());
     for (int idx = 0; idx < distance; ++idx) {
         if (count > m_readBuffers.size()) {
-            m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceRead"), 0, std::numeric_limits<size_t>::max(), 0, m_readBufferChunkSize, -1, 0, 0, IX_NULLPTR)));
+            m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceRead"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
         } else {
             m_readBuffers.erase(count + distance - idx);
         }
@@ -628,7 +678,7 @@ void iIODevice::setWriteChannelCount(int count)
     int distance = std::abs(count - (int)m_writeBuffers.size());
     for (int idx = 0; idx < distance; ++idx) {
         if (count > m_writeBuffers.size()) {
-            m_writeBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceWrite"), 0, std::numeric_limits<size_t>::max(), 0, m_writeBufferChunkSize, -1, 0, 0, IX_NULLPTR)));
+            m_writeBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceWrite"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
         } else {
             m_writeBuffers.erase(count + distance - idx);
         }
@@ -873,7 +923,6 @@ xint64 iIODevice::read(char *data, xint64 maxSize)
     CHECK_READABLE(read, xint64(-1));
 
     const xint64 readBytes = readImpl(data, maxSize);
-
     return readBytes;
 }
 
@@ -882,7 +931,7 @@ xint64 iIODevice::read(char *data, xint64 maxSize)
 */
 xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
 {
-    const bool buffered = (m_openMode & iIODevice::Unbuffered) == 0;
+    const bool buffered = (m_readBufferChunkSize != 0 && (m_openMode & iIODevice::Unbuffered) == 0);
     const bool sequential = isSequential4Mode();
     const bool keepDataInBuffer = sequential
                                   ? peeking || m_transactionStarted
@@ -933,11 +982,12 @@ xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
                             ? xint64(m_readBufferChunkSize)
                             : maxSize;
                     // Try to fill iIODevice buffer by single read
-                    iMemBlock* block = iMemBlock::newOne(IX_NULLPTR, std::max<xint64>(m_readBufferChunkSize, bytesToBuffer));
+                    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::newOne(IX_NULLPTR, std::max<xint64>(m_readBufferChunkSize, bytesToBuffer)));
                     readFromDevice = readData((char*)block->data().value(), bytesToBuffer);
 
+                    // TODO-done: chunk block ref?, no
                     deviceAtEof = (readFromDevice != bytesToBuffer);
-                    m_buffer.append(iMemChunk(block, 0, readFromDevice));
+                    m_buffer.append(iMemChunk(block.data(), 0, readFromDevice));
                     if (readFromDevice > 0) {
                         if (!sequential)
                             m_devicePos += readFromDevice;
@@ -1019,9 +1069,11 @@ iByteArray iIODevice::read(xint64 maxSize)
     // Try to prevent the data from being copied, if we have a chunk
     // with the same size in the read buffer.
     if (maxSize == m_buffer.nextDataBlockSize() && !m_transactionStarted
-        && (m_openMode & (iIODevice::ReadOnly | iIODevice::Text)) == iIODevice::ReadOnly) {
+        && (m_openMode & iIODevice::Text) == 0) {
+        //TODO-done: chunk block deref
         iMemChunk chunk = m_buffer.read();
-        result = iByteArray((char*)chunk.data().value(), chunk.length());
+        result = iByteArray(chunk);
+        chunk.reset(true);
         if (!isSequential4Mode())
             m_pos += maxSize;
         if (m_buffer.isEmpty())

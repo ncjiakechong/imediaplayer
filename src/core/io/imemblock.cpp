@@ -516,10 +516,10 @@ void iMemBlock::statAdd()
     m_pool->m_stat.nAllocatedByType[m_type] ++;
     m_pool->m_stat.nAccumulatedByType[m_type] ++;
 
-    // iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
-    //                     "pool %s: add length %zu, allocatedSize %d, accumulatedSize %d", 
-    //                     m_pool->m_name, m_length, m_pool->m_stat.allocatedSize.value(), 
-    //                     m_pool->m_stat.accumulatedSize.value());
+    iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
+                        "pool %s: add length %zu, allocatedSize %d, accumulatedSize %d", 
+                        m_pool->m_name, m_length, m_pool->m_stat.allocatedSize.value(), 
+                        m_pool->m_stat.accumulatedSize.value());
 }
 
 /* No lock necessary */
@@ -541,12 +541,11 @@ void iMemBlock::statRemove()
     }
 
     m_pool->m_stat.nAllocatedByType[m_type]--;
-}
 
-/* No lock necessary */
-iMemDataWraper iMemBlock::data4Chunk(const iMemChunk& c) const
-{
-    return iMemDataWraper(c.m_memblock.block(), c.m_index);
+    iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
+                    "pool %s: remove length %zu, allocatedSize %d, accumulatedSize %d", 
+                    m_pool->m_name, m_length, m_pool->m_stat.allocatedSize.value(), 
+                    m_pool->m_stat.accumulatedSize.value());
 }
 
 /* No lock necessary */

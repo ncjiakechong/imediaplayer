@@ -12,6 +12,9 @@
 #include <string.h>
 #include "core/io/imemchunk.h"
 #include "core/io/imemblock.h"
+#include "core/io/ilog.h"
+
+#define ILOG_TAG "ix_utils"
 
 namespace iShell {
 
@@ -54,7 +57,6 @@ iMemChunk& iMemChunk::makeWritable(size_t min) {
     iMemBlock* n = iMemBlock::newOne(m_memblock.block()->pool().data(), l);
     memcpy(n->data().value(), (xuint8*) m_memblock.block()->data().value() + m_index, m_length);
 
-    // TODO
     n->ref();
     m_memblock.block()->deref();
 
@@ -63,20 +65,37 @@ iMemChunk& iMemChunk::makeWritable(size_t min) {
     return *this;
 }
 
-iMemChunk& iMemChunk::reset()
+iMemChunk& iMemChunk::reset(bool lifecycle)
 {
+    if (lifecycle && (IX_NULLPTR != m_memblock.block()))
+        m_memblock.block()->deref();
+
     m_memblock = iMemGuard();
     m_index = 0;
     m_length = 0;
     return *this;
 }
 
-iMemChunk& iMemChunk::copy(iMemChunk *src)
+iMemChunk& iMemChunk::copy(const iMemChunk& src, size_t offset)
 {
-    IX_ASSERT(src && (m_length == src->m_length));
+    IX_ASSERT(src.m_length >= offset);
 
-    memmove((xuint8*)m_memblock.block()->data().value() + m_index, (xuint8*) src->m_memblock.block()->data().value() + src->m_index, m_length);
+    size_t length = std::min(m_length, src.m_length - offset);
+    memmove((xuint8*)m_memblock.block()->data().value() + m_index, (xuint8*) src.m_memblock.block()->data().value() + src.m_index + offset, length);
+    m_length = length;
+    
     return *this;
+}
+
+xint64 iMemChunk::indexOf(unsigned int c, size_t offset) const
+{
+    IX_ASSERT(m_length >= offset);
+    const char* ptr = (const char*)m_memblock.block()->data().value() + m_index + offset;
+    const char *findPtr = reinterpret_cast<const char *>(memchr(ptr, c, m_length - offset));
+    if (findPtr)
+        return xint64(findPtr - ptr);
+    
+    return -1;
 }
 
 iMCAlign::iMCAlign(size_t base)

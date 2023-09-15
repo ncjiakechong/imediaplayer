@@ -110,6 +110,8 @@ struct IX_CORE_EXPORT iBufferAttr
 class IX_CORE_EXPORT iMemBlockQueue
 {
 public:
+    typedef bool (*IteratorFunc)(const iMemChunk& chunk, xint64 pos, xint64 distance, void* userdata);
+
     /// Parameters:
     /// name:      name for debugging purposes
     /// idx:       start value for both read and write index
@@ -164,10 +166,13 @@ public:
     /// was passed we return the length of the hole in chunk->length.
     int peek(iMemChunk& chunk);
 
-    /// Much like pa_memblockq_peek, but guarantees that the returned chunk
+    /// Much like peek, but guarantees that the returned chunk
     /// will have a length of the block size passed. You must configure a
     /// silence memchunk for this memblockq if you use this call.
     int peekFixedSize(size_t block_size, iMemChunk& chunk);
+
+    /// Much like peek, interator each block data in the queue
+    int peekIterator(IteratorFunc func, void* userdata);
 
     /// Drop the specified bytes from the queue.
     xint64 drop(size_t length);
