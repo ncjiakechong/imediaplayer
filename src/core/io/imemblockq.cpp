@@ -73,6 +73,8 @@ iMemBlockQueue::~iMemBlockQueue()
 
     if (m_silence.m_memblock.block())
         m_silence.m_memblock.block()->deref();
+
+    delete m_mcalign;
 }
 
 void iMemBlockQueue::fixCurrentRead() 
@@ -385,7 +387,7 @@ bool iMemBlockQueue::updatePreBuf()
     return false;
 }
 
-// TODO: memchunk should deref
+/// memchunk should deref after return
 int iMemBlockQueue::peek(iMemChunk& chunk) 
 {
     /* We need to pre-buffer */
@@ -420,7 +422,6 @@ int iMemBlockQueue::peek(iMemChunk& chunk)
             if (length <= 0)
                 return -1;
 
-            // TODO: deref?
             chunk.m_memblock = iMemGuard();
             chunk.m_length = length;
         }

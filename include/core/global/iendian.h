@@ -12,6 +12,7 @@
 #define IENDIAN_H
 
 // include cstdlib and hope that it defines __GLIBC__ for glibc-based systems
+#include <limits>
 #include <cstdlib>
 #include <cstring>
 

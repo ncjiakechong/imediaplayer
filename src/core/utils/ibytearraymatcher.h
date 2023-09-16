@@ -11,6 +11,7 @@
 #ifndef IBYTEARRAYMATCHER_H
 #define IBYTEARRAYMATCHER_H
 
+#include <limits>
 #include <core/utils/ibytearray.h>
 
 namespace iShell {
