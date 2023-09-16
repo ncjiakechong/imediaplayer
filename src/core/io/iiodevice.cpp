@@ -8,6 +8,7 @@
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
+#include <limits>
 
 #include "core/io/iiodevice.h"
 #include "utils/itools_p.h"
@@ -346,8 +347,8 @@ int iIODevice::iMBQueueRef::getChar()
     iMemChunk rchunk(block.data(), 0, 1);
     rchunk.copy(tchunk);
     m_buf->drop(1);
+    tchunk.reset(true);
 
-    //TODO-done: chunk block deref
     return ret;
 }
 void iIODevice::iMBQueueRef::putChar(char c) 
@@ -357,7 +358,6 @@ void iIODevice::iMBQueueRef::putChar(char c)
     char* data = (char*)block->data().value();
     *data = c;
 
-    //TODO-done: chuck block ref?
     m_buf->pushAlign(iMemChunk(block.data(), 0, 1));
 }
 
@@ -421,13 +421,11 @@ xint64 iIODevice::iMBQueueRef::read(char *data, xint64 maxLength)
         readSoFar += bytesToReadFromThisBlock;
         m_buf->drop(bytesToReadFromThisBlock);
         tchunk.reset(true);
-        //TODO-done: chunk block deref
     }
 
     return readSoFar;
 }
 
-// TODO-done: memchunk should deref
 iMemChunk iIODevice::iMBQueueRef::read()
 {
     iMemChunk tchunk;
@@ -486,7 +484,6 @@ void iIODevice::iMBQueueRef::append(const char *data, xint64 size)
     else
         ::memcpy(writePointer, data, size);
 
-    // TODO-done: chunk block ref?
     m_buf->pushAlign(iMemChunk(block.data(), 0, size));
 }
 
@@ -650,7 +647,11 @@ void iIODevice::setReadChannelCount(int count)
         if (count > m_readBuffers.size()) {
             m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceRead"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
         } else {
-            m_readBuffers.erase(count + distance - idx);
+            std::unordered_map<int, iMemBlockQueue*>::iterator it = m_readBuffers.find(count + distance - idx - 1);
+            IX_ASSERT(it != m_readBuffers.end());
+            iMemBlockQueue* queue = it->second;
+            m_readBuffers.erase(it);
+            delete queue;
         }
     }
 
@@ -680,7 +681,11 @@ void iIODevice::setWriteChannelCount(int count)
         if (count > m_writeBuffers.size()) {
             m_writeBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceWrite"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
         } else {
-            m_writeBuffers.erase(count + distance - idx);
+            std::unordered_map<int, iMemBlockQueue*>::iterator it = m_writeBuffers.find(count + distance - idx - 1);
+            IX_ASSERT(it != m_writeBuffers.end());
+            iMemBlockQueue* queue = it->second;
+            m_writeBuffers.erase(it);
+            delete queue;
         }
     }
 
@@ -985,7 +990,6 @@ xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
                     iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::newOne(IX_NULLPTR, std::max<xint64>(m_readBufferChunkSize, bytesToBuffer)));
                     readFromDevice = readData((char*)block->data().value(), bytesToBuffer);
 
-                    // TODO-done: chunk block ref?, no
                     deviceAtEof = (readFromDevice != bytesToBuffer);
                     m_buffer.append(iMemChunk(block.data(), 0, readFromDevice));
                     if (readFromDevice > 0) {
@@ -1070,7 +1074,6 @@ iByteArray iIODevice::read(xint64 maxSize)
     // with the same size in the read buffer.
     if (maxSize == m_buffer.nextDataBlockSize() && !m_transactionStarted
         && (m_openMode & iIODevice::Text) == 0) {
-        //TODO-done: chunk block deref
         iMemChunk chunk = m_buffer.read();
         result = iByteArray(chunk);
         chunk.reset(true);
