@@ -316,7 +316,10 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
         int scopeLevel = data->scopeLevel;
         if (scopeLevel == 0 && loopLevel != 0)
             scopeLevel = 1;
-        static_cast<iDeferredDeleteEvent *>(event)->level = loopLevel + scopeLevel;
+
+        iDeferredDeleteEvent* deleteEvent = static_cast<iDeferredDeleteEvent *>(event);
+        deleteEvent->m_loopLevel = loopLevel;
+        deleteEvent->m_scopeLevel = scopeLevel;
     }
 
     iPostEvent pe(receiver, event, priority);
@@ -465,13 +468,16 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
             //    events posted by the current event loop; or
             // 3) if the event was posted before the outermost event loop.
 
-            int eventLevel = static_cast<iDeferredDeleteEvent *>(pe.event)->loopLevel();
+            const int eventLoopLevel = static_cast<iDeferredDeleteEvent *>(pe.event)->loopLevel();
+            const int eventScopeLevel = static_cast<iDeferredDeleteEvent *>(pe.event)->scopeLevel();
+
+            const bool postedBeforeOutermostLoop = eventLoopLevel == 0;
             int loopLevel = threadData->loopLevel + threadData->scopeLevel;
             const bool allowDeferredDelete =
-                (eventLevel > loopLevel
-                 || (!eventLevel && loopLevel > 0)
+                (eventLoopLevel + eventScopeLevel > threadData->loopLevel + threadData->scopeLevel
+                 || (postedBeforeOutermostLoop && threadData->loopLevel > 0)
                  || (event_type == iEvent::DeferredDelete
-                     && eventLevel == loopLevel));
+                     && eventLoopLevel + eventScopeLevel == threadData->loopLevel + threadData->scopeLevel));
             if (!allowDeferredDelete) {
                 // cannot send deferred delete
                 if (!event_type && !receiver) {

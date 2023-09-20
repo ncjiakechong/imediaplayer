@@ -79,7 +79,8 @@ iChildEvent::~iChildEvent()
 
 iDeferredDeleteEvent::iDeferredDeleteEvent()
     : iEvent(iEvent::DeferredDelete)
-    , level(0)
+    , m_loopLevel(0)
+    , m_scopeLevel(0)
 {}
 
 /*!
