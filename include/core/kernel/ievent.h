@@ -88,9 +88,11 @@ class IX_CORE_EXPORT iDeferredDeleteEvent : public iEvent
 public:
     explicit iDeferredDeleteEvent();
     virtual ~iDeferredDeleteEvent();
-    int loopLevel() const { return level; }
+    int loopLevel() const { return m_loopLevel; }
+    int scopeLevel() const { return m_scopeLevel; }
 private:
-    int level;
+    int m_loopLevel;
+    int m_scopeLevel;
     friend class iCoreApplication;
 };
 

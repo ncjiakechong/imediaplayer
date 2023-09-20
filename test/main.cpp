@@ -14,6 +14,7 @@
 #include "core/io/ilog.h"
 #include "core/thread/iwakeup.h"
 #include "core/kernel/ieventsource.h"
+#include "core/thread/ithread.h"
 
 #define ILOG_TAG "test"
  
@@ -22,13 +23,15 @@ extern int test_object(void);
 extern int test_ivariant(void);
 extern int test_thread(void);
 extern int test_timer(void);
-extern int test_player(const iShell::iString&);
+extern int test_player(const iShell::iString&, void (*callback)());
 
 class TestCase : public iShell::iObject
 {
     IX_OBJECT(TestCase)
 public:
-    TestCase(iObject* parent = IX_NULLPTR) : iObject(parent) {}
+    TestCase(iObject* parent = IX_NULLPTR) : iObject(parent) { s_testCase = this; }
+
+    static void playFinish() { if (s_testCase) s_testCase->doTestCase(6); };
 
     int start() const {
         TestCase* _This = const_cast<TestCase*>(this);
@@ -66,12 +69,13 @@ public:
                 std::advance(tmpIt, 1);
                 url = *tmpIt;
             }
-            if (!url.isEmpty() && 0 == test_player(url))
+            if (!url.isEmpty() && 0 == test_player(url, &playFinish))
                 return;
         }
             break;
         #endif
         default:
+            ilog_warn("all test completed!!!");
             iShell::iCoreApplication::quit();
             return;
 
@@ -81,7 +85,12 @@ public:
     }
 
     void tstcase_sig(int c) ISIGNAL(tstcase_sig, c)
+
+private:
+    static TestCase* s_testCase;
 };
+
+TestCase* TestCase::s_testCase = IX_NULLPTR;
 
 int main(int argc, char **argv)
 {

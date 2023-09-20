@@ -11,6 +11,8 @@
 #include <core/thread/imutex.h>
 #include <core/kernel/itimer.h>
 #include <core/kernel/icoreapplication.h>
+#include <core/thread/ithread.h>
+#include "../core/thread/ithread_p.h"
 #include "igstreamerbushelper_p.h"
 
 namespace iShell {
@@ -141,6 +143,7 @@ void iGstreamerBusHelper::interval()
 {
     GstMessage* message;
     while ((message = gst_bus_poll(m_bus, GST_MESSAGE_ANY, 0)) != IX_NULLPTR) {
+        iScopedScopeLevelCounter scopeLevelCounter(iThread::get2(iThread::currentThread()));
         processMessage(message);
         gst_message_unref(message);
     }

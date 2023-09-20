@@ -15,6 +15,7 @@
 
 #include "core/kernel/icoreapplication.h"
 #include "core/kernel/ieventdispatcher.h"
+#include "core/kernel/ievent.h"
 #include "core/thread/ithread.h"
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
@@ -237,6 +238,8 @@ void iThreadImpl::internalThreadFunc()
     {
         thread->m_mutex.lock();
         thread->m_isInFinish = true;
+
+        iCoreApplication::sendPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
 
         iEventDispatcher *eventDispatcher = data->dispatcher.load();
         if (eventDispatcher) {

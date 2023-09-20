@@ -121,10 +121,14 @@ public:
     : iObject(parent)
     , m_loopTime(0)
     {
-        player = new iMediaPlayer();
+        player = new iMediaPlayer(this);
         player->observeProperty("state", this, &TestPlayer::stateChanged);
         player->observeProperty("position", this, &TestPlayer::positionChanged);
         iObject::connect(player, &iMediaPlayer::errorEvent, this, &TestPlayer::errorEvent);
+    }
+
+    ~TestPlayer()
+    {
     }
 
     void errorEvent(iMediaPlayer::Error errorNum)
@@ -144,8 +148,8 @@ public:
             return;
         }
 
+        player->stop();
         deleteLater();
-        iCoreApplication::quit();
     }
 
     void positionChanged(xint64 position)
@@ -183,8 +187,9 @@ public:
     iMediaPlayer* player;
 };
 
-int test_player(const iString& path)
+int test_player(const iString& path, void (*callback)())
 {
     TestPlayer* player = new TestPlayer();
+    iObject::connect(player, &TestPlayer::destroyed, callback);
     return player->play(path);
 }
