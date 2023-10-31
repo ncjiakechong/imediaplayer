@@ -36,7 +36,7 @@
 
 namespace iShell {
 
-iCoreApplication* iCoreApplication::self = IX_NULLPTR;
+iCoreApplication* iCoreApplication::s_self = IX_NULLPTR;
 
 iCoreApplicationPrivate::iCoreApplicationPrivate(int argc, char **argv)
     : m_argc(argc)
@@ -69,7 +69,7 @@ iEventDispatcher* iCoreApplicationPrivate::createEventDispatcher() const
 iCoreApplication::iCoreApplication(iCoreApplicationPrivate* priv)
     : m_private(priv)
 {
-    self = this;
+    s_self = this;
     init();
 }
 
@@ -77,7 +77,7 @@ iCoreApplication::iCoreApplication(int argc, char** argv)
     : m_aboutToQuitEmitted(false)
     , m_private(new iCoreApplicationPrivate(argc, argv))
 {
-    self = this;
+    s_self = this;
     init();
 }
 
@@ -91,7 +91,7 @@ iCoreApplication::~iCoreApplication()
     }
 
     delete m_private;
-    self = IX_NULLPTR;
+    s_self = IX_NULLPTR;
 }
 
 void iCoreApplication::init()
@@ -119,13 +119,13 @@ std::list<iString> iCoreApplication::arguments()
 {
     std::list<iString> list;
 
-    if (!self) {
+    if (!s_self) {
         ilog_warn("iCoreApplication::arguments: Please instantiate the iCoreApplication object first");
         return list;
     }
 
-    const int ac = self->m_private->m_argc;
-    char ** const av = self->m_private->m_argv;
+    const int ac = s_self->m_private->m_argc;
+    char ** const av = s_self->m_private->m_argv;
 
     for (int a = 0; a < ac; ++a) {
         list.push_back(iString::fromLocal8Bit(av[a]));
@@ -167,13 +167,13 @@ iEventDispatcher* iCoreApplication::createEventDispatcher()
 
 int iCoreApplication::exec()
 {
-    iThreadData *threadData = self->m_threadData;
+    iThreadData *threadData = s_self->m_threadData;
     if (threadData != iThreadData::current()) {
-        ilog_warn(self->objectName(), ": Must be called from the main thread");
+        ilog_warn(s_self->objectName(), ": Must be called from the main thread");
         return -1;
     }
     if (!threadData->eventLoops.empty()) {
-        ilog_warn(self->objectName(), ": The event loop is already running");
+        ilog_warn(s_self->objectName(), ": The event loop is already running");
         return -1;
     }
 
@@ -182,8 +182,8 @@ int iCoreApplication::exec()
     int returnCode = eventLoop.exec();
     threadData->quitNow = false;
 
-    if (self)
-        self->execCleanup();
+    if (s_self)
+        s_self->execCleanup();
 
     return returnCode;
 }
@@ -209,10 +209,10 @@ void iCoreApplication::quit()
 
 void iCoreApplication::exit(int retCode)
 {
-    if (!self)
+    if (!s_self)
         return;
 
-    iThreadData *data = self->m_threadData;
+    iThreadData *data = s_self->m_threadData;
     data->quitNow = true;
     for (std::list<iEventLoop *>::iterator it = data->eventLoops.begin();
          it != data->eventLoops.end(); ++it) {
@@ -244,14 +244,14 @@ bool iCoreApplication::doNotify(iObject *receiver, iEvent *event)
 bool iCoreApplication::sendEvent(iObject *receiver, iEvent *event)
 {
     bool selfRequired = threadRequiresCoreApplication();
-    if (!self && selfRequired)
+    if (!s_self && selfRequired)
         return false;
 
     iScopedScopeLevelCounter scopeLevelCounter(receiver->m_threadData);
     if (!selfRequired)
         return doNotify(receiver, event);
 
-    return self->notify(receiver, event);
+    return s_self->notify(receiver, event);
 }
 
 void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
@@ -289,7 +289,7 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
 
     // if this is one of the compressible events, do compression
     if (receiver->m_postedEvents
-        && self && self->compressEvent(event, receiver, &data->postEventList)) {
+        && s_self && s_self->compressEvent(event, receiver, &data->postEventList)) {
         data->postEventList.mutex.unlock();
         return;
     }
