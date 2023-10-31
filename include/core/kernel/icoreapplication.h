@@ -40,7 +40,7 @@ public:
     iCoreApplication(int argc, char **argv);
     virtual ~iCoreApplication();
 
-    static iCoreApplication *instance() { return self; }
+    static iCoreApplication *instance() { return s_self; }
 
     static int exec();
     static void exit(int retCode = 0);
@@ -77,7 +77,7 @@ private:
     void init();
     void execCleanup();
 
-    static iCoreApplication* self;
+    static iCoreApplication* s_self;
 
     bool m_aboutToQuitEmitted;
     iCoreApplicationPrivate* m_private;
