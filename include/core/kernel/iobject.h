@@ -196,14 +196,15 @@ public:
     ///
     /// You can pass up to eight arguments (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) to the member function.
     template<class Obj, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection) {
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(), -1>::Object* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)();
         _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, IX_NULLPTR);
     }
 
     template<class Obj, class Arg1, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1), typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection) {
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1), -1>::Object* obj,
+                             Ret (Obj::*func)(Arg1), typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1);
         typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
 
@@ -213,7 +214,8 @@ public:
     }
 
     template<class Obj, class Arg1, class Arg2, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2),
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2), -1>::Object* obj,
+                             Ret (Obj::*func)(Arg1, Arg2),
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              ConnectionType type = AutoConnection) {
@@ -226,7 +228,8 @@ public:
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2, Arg3),
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3), -1>::Object* obj,
+                             Ret (Obj::*func)(Arg1, Arg2, Arg3),
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
@@ -240,7 +243,8 @@ public:
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4),
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4), -1>::Object* obj,
+                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4),
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
@@ -255,7 +259,7 @@ public:
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
-    static bool invokeMethod(Obj* obj,
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5), -1>::Object* obj,
                              Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5),
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
@@ -273,7 +277,7 @@ public:
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
              class Arg5, class Arg6, class Ret>
-    static bool invokeMethod(Obj* obj,
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>::Object* obj,
                              Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6),
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
@@ -292,7 +296,7 @@ public:
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
              class Arg5, class Arg6, class Arg7, class Ret>
-    static bool invokeMethod(Obj* obj,
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>::Object* obj,
                              Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7),
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
@@ -312,7 +316,7 @@ public:
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
              class Arg5, class Arg6, class Arg7, class Arg8, class Ret>
-    static bool invokeMethod(Obj* obj,
+    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), -1>::Object* obj,
                              Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8),
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
@@ -332,14 +336,15 @@ public:
     }
 
     template<class Obj, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)() const, ConnectionType type = AutoConnection) {
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)() const, -1>::Object* obj, Ret (Obj::*func)() const, ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)() const;
         _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, IX_NULLPTR);
     }
 
     template<class Obj, class Arg1, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1) const, typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection) {
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1) const, -1>::Object* obj,
+                             Ret (Obj::*func)(Arg1) const, typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1) const;
         typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
 
@@ -349,7 +354,8 @@ public:
     }
 
     template<class Obj, class Arg1, class Arg2, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2) const,
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2) const, -1>::Object* obj,
+                             Ret (Obj::*func)(Arg1, Arg2) const,
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              ConnectionType type = AutoConnection) {
@@ -362,7 +368,8 @@ public:
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2, Arg3) const,
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3) const, -1>::Object* obj,
+                             Ret (Obj::*func)(Arg1, Arg2, Arg3) const,
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
@@ -376,7 +383,8 @@ public:
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4) const,
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4) const, -1>::Object* obj,
+                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4) const,
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
@@ -391,7 +399,7 @@ public:
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
-    static bool invokeMethod(Obj* obj,
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5) const, -1>::Object* obj,
                              Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5) const,
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
@@ -409,7 +417,7 @@ public:
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
              class Arg5, class Arg6, class Ret>
-    static bool invokeMethod(Obj* obj,
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, -1>::Object* obj,
                              Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const,
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
@@ -428,7 +436,7 @@ public:
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
              class Arg5, class Arg6, class Arg7, class Ret>
-    static bool invokeMethod(Obj* obj,
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const, -1>::Object* obj,
                              Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const,
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
@@ -448,7 +456,7 @@ public:
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
              class Arg5, class Arg6, class Arg7, class Arg8, class Ret>
-    static bool invokeMethod(Obj* obj,
+    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const, -1>::Object* obj,
                              Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const,
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,

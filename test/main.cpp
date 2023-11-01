@@ -75,6 +75,10 @@ public:
             break;
         #endif
         default:
+            // test invokeMethod
+            invokeMethod(this, &TestCase::setParent, IX_NULLPTR);
+            invokeMethod(this, &iObject::setParent, IX_NULLPTR);
+            
             ilog_warn("all test completed!!!");
             iShell::iCoreApplication::quit();
             return;
