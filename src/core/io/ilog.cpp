@@ -41,7 +41,7 @@ static inline const char* ilog_path_basename (const char* file_name)
     return file_name;
 }
 
-static bool ilog_default_filter(void*, const char*, ilog_level_t level)
+static bool ilog_default_filter(void*, const char*, iLogLevel level)
 {
     if (level <= ILOG_DEBUG)
         return true;
@@ -55,7 +55,7 @@ static void ilog_default_set_threshold(void*, const char* patterns, bool reset)
     IX_UNUSED(reset);
 }
 
-static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t level, const char* file, const char* function, int line, const char* msg, int)
+static void ilog_default_meta_callback(void*, const char* tag, iLogLevel level, const char* file, const char* function, int line, const char* msg, int)
 {
     static const char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
     char cur_level = '-';
@@ -84,7 +84,7 @@ static void ilog_default_meta_callback(void*, const char* tag, ilog_level_t leve
     fflush(stdout);
 }
 
-static void ilog_default_data_callback(void*, const char* tag, ilog_level_t level, const char* file, const char* function, int line, const void* msg, int size)
+static void ilog_default_data_callback(void*, const char* tag, iLogLevel level, const char* file, const char* function, int line, const void* msg, int size)
 {
     static const char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
     char cur_level = '-';
@@ -135,26 +135,26 @@ iLogTarget iLogger::setDefaultTarget(const iLogTarget& target)
 {
     iLogTarget oldTarget = s_target;
     
-    if (!target.set_threshold || !target.filter || !target.meta_callback || !target.data_callback) {
+    if (!target.setThreshold || !target.filter || !target.metaCallback || !target.dataCallback) {
         s_target.user_data = IX_NULLPTR;
         s_target.filter = &ilog_default_filter;
-        s_target.set_threshold = &ilog_default_set_threshold;
-        s_target.meta_callback = &ilog_default_meta_callback;
-        s_target.data_callback = &ilog_default_data_callback;
+        s_target.setThreshold = &ilog_default_set_threshold;
+        s_target.metaCallback = &ilog_default_meta_callback;
+        s_target.dataCallback = &ilog_default_data_callback;
         return oldTarget;
     }
 
     s_target.user_data = target.user_data;
     s_target.filter = target.filter;
-    s_target.set_threshold = target.set_threshold;
-    s_target.meta_callback = target.meta_callback;
-    s_target.data_callback = target.data_callback;
+    s_target.setThreshold = target.setThreshold;
+    s_target.metaCallback = target.metaCallback;
+    s_target.dataCallback = target.dataCallback;
     return oldTarget;
 }
 
 void iLogger::setThreshold(const char* patterns, bool reset)
 {
-    s_target.set_threshold(s_target.user_data, patterns, reset);
+    s_target.setThreshold(s_target.user_data, patterns, reset);
 }
 
 iLogger::iLogger()
@@ -170,7 +170,7 @@ iLogger::~iLogger()
 {
 }
 
-bool iLogger::start(const char *tag, ilog_level_t level, const char* file, const char* function, int line)
+bool iLogger::start(const char *tag, iLogLevel level, const char* file, const char* function, int line)
 {
     if (!s_target.filter(s_target.user_data, tag, level))
         return false;
@@ -186,10 +186,10 @@ bool iLogger::start(const char *tag, ilog_level_t level, const char* file, const
 
 void iLogger::end()
 {
-    s_target.meta_callback(s_target.user_data, m_tags, m_level, m_file, m_function, m_line, m_buff.data(), m_buff.size());
+    s_target.metaCallback(s_target.user_data, m_tags, m_level, m_file, m_function, m_line, m_buff.data(), m_buff.size());
 }
 
-void iLogger::asprintf(const char* tag, ilog_level_t level, const char* file, const char* function, int line, const char *format, ...)
+void iLogger::asprintf(const char* tag, iLogLevel level, const char* file, const char* function, int line, const char *format, ...)
 {
     if (!s_target.filter(s_target.user_data, tag, level))
         return;
@@ -200,15 +200,15 @@ void iLogger::asprintf(const char* tag, ilog_level_t level, const char* file, co
     int log_len = vsnprintf(log_buf, sizeof(log_buf), format, ap);
     va_end(ap);
 
-    s_target.meta_callback(s_target.user_data, tag, level, file, function, line, log_buf, log_len);
+    s_target.metaCallback(s_target.user_data, tag, level, file, function, line, log_buf, log_len);
 }
 
-void iLogger::binaryData(const char* tag, ilog_level_t level, const char* file, const char* function, int line, const void* data, int size)
+void iLogger::binaryData(const char* tag, iLogLevel level, const char* file, const char* function, int line, const void* data, int size)
 {
     if (!s_target.filter(s_target.user_data, tag, level))
         return;
 
-    s_target.data_callback(s_target.user_data, tag, level, file, function, line, data, size);
+    s_target.dataCallback(s_target.user_data, tag, level, file, function, line, data, size);
 }
 
 void iLogger::append(bool value)
