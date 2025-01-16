@@ -89,7 +89,7 @@ void iMetaObject::setProperty(const std::unordered_map<iLatin1String, iSharedPtr
 
 const _iProperty* iMetaObject::property(const iLatin1String& name) const
 {
-    if (!hasProperty())
+    if (!isPropertyReady())
         return IX_NULLPTR;
 
     std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc>::const_iterator it;
@@ -824,7 +824,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
 const iMetaObject* iObject::metaObject() const
 {
     static iMetaObject staticMetaObject = iMetaObject("iObject", IX_NULLPTR);
-    if (!staticMetaObject.hasProperty()) {
+    if (!staticMetaObject.isPropertyReady()) {
         std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> ppt;
         staticMetaObject.setProperty(ppt);
         iObject::initProperty(&staticMetaObject);
