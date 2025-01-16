@@ -504,7 +504,7 @@ static void _printf_extension_log_func (GstDebugCategory* category,
 {
     const gchar *dbg_msg;
     gchar *obj = IX_NULLPTR;
-    static const ilog_level_t ll_GST2iLog[GST_LEVEL_COUNT + 1] = {ILOG_VERBOSE, ILOG_ERROR, ILOG_WARN, ILOG_NOTICE, ILOG_INFO, ILOG_DEBUG,
+    static const iLogLevel ll_GST2iLog[GST_LEVEL_COUNT + 1] = {ILOG_VERBOSE, ILOG_ERROR, ILOG_WARN, ILOG_NOTICE, ILOG_INFO, ILOG_DEBUG,
                                                                  ILOG_VERBOSE, ILOG_VERBOSE, ILOG_VERBOSE, ILOG_VERBOSE, ILOG_VERBOSE};
 
     dbg_msg = gst_debug_message_get (message);
