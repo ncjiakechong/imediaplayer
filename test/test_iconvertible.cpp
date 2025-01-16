@@ -33,16 +33,9 @@ struct C
 };
 
 template <typename T1, typename T2>
-void foo(T1 const &, T2 const &)
+bool foo(T1 const &, T2 const &)
 {
-    if(iShell::is_convertible<T1, T2>::value)
-    {
-        ilog_debug("Type t1 is convertible to t2");
-    }
-    else
-    {
-        ilog_debug("Type t1 is not convertible to t2");
-    }
+    return iShell::is_convertible<T1, T2>::value;
 }
 
 typedef int int_1;
@@ -70,35 +63,35 @@ int test_iconvertible(void)
     ilog_debug("struct A ", &a);
 
     ilog_debug("struct b to a");
-    foo(b,a);
+    IX_ASSERT(foo(b,a));
 
     ilog_debug("struct b to a");
-    foo(c,a);
+    IX_ASSERT(!foo(c,a));
 
     ilog_debug("struct b& to b");
-    foo(b_ref,b);
+    IX_ASSERT(foo(b_ref,b));
 
     ilog_debug("struct inta to intb");
-    foo(int_a,int_b);
+    IX_ASSERT(foo(int_a,int_b));
 
     ilog_debug("struct inta to inta&");
-    foo(int_a,int_a_r);
+    IX_ASSERT(foo(int_a,int_a_r));
 
     ilog_debug("struct inta& to inta");
-    foo(int_a_r, int_a);
+    IX_ASSERT(foo(int_a_r, int_a));
 
     ilog_debug("struct  inta to long_a");
-    foo(int_a,long_a);
+    IX_ASSERT(foo(int_a,long_a));
 
-        char char_a;
+    char char_a;
     ilog_debug("struct  inta to char_a");
-    foo(int_a,char_a);
+    IX_ASSERT(foo(int_a,char_a));
 
     ilog_debug("struct  inta to struct a");
-    foo(int_a,a);
+    IX_ASSERT(!foo(int_a,a));
 
     ilog_debug("struct  struct a to int");
-    foo(a,int_a);
+    IX_ASSERT(!foo(a,int_a));
 
     return 0;
 }

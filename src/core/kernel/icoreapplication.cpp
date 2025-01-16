@@ -318,8 +318,8 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
             scopeLevel = 1;
 
         iDeferredDeleteEvent* deleteEvent = static_cast<iDeferredDeleteEvent *>(event);
-        deleteEvent->m_loopLevel = loopLevel;
-        deleteEvent->m_scopeLevel = scopeLevel;
+        deleteEvent->ll = loopLevel;
+        deleteEvent->sl = scopeLevel;
     }
 
     iPostEvent pe(receiver, event, priority);

@@ -1985,11 +1985,11 @@ public:
 
     void setProperty(const std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> &ppt);
     const _iProperty* property(const iLatin1String& name) const;
-    bool hasProperty() const { return (m_propertyCandidate || m_propertyInited); }
+    bool isPropertyReady() const { return (m_propertyCandidate || m_propertyInited); }
 
 private:
-    bool m_propertyCandidate : 1; // hack for init property
-    bool m_propertyInited : 1; // hack for init property
+    bool m_propertyCandidate : 1; // hack for init property phase 1
+    bool m_propertyInited : 1;    // hack for init property phase 2
     const char* m_className;
     const iMetaObject* m_superdata;
     std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> m_property;
@@ -2006,7 +2006,7 @@ private:
 public:                                                                                                                    \
     virtual const iShell::iMetaObject *metaObject() const {                                                                \
         static iShell::iMetaObject staticMetaObject = iShell::iMetaObject(# TYPE, IX_BaseType::metaObject());              \
-        if (!staticMetaObject.hasProperty()) {                                                                             \
+        if (!staticMetaObject.isPropertyReady()) {                                                                         \
             std::unordered_map<iShell::iLatin1String, iShell::iSharedPtr< iShell::_iProperty >, iShell::iKeyHashFunc> ppt; \
             staticMetaObject.setProperty(ppt);                                                                             \
             IX_ThisType::initProperty(&staticMetaObject);                                                                  \
