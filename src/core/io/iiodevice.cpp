@@ -641,7 +641,6 @@ void iIODevice::setCurrentReadChannel(int channel)
 
 void iIODevice::setReadChannelCount(int count)
 {
-    int step = (count > m_readBuffers.size()) ? 1 : -1;
     int distance = std::abs(count - (int)m_readBuffers.size());
     for (int idx = 0; idx < distance; ++idx) {
         if (count > m_readBuffers.size()) {
@@ -675,7 +674,6 @@ void iIODevice::setCurrentWriteChannel(int channel)
 
 void iIODevice::setWriteChannelCount(int count)
 {
-    int step = (count > m_writeBuffers.size()) ? 1 : -1;
     int distance = std::abs(count - (int)m_writeBuffers.size());
     for (int idx = 0; idx < distance; ++idx) {
         if (count > m_writeBuffers.size()) {

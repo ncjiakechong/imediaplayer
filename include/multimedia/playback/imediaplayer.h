@@ -125,26 +125,26 @@ public: // slot
     void setMedia(const iUrl&media, iIODevice *stream = IX_NULLPTR);
 
 public: // signal
-    void mediaChanged(const iUrl &media) ISIGNAL(mediaChanged, media)
-    void currentMediaChanged(const iUrl &media) ISIGNAL(currentMediaChanged, media)
+    void mediaChanged(const iUrl &media) ISIGNAL(mediaChanged, media);
+    void currentMediaChanged(const iUrl &media) ISIGNAL(currentMediaChanged, media);
 
-    void stateChanged(State newState) ISIGNAL(stateChanged, newState)
-    void mediaStatusChanged(MediaStatus status) ISIGNAL(mediaStatusChanged, status)
+    void stateChanged(State newState) ISIGNAL(stateChanged, newState);
+    void mediaStatusChanged(MediaStatus status) ISIGNAL(mediaStatusChanged, status);
 
-    void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration)
-    void positionChanged(xint64 position) ISIGNAL(positionChanged, position)
+    void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration);
+    void positionChanged(xint64 position) ISIGNAL(positionChanged, position);
 
-    void volumeChanged(int volume) ISIGNAL(volumeChanged, volume)
-    void mutedChanged(bool muted) ISIGNAL(mutedChanged, muted)
-    void audioAvailableChanged(bool available) ISIGNAL(audioAvailableChanged, available)
-    void videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable)
+    void volumeChanged(int volume) ISIGNAL(volumeChanged, volume);
+    void mutedChanged(bool muted) ISIGNAL(mutedChanged, muted);
+    void audioAvailableChanged(bool available) ISIGNAL(audioAvailableChanged, available);
+    void videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable);
 
-    void bufferStatusChanged(int percentFilled) ISIGNAL(bufferStatusChanged, percentFilled)
+    void bufferStatusChanged(int percentFilled) ISIGNAL(bufferStatusChanged, percentFilled);
 
-    void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable)
-    void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate)
+    void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable);
+    void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate);
 
-    void errorEvent(Error errorNum) ISIGNAL(errorEvent, errorNum)
+    void errorEvent(Error errorNum) ISIGNAL(errorEvent, errorNum);
 
 public:
     bool bind(iObject *);

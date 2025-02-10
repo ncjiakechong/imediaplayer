@@ -64,20 +64,20 @@ public:
     virtual void stop() = 0;
 
 public: // signal
-    void mediaChanged(const iUrl& content) ISIGNAL(mediaChanged, content)
-    void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration)
-    void positionChanged(xint64 position) ISIGNAL(positionChanged, position)
-    void stateChanged(iMediaPlayer::State newState) ISIGNAL(stateChanged, newState)
-    void mediaStatusChanged(iMediaPlayer::MediaStatus status) ISIGNAL(mediaStatusChanged, status)
-    void volumeChanged(int volume) ISIGNAL(volumeChanged, volume)
-    void mutedChanged(bool mute) ISIGNAL(mutedChanged, mute)
-    void audioAvailableChanged(bool audioAvailable) ISIGNAL(audioAvailableChanged, audioAvailable)
-    void videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable)
-    void bufferStatusChanged(int percentFilled) ISIGNAL(bufferStatusChanged, percentFilled)
-    void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable)
-    void availablePlaybackRangesChanged(const iMediaTimeRange &ranges) ISIGNAL(availablePlaybackRangesChanged, ranges)
-    void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate)
-    void error(int errorNum, const iString &errorString) ISIGNAL(error, errorNum, errorString)
+    void mediaChanged(const iUrl& content) ISIGNAL(mediaChanged, content);
+    void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration);
+    void positionChanged(xint64 position) ISIGNAL(positionChanged, position);
+    void stateChanged(iMediaPlayer::State newState) ISIGNAL(stateChanged, newState);
+    void mediaStatusChanged(iMediaPlayer::MediaStatus status) ISIGNAL(mediaStatusChanged, status);
+    void volumeChanged(int volume) ISIGNAL(volumeChanged, volume);
+    void mutedChanged(bool mute) ISIGNAL(mutedChanged, mute);
+    void audioAvailableChanged(bool audioAvailable) ISIGNAL(audioAvailableChanged, audioAvailable);
+    void videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable);
+    void bufferStatusChanged(int percentFilled) ISIGNAL(bufferStatusChanged, percentFilled);
+    void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable);
+    void availablePlaybackRangesChanged(const iMediaTimeRange &ranges) ISIGNAL(availablePlaybackRangesChanged, ranges);
+    void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate);
+    void error(int errorNum, const iString &errorString) ISIGNAL(error, errorNum, errorString);
 
 protected:
     explicit iMediaPlayerControl(iObject *parent = IX_NULLPTR);

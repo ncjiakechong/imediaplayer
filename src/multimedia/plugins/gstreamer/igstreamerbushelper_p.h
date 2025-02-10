@@ -67,7 +67,7 @@ public:
     void installMessageFilter(iObject *filter);
     void removeMessageFilter(iObject *filter);
 
-    void message(const iGstreamerMessage& msg) ISIGNAL(message, msg)
+    void message(const iGstreamerMessage& msg) ISIGNAL(message, msg);
 
 private:
     GstBus* bus() const { return m_bus; }

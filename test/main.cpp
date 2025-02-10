@@ -88,7 +88,7 @@ public:
         IEMIT tstcase_sig(num + 1);
     }
 
-    void tstcase_sig(int c) ISIGNAL(tstcase_sig, c)
+    void tstcase_sig(int c) ISIGNAL(tstcase_sig, c);
 
 private:
     static TestCase* s_testCase;

@@ -526,11 +526,12 @@ static void _printf_extension_log_func (GstDebugCategory* category,
         g_free (obj);
 }
 
+
+static bool _initializedGst = false;
 void iGstUtils::initializeGst()
 {
-    static bool initialized = false;
-    if (!initialized) {
-        initialized = true;
+    if (!_initializedGst) {
+        _initializedGst = true;
         gst_init(IX_NULLPTR, IX_NULLPTR);
 
         /* set up our own log function to make sure the code in gstinfo is actually
@@ -542,6 +543,12 @@ void iGstUtils::initializeGst()
 
         gst_debug_set_threshold_from_string("2,GST_TRACER:7", FALSE);
     }
+}
+
+void iGstUtils::deinitGst()
+{
+    gst_deinit();
+    _initializedGst = false;
 }
 
 namespace {

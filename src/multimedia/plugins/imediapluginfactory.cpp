@@ -9,11 +9,15 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include <core/io/ilog.h>
+
 #include "plugins/gstreamer/igstutils_p.h"
 #include "plugins/gstreamer/igstreamerplayersession_p.h"
 #include "plugins/gstreamer/igstreamerplayercontrol_p.h"
 #include "plugins/gstreamer/igstreamerautorenderer.h"
 #include "plugins/imediapluginfactory.h"
+
+#define ILOG_TAG "ix_media"
 
 namespace iShell {
 
@@ -24,6 +28,7 @@ iMediaPluginFactory::iMediaPluginFactory()
 
 iMediaPluginFactory::~iMediaPluginFactory()
 {
+    iGstUtils::deinitGst();
 }
 
 iMediaPluginFactory* iMediaPluginFactory::instance()
@@ -33,6 +38,8 @@ iMediaPluginFactory* iMediaPluginFactory::instance()
     static struct Cleanup {
         ~Cleanup() {
             delete s_instance;
+            s_instance = IX_NULLPTR;
+            ilog_info("cleanup iMediaPluginFactory");
         }
     } cleanup; 
 

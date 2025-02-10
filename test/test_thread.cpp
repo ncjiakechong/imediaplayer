@@ -37,7 +37,7 @@ public:
         slot = arg;
     }
 
-    void tst_sig_int1(int arg) ISIGNAL(tst_sig_int1, arg)
+    void tst_sig_int1(int arg) ISIGNAL(tst_sig_int1, arg);
 
 public: //test result
     int slot;

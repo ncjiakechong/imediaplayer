@@ -72,10 +72,9 @@ static void ilog_default_meta_callback(void*, const char* tag, iLogLevel level, 
         file = ilog_path_basename (file);
     }
 
-    int  meta_len = 0;
     char meta_buf[256] = {0};
     iTime current = iDateTime::currentDateTime().time();
-    meta_len = snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5lld %5d %s:%c %s:%d:%s",
+    snprintf(meta_buf, sizeof(meta_buf), "%02d:%02d:%02d:%03d %5lld %5d %s:%c %s:%d:%s",
                     current.hour(), current.minute(), current.second(), current.msec(),
                     (long long int)iCoreApplication::applicationPid(), iThread::currentThreadId(),
                     tag, cur_level, file, line, function);
@@ -398,18 +397,17 @@ void iLogger::append(float value)
 
 void iLogger::append(double value)
 {
-    int value_len = 0;
     int backup_size = m_buff.size();
     int backup_cap = m_buff.capacity();
 
     char* buff = m_buff.data();
-    value_len = snprintf(buff + backup_size, m_buff.capacity() - backup_size,
+    int value_len = snprintf(buff + backup_size, m_buff.capacity() - backup_size,
              "%f", value);
     m_buff.resize(backup_size + value_len);
 
     if (backup_cap < (backup_size + value_len)) {
         buff = m_buff.data();
-        value_len = snprintf(buff + backup_size, m_buff.capacity() - backup_size,
+        snprintf(buff + backup_size, m_buff.capacity() - backup_size,
                  "%f", value);
     }
 }

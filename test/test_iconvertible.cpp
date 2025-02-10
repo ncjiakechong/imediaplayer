@@ -93,5 +93,35 @@ int test_iconvertible(void)
     ilog_debug("struct  struct a to int");
     IX_ASSERT(!foo(a,int_a));
 
+    /////////////////////////////////////////////////////////////////////////////////
+    // Additional Test Cases for is_convertible
+    /////////////////////////////////////////////////////////////////////////////////
+    // Test conversion between base and derived class pointers.
+    IX_ASSERT((iShell::is_convertible<B*,A*>::value));   // B* can be converted to A*
+    IX_ASSERT(!(iShell::is_convertible<A*, B*>::value));  // A* cannot be converted to B*
+
+    // Test conversion with const qualifiers (pointer conversion).
+    IX_ASSERT((iShell::is_convertible<int*, const int*>::value));
+    IX_ASSERT(!(iShell::is_convertible<const int*, int*>::value));
+
+    // Test conversion with const qualifiers (reference conversion).
+    IX_ASSERT(!(iShell::is_convertible<int, int&>::value));
+    IX_ASSERT((iShell::is_convertible<int&, int&>::value));
+    IX_ASSERT((iShell::is_convertible<int&, const int&>::value));
+    IX_ASSERT(!(iShell::is_convertible<const int&, int&>::value));
+
+    // Test conversion between unrelated types.
+    IX_ASSERT(!(iShell::is_convertible<A*, int*>::value));
+    IX_ASSERT(!(iShell::is_convertible<int*, A*>::value));
+
+    // Test conversion involving void pointer.
+    IX_ASSERT((iShell::is_convertible<int*, void*>::value));
+    IX_ASSERT((iShell::is_convertible<char*, void*>::value));
+
+    IX_ASSERT((iShell::is_convertible<int, double>::value));
+    IX_ASSERT((iShell::is_convertible<double, int>::value));
+    IX_ASSERT(!(iShell::is_convertible<double, int*>::value));
+    IX_ASSERT(!(iShell::is_convertible<double, int*>::value));
+
     return 0;
 }

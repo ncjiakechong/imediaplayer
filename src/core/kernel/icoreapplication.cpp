@@ -472,7 +472,6 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
             const int eventScopeLevel = static_cast<iDeferredDeleteEvent *>(pe.event)->scopeLevel();
 
             const bool postedBeforeOutermostLoop = eventLoopLevel == 0;
-            int loopLevel = threadData->loopLevel + threadData->scopeLevel;
             const bool allowDeferredDelete =
                 (eventLoopLevel + eventScopeLevel > threadData->loopLevel + threadData->scopeLevel
                  || (postedBeforeOutermostLoop && threadData->loopLevel > 0)

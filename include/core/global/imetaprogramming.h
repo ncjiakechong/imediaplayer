@@ -208,20 +208,19 @@ template <typename T>
 struct class_wrapper<T*>
 { typedef T CLASSTYPE; };
 
+// to check if T1 can be converted to T2
 template <typename T1, typename T2>
 struct is_convertible
 {
-    static int test(const typename type_wrapper<T2>::TYPE&);
+    static int test(T2);
     static char test(...);
-    static const typename type_wrapper<T1>::TYPE &dummy();
+    static T1 dummy();
 
     enum { value = sizeof(test(dummy())) == sizeof(int) };
 };
 
-template<typename T1, typename T2> struct is_convertible<T1, T2&> { enum { value = false }; };
-template<typename T> struct is_convertible<T&, T&> { enum { value = true }; };
 // void as a return value
-template<typename T> struct is_convertible<void, T> { enum { value = true }; };
+template<typename T> struct is_convertible<void, T> { enum { value = false }; };
 template<typename T> struct is_convertible<T, void> { enum { value = true }; };
 template<> struct is_convertible<void, void> { enum { value = true }; };
 

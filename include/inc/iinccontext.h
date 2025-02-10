@@ -175,9 +175,9 @@ public:
     xuint32 getServerProtocolVersion();
 
 public: // signal
-    void stateChanged(State st) ISIGNAL(stateChanged, st)
-    void eventNotify(iStringView name) ISIGNAL(eventNotify, name)
-    void subscribeNotify(SubscriptionEventType t, xuint32 idx) ISIGNAL(subscribeNotify, t, idx)
+    void stateChanged(State st) ISIGNAL(stateChanged, st);
+    void eventNotify(iStringView name) ISIGNAL(eventNotify, name);
+    void subscribeNotify(SubscriptionEventType t, xuint32 idx) ISIGNAL(subscribeNotify, t, idx);
 
 protected:
     virtual ~iINCContext();

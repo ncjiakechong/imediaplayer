@@ -540,8 +540,8 @@ void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingD
 
 bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
 {
-    int max_priority;
-    int timeout;
+    int max_priority = std::numeric_limits<int>::max();
+    int timeout = -1;
     bool some_ready;
     int nfds, allocated_nfds;
     iPollFD *fds = IX_NULLPTR;

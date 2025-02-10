@@ -781,11 +781,11 @@ iMemPool::~iMemPool()
     iScopedLock<iMutex> _lock(m_mutex);
 
     while (m_imports) {
-        delete m_imports;
+        delete m_imports; // each import will remove itself from the list
     }
 
     while (m_exports) {
-        delete m_exports;
+        delete m_exports; // each export will remove itself from the list
     }
 
     _lock.unlock();
@@ -1051,6 +1051,8 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, size_t offset
         seg = segmentAttach(type, shmId, -1, writable);
         if (IX_NULLPTR == seg)
             return IX_NULLPTR;
+    } else {
+        seg = sit->second;
     }
 
     if (writable && !seg->writable) {

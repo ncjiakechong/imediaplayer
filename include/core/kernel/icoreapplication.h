@@ -60,7 +60,7 @@ public:
 
     static xint64 applicationPid();
 
-    void aboutToQuit() ISIGNAL(aboutToQuit)
+    void aboutToQuit() ISIGNAL(aboutToQuit);
 
 protected:
     iCoreApplication(iCoreApplicationPrivate* priv);
