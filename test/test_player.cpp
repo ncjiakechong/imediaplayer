@@ -110,7 +110,7 @@ public:
     virtual xint64 writeData(const char *data, xint64 len)
     { return 0; }
 
-    void noMoreData() const ISIGNAL(noMoreData)
+    void noMoreData() const ISIGNAL(noMoreData);
 };
 
 class TestPlayer : public iObject
@@ -142,14 +142,15 @@ public:
         if (newState != iMediaPlayer::StoppedState)
             return;
 
-        if (0 == m_loopTime) {
+        if (2 >= m_loopTime) {
             ++ m_loopTime;
+            ilog_info("player replay times ----", m_loopTime, "----");
             iObject::invokeMethod(this, &TestPlayer::rePlay, QueuedConnection);
             return;
         }
 
         player->stop();
-        deleteLater();
+        iTimer::singleShot(500, 0, this, &TestPlayer::deleteLater);
     }
 
     void positionChanged(xint64 position)
@@ -174,10 +175,13 @@ public:
 
     void rePlay() {
         iString path = streamDevice->m_filePath;
-        streamDevice->close();
-        streamDevice->open(iIODevice::ReadOnly);
-        player->setMedia(iUrl("appsrc://"), streamDevice);
-        // player->setMedia(iUrl(path));
+        if (m_loopTime & 1) {
+            streamDevice->close();
+            streamDevice->open(iIODevice::ReadOnly);
+            player->setMedia(iUrl("appsrc://"), streamDevice);
+        } else {
+            player->setMedia(iUrl(path));
+        }
         player->play();
     }
 

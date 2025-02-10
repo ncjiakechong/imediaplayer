@@ -58,8 +58,8 @@ public:
     const iString& objectName() const { return m_objName; }
 
     /// SIGNALS start
-    void objectNameChanged(const iString& name) ISIGNAL(objectNameChanged, name)
-    void destroyed(iObject* obj) ISIGNAL(destroyed, obj)
+    void objectNameChanged(const iString& name) ISIGNAL(objectNameChanged, name);
+    void destroyed(iObject* obj) ISIGNAL(destroyed, obj);
     /// SIGNALS end
 
     void setParent(iObject *parent);
@@ -98,7 +98,7 @@ public:
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
         // Return type of the slot is not compatible with the return type of the signal.
-        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
+        IX_COMPILER_VERIFY((is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
         _iConnectionHelper<Func1, Func2, -1> conn(sender, signal, true, receiver, slot, true, type);
         return connectImpl(conn);
@@ -134,7 +134,7 @@ public:
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
         // Return type of the slot is not compatible with the return type of the signal.
-        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
+        IX_COMPILER_VERIFY((is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
         _iConnectionHelper<Func1, Func2, -1> conn(sender, signal, true, IX_NULLPTR, slot, true, DirectConnection);
         return connectImpl(conn);
@@ -155,7 +155,7 @@ public:
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
         // Return type of the slot is not compatible with the return type of the signal.
-        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
+        IX_COMPILER_VERIFY((is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
         _iConnectionHelper<typename SignalHelper::Function, typename SlotHelper::Function, -1> conn(sender, SignalHelper::safeFunc(signal), SignalHelper::valid,
                                                                                             receiver, SlotHelper::safeFunc(slot), SlotHelper::valid,
@@ -195,283 +195,153 @@ public:
     ///   If type is AutoConnection, the member is invoked synchronously if obj lives in the same thread as the caller; otherwise it will invoke the member asynchronously.
     ///
     /// You can pass up to eight arguments (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) to the member function.
-    template<class Obj, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(), -1>::Object* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)();
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+    template<typename Func>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func, ConnectionType type = AutoConnection) {
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, IX_NULLPTR);
     }
 
-    template<class Obj, class Arg1, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1), -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1), typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1);
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
+    template<typename Func, typename Arg1>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+                            Arg1 a1, ConnectionType type = AutoConnection) {
+        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef void (iObject::*ArgFunc)(Arg1);
+        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
 
-        Arguments args(a1);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
+
+        typename InvokeType::Arguments args(a1);
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
-    template<class Obj, class Arg1, class Arg2, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2), -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2),
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2);
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
+    template<typename Func, typename Arg1, typename Arg2>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+                             Arg1 a1, Arg2 a2, ConnectionType type = AutoConnection) {
+        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef void (iObject::*ArgFunc)(Arg1, Arg2);
+        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
 
-        Arguments args(a1, a2);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
+
+        typename InvokeType::Arguments args(a1, a2);
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3), -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3),
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3);
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
+    template<typename Func, typename Arg1, typename Arg2, typename Arg3>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+                             Arg1 a1, Arg2 a2, Arg3 a3, ConnectionType type = AutoConnection) {
+        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3);
+        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
 
-        Arguments args(a1, a2, a3);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
+
+        typename InvokeType::Arguments args(a1, a2, a3);
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4), -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4),
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4);
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
+    template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+                             Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, ConnectionType type = AutoConnection) {
+        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4);
+        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
 
-        Arguments args(a1, a2, a3, a4);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
+
+        typename InvokeType::Arguments args(a1, a2, a3, a4);
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5), -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5),
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5);
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
+    template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+                             Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, Arg5 a5, ConnectionType type = AutoConnection) {
+        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4, Arg5);
+        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
 
-        Arguments args(a1, a2, a3, a4, a5);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
+
+        typename InvokeType::Arguments args(a1, a2, a3, a4, a5);
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
-             class Arg5, class Arg6, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6),
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
+    template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+                             Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, Arg5 a5, Arg6 a6, ConnectionType type = AutoConnection) {
+        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
+        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
 
-        Arguments args(a1, a2, a3, a4, a5, a6);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
+
+        typename InvokeType::Arguments args(a1, a2, a3, a4, a5, a6);
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
-             class Arg5, class Arg6, class Arg7, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7),
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
-                             typename type_wrapper<Arg7>::CONSTREFTYPE a7,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
+    template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+                             Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, Arg5 a5, Arg6 a6, Arg7 a7, ConnectionType type = AutoConnection) {
+        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
+        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
 
-        Arguments args(a1, a2, a3, a4, a5, a6, a7);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
+
+        typename InvokeType::Arguments args(a1, a2, a3, a4, a5, a6, a7);
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
-             class Arg5, class Arg6, class Arg7, class Arg8, class Ret>
-    static bool invokeMethod(typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8),
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
-                             typename type_wrapper<Arg7>::CONSTREFTYPE a7,
-                             typename type_wrapper<Arg8>::CONSTREFTYPE a8,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
+    template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+                             Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, Arg5 a5, Arg6 a6, Arg7 a7, Arg8 a8, ConnectionType type = AutoConnection) {
+        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
+        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
 
-        Arguments args(a1, a2, a3, a4, a5, a6, a7, a8);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, &args);
-    }
+        // compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
-    template<class Obj, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)() const, -1>::Object* obj, Ret (Obj::*func)() const, ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)() const;
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, IX_NULLPTR);
-    }
-
-    template<class Obj, class Arg1, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1) const, -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1) const, typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1) const;
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
-
-        Arguments args(a1);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, &args);
-    }
-
-    template<class Obj, class Arg1, class Arg2, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2) const, -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2) const,
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2) const;
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
-
-        Arguments args(a1, a2);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, &args);
-    }
-
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3) const, -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3) const,
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3) const;
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
-
-        Arguments args(a1, a2, a3);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, &args);
-    }
-
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4) const, -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4) const,
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4) const;
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
-
-        Arguments args(a1, a2, a3, a4);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, &args);
-    }
-
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5) const, -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5) const,
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5) const;
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
-
-        Arguments args(a1, a2, a3, a4, a5);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, &args);
-    }
-
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
-             class Arg5, class Arg6, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const,
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const;
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
-
-        Arguments args(a1, a2, a3, a4, a5, a6);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, &args);
-    }
-
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
-             class Arg5, class Arg6, class Arg7, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const, -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const,
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
-                             typename type_wrapper<Arg7>::CONSTREFTYPE a7,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const;
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
-
-        Arguments args(a1, a2, a3, a4, a5, a6, a7);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
-        return invokeMethodImpl(conn, &args);
-    }
-
-    template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
-             class Arg5, class Arg6, class Arg7, class Arg8, class Ret>
-    static bool invokeMethod(const typename FunctionPointer<Ret (Obj::*)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const, -1>::Object* obj,
-                             Ret (Obj::*func)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const,
-                             typename type_wrapper<Arg1>::CONSTREFTYPE a1,
-                             typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             typename type_wrapper<Arg6>::CONSTREFTYPE a6,
-                             typename type_wrapper<Arg7>::CONSTREFTYPE a7,
-                             typename type_wrapper<Arg8>::CONSTREFTYPE a8,
-                             ConnectionType type = AutoConnection) {
-        typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const;
-        typedef typename FunctionPointer<Function, -1>::Arguments Arguments;
-
-        Arguments args(a1, a2, a3, a4, a5, a6, a7, a8);
-        _iConnectionHelper<Function, Function, -1> conn(obj, func, true, obj, func, true, type);
+        typename InvokeType::Arguments args(a1, a2, a3, a4, a5, a6, a7, a8);
+        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
@@ -568,6 +438,7 @@ template <class T>
 inline T iobject_cast(iObject *object) {
     typedef typename class_wrapper<T>::CLASSTYPE ObjType;
     const ObjType* target = IX_NULLPTR;
+    // metaObject is a static const function for each iObject, so we use it to cast via NULL point
     return static_cast<T>(target->ObjType::metaObject()->cast(object));
 }
 
@@ -575,6 +446,7 @@ template <class T>
 inline T iobject_cast(const iObject *object) {
     typedef typename class_wrapper<T>::CLASSTYPE ObjType;
     const ObjType* target = IX_NULLPTR;
+    // metaObject is a static const function for each iObject, so we use it to cast via NULL point
     return static_cast<T>(target->ObjType::metaObject()->cast(object));
 }
 

@@ -71,7 +71,9 @@ namespace iGstUtils {
     iAudioFormat audioFormatForBuffer(GstBuffer *buffer);
     #endif
     GstCaps *capsForAudioFormat(const iAudioFormat &format);
+
     void initializeGst();
+    void deinitGst();
     iMultimedia::SupportEstimate hasSupport(const iString &mimeType,
                                              const std::list<iString> &codecs,
                                              const std::unordered_set<iString, iKeyHashFunc> &supportedMimeTypeSet);

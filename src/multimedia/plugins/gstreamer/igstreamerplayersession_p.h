@@ -121,23 +121,23 @@ public:
     void showPrerollFrames(bool enabled);
 
 public:
-    void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration)
-    void positionChanged(xint64 position) ISIGNAL(positionChanged, position)
-    void stateChanged(iMediaPlayer::State state) ISIGNAL(stateChanged, state)
-    void volumeChanged(int volume) ISIGNAL(volumeChanged, volume)
-    void mutedStateChanged(bool muted) ISIGNAL(mutedStateChanged, muted)
-    void audioAvailableChanged(bool audioAvailable) ISIGNAL(audioAvailableChanged, audioAvailable)
-    void videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable)
-    void bufferingProgressChanged(int percentFilled) ISIGNAL(bufferingProgressChanged, percentFilled)
-    void playbackFinished() ISIGNAL(playbackFinished)
-    void tagsChanged() ISIGNAL(tagsChanged)
-    void streamsChanged() ISIGNAL(streamsChanged)
-    void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable)
-    void error(int errorNum, const iString &errorString) ISIGNAL(error, errorNum, errorString)
-    void invalidMedia() ISIGNAL(invalidMedia)
-    void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate)
-    void rendererChanged() ISIGNAL(rendererChanged)
-    void pipelineChanged() ISIGNAL(pipelineChanged)
+    void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration);
+    void positionChanged(xint64 position) ISIGNAL(positionChanged, position);
+    void stateChanged(iMediaPlayer::State state) ISIGNAL(stateChanged, state);
+    void volumeChanged(int volume) ISIGNAL(volumeChanged, volume);
+    void mutedStateChanged(bool muted) ISIGNAL(mutedStateChanged, muted);
+    void audioAvailableChanged(bool audioAvailable) ISIGNAL(audioAvailableChanged, audioAvailable);
+    void videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable);
+    void bufferingProgressChanged(int percentFilled) ISIGNAL(bufferingProgressChanged, percentFilled);
+    void playbackFinished() ISIGNAL(playbackFinished);
+    void tagsChanged() ISIGNAL(tagsChanged);
+    void streamsChanged() ISIGNAL(streamsChanged);
+    void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable);
+    void error(int errorNum, const iString &errorString) ISIGNAL(error, errorNum, errorString);
+    void invalidMedia() ISIGNAL(invalidMedia);
+    void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate);
+    void rendererChanged() ISIGNAL(rendererChanged);
+    void pipelineChanged() ISIGNAL(pipelineChanged);
 
 protected:
     bool event(iEvent *e);

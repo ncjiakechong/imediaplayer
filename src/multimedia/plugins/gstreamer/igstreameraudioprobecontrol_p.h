@@ -26,8 +26,8 @@ public:
     explicit iGstreamerAudioProbeControl(iObject *parent);
     virtual ~iGstreamerAudioProbeControl();
 
-    void audioBufferProbed(const iAudioBuffer &buffer) ISIGNAL(audioBufferProbed, buffer)
-    void flush() ISIGNAL(flush)
+    void audioBufferProbed(const iAudioBuffer &buffer) ISIGNAL(audioBufferProbed, buffer);
+    void flush() ISIGNAL(flush);
 
 protected:
     void probeCaps(GstCaps *caps);

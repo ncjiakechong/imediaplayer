@@ -47,8 +47,8 @@ public:
     virtual bool isReady() const { return true; }
 
 public: //signals:
-    void sinkChanged() ISIGNAL(sinkChanged)
-    void readyChanged(bool ready) ISIGNAL(readyChanged, ready)
+    void sinkChanged() ISIGNAL(sinkChanged);
+    void readyChanged(bool ready) ISIGNAL(readyChanged, ready);
 };
 
 } // namespace iShell

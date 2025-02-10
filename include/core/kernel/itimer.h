@@ -55,7 +55,7 @@ public:
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
         // Return type of the slot is not compatible with the return type of the signal.
-        IX_COMPILER_VERIFY((is_convertible<typename SignalType::ReturnType, typename SlotType::ReturnType>::value));
+        IX_COMPILER_VERIFY((is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
         _iConnectionHelper<SignalFunc, Func, -1> conn(IX_NULLPTR, &iTimer::timeout, true, receiver, slot, true, DirectConnection);
         singleShotImpl(interval, userdata, timerType, receiver, conn);
@@ -84,7 +84,7 @@ public: //slot
     void stop();
 
     // SIGNAL
-    void timeout(xintptr userdata) ISIGNAL(timeout)
+    void timeout(xintptr userdata) ISIGNAL(timeout);
 
 protected:
     virtual bool event(iEvent *);

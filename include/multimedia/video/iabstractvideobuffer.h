@@ -75,7 +75,7 @@ public:
     virtual int map(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) = 0;
 
 protected:
-    virtual int mapImpl(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]);
+    virtual int mapImpl(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) override;
 
 private:
     IX_DISABLE_COPY(iAbstractPlanarVideoBuffer)

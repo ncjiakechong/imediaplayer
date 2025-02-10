@@ -90,7 +90,7 @@ public:
         iCoreApplication::postEvent(iThread::currentThread(), new iEvent(iEvent::Quit));
     }
 
-    void tst_sig() ISIGNAL(tst_sig)
+    void tst_sig() ISIGNAL(tst_sig);
 
 private:
     int m_t500;

@@ -51,7 +51,7 @@ public:
 
     bool isAudioAvailable() const override;
     bool isVideoAvailable() const override;
-    void setVideoOutput(iObject *output);
+    void setVideoOutput(iObject *output) override;
 
     bool isSeekable() const override;
     iMediaTimeRange availablePlaybackRanges() const override;

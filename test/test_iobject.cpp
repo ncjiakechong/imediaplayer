@@ -71,10 +71,10 @@ public:
         ilog_debug(this, " tst_slot_prop changed ", arg1.value<int>());
     }
 
-    void testPropertyChanged(int value) ISIGNAL(testPropertyChanged, value)
+    void testPropertyChanged(int value) ISIGNAL(testPropertyChanged, value);
 
-    void signal_void() ISIGNAL(signal_void)
-    void signal_struct(int arg1, const struct E& arg2, int arg3) ISIGNAL(signal_struct, arg1, arg2, arg3)
+    void signal_void() ISIGNAL(signal_void);
+    void signal_struct(int arg1, const struct E& arg2, int arg3) ISIGNAL(signal_struct, arg1, arg2, arg3);
 
     void destory() {
         delete this;
@@ -272,23 +272,23 @@ public:
     }
 
 public:
-    int tst_sig_int_ret() ISIGNAL(tst_sig_int_ret)
-    void tst_sig_int0() ISIGNAL(tst_sig_int0)
-    void tst_sig_int1(int arg1) ISIGNAL(tst_sig_int1, arg1)
-    void tst_sig_int2(int arg1, int arg2) ISIGNAL(tst_sig_int2, arg1, arg2)
-    void tst_sig_int3(int arg1, int arg2, int arg3) ISIGNAL(tst_sig_int3, arg1, arg2, arg3)
-    void tst_sig_int4(int arg1, int arg2, int arg3, int arg4) ISIGNAL(tst_sig_int4, arg1, arg2, arg3, arg4)
-    void tst_sig_int5(int arg1, int arg2, int arg3, int arg4, int arg5) ISIGNAL(tst_sig_int5, arg1, arg2, arg3, arg4, arg5)
-    void tst_sig_int6(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) ISIGNAL(tst_sig_int6, arg1, arg2, arg3, arg4, arg5, arg6)
-    void tst_sig_int7(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7) ISIGNAL(tst_sig_int7, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
-    void tst_sig_int8(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8) ISIGNAL(tst_sig_int8, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+    int tst_sig_int_ret() ISIGNAL(tst_sig_int_ret);
+    void tst_sig_int0() ISIGNAL(tst_sig_int0);
+    void tst_sig_int1(int arg1) ISIGNAL(tst_sig_int1, arg1);
+    void tst_sig_int2(int arg1, int arg2) ISIGNAL(tst_sig_int2, arg1, arg2);
+    void tst_sig_int3(int arg1, int arg2, int arg3) ISIGNAL(tst_sig_int3, arg1, arg2, arg3);
+    void tst_sig_int4(int arg1, int arg2, int arg3, int arg4) ISIGNAL(tst_sig_int4, arg1, arg2, arg3, arg4);
+    void tst_sig_int5(int arg1, int arg2, int arg3, int arg4, int arg5) ISIGNAL(tst_sig_int5, arg1, arg2, arg3, arg4, arg5);
+    void tst_sig_int6(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) ISIGNAL(tst_sig_int6, arg1, arg2, arg3, arg4, arg5, arg6);
+    void tst_sig_int7(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7) ISIGNAL(tst_sig_int7, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    void tst_sig_int8(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8) ISIGNAL(tst_sig_int8, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 
 
-    void tst_sig_struct(int arg1, const struct E& arg2, int arg3) ISIGNAL(tst_sig_struct, arg1, arg2, arg3)
-    void tst_sig_ref(int arg1, struct E& arg2, int arg3) ISIGNAL(tst_sig_ref, arg1, arg2, arg3)
-    void tst_sig_point(int arg1, struct E* arg2, int arg3) ISIGNAL(tst_sig_point, arg1, arg2, arg3)
+    void tst_sig_struct(int arg1, const struct E& arg2, int arg3) ISIGNAL(tst_sig_struct, arg1, arg2, arg3);
+    void tst_sig_ref(int arg1, struct E& arg2, int arg3) ISIGNAL(tst_sig_ref, arg1, arg2, arg3);
+    void tst_sig_point(int arg1, struct E* arg2, int arg3) ISIGNAL(tst_sig_point, arg1, arg2, arg3);
 
-    void tst_sig_refAdd(int& arg1) ISIGNAL(tst_sig_refAdd, arg1)
+    void tst_sig_refAdd(int& arg1) ISIGNAL(tst_sig_refAdd, arg1);
 };
 
 
@@ -298,7 +298,7 @@ class TestObjectDelete : public iObject
 public:
     TestObjectDelete(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 
-    void tst_sig(iObject* obj)  ISIGNAL(tst_sig, obj)
+    void tst_sig(iObject* obj)  ISIGNAL(tst_sig, obj);
 };
 
 class TestObjectDeleteSlot : public iObject
@@ -509,6 +509,59 @@ int test_object(void)
     tst_sig.emit_signals();
 
     tst_sig.disconnect(&tst_sig, IX_NULLPTR, &tst_obj, IX_NULLPTR);
+
+    ilog_debug("-------------inkokemethod");
+    tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int1, 1.0);
+    IX_ASSERT(1 == tst_obj.slot_arg1);
+
+    tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int2, 2.0, 1.0);
+    IX_ASSERT(2 == tst_obj.slot_arg1);
+    IX_ASSERT(1 == tst_obj.slot_arg2);
+
+    tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int3, 3.0f, 2, 1.0);
+    IX_ASSERT(3 == tst_obj.slot_arg1);
+    IX_ASSERT(2 == tst_obj.slot_arg2);
+    IX_ASSERT(1 == tst_obj.slot_arg3);
+
+    tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int4, 4.0, 3, 2, 1.0);
+    IX_ASSERT(4 == tst_obj.slot_arg1);
+    IX_ASSERT(3 == tst_obj.slot_arg2);
+    IX_ASSERT(2 == tst_obj.slot_arg3);
+    IX_ASSERT(1 == tst_obj.slot_arg4);
+
+    tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int5, 5.0, 4, 3, 2, 1.0);
+    IX_ASSERT(5 == tst_obj.slot_arg1);
+    IX_ASSERT(4 == tst_obj.slot_arg2);
+    IX_ASSERT(3 == tst_obj.slot_arg3);
+    IX_ASSERT(2 == tst_obj.slot_arg4);
+    IX_ASSERT(1 == tst_obj.slot_arg5);
+
+    tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int6, 6.0, 5, (long long int)4, 3, 2, 1.0);
+    IX_ASSERT(6 == tst_obj.slot_arg1);
+    IX_ASSERT(5 == tst_obj.slot_arg2);
+    IX_ASSERT(4 == tst_obj.slot_arg3);
+    IX_ASSERT(3 == tst_obj.slot_arg4);
+    IX_ASSERT(2 == tst_obj.slot_arg5);
+    IX_ASSERT(1 == tst_obj.slot_arg6);
+
+    tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int7, 7.0, 6, 5, (short)4, 3, 2, 1.0);
+    IX_ASSERT(7 == tst_obj.slot_arg1);
+    IX_ASSERT(6 == tst_obj.slot_arg2);
+    IX_ASSERT(5 == tst_obj.slot_arg3);
+    IX_ASSERT(4 == tst_obj.slot_arg4);
+    IX_ASSERT(3 == tst_obj.slot_arg5);
+    IX_ASSERT(2 == tst_obj.slot_arg6);
+    IX_ASSERT(1 == tst_obj.slot_arg7);
+
+    tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int8, 0.8, 7, 6, 5, (char)4, 3, 2, 1);
+    IX_ASSERT(0 == tst_obj.slot_arg1);
+    IX_ASSERT(7 == tst_obj.slot_arg2);
+    IX_ASSERT(6 == tst_obj.slot_arg3);
+    IX_ASSERT(5 == tst_obj.slot_arg4);
+    IX_ASSERT(4 == tst_obj.slot_arg5);
+    IX_ASSERT(3 == tst_obj.slot_arg6);
+    IX_ASSERT(2 == tst_obj.slot_arg7);
+    IX_ASSERT(1 == tst_obj.slot_arg8);
 
     iObject::connect(&tst_obj, &TestObject::signal_struct, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
@@ -736,6 +789,46 @@ int test_object(void)
     IEMIT signalObj2.tst_sig(&signalObj2);
 
     iObject::disconnect(&signalObj2, &TestObjectDelete::tst_sig, &tst_slotObj, &TestObjectDeleteSlot::slotNothing);
+
+    // Test multiple connections using a lambda slot.
+    int lambdaCallCount = 0;
+    auto lambdaSlot = [&lambdaCallCount]() {
+        ilog_debug("Additional lambda slot called");
+        lambdaCallCount++;
+    };
+    // Connect the lambda slot twice.
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, &tst_funcSlot, lambdaSlot);
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, &tst_funcSlot, lambdaSlot, QueuedConnection);
+    IEMIT tst_sig.tst_sig_int0();
+    IX_ASSERT(lambdaCallCount == 1);
+
+    // Disconnect one instance of the lambda slot.
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, &tst_funcSlot, lambdaSlot);
+    lambdaCallCount = 0;
+    IEMIT tst_sig.tst_sig_int0();
+    IX_ASSERT(lambdaCallCount == 0);
+
+    // Disconnect remaining instance.
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, &tst_funcSlot, lambdaSlot);
+    lambdaCallCount = 0;
+    IEMIT tst_sig.tst_sig_int0();
+    IX_ASSERT(lambdaCallCount == 0);
+
+    // Test connecting the same slot object more than once.
+    // The same slot connected multiple times should be invoked each time.
+    TestObject dupSlotObj;
+    dupSlotObj.slot_arg1 = 0;
+    // Connect the same slot twice.
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &dupSlotObj, &TestObject::tst_slot_int1);
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int1, &dupSlotObj, &TestObject::tst_slot_int1);
+    IEMIT tst_sig.tst_sig_int1(10);
+    // Both slots will update slot_arg1; the value remains from the last call.
+    IX_ASSERT(dupSlotObj.slot_arg1 == 10);
+    // Disconnect both instances.
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int1, &dupSlotObj, &TestObject::tst_slot_int1);
+    IEMIT tst_sig.tst_sig_int1(20);
+    // No change expected since slots were disconnected.
+    IX_ASSERT(dupSlotObj.slot_arg1 == 10);
 
     return 0;
 }

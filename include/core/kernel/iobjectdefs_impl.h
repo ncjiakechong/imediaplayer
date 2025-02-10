@@ -1665,7 +1665,7 @@ protected:
     typedef _iConnection* (*ImplFn)(int which, const _iConnection* _this, const _iConnection* _other, void* args, void* ret);
 
     _iConnection(ImplFn impl, ConnectionType type, xuint16 signalSize, xuint16 slotSize);
-    ~_iConnection();
+    ~_iConnection(); // there is no action in subclass destructor, so we don't need virtual destructor to avoid vtable
 
     void setSignal(const iObject* sender, _iMemberFunction signal);
 
