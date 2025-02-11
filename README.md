@@ -4,6 +4,7 @@ The current code implements the core iObject and a media player (based on GStrea
 A C++ INC is planned for the next phase.
 
 Key features of the core iObject:
+
 A. Signal/Slot mechanism:
   - Automatically checks argument compatibility between signals and slots.
   - Supports lambda expressions and function pointers.
