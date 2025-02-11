@@ -71,7 +71,7 @@ public:
         ilog_debug(this, " tst_slot_prop changed ", arg1.value<int>());
     }
 
-    void testPropertyChanged(int value) ISIGNAL(testPropertyChanged, value);
+    void testPropertyChanged(int value) const ISIGNAL(testPropertyChanged, value);
 
     void signal_void() ISIGNAL(signal_void);
     void signal_struct(int arg1, const struct E& arg2, int arg3) ISIGNAL(signal_struct, arg1, arg2, arg3);
@@ -289,6 +289,8 @@ public:
     void tst_sig_point(int arg1, struct E* arg2, int arg3) ISIGNAL(tst_sig_point, arg1, arg2, arg3);
 
     void tst_sig_refAdd(int& arg1) ISIGNAL(tst_sig_refAdd, arg1);
+
+    void tst_sig_const() ISIGNAL(tst_sig_const);
 };
 
 
@@ -504,9 +506,15 @@ int test_object(void)
     // iObject::connect(&tst_sig, &TestSignals::tst_sig_ref, &tst_obj, &TestObject::tst_slot_type_change); // build error
     iObject::connect(&tst_sig, &TestSignals::tst_sig_point, &tst_obj, &TestObject::tst_slot_type_change);
 
+    // const TestObject* const_obj = &tst_obj;
+    // iObject::connect(&tst_sig, &TestSignals::tst_sig_struct, const_obj, &TestObject::tst_slot_constref); // build error
+
     // iObject::connect(&tst_sig, &TestSignals::tst_sig_point, &tst_obj, &TestObject::tst_slot_error); // build error
     ilog_debug("-------------emit_signals1");
     tst_sig.emit_signals();
+
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_const, &tst_obj, &TestObject::tst_slot_int0);
+    tst_sig.tst_sig_const();
 
     tst_sig.disconnect(&tst_sig, IX_NULLPTR, &tst_obj, IX_NULLPTR);
 
