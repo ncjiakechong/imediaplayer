@@ -108,7 +108,7 @@ public:
     template <typename Func1, typename Func2, typename Object>
     static inline typename enable_if< FunctionPointer<Func2, -1>::ArgumentCount == -1 && !is_convertible<Func2, const char*>::value, bool>::type
         connect(const typename FunctionPointer<Func1, -1>::Object *sender, Func1 signal,
-                const Object *receiver, Func2 slot, ConnectionType type = AutoConnection) {
+                const Object *indicator, Func2 slot, ConnectionType type = AutoConnection) {
         typedef FunctionPointer<Func1, -1> SignalType;
         const int FunctorArgumentCount = ComputeFunctorArgumentCount<Func2 , typename SignalType::Arguments::Type, SignalType::ArgumentCount>::value;
 
@@ -117,7 +117,7 @@ public:
         IX_COMPILER_VERIFY((FunctorArgumentCount >= 0));
         // TODO: check Return type convertible
 
-        _iConnectionHelper<Func1, Func2, FunctorArgumentCount> conn(sender, signal, true, IX_NULLPTR, slot, true, type);
+        _iConnectionHelper<Func1, Func2, FunctorArgumentCount> conn(sender, signal, true, indicator, slot, true, type);
         return connectImpl(conn);
     }
 
