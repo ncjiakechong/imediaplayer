@@ -65,7 +65,7 @@ public:
     void setParent(iObject *parent);
 
     iThread* thread() const;
-    void moveToThread(iThread *targetThread);
+    bool moveToThread(iThread *targetThread);
 
     int startTimer(int interval, xintptr userdata = 0, TimerType timerType = CoarseTimer);
     void killTimer(int id);
