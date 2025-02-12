@@ -277,21 +277,21 @@ iThread* iObject::thread() const
     return m_threadData->thread.load();
 }
 
-void iObject::moveToThread(iThread *targetThread)
+bool iObject::moveToThread(iThread *targetThread)
 {
     if (targetThread == m_threadData->thread) {
         // object is already in this thread
-        return;
+        return true;
     }
 
     if (this == m_threadData->thread) {
         ilog_warn("Cannot move a thread to another");
-        return;
+        return false;
     }
 
     if (IX_NULLPTR != m_parent) {
         ilog_warn("Cannot move objects with a parent");
-        return;
+        return false;
     }
 
     iThreadData *currentData = iThreadData::current();
@@ -304,7 +304,7 @@ void iObject::moveToThread(iThread *targetThread)
                   " is not the object's thread (", m_threadData->thread.load(), ").\n"
                   "Cannot move to target thread (", targetData ? targetData->thread.load() : IX_NULLPTR,")\n");
 
-        return;
+        return false;
     }
 
     // prepare to move
@@ -328,6 +328,8 @@ void iObject::moveToThread(iThread *targetThread)
 
     // now currentData can commit suicide if it wants to
     currentData->deref();
+
+    return true;
 }
 
 void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *targetData)
