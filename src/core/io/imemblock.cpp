@@ -756,7 +756,7 @@ iMemPool::iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint
     , m_mutex(iMutex::Recursive)
     , m_freeSlots(n_blocks)
 {
-    IX_ASSERT(m_memory);
+    IX_ASSERT(m_memory && (m_memory->size() >= (block_size * n_blocks)));
     m_stat.nAllocated = 0;
     m_stat.nAccumulated = 0;
     m_stat.nImported = 0;
@@ -848,9 +848,11 @@ void iMemPool::vacuum()
 iMemPool::Slot* iMemPool::allocateSlot()
 {
     Slot* slot = m_freeSlots.pop(IX_NULLPTR);
-    if (IX_NULLPTR != slot) {
+    if (IX_NULLPTR != slot)
         return slot;
-    }
+
+    if ((m_memory->size() <= 0) || (IX_NULLPTR == m_memory->data()))
+        return slot;
 
     int idx = m_nInit++;
 
@@ -864,7 +866,7 @@ iMemPool::Slot* iMemPool::allocateSlot()
     if (IX_NULLPTR == slot && (m_nBlocks > 0)) {
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, "Pool full");
         m_stat.nPoolFull++;
-        return IX_NULLPTR;
+        return slot;
     }
 
     return slot;
