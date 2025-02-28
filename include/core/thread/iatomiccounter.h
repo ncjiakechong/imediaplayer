@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iatomiccounter.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a thread-safe counter
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

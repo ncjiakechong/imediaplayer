@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ishareddata.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   designed to be used with iSharedDataPointer or 
+///          iExplicitlySharedDataPointer to implement custom 
+///          implicitly or explicitly shared classes
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

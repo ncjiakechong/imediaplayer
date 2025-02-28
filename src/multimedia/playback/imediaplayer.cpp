@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imediaplayer.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   high level media playback class which allows playing of a media source
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

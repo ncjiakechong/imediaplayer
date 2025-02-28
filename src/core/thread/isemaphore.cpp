@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    isemaphore.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   implement a counting semaphore
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

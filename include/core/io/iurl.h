@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iurl.h
-/// @brief   Short description
+/// @brief   provide a comprehensive and flexible way to represent and manipulate URLs.
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

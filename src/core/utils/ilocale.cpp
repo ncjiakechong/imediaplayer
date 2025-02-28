@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ilocale.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a comprehensive set of tools for handling locale-specific data, 
+///          such as language, country, script, number formatting, date and time formatting,
+///          currency formatting, and text direction.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

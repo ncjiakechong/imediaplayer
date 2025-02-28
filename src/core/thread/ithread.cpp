@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ithread.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   implement an abstraction for managing threads of execution
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

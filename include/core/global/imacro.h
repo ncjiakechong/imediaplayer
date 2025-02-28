@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imacro.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines a collection of macros used throughout whole library
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

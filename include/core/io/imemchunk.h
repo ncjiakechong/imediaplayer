@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imemchunk.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides tools for woking with segments of memory blocks
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

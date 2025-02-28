@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstappsrc.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   acts as a GStreamer appsrc element
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iprocessordetection.h
-/// @brief   Short description
-/// @details description.
+/// @brief   focuses on detecting the processor's byte order (endianness) at compile time
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

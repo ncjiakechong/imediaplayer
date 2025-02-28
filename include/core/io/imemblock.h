@@ -3,8 +3,10 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imemblock.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines a memory management subsystem
+/// @details centered around the concepts of memory blocks, memory pools, and shared memory. 
+///          It provides classes for allocating, managing, and sharing memory 
+///          between different parts of an application or even different processes.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

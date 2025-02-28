@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imultimedia.h
-/// @brief   Short description
+/// @brief   multi media global header
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

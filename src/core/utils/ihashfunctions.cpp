@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ihashfunctions.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   defines hash functions for various classes, 
+///          enabling their use as keys in hash tables
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

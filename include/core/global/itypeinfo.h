@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    itypeinfo.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides type trait functionality allowing compile-time introspection of type properties
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

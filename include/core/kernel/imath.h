@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imath.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines a collection of mathematical functions and constants
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

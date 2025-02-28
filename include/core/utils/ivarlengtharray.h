@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ivarlengtharray.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a dynamic array that can grow or shrink in size as needed
+/// @details It's similar to std::vector, but with a pre-allocated buffer 
+///          to avoid frequent memory allocations for small arrays
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

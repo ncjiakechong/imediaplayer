@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iutfcodec.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   It is a private header file for iUtfCodec
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

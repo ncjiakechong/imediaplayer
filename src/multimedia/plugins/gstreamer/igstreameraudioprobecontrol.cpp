@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreameraudioprobecontrol.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   designed to intercept and process audio buffers within a GStreamer pipeline
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

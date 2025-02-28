@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imediapluginfactory.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   factory for creating multimedia-related objects
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

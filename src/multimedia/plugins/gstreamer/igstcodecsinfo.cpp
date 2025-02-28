@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstcodecsinfo.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   responsible for retrieving and managing information about available GStreamer codecs
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

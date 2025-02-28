@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iabstractvideobuffer_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   an abstraction for video data
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

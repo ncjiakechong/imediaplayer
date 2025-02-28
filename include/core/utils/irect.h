@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    irect.h
-/// @brief   Short description
-/// @details description.
+/// @brief   represent 2D rectangles with integer and floating-point coordinates
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

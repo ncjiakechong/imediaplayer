@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iendian.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines utilities for handling endianness in a platform-independent manner
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

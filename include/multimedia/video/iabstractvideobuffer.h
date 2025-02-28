@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iabstractvideobuffer.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provide an abstraction for working with video buffers, 
+///          allowing access to the underlying video data for rendering or processing
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

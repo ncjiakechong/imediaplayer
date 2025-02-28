@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iregularexpression.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides pattern matching using regular expressions
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

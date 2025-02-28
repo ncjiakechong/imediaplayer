@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstutils_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a collection of utility functions for working with GStreamer
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

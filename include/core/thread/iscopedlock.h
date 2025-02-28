@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    scopedlock.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provide RAII (Resource Acquisition Is Initialization) wrappers for mutexes
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

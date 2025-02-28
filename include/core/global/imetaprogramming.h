@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imetaprogramming.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a collection of template-based utilities for compile-time type introspection
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

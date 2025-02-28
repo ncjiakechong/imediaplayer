@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ideadlinetimer.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   design to calculate future deadlines and verify whether a deadline has expired
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

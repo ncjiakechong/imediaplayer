@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iregularexpression.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provide a comprehensive set of tools for working with regular expressions, 
+///          allowing for pattern matching, searching, and manipulation of strings
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

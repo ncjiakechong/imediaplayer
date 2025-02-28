@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iaupdate.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a mechanism for lock-free updates of arbitrary data structures, 
+///          similar to Read-Copy-Update (RCU)
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

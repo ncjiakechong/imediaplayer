@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imemtrap.h
-/// @brief   Short description
-/// @details description.
+/// @brief   This class provides a mechanism to handle SIGBUS signals that can occur 
+///          when accessing memory regions, particularly memory-mapped regions 
+///          controlled by external processes or hardware resources
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

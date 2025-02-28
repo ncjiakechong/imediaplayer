@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imediaplayercontrol.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides access to the media playing functionality
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

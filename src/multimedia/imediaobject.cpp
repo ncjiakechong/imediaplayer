@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imediaobject.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a common base for multimedia objects
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

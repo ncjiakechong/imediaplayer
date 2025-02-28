@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iglobal.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines fundamental types, macros, and functions used throughout whole library
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iaudiobuffer.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   designed to hold audio data, providing methods for 
+///          accessing, modifying, and querying the audio content
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

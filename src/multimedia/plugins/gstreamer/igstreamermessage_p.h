@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamermessage_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a wrapper around GstMessage type
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

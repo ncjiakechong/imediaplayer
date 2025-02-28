@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    inumeric.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines functions and utilities for handling numeric values,
+///          especially floating-point numbers
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

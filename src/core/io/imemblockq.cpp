@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imemblockq.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   implements a queue(similar as ringbuffer without memory copy) of memchunks
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamervideorendererinterface.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   serves as an interface for GStreamer-based video renderers
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

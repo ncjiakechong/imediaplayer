@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamerautorenderer.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   act as GStreamer video renderer that automatically selects an appropriate video sink
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

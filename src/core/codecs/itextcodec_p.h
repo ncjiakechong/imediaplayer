@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    itextcodec_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   convenience class for iTextCodec
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

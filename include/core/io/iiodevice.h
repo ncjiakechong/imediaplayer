@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iiodevice.h
-/// @brief   Short description
-/// @details description.
+/// @brief   servers as an abstract base class for all I/O devices
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

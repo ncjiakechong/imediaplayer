@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamerbushelper.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a mechanism for monitoring and processing messages from a GStreamer bus
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imutex.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provide mutual exclusion mechanisms for thread synchronization
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

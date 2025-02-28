@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ithread_win.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   implement ithread for Windows
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

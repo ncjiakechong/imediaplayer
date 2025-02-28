@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ifreelist.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   a lock-free free list implementation
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

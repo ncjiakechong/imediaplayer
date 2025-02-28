@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamerbufferprobe.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a mechanism for intercepting and examining 
+///          GStreamer buffers and caps as they flow through a pipeline
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

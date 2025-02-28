@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    isharemem.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provide an abstraction for managing shared memory regions. 
+///          It allows creating, attaching to, and detaching from shared memory segments, 
+///          enabling inter-process communication and data sharing
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

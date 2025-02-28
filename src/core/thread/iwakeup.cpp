@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iwakeup.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a mechanism for signaling and waking up threads 
+///          that are waiting for an event to occur
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

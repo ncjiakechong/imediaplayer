@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iobjectdefs_impl.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides implementation details and helper classes 
+///          for the iObject signal/slot mechanism and property system
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

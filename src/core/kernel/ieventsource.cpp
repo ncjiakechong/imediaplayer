@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ieventsource.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   generate events and notifying the event loop when they are ready to be processed
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

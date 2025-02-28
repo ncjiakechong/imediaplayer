@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ilocale_tools_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provide locale-independent conversion functions for numbers and strings
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

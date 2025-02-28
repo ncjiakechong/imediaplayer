@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ivideoframe.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   represents a video frame, encapsulating the video data and metadata
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

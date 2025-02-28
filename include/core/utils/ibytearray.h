@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ibytearray.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a dynamic array of bytes for storing and manipulating sequences of characters
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

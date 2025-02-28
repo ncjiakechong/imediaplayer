@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ibitarray.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a dynamic array of bits, 
+///          allowing efficient storage and manipulation of boolean values
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

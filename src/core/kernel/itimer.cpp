@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    itimer.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a mechanism for creating and managing timers that can trigger a signal
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
