@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iurl.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a convenient interface for working with URLs
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

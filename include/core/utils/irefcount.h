@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    irefcount.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a thread-safe reference counter, used for managing the lifetime of shared objects
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

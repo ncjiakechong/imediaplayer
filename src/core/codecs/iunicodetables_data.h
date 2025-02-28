@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iunicodetables_data.h
-/// @brief   Short description
-/// @details description.
+/// @brief   generated from the Unicode 10.0 database
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

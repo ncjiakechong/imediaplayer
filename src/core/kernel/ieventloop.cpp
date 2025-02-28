@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ieventloop.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   central mechanism for processing events and handling user interactions in a event-driven applications
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

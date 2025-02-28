@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    idatetime.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provide a comprehensive set of tools for working with dates, times, 
+///          and date-time combinations
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

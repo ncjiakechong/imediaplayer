@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ieventdispatcher.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   an abstract base class responsible for managing and dispatching events
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -26,7 +25,8 @@ struct iTimerIdFreeListConstants
     {
         InitialNextValue = 1,
         IndexMask = 0x0000ffff,
-        SerialMask = ~IndexMask & ~0x80000000,
+        // Use explicit type to avoid potential overflow
+        SerialMask = static_cast<xuint32>(~IndexMask & ~0x80000000),
         SerialCounter = IndexMask + 1,
         MaxIndex = IndexMask,
         BlockCount = 6

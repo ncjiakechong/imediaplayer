@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    icoreapplication.h
-/// @brief   Short description
-/// @details description.
+/// @brief   central class for managing the lifecycle and event handling of an application
+/// @details provide foundation for running and controlling the application, 
+///          including event dispatching, signal handling, and application-level resources
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamermessage.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides an implementation of the iMediaPlayerControl interface, 
+///          using GStreamer as the underlying media playback engine
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

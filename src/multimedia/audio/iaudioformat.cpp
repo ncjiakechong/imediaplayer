@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iaudioformat.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   encapsulates information about the format of audio data
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

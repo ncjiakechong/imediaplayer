@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imediatimerange.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   represents a time interval with integer precision
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

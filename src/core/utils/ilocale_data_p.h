@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ilocale_data_p.h
-/// @brief   Short description
+/// @brief   defines internal data structures and functions used by the iLocaleShort description
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

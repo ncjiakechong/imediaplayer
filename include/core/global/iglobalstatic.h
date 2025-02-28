@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iglobalstatic.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a thread-safe mechanism for initializing and accessing global static objects
+/// @details defines two macros, IX_GLOBAL_STATIC_WITH_ARGS and IX_GLOBAL_STATIC, 
+///          which are used to declare and define the global static objects.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

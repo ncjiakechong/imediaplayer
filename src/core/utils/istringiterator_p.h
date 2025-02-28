@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    istringiterator_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a custom iterator for traversing iString objects
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

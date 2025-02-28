@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    istringalgorithms.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines a collection of utility functions for performing various operations on strings
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

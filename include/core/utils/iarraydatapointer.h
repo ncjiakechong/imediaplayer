@@ -2,9 +2,9 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    ibitarray.h
-/// @brief   Short description
-/// @details description.
+/// @file    iarraydatapointer.h
+/// @brief   provides a smart pointer-like interface for managing data stored 
+///          in a contiguous block of memory
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

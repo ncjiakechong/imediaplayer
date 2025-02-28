@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imemblockq.h
-/// @brief   Short description
-/// @details description.
+/// @brief   implements a queue(similar as ringbuffer without memory copy) of memchunks
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -78,10 +77,7 @@ struct IX_CORE_EXPORT iBufferAttr
      * less than minreq bytes from the client, instead waits until the
      * buffer is free enough to request more bytes at once. It is
      * recommended to set this to (uint32_t) -1, which will initialize
-     * this to a value that is deemed sensible by the server. This
-     * should be set to a value that gives PulseAudio enough time to
-     * move the data from the per-stream playback buffer into the
-     * hardware playback buffer. */
+     * this to a value that is deemed sensible by the server. */
 
     xuint32 fragsize;
     /**< Recording only: fragment size. The server sends data in
@@ -102,8 +98,8 @@ struct IX_CORE_EXPORT iBufferAttr
 
 /**
  * A memblockqueue is a queue of memchunks (yep, the name is not
- * perfect). It is similar to the ring buffers used by most other
- * audio software. In contrast to a ring buffer this memblockqueue data
+ * perfect). It is similar to the ring buffers.
+ * In contrast to a ring buffer this memblockqueue data
  * type doesn't need to copy any data around, it just maintains
  * references to reference counted memory blocks. 
 */

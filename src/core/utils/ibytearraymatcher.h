@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ibytearraymatcher.h
-/// @brief   Short description
-/// @details description.
+/// @brief   holds a sequence of bytes that can be quickly matched in a byte array
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

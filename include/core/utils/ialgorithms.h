@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ialgorithms.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines a collection of utility algorithms
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

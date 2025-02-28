@@ -3,8 +3,10 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iobject.h
-/// @brief   Short description
-/// @details description.
+/// @brief   serves as the base class for all objects
+/// @details provides fundamental functionalities such as object naming, 
+///          parent-child relationships, threading, property management, 
+///          and a signal/slot mechanism for inter-object communication.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -36,8 +38,8 @@ struct ExternalRefCountData;
  * - Args type is adapted from Signal to Slot, E.g signal(float) -> slot(int)
  * - Return value from Slot to Signal
  * - Slot support override function
- * - Slot also support lambda and unary function
- * - Support signal forward
+ * - Support lambda and unary function as slot
+ * - Signal transmission
  */
 class IX_CORE_EXPORT iObject
 {

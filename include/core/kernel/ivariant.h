@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ivariant.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a generic container that can hold values of different types
+/// @details key component for implementing a flexible container and for passing data 
+///          between different parts without knowing the exact type at compile time
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

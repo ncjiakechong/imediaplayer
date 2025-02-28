@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ivideosurfaceformat.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   video surface format utility class
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ichar.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a representation of a Unicode character, offering 
+///          functionalities for character manipulation, classification, and conversion
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

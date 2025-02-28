@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iendian.cpp
-/// @brief   Short description
+/// @brief   onversion Functions little and big endian representations of numbers
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

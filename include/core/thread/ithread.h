@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ithread.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provide an abstraction for managing threads of execution
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

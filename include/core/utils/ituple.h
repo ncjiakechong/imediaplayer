@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ituple.h
-/// @brief   Short description
-/// @details description.
+/// @brief   Provides a fixed-size collection of heterogeneous elements, similar to std::tuple in C++11
+/// @details It leverages template metaprogramming and the iTypeList infrastructure 
+///          to create a type-safe and efficient tuple implementation.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    istring.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provide functionalities for working with Unicode strings and Latin-1 strings
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

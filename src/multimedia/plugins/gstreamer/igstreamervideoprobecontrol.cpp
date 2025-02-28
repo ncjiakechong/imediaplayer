@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamervideoprobecontrol.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a mechanism for intercepting and examining video frames within a GStreamer pipeline
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

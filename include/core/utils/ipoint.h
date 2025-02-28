@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ipoint.h
-/// @brief   Short description
-/// @details description.
+/// @brief   represent 2D points with integer and floating-point coordinates
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

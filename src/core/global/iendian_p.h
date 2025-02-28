@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iendian_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   conversion Functions little and big endian representations of numbers
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

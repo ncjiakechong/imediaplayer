@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ipoll.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines a cross-platform polling mechanism for monitoring file descriptors for I/O events
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ithread_posix.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   implement ithread for posix platform
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

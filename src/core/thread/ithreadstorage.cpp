@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ithreadstorage.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provide a mechanism for thread-local storage (TLS)
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    isize.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   represent 2D sizes (width and height) with integer and floating-point values
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

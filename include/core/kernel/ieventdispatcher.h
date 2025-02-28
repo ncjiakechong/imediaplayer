@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ieventdispatcher.h
-/// @brief   Short description
-/// @details description.
+/// @brief   an abstract base class responsible for managing and dispatching events
+/// @details handles timer events, manages event sources, and dispatches events to objects
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ieventdispatcher_generic.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   a implementation for all platform
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ievent.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   defines event subsystem in iObject and several derived classes for specific event types
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

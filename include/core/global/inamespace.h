@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    inamespace.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines a collection of enumerations for whole library
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

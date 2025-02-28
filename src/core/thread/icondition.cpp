@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    icondition.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a synchronization primitive used to block a thread 
+///          until a particular condition is met.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

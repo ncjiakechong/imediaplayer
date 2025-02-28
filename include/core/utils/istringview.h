@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    istringview.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a unified view on UTF-16 strings with a read-only subset of the iString API
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

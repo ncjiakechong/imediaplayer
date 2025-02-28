@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamerplayersession_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   manages a GStreamer pipeline for media playback
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

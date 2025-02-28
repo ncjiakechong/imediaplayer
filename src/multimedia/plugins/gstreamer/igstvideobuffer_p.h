@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstvideobuffer_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   an abstraction for accessing the data within a GStreamer buffer containing video frames
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

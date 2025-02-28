@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ibasicatomicbitfield.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a thread-safe bitfield implementation using atomic operations
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

@@ -3,8 +3,9 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    itypelist.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines a set of template metaprogramming tools 
+///          for creating and manipulating compile-time lists of types,
+///          it is used to implement other data structures, such as iTuple
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

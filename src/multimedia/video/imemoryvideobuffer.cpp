@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imemoryvideobuffer.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a system memory allocated video data buffer
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

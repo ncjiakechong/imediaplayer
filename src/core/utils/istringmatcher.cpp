@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    istringmatcher.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a way to efficiently search for a specific pattern within a string
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

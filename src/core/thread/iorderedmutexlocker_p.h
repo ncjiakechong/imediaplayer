@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iorderedmutexlocker_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   Locks 2 mutexes in a defined order
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

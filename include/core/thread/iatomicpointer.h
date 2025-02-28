@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iatomicpointer.h
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a thread-safe way to manage pointers
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

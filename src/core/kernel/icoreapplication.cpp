@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    icoreapplication.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   central class for managing the lifecycle and event handling of an application
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

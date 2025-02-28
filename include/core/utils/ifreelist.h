@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ifreelist.h
-/// @brief   Short description
-/// @details description.
+/// @brief   a lock-free free list implementation
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -144,7 +143,6 @@ protected:
 }; 
 
 /*!
-
     This is a generic implementation of a lock-free free list. 
     Mode 1: Use next() to get the next free entry in the list, 
             and release(id) when done with the id.

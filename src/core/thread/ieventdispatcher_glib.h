@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ieventdispatcher_glib.h
-/// @brief   Short description
-/// @details description.
+/// @brief   a implementation based on glib
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

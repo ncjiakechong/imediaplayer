@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ivariant.cpp
-/// @brief   Short description
-/// @details description.
+/// @brief   provides a generic container that can hold values of different types
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

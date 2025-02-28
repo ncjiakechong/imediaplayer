@@ -3,8 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    istringalgorithms_p.h
-/// @brief   Short description
-/// @details description.
+/// @brief   defines internal helper functions for string manipulation
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
