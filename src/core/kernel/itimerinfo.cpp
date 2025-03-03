@@ -2,7 +2,7 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    itimerinfo_C11.cpp
+/// @file    itimerinfo.cpp
 /// @brief   timer subsystem utility class
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

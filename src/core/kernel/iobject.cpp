@@ -2,7 +2,7 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iobject.h
+/// @file    iobject.cpp
 /// @brief   serves as the base class for all objects
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
