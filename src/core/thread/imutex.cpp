@@ -2,7 +2,7 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    imutex.h
+/// @file    imutex.cpp
 /// @brief   provide mutual exclusion mechanisms for thread synchronization
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

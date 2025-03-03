@@ -2,7 +2,7 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    igstreamermessage.h
+/// @file    igstreamermessage.cpp
 /// @brief   provides a wrapper around GstMessage type
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

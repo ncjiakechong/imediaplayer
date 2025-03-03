@@ -2,7 +2,7 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    igstutils.h
+/// @file    igstutils.cpp
 /// @brief   provides a collection of utility functions for working with GStreamer
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

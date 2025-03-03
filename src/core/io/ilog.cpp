@@ -2,7 +2,7 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    ilog.h
+/// @file    ilog.cpp
 /// @brief   defines a simple logging subsystem
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

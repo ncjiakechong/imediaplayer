@@ -2,7 +2,7 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    igstreamerbushelper.h
+/// @file    igstreamerbushelper.cpp
 /// @brief   provides a mechanism for monitoring and processing messages from a GStreamer bus
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
