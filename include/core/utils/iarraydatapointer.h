@@ -356,7 +356,7 @@ private:
         Data* d = Data::allocate(detachCapacity(size), options);
         iArrayDataPointer copy(d, static_cast<T*>(d->data().value()), 0);
         if (size)
-            copy->copyAppend(begin(), end());
+            copy.copyAppend(begin(), end());
 
         d = copy.d;
         copy.d = IX_NULLPTR;
