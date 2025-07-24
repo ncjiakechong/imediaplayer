@@ -435,7 +435,7 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t eleme
         return block;
     } else {
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__,
-                        "Memory block too large for pool: %llu > %zu", allocSize - headerSize, pool->m_blockSize);
+                        "Memory block too large for pool: %llu > %zu", (long long unsigned int)(allocSize - headerSize), pool->m_blockSize);
         pool->m_stat.nTooLargeForPool++;
         return IX_NULLPTR;
     }
