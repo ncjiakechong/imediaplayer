@@ -9,6 +9,7 @@
 /////////////////////////////////////////////////////////////////
 
 #include "core/kernel/icoreapplication.h"
+#include "core/thread/ithreadstorage.h"
 #include "core/thread/ithread.h"
 #include "core/kernel/ievent.h" 
 #include "core/io/ilog.h"
@@ -318,6 +319,8 @@ void iThreadImpl::internalThreadFunc()
         thread->m_isInFinish = true;
 
         iCoreApplication::sendPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
+
+        iThreadStorageData::finish((void**)&data->tls);
 
         iEventDispatcher *eventDispatcher = data->dispatcher.load();
         if (eventDispatcher) {

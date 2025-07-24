@@ -16,6 +16,7 @@
 #include "core/thread/ithread.h"
 #include "core/kernel/icoreapplication.h"
 #include "core/kernel/ievent.h"
+#include "core/thread/ithreadstorage.h"
 
 #define ILOG_TAG "test"
 
@@ -28,19 +29,32 @@ public:
     TestThread(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 
     void tst_slot_int1(int arg) {
-        ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1 ", arg);
-        slot = arg;
+        if (slot.hasLocalData()) {
+            ilog_debug("test_thread: [", iThread::currentThreadId(), "] tst_slot_int1 old ", slot.localData(), " new ", arg);
+        } else {
+            ilog_debug("test_thread: [", iThread::currentThreadId(), "] tst_slot_int1 new ", arg);
+        }
+
+        acount = arg;
+        slot.setLocalData(arg);
     }
 
     void tst_slot_int1_block(int arg) {
-        ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block ", arg);
-        slot = arg;
+        if (slot.hasLocalData()) {
+            ilog_debug("test_thread: [", iThread::currentThreadId(), "] tst_slot_int1_block old ", slot.localData(), " new ", arg);
+        } else {
+            ilog_debug("test_thread: [", iThread::currentThreadId(), "] tst_slot_int1_block new ", arg);
+        }
+        
+        acount = arg;
+        slot.setLocalData(arg);
     }
 
     void tst_sig_int1(int arg) ISIGNAL(tst_sig_int1, arg);
 
 public: //test result
-    int slot;
+    int acount = 0;
+    iThreadStorage<int> slot;
 };
 
 int test_thread(void)
@@ -57,14 +71,16 @@ int test_thread(void)
     iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1_block, BlockingQueuedConnection);
     thread->start();
 
-    thread1->slot = 0;
+    thread1->acount = 0;
+    thread1->slot.setLocalData(0);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 start");
     IEMIT signal1->tst_sig_int1(1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 end");
-    IX_ASSERT(1 == signal1->slot);
-    IX_ASSERT(1 == thread1->slot);
+    IX_ASSERT(1 == signal1->acount);
+    IX_ASSERT(1 == thread1->acount && 0 == thread1->slot.localData());
 
-    thread1->slot = 0;
+    thread1->acount = 0;
+    thread1->slot.setLocalData(0);
     iObject::disconnect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1_block);
     iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_sig_int1 2 start");
@@ -74,7 +90,7 @@ int test_thread(void)
     iThread::yieldCurrentThread();
     iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));
     thread->wait();
-    IX_ASSERT(2 == thread1->slot);
+    IX_ASSERT(2 == thread1->acount && 0 == thread1->slot.localData());
     delete thread1;
 
     thread1 = new TestThread;
@@ -85,10 +101,11 @@ int test_thread(void)
     IX_ASSERT(!iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1, ConnectionType(DirectConnection | UniqueConnection)));
     thread->start();
 
-    thread1->slot = 0;
+    thread1->acount = 0;
+    thread1->slot.setLocalData(0);
     ilog_debug("test_thread: [", iThread::currentThreadId(),"]tst_sig_int1");
-    IEMIT signal1->tst_sig_int1(2);
-    IX_ASSERT(2 == thread1->slot);
+    IEMIT signal1->tst_sig_int1(3);
+    IX_ASSERT(3 == thread1->acount && 3 == thread1->slot.localData());
 
     delete thread1;
 
