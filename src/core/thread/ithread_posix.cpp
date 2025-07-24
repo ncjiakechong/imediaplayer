@@ -366,11 +366,7 @@ int iThread::currentThreadId()
 
 void iThread::yieldCurrentThread()
 {
-    #if defined(IX_OS_MAC)
-    pthread_yield_np();
-    #else
-    pthread_yield();
-    #endif
+    sched_yield();
 }
 
 } // namespace iShell
