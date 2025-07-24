@@ -43,7 +43,7 @@ iThreadStorageData::iThreadStorageData(void (*func)(void *))
          */
         iThreadData *data = iThreadData::current();
         id = data->tls.size();
-        ilog_debug("Allocated id ", id, ", destructor ", func, " cannot be stored");
+        ilog_verbose("Allocated id ", id, ", destructor ", func, " cannot be stored");
         return;
     }
     DestructorMap::iterator it = destr->begin();
@@ -56,12 +56,12 @@ iThreadStorageData::iThreadStorageData(void (*func)(void *))
     } else {
         *it = func;
     }
-    ilog_debug("Allocated id ", id, ", destructor ", func);
+    ilog_verbose("Allocated id ", id, ", destructor ", func);
 }
 
 iThreadStorageData::~iThreadStorageData()
 {
-    ilog_debug("Released id ", id);
+    ilog_verbose("Released id ", id);
     iMutex::ScopedLock locker(destructorsMutex);
     DestructorMap *destr = destructors();
     if (destr) {
@@ -86,7 +86,7 @@ void **iThreadStorageData::get() const
     std::advance(it, id);
     void **v = &(*it);
 
-    ilog_debug("iThreadStorageData: Returning storage ", id, ", data ", *v, ", for thread ", iThread::currentThreadId());
+    ilog_verbose("iThreadStorageData: Returning storage ", id, ", data ", *v, ", for thread ", iThread::currentThreadId());
 
     return *v ? v : IX_NULLPTR;
 }
@@ -108,7 +108,7 @@ void **iThreadStorageData::set(void *p)
     void *&value = *it;
     // delete any previous data
     if (value != IX_NULLPTR) {
-        ilog_debug("previous storage ", id, ", data ", value, ", for thread ", iThread::currentThreadId());
+        ilog_verbose("previous storage ", id, ", data ", value, ", for thread ", iThread::currentThreadId());
 
         iMutex::ScopedLock locker(destructorsMutex);
         DestructorMap *destr = destructors();
@@ -127,7 +127,7 @@ void **iThreadStorageData::set(void *p)
 
     // store new data
     value = p;
-    ilog_debug("iThreadStorageData: Set storage ", id, " for thread ", iThread::currentThreadId(), "to ",p);
+    ilog_verbose("iThreadStorageData: Set storage ", id, " for thread ", iThread::currentThreadId(), " to ",p);
     return &value;
 }
 
@@ -137,7 +137,7 @@ void iThreadStorageData::finish(void **p)
     if (!tls || tls->empty() || !destructors())
         return; // nothing to do
 
-    ilog_debug("Destroying storage for thread ", iThread::currentThreadId());
+    ilog_verbose("Destroying storage for thread ", iThread::currentThreadId());
     while (!tls->empty()) {
         void *&value = tls->back();
         void *q = value;
