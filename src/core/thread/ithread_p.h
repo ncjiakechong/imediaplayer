@@ -11,6 +11,7 @@
 #define ITHREAD_P_H
 
 #include <list>
+#include <unordered_map>
 
 #include <core/thread/iatomicpointer.h>
 #include <core/thread/imutex.h>
@@ -116,7 +117,7 @@ public:
     iAtomicPointer<iThread>         thread;
     iAtomicPointer<iEventDispatcher> dispatcher;
 
-    std::list<void*>                tls; 
+    std::unordered_map<int, void*>  tls;
 private:
     iRefCount                       m_ref;
 };
