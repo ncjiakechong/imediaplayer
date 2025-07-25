@@ -64,10 +64,25 @@ iThreadStorageData::~iThreadStorageData()
     ilog_verbose("Released id ", id);
     iMutex::ScopedLock locker(destructorsMutex);
     DestructorMap *destr = destructors();
-    if (destr) {
+    if (!destr) {
+        // destructors already destroyed, nothing to do
+        ilog_verbose("Destructor map already destroyed, nothing to do for id ", id);
+        return;
+    }
+
+    // it is not the last item and destructor will be called later
+    if (id < (destr->size() - 1)) {
         DestructorMap::iterator it = destr->begin();
         std::advance(it, id);
         *it = IX_NULLPTR;
+        return;
+    }
+
+    IX_ASSERT(id == (destr->size() - 1));
+    destr->pop_back();
+
+    while (!destr->empty() && (IX_NULLPTR == destr->back())) {
+        destr->pop_back();
     }
 }
 
