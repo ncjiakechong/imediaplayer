@@ -23,7 +23,6 @@ public:
     void** set(void* p);
 
     static void finish(void**);
-    int id;
 };
 
 // pointer specialization

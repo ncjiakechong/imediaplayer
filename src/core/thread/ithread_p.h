@@ -117,7 +117,7 @@ public:
     iAtomicPointer<iThread>         thread;
     iAtomicPointer<iEventDispatcher> dispatcher;
 
-    std::unordered_map<int, void*>  tls;
+    std::unordered_map<xuintptr, void*>  tls;
 private:
     iRefCount                       m_ref;
 };

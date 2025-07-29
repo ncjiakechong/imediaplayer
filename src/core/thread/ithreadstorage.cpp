@@ -8,7 +8,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <list>
+#include <unordered_map>
 #include <string.h>
 
 #include "core/io/ilog.h"
@@ -24,7 +24,7 @@
 namespace iShell {
 
 static iMutex destructorsMutex;
-typedef std::list<void (*)(void *)> DestructorMap;
+typedef std::unordered_map<xuintptr, void (*)(void *)> DestructorMap;
 IX_GLOBAL_STATIC(DestructorMap, destructors)
 
 iThreadStorageData::iThreadStorageData(void (*func)(void *))
@@ -42,48 +42,26 @@ iThreadStorageData::iThreadStorageData(void (*func)(void *))
          no where to store it, and no way to actually call it.
          */
         iThreadData *data = iThreadData::current();
-        id = data->tls.size();
-        ilog_verbose("Allocated id ", id, ", destructor ", func, " cannot be stored");
+        ilog_warn("Allocated id ", this, ", destructor ", func, " cannot be stored");
         return;
     }
-    DestructorMap::iterator it = destr->begin();
-    for (id = 0, it = destr->begin(); id < destr->size() && it != destr->end(); ++id, ++it) {
-        if (*it == IX_NULLPTR)
-            break;
-    }
-    if (id == destr->size()) {
-        destr->push_back(func);
-    } else {
-        *it = func;
-    }
-    ilog_verbose("Allocated id ", id, ", destructor ", func);
+
+    destructors->insert({reinterpret_cast<xuintptr>(this), func});
+    ilog_verbose("Allocated id ", this, ", destructor ", func);
 }
 
 iThreadStorageData::~iThreadStorageData()
 {
-    ilog_verbose("Released id ", id);
+    ilog_verbose("Released id ", this);
     iMutex::ScopedLock locker(destructorsMutex);
     DestructorMap *destr = destructors();
     if (!destr) {
         // destructors already destroyed, nothing to do
-        ilog_verbose("Destructor map already destroyed, nothing to do for id ", id);
+        ilog_warn("Destructor map already destroyed, nothing to do for id ", this);
         return;
     }
 
-    // it is not the last item and destructor will be called later
-    if (id < (destr->size() - 1)) {
-        DestructorMap::iterator it = destr->begin();
-        std::advance(it, id);
-        *it = IX_NULLPTR;
-        return;
-    }
-
-    IX_ASSERT(id == (destr->size() - 1));
-    destr->pop_back();
-
-    while (!destr->empty() && (IX_NULLPTR == destr->back())) {
-        destr->pop_back();
-    }
+    destr->erase(reinterpret_cast<xuintptr>(this));
 }
 
 void **iThreadStorageData::get() const
@@ -93,15 +71,15 @@ void **iThreadStorageData::get() const
         ilog_warn("iThreadStorage can only be used with threads started with iThread");
         return IX_NULLPTR;
     }
-    std::unordered_map<int, void*>  &tls = data->tls;
-    std::unordered_map<int, void*>::iterator it = tls.find(id);
+    std::unordered_map<xuintptr, void*>  &tls = data->tls;
+    std::unordered_map<xuintptr, void*>::iterator it = tls.find(reinterpret_cast<xuintptr>(this));
 
-    if (tls.end() != it) {
-        ilog_verbose("iThreadStorageData: Returning storage ", id, ", data ", it->second, ", for thread ", iThread::currentThreadId());
-        return &it->second;
+    if (tls.end() == it) {
+        return IX_NULLPTR;
     }
 
-    return IX_NULLPTR;
+    ilog_verbose("iThreadStorageData: Returning storage ", this, ", data ", it->second, ", for thread ", iThread::currentThreadId());
+    return &it->second;
 }
 
 void **iThreadStorageData::set(void *p)
@@ -111,19 +89,20 @@ void **iThreadStorageData::set(void *p)
         ilog_warn("iThreadStorage can only be used with threads started with iThread");
         return IX_NULLPTR;
     }
-    std::unordered_map<int, void*>  &tls = data->tls;
-    std::unordered_map<int, void*>::iterator it = tls.find(id);
+
+    xuintptr id = reinterpret_cast<xuintptr>(this);
+    std::unordered_map<xuintptr, void*>  &tls = data->tls;
+    std::unordered_map<xuintptr, void*>::iterator it = tls.find(id);
 
     // delete any previous data
     if ((tls.end() != it) && (IX_NULLPTR != it->second)) {
-        ilog_verbose("previous storage ", id, ", data ", it->second, ", for thread ", iThread::currentThreadId());
+        ilog_verbose("previous storage ", this, ", data ", it->second, ", for thread ", iThread::currentThreadId());
 
         iMutex::ScopedLock locker(destructorsMutex);
         DestructorMap *destr = destructors();
-        DestructorMap::iterator destr_it = destr->begin();
-        std::advance(destr_it, id);
+        DestructorMap::iterator destr_it = destr->find(id);
 
-        void (*destructor)(void *) = destr ? *destr_it : IX_NULLPTR;
+        void (*destructor)(void *) = (destr->end() != destr_it) ? destr_it->second : IX_NULLPTR;
         locker.unlock();
 
         void *q = it->second;
@@ -133,7 +112,7 @@ void **iThreadStorageData::set(void *p)
             destructor(q);
     }
 
-    ilog_verbose("iThreadStorageData: Set storage ", id, " for thread ", iThread::currentThreadId(), " to ",p);
+    ilog_verbose("iThreadStorageData: Set storage ", this, " for thread ", iThread::currentThreadId(), " to ", p);
 
     // store new data
     if (tls.end() != it) {
@@ -147,15 +126,15 @@ void **iThreadStorageData::set(void *p)
 
 void iThreadStorageData::finish(void **p)
 {
-    std::unordered_map<int, void*>*tls = reinterpret_cast<std::unordered_map<int, void*> *>(p);
+    std::unordered_map<xuintptr, void*>*tls = reinterpret_cast<std::unordered_map<xuintptr, void*> *>(p);
     if (!tls || tls->empty() || !destructors())
         return; // nothing to do
 
     ilog_verbose("Destroying storage for thread ", iThread::currentThreadId());
     int size = tls->size();
     while (!tls->empty() && (--size >= 0)) {
-        std::unordered_map<int, void*>::iterator it = tls->begin();
-        int key = it->first;
+        std::unordered_map<xuintptr, void*>::iterator it = tls->begin();
+        xuintptr id = it->first;
         void *&value = it->second;
         void *q = value;
         value = IX_NULLPTR;
@@ -167,19 +146,21 @@ void iThreadStorageData::finish(void **p)
         }
 
         iMutex::ScopedLock locker(destructorsMutex);
-        DestructorMap::iterator destr_it = destructors->begin();
-        std::advance(destr_it, key);
+        DestructorMap::iterator destr_it = destructors->find(id);
 
-        void (*destructor)(void *) = *destr_it;
+        void (*destructor)(void *) = (destructors->end() != destr_it) ? destr_it->second : IX_NULLPTR;
         locker.unlock();
 
         if (!destructor) {
             if (iThread::currentThread())
-                ilog_warn("Thread[", iThread::currentThreadId(), "] exited after iThreadStorage", key, " destroyed");
+                ilog_warn("Thread[", iThread::currentThreadId(), "] exited after iThreadStorage ", iHexUInt64(id), " destroyed");
+
             continue;
         }
+
         destructor(q); //crash here might mean the thread exited after threadstorage was destroyed
     }
+
     tls->clear();
 }
 
