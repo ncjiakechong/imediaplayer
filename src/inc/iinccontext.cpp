@@ -22,7 +22,4 @@ iINCContext::iINCContext(iStringView name, iObject *parent)
 iINCContext::~iINCContext()
 {}
 
-iINCContext::Listener::~Listener()
-{}
-
 } // namespace iShell
