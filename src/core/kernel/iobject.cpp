@@ -103,6 +103,7 @@ iObject::iObject(iObject *parent)
     :m_wasDeleted(false)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
+    , m_blockSig(false)
     , m_unused(0)
     , m_postedEvents(0)
     , m_threadData(iThreadData::current())
@@ -121,6 +122,7 @@ iObject::iObject(const iString& name, iObject* parent)
     : m_wasDeleted(false)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
+    , m_blockSig(false)
     , m_unused(0)
     , m_postedEvents(0)
     , m_objName(name)
@@ -139,6 +141,7 @@ iObject::iObject(const iString& name, iObject* parent)
 iObject::~iObject()
 {
     m_wasDeleted = true;
+    m_blockSig = false; // unblock signals so we always emit destroyed()
 
     isharedpointer::ExternalRefCountData *refcount = m_refCount.load();
     if (refcount) {
@@ -276,6 +279,13 @@ iObject::~iObject()
 void iObject::deleteLater()
 {
     iCoreApplication::postEvent(this, new iDeferredDeleteEvent());
+}
+
+bool iObject::blockSignals(bool block)
+{
+    bool previous = m_blockSig;
+    m_blockSig = block;
+    return previous;
 }
 
 iThread* iObject::thread() const
@@ -758,6 +768,9 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
 
         IX_DISABLE_COPY(ConnectArgHelper)
     };
+
+    if (m_blockSig)
+        return;
 
     iScopedLock<iMutex> locker(m_signalSlotLock);
     ConnectionListsRef connectionLists(m_connectionLists);

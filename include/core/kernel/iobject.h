@@ -64,7 +64,13 @@ public:
     void destroyed(iObject* obj) ISIGNAL(destroyed, obj);
     /// SIGNALS end
 
+    inline bool signalsBlocked() const { return m_blockSig; }
+    bool blockSignals(bool block);
+
     void setParent(iObject *parent);
+
+    typedef std::list<iObject *> iObjectList;
+    inline const iObjectList& children() const { return m_children; }
 
     iThread* thread() const;
     bool moveToThread(iThread *targetThread);
@@ -403,8 +409,6 @@ private:
         _iObjectConnectionList() : orphaned(false), dirty(false), inUse(0) {}
     };
 
-    typedef std::list<iObject *> iObjectList;
-
     bool observePropertyImp(const char* name, _iConnection &conn);
     void emitImpl(const char* name, _iMemberFunction signal, void* args, void* ret);
     static bool connectImpl(const _iConnection& conn);
@@ -423,7 +427,8 @@ private:
     uint m_wasDeleted : 1;
     uint m_isDeletingChildren : 1;
     uint m_deleteLaterCalled : 1;
-    uint m_unused : 29;
+    uint m_blockSig : 1;
+    uint m_unused : 28;
     int  m_postedEvents;
 
     iString     m_objName;
