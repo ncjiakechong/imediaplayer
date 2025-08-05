@@ -1,0 +1,19 @@
+/////////////////////////////////////////////////////////////////
+/// Copyright 2018-2020
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    iincengine.cpp
+/// @brief   engine of INC(Inter Node Communication)
+/// @details description.
+/// @version 1.0
+/// @author  ncjiakechong@gmail.com
+/////////////////////////////////////////////////////////////////
+
+#include <inc/iincengine.h>
+
+namespace iShell {
+
+iINCEngine::~iINCEngine()
+{}
+
+} // namespace iShell

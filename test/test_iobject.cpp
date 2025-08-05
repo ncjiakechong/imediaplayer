@@ -82,22 +82,30 @@ public:
 
     inline int tst_slot_return() {
         ilog_debug(this, " tst_slot_return");
+
+        sender_obj = sender();
         return 1;
     }
 
     inline void tst_slot_int0() {
         ilog_debug(this, " tst_slot_int0");
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_int1(int arg1) {
         ilog_debug(this, " tst_slot_int1 arg1 ", arg1);
         slot_arg1 = arg1;
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_int2(int arg1, int arg2) {
         ilog_debug(this, " tst_slot_int2 arg1 ", arg1, ", arg2 ", arg2);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
+
+        sender_obj = sender();
     }
 
     inline int tst_slot_int3(int arg1, int arg2, int arg3) {
@@ -105,6 +113,8 @@ public:
         slot_arg1 = arg1;
         slot_arg2 = arg2;
         slot_arg3 = arg3;
+
+        sender_obj = sender();
         return arg1;
     }
 
@@ -114,6 +124,8 @@ public:
         slot_arg2 = arg2;
         slot_arg3 = arg3;
         slot_arg4 = arg4;
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_int5(int arg1, int arg2, int arg3, int arg4, int arg5) {
@@ -124,6 +136,8 @@ public:
         slot_arg3 = arg3;
         slot_arg4 = arg4;
         slot_arg5 = arg5;
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_int6(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
@@ -135,6 +149,8 @@ public:
         slot_arg4 = arg4;
         slot_arg5 = arg5;
         slot_arg6 = arg6;
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_int7(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7) {
@@ -147,6 +163,8 @@ public:
         slot_arg5 = arg5;
         slot_arg6 = arg6;
         slot_arg7 = arg7;
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_int8(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8) {
@@ -160,6 +178,8 @@ public:
         slot_arg6 = arg6;
         slot_arg7 = arg7;
         slot_arg8 = arg8;
+
+        sender_obj = sender();
     }
 
     static void tst_slot_static(int arg1, struct E, float arg3) {
@@ -168,35 +188,65 @@ public:
 
     inline void tst_slot_struct(int arg1, struct E, int arg3) {
         ilog_debug(this, " tst_slot_struct arg1 ", arg1, ", arg3 ", arg3);
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_ref(int arg1, struct E&, float arg3) {
         ilog_debug(this, " tst_slot_ref arg1 ", arg1, " arg3 ", arg3);
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_constref(int arg1, const struct E&, float arg3) {
         ilog_debug(this, " tst_slot_constref arg1 ", arg1, " arg3 ", arg3);
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_point(int arg1, struct E* arg2, float arg3) {
         ilog_debug(this, " tst_slot_point arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_error(int arg1, struct F* arg2, float arg3) {
         ilog_debug(this, "tst_slot_error arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_type_change(char arg1, struct E* arg2, int arg3) {
         ilog_debug(this, " tst_slot_type_change arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
+
+        sender_obj = sender();
     }
 
     inline void tst_slot_refAdd(int& value) {
         ilog_debug(this, " tst_slot_refAdd value ", value);
         ++value;
+
+        sender_obj = sender();
     }
 
     void tst_slot_disconnect() {
         ++slot_disconnect;
+
+        sender_obj = sender();
+    }
+
+    void emit_sender_check(iObject* _sender, bool farword) ISIGNAL(emit_sender_check, _sender, farword);
+    void tst_sender_check(iObject* _sender, bool farword) {
+        IX_ASSERT(_sender == sender());
+
+        if (!farword) return;
+
+        emit_sender_check(this, false);
+        IX_ASSERT(_sender == sender());
+    }
+
+    iObject* senderObj() const {
+        return sender();
     }
 
     int m_testProp;
@@ -211,6 +261,7 @@ public:
     int slot_arg8;
 
     int slot_disconnect;
+    iObject* sender_obj;
 };
 
 void destoryObj(TestObject* ptr) {
@@ -291,6 +342,8 @@ public:
     void tst_sig_refAdd(int& arg1) ISIGNAL(tst_sig_refAdd, arg1);
 
     void tst_sig_const() ISIGNAL(tst_sig_const);
+
+    void emit_sender_check(iObject* _sender, bool farword) ISIGNAL(emit_sender_check, _sender, farword);
 };
 
 
@@ -439,32 +492,46 @@ int test_object(void)
 
     IX_ASSERT((1 == IEMIT tst_sig.tst_sig_int_ret()));
 
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int0();
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
+
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int1(1);
     IX_ASSERT(1 == tst_obj.slot_arg1);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int2(2, 1);
     IX_ASSERT(2 == tst_obj.slot_arg1);
     IX_ASSERT(1 == tst_obj.slot_arg2);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int3(3, 2, 1);
     IX_ASSERT(3 == tst_obj.slot_arg1);
     IX_ASSERT(2 == tst_obj.slot_arg2);
     IX_ASSERT(1 == tst_obj.slot_arg3);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int4(4, 3, 2, 1);
     IX_ASSERT(4 == tst_obj.slot_arg1);
     IX_ASSERT(3 == tst_obj.slot_arg2);
     IX_ASSERT(2 == tst_obj.slot_arg3);
     IX_ASSERT(1 == tst_obj.slot_arg4);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int5(5, 4, 3, 2, 1);
     IX_ASSERT(5 == tst_obj.slot_arg1);
     IX_ASSERT(4 == tst_obj.slot_arg2);
     IX_ASSERT(3 == tst_obj.slot_arg3);
     IX_ASSERT(2 == tst_obj.slot_arg4);
     IX_ASSERT(1 == tst_obj.slot_arg5);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int6(6, 5, 4, 3, 2, 1);
     IX_ASSERT(6 == tst_obj.slot_arg1);
     IX_ASSERT(5 == tst_obj.slot_arg2);
@@ -472,7 +539,9 @@ int test_object(void)
     IX_ASSERT(3 == tst_obj.slot_arg4);
     IX_ASSERT(2 == tst_obj.slot_arg5);
     IX_ASSERT(1 == tst_obj.slot_arg6);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int7(7, 6, 5, 4, 3, 2, 1);
     IX_ASSERT(7 == tst_obj.slot_arg1);
     IX_ASSERT(6 == tst_obj.slot_arg2);
@@ -481,7 +550,9 @@ int test_object(void)
     IX_ASSERT(3 == tst_obj.slot_arg5);
     IX_ASSERT(2 == tst_obj.slot_arg6);
     IX_ASSERT(1 == tst_obj.slot_arg7);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     IEMIT tst_sig.tst_sig_int8(8, 7, 6, 5, 4, 3, 2, 1);
     IX_ASSERT(8 == tst_obj.slot_arg1);
     IX_ASSERT(7 == tst_obj.slot_arg2);
@@ -491,6 +562,7 @@ int test_object(void)
     IX_ASSERT(3 == tst_obj.slot_arg6);
     IX_ASSERT(2 == tst_obj.slot_arg7);
     IX_ASSERT(1 == tst_obj.slot_arg8);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_funcSlot, &TestFunctionSlot::tst_slot_int0);
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int2, IX_NULLPTR, &TestFunctionSlot::tst_slot_int2);
@@ -511,39 +583,67 @@ int test_object(void)
 
     // iObject::connect(&tst_sig, &TestSignals::tst_sig_point, &tst_obj, &TestObject::tst_slot_error); // build error
     ilog_debug("-------------emit_signals1");
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_sig.emit_signals();
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
     iObject::connect(&tst_sig, &TestSignals::tst_sig_const, &tst_obj, &TestObject::tst_slot_int0);
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_sig.tst_sig_const();
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
+
+    // test sender function during the regression call
+    iObject::connect(&tst_sig, &TestSignals::emit_sender_check, &tst_obj, &TestObject::tst_sender_check);
+    iObject::connect(&tst_obj, &TestObject::emit_sender_check, &tst_obj, &TestObject::tst_sender_check);
+    tst_sig.emit_sender_check(&tst_sig, true);
+
+    // test sender function during signal forward
+    iObject::disconnect(&tst_sig, &TestSignals::emit_sender_check, &tst_obj, &TestObject::tst_sender_check);
+    iObject::disconnect(&tst_obj, &TestObject::emit_sender_check, &tst_obj, &TestObject::tst_sender_check);
+    iObject::connect(&tst_sig, &TestSignals::emit_sender_check, &tst_obj, &TestObject::emit_sender_check);
+    iObject::connect(&tst_obj, &TestObject::emit_sender_check, &tst_obj, &TestObject::tst_sender_check);
+    tst_sig.emit_sender_check(&tst_obj, true);
 
     tst_sig.disconnect(&tst_sig, IX_NULLPTR, &tst_obj, IX_NULLPTR);
+    iObject::disconnect(&tst_obj, &TestObject::emit_sender_check, &tst_obj, &TestObject::tst_sender_check);
 
     ilog_debug("-------------inkokemethod");
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int1, 1.0);
     IX_ASSERT(1 == tst_obj.slot_arg1);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int2, 2.0, 1.0);
     IX_ASSERT(2 == tst_obj.slot_arg1);
     IX_ASSERT(1 == tst_obj.slot_arg2);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int3, 3.0f, 2, 1.0);
     IX_ASSERT(3 == tst_obj.slot_arg1);
     IX_ASSERT(2 == tst_obj.slot_arg2);
     IX_ASSERT(1 == tst_obj.slot_arg3);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int4, 4.0, 3, 2, 1.0);
     IX_ASSERT(4 == tst_obj.slot_arg1);
     IX_ASSERT(3 == tst_obj.slot_arg2);
     IX_ASSERT(2 == tst_obj.slot_arg3);
     IX_ASSERT(1 == tst_obj.slot_arg4);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int5, 5.0, 4, 3, 2, 1.0);
     IX_ASSERT(5 == tst_obj.slot_arg1);
     IX_ASSERT(4 == tst_obj.slot_arg2);
     IX_ASSERT(3 == tst_obj.slot_arg3);
     IX_ASSERT(2 == tst_obj.slot_arg4);
     IX_ASSERT(1 == tst_obj.slot_arg5);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int6, 6.0, 5, (long long int)4, 3, 2, 1.0);
     IX_ASSERT(6 == tst_obj.slot_arg1);
     IX_ASSERT(5 == tst_obj.slot_arg2);
@@ -551,7 +651,9 @@ int test_object(void)
     IX_ASSERT(3 == tst_obj.slot_arg4);
     IX_ASSERT(2 == tst_obj.slot_arg5);
     IX_ASSERT(1 == tst_obj.slot_arg6);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int7, 7.0, 6, 5, (short)4, 3, 2, 1.0);
     IX_ASSERT(7 == tst_obj.slot_arg1);
     IX_ASSERT(6 == tst_obj.slot_arg2);
@@ -560,7 +662,9 @@ int test_object(void)
     IX_ASSERT(3 == tst_obj.slot_arg5);
     IX_ASSERT(2 == tst_obj.slot_arg6);
     IX_ASSERT(1 == tst_obj.slot_arg7);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.invokeMethod(&tst_obj, &TestObject::tst_slot_int8, 0.8, 7, 6, 5, (char)4, 3, 2, 1);
     IX_ASSERT(0 == tst_obj.slot_arg1);
     IX_ASSERT(7 == tst_obj.slot_arg2);
@@ -570,13 +674,16 @@ int test_object(void)
     IX_ASSERT(3 == tst_obj.slot_arg6);
     IX_ASSERT(2 == tst_obj.slot_arg7);
     IX_ASSERT(1 == tst_obj.slot_arg8);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
     iObject::connect(&tst_obj, &TestObject::signal_struct, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
     IX_ASSERT((!iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::signal_struct)));
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.signal_struct(11, E(), 13);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
     // iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &tst_obj); // build error
     // iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, "build error"); // build error
@@ -591,7 +698,9 @@ int test_object(void)
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.signal_struct(21, E(), 23);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
     IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, IX_NULLPTR, IX_NULLPTR));
     IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
@@ -601,7 +710,9 @@ int test_object(void)
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_obj.signal_struct(31, E(), 33);
+    IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
     IX_ASSERT(iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR));
     IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
@@ -613,20 +724,26 @@ int test_object(void)
     iObject::connect(&tst_sig, &TestSignals::tst_sig_ref, &tst_obj, &TestObject::tst_slot_ref);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_point, &tst_obj, &TestObject::tst_slot_point);
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_sig.emit_signals();
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
     ilog_debug("-------------emit_signals3");
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_struct, &tst_obj, &TestObject::tst_slot_struct);
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_ref, &tst_obj, &TestObject::tst_slot_ref);
 
+    tst_obj.sender_obj = IX_NULLPTR;
     tst_sig.emit_signals();
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
     ilog_debug("-------------emit_signals4");
     int value = 5;
+    tst_obj.sender_obj = IX_NULLPTR;
     iObject::connect(&tst_sig, &TestSignals::tst_sig_refAdd, &tst_obj, &TestObject::tst_slot_refAdd);
     IEMIT tst_sig.tst_sig_refAdd(value);
     ilog_debug("tst_sig_refAdd ", value);
     IX_ASSERT(6 == value);
+    IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
     iSharedPtr<TestObject> shareprt_1(new TestObject(&tst_obj), &TestObject::destory);
     shareprt_1.clear();
@@ -705,21 +822,27 @@ int test_object(void)
     ilog_debug("-------------slot disconnect");
     TestObject* tst_sharedObj_6 = new TestObject();
     tst_sharedObj_6->slot_disconnect = 0;
+    tst_sharedObj_6->sender_obj = IX_NULLPTR;
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_6, &TestObject::tst_slot_disconnect);
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_6, &TestObject::tst_slot_disconnect);
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 == tst_sharedObj_6->slot_disconnect);
+    IX_ASSERT(IX_NULLPTR == tst_sharedObj_6->sender_obj && IX_NULLPTR == tst_sharedObj_6->senderObj());
     delete tst_sharedObj_6;
 
     TestObject* tst_sharedObj_6_1 = new TestObject();
     tst_sharedObj_6_1->slot_disconnect = 0;
+    tst_sharedObj_6_1->sender_obj = IX_NULLPTR;
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_6_1, &TestObject::tst_slot_disconnect);
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 < tst_sharedObj_6_1->slot_disconnect);
+    IX_ASSERT(&tst_sig == tst_sharedObj_6_1->sender_obj && IX_NULLPTR == tst_sharedObj_6_1->senderObj());
     tst_sharedObj_6_1->slot_disconnect = 0;
+    tst_sharedObj_6_1->sender_obj = IX_NULLPTR;
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, IX_NULLPTR, &TestObject::tst_slot_disconnect);
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 == tst_sharedObj_6_1->slot_disconnect);
+    IX_ASSERT(IX_NULLPTR == tst_sharedObj_6->sender_obj && IX_NULLPTR == tst_sharedObj_6->senderObj());
     delete tst_sharedObj_6_1;
 
     // test for member function
@@ -753,17 +876,21 @@ int test_object(void)
     // test disconnect during signal
     TestObject* tst_sharedObj_7 = new TestObject();
     tst_sharedObj_7->slot_disconnect = 0;
+    tst_sharedObj_7->sender_obj = IX_NULLPTR;
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_7, &TestObject::tst_slot_disconnect);
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 < tst_sharedObj_7->slot_disconnect);
+    IX_ASSERT(&tst_sig == tst_sharedObj_7->sender_obj && IX_NULLPTR == tst_sharedObj_7->senderObj());
 
     iObject* tst_objcost = tst_sharedObj_7;
     IX_ASSERT(IX_NULLPTR != iobject_cast<TestObject*>(tst_objcost));
 
     tst_sharedObj_7->slot_disconnect = 0;
+    tst_sharedObj_7->sender_obj = IX_NULLPTR;
     tst_sig.disconnect(&tst_sig, &TestSignals::tst_sig_int0, tst_sharedObj_7, IX_NULLPTR);
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 == tst_sharedObj_7->slot_disconnect);
+    IX_ASSERT(IX_NULLPTR == tst_sharedObj_7->sender_obj && IX_NULLPTR == tst_sharedObj_7->senderObj());
 
     tst_sharedObj_7->deleteLater();
     // test multi deleteLater

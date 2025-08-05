@@ -36,6 +36,7 @@ public:
         }
 
         acount = arg;
+        sender_obj = sender();
         slot.setLocalData(arg);
     }
 
@@ -47,13 +48,19 @@ public:
         }
         
         acount = arg;
+        sender_obj = sender();
         slot.setLocalData(arg);
     }
 
     void tst_sig_int1(int arg) ISIGNAL(tst_sig_int1, arg);
 
+    iObject* senderObj() const {
+        return sender();
+    }
+
 public: //test result
     int acount = 0;
+    iObject* sender_obj;
     iThreadStorage<int> slot;
 };
 
@@ -72,14 +79,17 @@ int test_thread(void)
     thread->start();
 
     thread1->acount = 0;
+    thread1->sender_obj = IX_NULLPTR;
     thread1->slot.setLocalData(0);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 start");
     IEMIT signal1->tst_sig_int1(1);
     ilog_debug("test_thread: [", iThread::currentThreadId(), "]tst_slot_int1_block 1 end");
     IX_ASSERT(1 == signal1->acount);
     IX_ASSERT(1 == thread1->acount && 0 == thread1->slot.localData());
+    IX_ASSERT(signal1 == thread1->sender_obj && IX_NULLPTR == thread1->senderObj());
 
     thread1->acount = 0;
+    thread1->sender_obj = IX_NULLPTR;
     thread1->slot.setLocalData(0);
     iObject::disconnect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1_block);
     iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1);
@@ -91,6 +101,7 @@ int test_thread(void)
     iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));
     thread->wait();
     IX_ASSERT(2 == thread1->acount && 0 == thread1->slot.localData());
+    IX_ASSERT(signal1 == thread1->sender_obj && IX_NULLPTR == thread1->senderObj());
     delete thread1;
 
     thread1 = new TestThread;
@@ -102,10 +113,14 @@ int test_thread(void)
     thread->start();
 
     thread1->acount = 0;
+    signal1->sender_obj = IX_NULLPTR;
+    thread1->sender_obj = IX_NULLPTR;
     thread1->slot.setLocalData(0);
     ilog_debug("test_thread: [", iThread::currentThreadId(),"]tst_sig_int1");
     IEMIT signal1->tst_sig_int1(3);
     IX_ASSERT(3 == thread1->acount && 3 == thread1->slot.localData());
+    IX_ASSERT(IX_NULLPTR == signal1->sender_obj && IX_NULLPTR == signal1->senderObj());
+    IX_ASSERT(signal1 == thread1->sender_obj && IX_NULLPTR == thread1->senderObj());
 
     delete thread1;
 
@@ -117,6 +132,7 @@ int test_thread(void)
         ilog_debug("call lambda slot at testThread ", value);
         lambda_slot_count += value;
         });
+
     iObject::invokeMethod(thread1, &TestThread::tst_sig_int1, 3, BlockingQueuedConnection);
     IX_ASSERT(3 == lambda_slot_count);
     ilog_debug("lambda slot at mainthread ", lambda_slot_count);

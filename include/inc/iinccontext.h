@@ -13,8 +13,7 @@
 
 #include <unordered_set>
 
-#include <core/kernel/iobject.h>
-#include <inc/iincglobal.h>
+#include <inc/iincengine.h>
 
 namespace iShell {
 
@@ -78,7 +77,7 @@ public:
         STATE_TERMINATED      /**< The connection was terminated cleanly */
     };
 
-    iINCContext(iStringView name, iObject *parent = IX_NULLPTR);
+    iINCContext(iStringView name, iINCEngine *engine, iObject *parent = IX_NULLPTR);
 
     /** Return the current context status */
     State getState() const;
@@ -127,6 +126,7 @@ protected:
     virtual ~iINCContext();
 
 private:
+    iINCEngine* m_engine;
     std::unordered_set<iINCOperation*> m_operations;
 
     friend class iINCOperation;

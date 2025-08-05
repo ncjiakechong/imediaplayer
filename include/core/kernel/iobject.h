@@ -369,7 +369,20 @@ protected:
         return emitImpl(name, signal, args, IX_NULLPTR);
     }
 
+    iObject *sender() const;
+
 private:
+    struct _iSender
+    {
+        _iSender(iObject *receiver, iObject *sender);
+        ~_iSender();
+        void receiverDeleted();
+
+        _iSender *_previous;
+        iObject *_receiver;
+        iObject *_sender;
+    };
+
     struct _iConnectionList
     {
         _iConnectionList() : first(IX_NULLPTR), last(IX_NULLPTR) {}
@@ -426,6 +439,7 @@ private:
     // linked list of connections connected to this object
     _iObjectConnectionList* m_connectionLists;
     _iConnection* m_senders;
+    _iSender*  m_currentSender;
     iMutex     m_signalSlotLock;
 
     std::set<int> m_runningTimers;

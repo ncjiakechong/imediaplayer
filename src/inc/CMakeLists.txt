@@ -3,6 +3,7 @@ project (iinc)
 add_definitions(-DIBUILD_INC_LIB)
 
 set (ComSource
+	iincengine.cpp
 	iinccontext.cpp
 	iincoperation.cpp
 	iincstream.cpp)

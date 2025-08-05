@@ -13,9 +13,11 @@
 
 namespace iShell {
 
-iINCContext::iINCContext(iStringView name, iObject *parent)
+iINCContext::iINCContext(iStringView name, iINCEngine *engine, iObject *parent)
     : iObject(parent) 
+    , m_engine(engine)
 {
+    IX_ASSERT(IX_NULLPTR != engine);
     setObjectName(name.toString());
 }
 

@@ -110,6 +110,7 @@ iObject::iObject(iObject *parent)
     , m_currentChildBeingDeleted(IX_NULLPTR)
     , m_connectionLists(IX_NULLPTR)
     , m_senders(IX_NULLPTR)
+    , m_currentSender(IX_NULLPTR)
 {
     m_threadData->ref();
 
@@ -128,6 +129,7 @@ iObject::iObject(const iString& name, iObject* parent)
     , m_currentChildBeingDeleted(IX_NULLPTR)
     , m_connectionLists(IX_NULLPTR)
     , m_senders(IX_NULLPTR)
+    , m_currentSender(IX_NULLPTR)
 {
     m_threadData->ref();
 
@@ -151,6 +153,11 @@ iObject::~iObject()
     }
 
     IEMIT destroyed(this);
+
+    if (IX_NULLPTR != m_currentSender) {
+        m_currentSender->receiverDeleted();
+        m_currentSender = IX_NULLPTR;
+    }
 
     if ((IX_NULLPTR != m_connectionLists) || (IX_NULLPTR != m_senders)) {
         iMutex *signalSlotMutex = &m_signalSlotLock;
@@ -358,6 +365,11 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
         targetData->dispatcher.load()->wakeUp();
     }
 
+    if (IX_NULLPTR != m_currentSender) {
+        m_currentSender->receiverDeleted();
+        m_currentSender = IX_NULLPTR;
+    }
+
     // set new thread data
     targetData->ref();
     m_threadData->deref();
@@ -511,6 +523,15 @@ void iObject::cleanConnectionLists()
 
         m_connectionLists->dirty = false;
     }
+}
+
+iObject* iObject::sender() const
+{
+    if (!m_currentSender)
+        return IX_NULLPTR;
+
+    iScopedLock<iMutex> locker(const_cast<iObject*>(this)->m_signalSlotLock);
+    return m_currentSender->_sender;
 }
 
 bool iObject::connectImpl(const _iConnection& conn)
@@ -788,6 +809,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         if ((AutoConnection == _type && receiverInSameThread)
             || (DirectConnection == _type)) {
             locker.unlock();
+            _iSender sender(receiver, this);
             conn->emits(argHelper.arg(*conn, false).data(), ret);
 
             if (connectionLists->orphaned)
@@ -928,6 +950,7 @@ bool iObject::event(iEvent *e)
     switch (e->type()) {
     case iEvent::MetaCall: {
         iMetaCallEvent* event = static_cast<iMetaCallEvent*>(e);
+        _iSender sender(const_cast<iObject*>(this), const_cast<iObject*>(event->connection->_sender));
         event->connection->emits(event->arguments.data(), IX_NULLPTR);
         break;
     }
@@ -991,6 +1014,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
     uint _type = c._type & Connection_PrimaryMask;
     if ((AutoConnection == _type && receiverInSameThread)
         || (DirectConnection == _type)) {
+        _iSender sender(const_cast<iObject*>(receiver), const_cast<iObject*>(c._sender));
         c.emits(args, IX_NULLPTR);
         return true;
     } else if (_type == BlockingQueuedConnection) {
@@ -1080,6 +1104,28 @@ size_t iConKeyHashFunc::operator()(const _iMemberFunction& key) const
 
     __adapoter.func = key;
     return __adapoter.key;
+}
+
+iObject::_iSender::_iSender(iObject *receiver, iObject *sender)
+    : _receiver(receiver), _sender(sender), _previous(IX_NULLPTR)
+{
+    if (IX_NULLPTR != _receiver) {
+        _previous = _receiver->m_currentSender;
+        receiver->m_currentSender = this;
+    }
+}
+iObject::_iSender::~_iSender()
+{
+    if (IX_NULLPTR != _receiver)
+        _receiver->m_currentSender = _previous;
+}
+void iObject::_iSender::receiverDeleted()
+{
+    _iSender *s = this;
+    while (IX_NULLPTR != s) {
+        s->_receiver = IX_NULLPTR;
+        s = s->_previous;
+    }
 }
 
 } // namespace iShell
