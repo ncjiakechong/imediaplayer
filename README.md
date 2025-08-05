@@ -1,7 +1,7 @@
 # mediaplayer
-A C++ media player, similar to Qt Multimedia, but without the Qt dependency.
+A C++ media player, similar to Qt Multimedia, but without the Qt dependency.  
 The current code implements the core iObject and a media player (based on GStreamer).  
-A C++ INC is planned for the next phase.
+A C++ INC router is planned for the next phase.
 
 Key features of the core iObject:
 
