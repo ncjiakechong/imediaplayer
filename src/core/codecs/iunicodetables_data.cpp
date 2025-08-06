@@ -17,20 +17,25 @@ namespace iUnicodeTables {
 
 static inline const Properties *iGetProp(uint ucs4)
 {
-    return uc_properties + GET_PROP_INDEX(ucs4);
+    IX_ASSERT(ucs4 <= iChar::LastValidCodePoint);
+    if (ucs4 < 0x11000)
+        return uc_properties + uc_property_trie[uc_property_trie[ucs4 >> 5] + (ucs4 & 0x1f)];
+
+    return uc_properties
+        + uc_property_trie[uc_property_trie[((ucs4 - 0x11000) >> 8) + 0x880] + (ucs4 & 0xff)];
 }
 
 static inline const Properties *iGetProp(ushort ucs2)
 {
-    return uc_properties + GET_PROP_INDEX_UCS2(ucs2);
+    return uc_properties + uc_property_trie[uc_property_trie[ucs2 >> 5] + (ucs2 & 0x1f)];
 }
 
-const Properties * properties(uint ucs4)
+const Properties* properties(uint ucs4)
 {
     return iGetProp(ucs4);
 }
 
-const Properties * properties(ushort ucs2)
+const Properties* properties(ushort ucs2)
 {
     return iGetProp(ucs2);
 }

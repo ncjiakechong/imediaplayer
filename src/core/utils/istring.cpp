@@ -623,7 +623,7 @@ inline char iToLower(char ch)
 */
 
 /*!
-    \class QString
+    \class iString
     \inmodule QtCore
     \reentrant
 
@@ -790,8 +790,8 @@ inline char iToLower(char ch)
 
     To obtain a pointer to the actual character data, call data() or
     constData(). These functions return a pointer to the beginning of
-    the QChar data. The pointer is guaranteed to remain valid until a
-    non-const function is called on the QString.
+    the iChar data. The pointer is guaranteed to remain valid until a
+    non-const function is called on the iString.
 
     \section2 Comparing Strings
 
@@ -799,7 +799,7 @@ inline char iToLower(char ch)
     operator<(), \l operator<=(), \l operator==(), \l operator>=(),
     and so on.  Note that the comparison is based exclusively on the
     numeric Unicode values of the characters. It is very fast, but is
-    not what a human would expect; the QString::localeAwareCompare()
+    not what a human would expect; the iString::localeAwareCompare()
     function is usually a better choice for sorting user-interface
     strings, when such a comparison is available.
 
@@ -992,7 +992,7 @@ inline char iToLower(char ch)
 
     \section1 Maximum size and out-of-memory conditions
 
-    In case memory allocation fails, QString will throw a \c std::bad_alloc
+    In case memory allocation fails, iString will throw a \c std::bad_alloc
     exception. Out of memory conditions in the Qt containers are the only case
     where Qt will throw exceptions.
 
@@ -5233,52 +5233,97 @@ namespace iUnicodeTables {
     reallocate memory to grow the buffer. In that case, we need to adjust the \a
     it pointer.
  */
-template <typename Traits, typename T>
-static iString detachAndConvertCase(T &str, iStringIterator it)
+struct R {
+    char16_t chars[MaxSpecialCaseLength + 1];
+    xint8 sz;
+
+    // iterable
+    const char16_t* begin() const { return chars; }
+    const char16_t* end() const { return chars + sz; }
+    // iStringView-compatible
+    const char16_t* data() const { return chars; }
+    xint8 size() const { return sz; }
+};
+
+R fromUcs4(char32_t c)
+{
+    R result;
+    if (iChar::requiresSurrogates(c)) {
+        result.chars[0] = iChar::highSurrogate(c);
+        result.chars[1] = iChar::lowSurrogate(c);
+        result.sz = 2;
+    } else {
+        result.chars[0] = char16_t(c);
+        result.chars[1] = u'\0';
+        result.sz = 1;
+    }
+    return result;
+}
+
+static R fullConvertCase(char32_t uc, iUnicodeTables::Case which) noexcept
+{
+    R result;
+    IX_ASSERT(uc <= iChar::LastValidCodePoint);
+
+    auto pp = result.chars;
+
+    const auto fold = properties(uc)->cases[which];
+    const auto caseDiff = fold.diff;
+
+    if (fold.special) {
+        const auto *specialCase = specialCaseMap + caseDiff;
+        auto length = *specialCase++;
+        while (length--)
+            *pp++ = *specialCase++;
+    } else {
+        // so far, case convertion never changes planes (guaranteed by the qunicodetables generator)
+        R tmp = fromUcs4(uc + caseDiff);
+        *pp++ = result.chars[0];
+        if (result.sz > 1)
+            *pp++ = result.chars[1];
+    }
+    result.sz = pp - result.chars;
+    return result;
+}
+
+template <typename T>
+static iString detachAndConvertCase(T &str, iStringIterator it, iUnicodeTables::Case which)
 {
     IX_ASSERT(!str.isEmpty());
-    iString s = std::move(str);             // will copy if T is const iString
+    iString s = str;             // will copy if T is const iString
     iChar *pp = s.begin() + it.index(); // will detach if necessary
 
     do {
-        uint uc = it.nextUnchecked();
-
-        const iUnicodeTables::Properties *prop = iUnicodeTables::properties(uc);
-        signed short caseDiff = Traits::caseDiff(prop);
-
-        if (Traits::caseSpecial(prop)) {
-            const ushort *specialCase = specialCaseMap + caseDiff;
-            ushort length = *specialCase++;
-
-            if (length == 1) {
-                *pp++ = iChar(*specialCase);
+        const auto folded = fullConvertCase(it.next(), which);
+        if (folded.size() > 1) {
+            if (folded.chars[0] == *pp && folded.size() == 2) {
+                // special case: only second actually changed (e.g. surrogate pairs),
+                // avoid slow case
+                ++pp;
+                *pp++ = folded.chars[1];
             } else {
                 // slow path: the string is growing
-                int inpos = it.index() - 1;
-                int outpos = pp - s.constBegin();
+                xsizetype inpos = it.index() - 1;
+                xsizetype outpos = pp - s.constBegin();
 
-                s.replace(outpos, 1, reinterpret_cast<const iChar *>(specialCase), length);
-                pp = const_cast<iChar *>(s.constBegin()) + outpos + length;
+                s.replace(outpos, 1, reinterpret_cast<const iChar *>(folded.data()), folded.size());
+                pp = const_cast<iChar *>(s.constBegin()) + outpos + folded.size();
 
                 // do we need to adjust the input iterator too?
                 // if it is pointing to s's data, str is empty
                 if (str.isEmpty())
-                    it = iStringIterator(s.constBegin(), inpos + length, s.constEnd());
+                    it = iStringIterator(s.constBegin(), inpos + folded.size(), s.constEnd());
             }
-        } else if (iChar::requiresSurrogates(uc)) {
-            // so far, case convertion never changes planes (guaranteed by the qunicodetables generator)
-            pp++;
-            *pp++ = iChar::lowSurrogate(uc + caseDiff);
         } else {
-            *pp++ = iChar(uc + caseDiff);
+            *pp++ = folded.chars[0];
         }
     } while (it.hasNext());
 
     return s;
 }
 
-template <typename Traits, typename T>
-static iString convertCase(T &str)
+template <typename T>
+static iString convertCase(T &str, iUnicodeTables::Case which)
 {
     const iChar *p = str.constBegin();
     const iChar *e = p + str.size();
@@ -5289,24 +5334,24 @@ static iString convertCase(T &str)
 
     iStringIterator it(p, e);
     while (it.hasNext()) {
-        uint uc = it.nextUnchecked();
-        if (Traits::caseDiff(iUnicodeTables::properties(uc))) {
-            it.recedeUnchecked();
-            return detachAndConvertCase<Traits>(str, it);
+        const char32_t uc = it.next();
+        if (properties(uc)->cases[which].diff) {
+            it.recede();
+            return detachAndConvertCase(str, it, which);
         }
     }
-    return str;
+    return std::move(str);
 }
 } // namespace iUnicodeTables
 
 iString iString::toLower_helper(const iString &str)
 {
-    return iUnicodeTables::convertCase<iUnicodeTables::LowercaseTraits>(str);
+    return iUnicodeTables::convertCase(str, iUnicodeTables::LowerCase);
 }
 
 iString iString::toLower_helper(iString &str)
 {
-    return iUnicodeTables::convertCase<iUnicodeTables::LowercaseTraits>(str);
+    return iUnicodeTables::convertCase(str, iUnicodeTables::LowerCase);
 }
 
 /*!
@@ -5318,12 +5363,12 @@ iString iString::toLower_helper(iString &str)
 
 iString iString::toCaseFolded_helper(const iString &str)
 {
-    return iUnicodeTables::convertCase<iUnicodeTables::CasefoldTraits>(str);
+    return iUnicodeTables::convertCase(str, iUnicodeTables::CaseFold);
 }
 
 iString iString::toCaseFolded_helper(iString &str)
 {
-    return iUnicodeTables::convertCase<iUnicodeTables::CasefoldTraits>(str);
+    return iUnicodeTables::convertCase(str, iUnicodeTables::CaseFold);
 }
 
 /*!
@@ -5341,12 +5386,12 @@ iString iString::toCaseFolded_helper(iString &str)
 
 iString iString::toUpper_helper(const iString &str)
 {
-    return iUnicodeTables::convertCase<iUnicodeTables::UppercaseTraits>(str);
+    return iUnicodeTables::convertCase(str, iUnicodeTables::UpperCase);
 }
 
 iString iString::toUpper_helper(iString &str)
 {
-    return iUnicodeTables::convertCase<iUnicodeTables::UppercaseTraits>(str);
+    return iUnicodeTables::convertCase(str, iUnicodeTables::UpperCase);
 }
 
 /*!

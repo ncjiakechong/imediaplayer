@@ -1338,19 +1338,18 @@ iChar::UnicodeVersion iChar::currentUnicodeVersion()
     return UNICODE_DATA_VERSION;
 }
 
-
-template <typename Traits, typename T>
-static inline T convertCase_helper(T uc)
+template <typename T>
+static inline T convertCase_helper(T uc, iUnicodeTables::Case which) noexcept
 {
-    const iUnicodeTables::Properties *prop = iUnicodeTables::properties(uc);
+    const auto fold = properties(uc)->cases[which];
 
-    if (Traits::caseSpecial(prop)) {
-        const ushort *specialCase = specialCaseMap + Traits::caseDiff(prop);
+    if (fold.special) {
+        const ushort *specialCase = specialCaseMap + fold.diff;
         // so far, there are no special cases beyond BMP (guaranteed by the qunicodetables generator)
         return *specialCase == 1 ? specialCase[1] : uc;
     }
 
-    return uc + Traits::caseDiff(prop);
+    return uc + fold.diff;
 }
 
 /*!
@@ -1370,7 +1369,7 @@ uint iChar::toLower(uint ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
-    return convertCase_helper<iUnicodeTables::LowercaseTraits>(ucs4);
+    return convertCase_helper(ucs4, iUnicodeTables::LowerCase);
 }
 
 /*!
@@ -1390,7 +1389,7 @@ uint iChar::toUpper(uint ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
-    return convertCase_helper<iUnicodeTables::UppercaseTraits>(ucs4);
+    return convertCase_helper(ucs4, iUnicodeTables::UpperCase);
 }
 
 /*!
@@ -1410,7 +1409,7 @@ uint iChar::toTitleCase(uint ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
-    return convertCase_helper<iUnicodeTables::TitlecaseTraits>(ucs4);
+    return convertCase_helper(ucs4, iUnicodeTables::TitleCase);
 }
 
 uint foldCase(const ushort *ch, const ushort *start)
@@ -1418,7 +1417,7 @@ uint foldCase(const ushort *ch, const ushort *start)
     uint ucs4 = *ch;
     if (iChar::isLowSurrogate(ucs4) && ch > start && iChar::isHighSurrogate(*(ch - 1)))
         ucs4 = iChar::surrogateToUcs4(*(ch - 1), ucs4);
-    return convertCase_helper<iUnicodeTables::CasefoldTraits>(ucs4);
+    return convertCase_helper(ucs4, iUnicodeTables::CaseFold);
 }
 
 uint foldCase(uint ch, uint &last)
@@ -1427,12 +1426,12 @@ uint foldCase(uint ch, uint &last)
     if (iChar::isLowSurrogate(ucs4) && iChar::isHighSurrogate(last))
         ucs4 = iChar::surrogateToUcs4(last, ucs4);
     last = ch;
-    return convertCase_helper<iUnicodeTables::CasefoldTraits>(ucs4);
+    return convertCase_helper(ucs4, iUnicodeTables::CaseFold);
 }
 
 ushort foldCase(ushort ch)
 {
-    return convertCase_helper<iUnicodeTables::CasefoldTraits>(ch);
+    return convertCase_helper(ch, iUnicodeTables::CaseFold);
 }
 
 iChar foldCase(iChar ch)
@@ -1456,7 +1455,7 @@ uint iChar::toCaseFolded(uint ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
-    return convertCase_helper<iUnicodeTables::CasefoldTraits>(ucs4);
+    return convertCase_helper(ucs4, iUnicodeTables::CaseFold);
 }
 
 /*!
