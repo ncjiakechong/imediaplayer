@@ -62,7 +62,6 @@ int iSemaphore::available() const
     return m_semph->avail;
 }
 
-
 bool iSemaphore::tryAcquire(int n)
 {
     IX_ASSERT(n >= 0);

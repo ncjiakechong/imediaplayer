@@ -25,17 +25,17 @@ typedef unsigned long ulong;
 /*
    Size-dependent types (architechture-dependent byte order)
 
-   Make sure to update QMetaType when changing these typedefs
+   Make sure to update iMetaType when changing these typedefs
 */
 
-typedef int8_t xint8;         /* 8 bit signed */
-typedef uint8_t xuint8;      /* 8 bit unsigned */
-typedef int16_t xint16;              /* 16 bit signed */
-typedef uint16_t xuint16;    /* 16 bit unsigned */
-typedef int32_t xint32;                /* 32 bit signed */
-typedef uint32_t xuint32;      /* 32 bit unsigned */
-typedef int64_t xint64;           /* 64 bit signed */
-typedef uint64_t xuint64; /* 64 bit unsigned */
+typedef int8_t xint8;           /* 8 bit signed */
+typedef uint8_t xuint8;         /* 8 bit unsigned */
+typedef int16_t xint16;         /* 16 bit signed */
+typedef uint16_t xuint16;       /* 16 bit unsigned */
+typedef int32_t xint32;         /* 32 bit signed */
+typedef uint32_t xuint32;       /* 32 bit unsigned */
+typedef int64_t xint64;         /* 64 bit signed */
+typedef uint64_t xuint64;       /* 64 bit unsigned */
 
 typedef double xreal;
 typedef xint64 xlonglong;
@@ -148,7 +148,6 @@ IX_CORE_EXPORT void ix_assert_x(const char *what, const char *file, int line);
 
 #define IX_ASSERT(cond) ((cond) ? static_cast<void>(0) : ix_assert(#cond, __FILE__, __LINE__))
 #define IX_ASSERT_X(cond, what) ((cond) ? static_cast<void>(0) : ix_assert_x(what, __FILE__, __LINE__))
-
 
 } // namespace iShell
 

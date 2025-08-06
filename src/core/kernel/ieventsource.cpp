@@ -60,11 +60,6 @@ int iEventSource::attach(iEventDispatcher* dispatcher)
         return -1;
     }
 
-    if (iThread::currentThread() != dispatcher->thread()) {
-        ilog_warn(__FUNCTION__, ": must in same thread as dispatcher");
-        return -1;
-    }
-
     if (IX_NULLPTR != m_dispatcher) {
         ilog_warn(__FUNCTION__, ": has attached to ", m_dispatcher->objectName());
         return -1;
@@ -89,11 +84,6 @@ int iEventSource::detach()
         return -1;
     }
 
-    if (iThread::currentThread() != m_dispatcher->thread()) {
-        ilog_warn(__FUNCTION__, ": must in same thread as dispatcher");
-        return -1;
-    }
-
     std::list<iPollFD*>::const_iterator it;
     for (it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
         m_dispatcher->removePoll(*it, this);
@@ -108,11 +98,6 @@ int iEventSource::detach()
 
 int iEventSource::addPoll(iPollFD* fd)
 {
-    if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn(__FUNCTION__, ": must in same thread as dispatcher");
-        return -1;
-    }
-
     m_pollFds.push_back(fd);
 
     if (m_dispatcher)
@@ -123,11 +108,6 @@ int iEventSource::addPoll(iPollFD* fd)
 
 int iEventSource::removePoll(iPollFD* fd)
 {
-    if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn(__FUNCTION__, ": must in same thread as dispatcher");
-        return -1;
-    }
-
     for (std::list<iPollFD*>::iterator it = m_pollFds.begin(); it != m_pollFds.end(); ++it) {
         if ((*it) == fd) {
             m_pollFds.erase(it);

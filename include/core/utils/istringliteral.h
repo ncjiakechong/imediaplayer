@@ -13,7 +13,6 @@
 
 #include <core/utils/iarraydata.h>
 
-
 namespace iShell {
 
 typedef iTypedArrayData<ushort> iStringData;
