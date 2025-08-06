@@ -151,10 +151,10 @@ public:
     void unbind(iObject *);
 
 protected:
-    void _x_stateChanged(iMediaPlayer::State state);
-    void _x_mediaStatusChanged(iMediaPlayer::MediaStatus status);
-    void _x_error(int error, const iString &errorString);
-    void _x_updateMedia(const iString&);
+    void stateChangedNotify(iMediaPlayer::State state);
+    void mediaStatusChangedNotify(iMediaPlayer::MediaStatus status);
+    void errorNotify(int error, const iString &errorString);
+    void updateMediaNotify(const iString&);
 
 private:
     iMediaPlayerControl* m_control;
