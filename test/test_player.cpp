@@ -23,6 +23,7 @@ class TestPlayer : public iObject
 public:
     TestPlayer(iObject* parent = IX_NULLPTR)
     : iObject(parent)
+    , m_loopTime(0)
     {
         player = new iMediaPlayer();
         player->observeProperty("state", this, &TestPlayer::stateChanged);
@@ -38,10 +39,18 @@ public:
     void stateChanged(iMediaPlayer::State newState)
     {
         ilog_debug(newState);
-        if (newState == iMediaPlayer::StoppedState) {
-            deleteLater();
-            iCoreApplication::quit();
+        if (newState != iMediaPlayer::StoppedState)
+            return;
+
+        if (0 == m_loopTime) {
+            ++ m_loopTime;
+            player->play();
+            return;
         }
+
+
+        deleteLater();
+        iCoreApplication::quit();
     }
 
     void positionChanged(xint64 position)
@@ -59,6 +68,7 @@ public:
         return -1;
     }
 
+    int m_loopTime;
     iMediaPlayer* player;
 };
 

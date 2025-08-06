@@ -13,21 +13,6 @@
 #include "iabstractvideobuffer_p.h"
 
 namespace iShell {
-
-class iMemoryVideoBufferPrivate : public iAbstractVideoBufferPrivate
-{
-public:
-    iMemoryVideoBufferPrivate()
-        : bytesPerLine(0)
-        , mapMode(iAbstractVideoBuffer::NotMapped)
-    {
-    }
-
-    int bytesPerLine;
-    iAbstractVideoBuffer::MapMode mapMode;
-    iByteArray data;
-};
-
 /*!
     \class iMemoryVideoBuffer
     \brief The iMemoryVideoBuffer class provides a system memory allocated video data buffer.
@@ -41,10 +26,11 @@ public:
     Constructs a video buffer with an image stride of \a bytesPerLine from a byte \a array.
 */
 iMemoryVideoBuffer::iMemoryVideoBuffer(const iByteArray &array, int bytesPerLine)
-    : iAbstractVideoBuffer(*new iMemoryVideoBufferPrivate, NoHandle)
+    : iAbstractVideoBuffer( NoHandle)
+    , m_bytesPerLine(bytesPerLine)
+    , m_mapMode(NotMapped)
+    , m_data(array)
 {
-    static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->data = array;
-    static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->bytesPerLine = bytesPerLine;
 }
 
 /*!
@@ -59,7 +45,7 @@ iMemoryVideoBuffer::~iMemoryVideoBuffer()
 */
 iAbstractVideoBuffer::MapMode iMemoryVideoBuffer::mapMode() const
 {
-    return static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->mapMode;
+    return m_mapMode;
 }
 
 /*!
@@ -67,17 +53,17 @@ iAbstractVideoBuffer::MapMode iMemoryVideoBuffer::mapMode() const
 */
 uchar *iMemoryVideoBuffer::map(MapMode mode, int *numBytes, int *bytesPerLine)
 {
-    if (static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->mapMode == NotMapped
-        && static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->data.data() && mode != NotMapped) {
-        static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->mapMode = mode;
+    if (m_mapMode == NotMapped
+        && m_data.data() && mode != NotMapped) {
+        m_mapMode = mode;
 
         if (numBytes)
-            *numBytes = static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->data.size();
+            *numBytes = m_data.size();
 
         if (bytesPerLine)
-            *bytesPerLine = static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->bytesPerLine;
+            *bytesPerLine = m_bytesPerLine;
 
-        return reinterpret_cast<uchar *>(static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->data.data());
+        return reinterpret_cast<uchar *>(m_data.data());
     } else {
         return IX_NULLPTR;
     }
@@ -88,7 +74,7 @@ uchar *iMemoryVideoBuffer::map(MapMode mode, int *numBytes, int *bytesPerLine)
 */
 void iMemoryVideoBuffer::unmap()
 {
-    static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->mapMode = NotMapped;
+    m_mapMode = NotMapped;
 }
 
 } // namespace iShell

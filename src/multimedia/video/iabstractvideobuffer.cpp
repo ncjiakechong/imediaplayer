@@ -16,16 +16,6 @@
 
 namespace iShell {
 
-int iAbstractVideoBufferPrivate::map(
-            iAbstractVideoBuffer::MapMode mode,
-            int *numBytes,
-            int bytesPerLine[4],
-            uchar *data[4])
-{
-    data[0] = q_ptr->map(mode, numBytes, bytesPerLine);
-    return data[0] ? 1 : 0;
-}
-
 /*!
     \class iAbstractVideoBuffer
     \brief The iAbstractVideoBuffer class is an abstraction for video data.
@@ -87,19 +77,8 @@ int iAbstractVideoBufferPrivate::map(
     Constructs an abstract video buffer of the given \a type.
 */
 iAbstractVideoBuffer::iAbstractVideoBuffer(HandleType type)
-    : d_ptr(IX_NULLPTR)
-    , m_type(type)
+    : m_type(type)
 {
-}
-
-/*!
-    \internal
-*/
-iAbstractVideoBuffer::iAbstractVideoBuffer(iAbstractVideoBufferPrivate &dd, HandleType type)
-    : d_ptr(&dd)
-    , m_type(type)
-{
-    d_ptr->q_ptr = this;
 }
 
 /*!
@@ -107,7 +86,6 @@ iAbstractVideoBuffer::iAbstractVideoBuffer(iAbstractVideoBufferPrivate &dd, Hand
 */
 iAbstractVideoBuffer::~iAbstractVideoBuffer()
 {
-    delete d_ptr;
 }
 
 /*!
@@ -198,13 +176,13 @@ iAbstractVideoBuffer::HandleType iAbstractVideoBuffer::handleType() const
 */
 int iAbstractVideoBuffer::mapPlanes(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4])
 {
-    if (d_ptr) {
-        return d_ptr->map(mode, numBytes, bytesPerLine, data);
-    } else {
-        data[0] = map(mode, numBytes, bytesPerLine);
+    return mapImpl(mode, numBytes, bytesPerLine, data);
+}
 
-        return data[0] ? 1 : 0;
-    }
+int iAbstractVideoBuffer::mapImpl(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4])
+{
+    data[0] = map(mode, numBytes, bytesPerLine);
+    return data[0] ? 1 : 0;
 }
 
 /*!
@@ -230,13 +208,6 @@ iVariant iAbstractVideoBuffer::handle() const
     return iVariant();
 }
 
-
-int iAbstractPlanarVideoBufferPrivate::map(
-        iAbstractVideoBuffer::MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4])
-{
-    return static_cast<iAbstractPlanarVideoBuffer*>(q_ptr)->map(mode, numBytes, bytesPerLine, data);
-}
-
 /*!
     \class iAbstractPlanarVideoBuffer
     \brief The iAbstractPlanarVideoBuffer class is an abstraction for planar video data.
@@ -256,23 +227,20 @@ int iAbstractPlanarVideoBufferPrivate::map(
     Constructs an abstract planar video buffer of the given \a type.
 */
 iAbstractPlanarVideoBuffer::iAbstractPlanarVideoBuffer(HandleType type)
-    : iAbstractVideoBuffer(*new iAbstractPlanarVideoBufferPrivate, type)
+    : iAbstractVideoBuffer(type)
 {
 }
 
-/*!
-    \internal
-*/
-iAbstractPlanarVideoBuffer::iAbstractPlanarVideoBuffer(
-        iAbstractPlanarVideoBufferPrivate &dd, HandleType type)
-    : iAbstractVideoBuffer(dd, type)
-{
-}
 /*!
     Destroys an abstract planar video buffer.
 */
 iAbstractPlanarVideoBuffer::~iAbstractPlanarVideoBuffer()
 {
+}
+
+int iAbstractPlanarVideoBuffer::mapImpl(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4])
+{
+    return map(mode, numBytes, bytesPerLine, data);
 }
 
 /*!

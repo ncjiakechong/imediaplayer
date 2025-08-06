@@ -20,8 +20,6 @@ namespace iShell {
 
 class iVariant;
 
-class iAbstractVideoBufferPrivate;
-
 class IX_MULTIMEDIA_EXPORT iAbstractVideoBuffer
 {
 public:
@@ -59,17 +57,14 @@ public:
     virtual iVariant handle() const;
 
 protected:
-    iAbstractVideoBuffer(iAbstractVideoBufferPrivate &dd, HandleType type);
+    virtual int mapImpl(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]);
 
-    iAbstractVideoBufferPrivate *d_ptr;  // For expansion, not used currently
     HandleType m_type;
 
 private:
-    friend class iAbstractVideoBufferPrivate;
     IX_DISABLE_COPY(iAbstractVideoBuffer)
 };
 
-class iAbstractPlanarVideoBufferPrivate;
 class IX_MULTIMEDIA_EXPORT iAbstractPlanarVideoBuffer : public iAbstractVideoBuffer
 {
 public:
@@ -80,7 +75,7 @@ public:
     virtual int map(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) = 0;
 
 protected:
-    iAbstractPlanarVideoBuffer(iAbstractPlanarVideoBufferPrivate &dd, HandleType type);
+    virtual int mapImpl(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]);
 
 private:
     IX_DISABLE_COPY(iAbstractPlanarVideoBuffer)
