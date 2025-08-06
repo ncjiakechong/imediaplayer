@@ -66,7 +66,7 @@ public:
 
     inline void truncate(int pos) { if (pos < size()) resize(pos); }
 
-    const char *bits() const { return isEmpty() ? nullptr : d.constData() + 1; }
+    const char *bits() const { return isEmpty() ? IX_NULLPTR : d.constData() + 1; }
     static iBitArray fromBits(const char *data, xsizetype len);
 
 public:

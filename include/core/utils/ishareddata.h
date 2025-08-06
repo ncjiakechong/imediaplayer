@@ -53,7 +53,7 @@ public:
     inline bool operator==(const iSharedDataPointer<T> &other) const { return d == other.d; }
     inline bool operator!=(const iSharedDataPointer<T> &other) const { return d != other.d; }
 
-    inline iSharedDataPointer() { d = nullptr; }
+    inline iSharedDataPointer() { d = IX_NULLPTR; }
     inline ~iSharedDataPointer() { if (d && (0 == --d->ref)) delete d; }
 
     explicit iSharedDataPointer(T *data);
@@ -116,7 +116,7 @@ public:
     inline T *operator->() const { return d; }
     inline T *data() const { return d; }
     inline const T *constData() const { return d; }
-    inline T *take() { T *x = d; d = nullptr; return x; }
+    inline T *take() { T *x = d; d = IX_NULLPTR; return x; }
 
     inline void detach() { if (d && d->ref.load() != 1) detach_helper(); }
 
@@ -125,17 +125,17 @@ public:
         if(d && !d->ref.deref())
             delete d;
 
-        d = nullptr;
+        d = IX_NULLPTR;
     }
 
-    inline operator bool () const { return d != nullptr; }
+    inline operator bool () const { return d != IX_NULLPTR; }
 
     inline bool operator==(const iExplicitlySharedDataPointer<T> &other) const { return d == other.d; }
     inline bool operator!=(const iExplicitlySharedDataPointer<T> &other) const { return d != other.d; }
     inline bool operator==(const T *ptr) const { return d == ptr; }
     inline bool operator!=(const T *ptr) const { return d != ptr; }
 
-    inline iExplicitlySharedDataPointer() { d = nullptr; }
+    inline iExplicitlySharedDataPointer() { d = IX_NULLPTR; }
     inline ~iExplicitlySharedDataPointer() { if (d && (0 == --d->ref)) delete d; }
 
     explicit iExplicitlySharedDataPointer(T *data);

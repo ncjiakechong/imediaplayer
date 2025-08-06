@@ -19,7 +19,7 @@
 namespace iShell {
 
 
-#define Q_VOID
+#define IX_VOID
 
 #define CHECK_MAXLEN(function, returnType) \
     do { \
@@ -90,11 +90,10 @@ iIODevicePrivate::~iIODevicePrivate()
 
 /*!
     \class iIODevice
-    \inmodule QtCore
     \reentrant
 
     \brief The iIODevice class is the base interface class of all I/O
-    devices in Qt.
+    devices.
 
     \ingroup io
 
@@ -103,7 +102,7 @@ iIODevicePrivate::~iIODevicePrivate()
     of data, such as QFile, QBuffer and QTcpSocket. iIODevice is
     abstract and cannot be instantiated, but it is common to use the
     interface it defines to provide device-independent I/O features.
-    For example, Qt's XML classes operate on a iIODevice pointer,
+    For example, XML classes operate on a iIODevice pointer,
     allowing them to be used with various devices (such as files and
     buffers).
 
@@ -240,7 +239,7 @@ iIODevicePrivate::~iIODevicePrivate()
                      allowed. This flag currently only affects QFile. Other
                      classes might use this flag in the future, but until then
                      using this flag with any classes other than QFile may
-                     result in undefined behavior. (since Qt 5.11)
+                     result in undefined behavior.
     \value ExistingOnly Fail if the file to be opened does not exist. This flag
                      must be specified alongside ReadOnly, WriteOnly, or
                      ReadWrite. Note that using this flag with ReadOnly alone
@@ -248,7 +247,7 @@ iIODevicePrivate::~iIODevicePrivate()
                      not exist. This flag currently only affects QFile. Other
                      classes might use this flag in the future, but until then
                      using this flag with any classes other than QFile may
-                     result in undefined behavior. (since Qt 5.11)
+                     result in undefined behavior.
 
     Certain flags, such as \c Unbuffered and \c Truncate, are
     meaningless when used with some subclasses. Some of these
@@ -1014,7 +1013,7 @@ iByteArray iIODevice::read(xint64 maxSize)
         if (!d_ptr->isSequential())
             d_ptr->pos += maxSize;
         if (d_ptr->buffer.isEmpty())
-            readData(nullptr, 0);
+            readData(IX_NULLPTR, 0);
         return result;
     }
 
@@ -1454,7 +1453,7 @@ xint64 iIODevice::write(const char *data)
 */
 void iIODevice::ungetChar(char c)
 {
-    CHECK_READABLE(read, Q_VOID);
+    CHECK_READABLE(read, IX_VOID);
 
     if (d_ptr->transactionStarted) {
         ilog_warn("ungetChar", "Called while transaction is in progress");
@@ -1476,42 +1475,7 @@ void iIODevice::ungetChar(char c)
 */
 bool iIODevice::putChar(char c)
 {
-    return d_ptr->putCharHelper(c);
-}
-
-/*!
-    \internal
-*/
-bool iIODevicePrivate::putCharHelper(char c)
-{
-    return q_ptr->write(&c, 1) == 1;
-}
-
-/*!
-    \internal
-*/
-xint64 iIODevicePrivate::peek(char *data, xint64 maxSize)
-{
-    return read(data, maxSize, true);
-}
-
-/*!
-    \internal
-*/
-iByteArray iIODevicePrivate::peek(xint64 maxSize)
-{
-    iByteArray result(maxSize, iShell::Uninitialized);
-
-    const xint64 readBytes = read(result.data(), maxSize, true);
-
-    if (readBytes < maxSize) {
-        if (readBytes <= 0)
-            result.clear();
-        else
-            result.resize(readBytes);
-    }
-
-    return result;
+    return write(&c, 1) == 1;
 }
 
 /*! \fn bool iIODevice::getChar(char *c)
@@ -1551,7 +1515,7 @@ xint64 iIODevice::peek(char *data, xint64 maxSize)
     CHECK_MAXLEN(peek, xint64(-1));
     CHECK_READABLE(peek, xint64(-1));
 
-    return d_ptr->peek(data, maxSize);
+    return d_ptr->read(data, maxSize, true);
 }
 
 /*!
@@ -1577,7 +1541,18 @@ iByteArray iIODevice::peek(xint64 maxSize)
     CHECK_MAXBYTEARRAYSIZE(peek);
     CHECK_READABLE(peek, iByteArray());
 
-    return d_ptr->peek(maxSize);
+    iByteArray result(maxSize, iShell::Uninitialized);
+
+    const xint64 readBytes = peek(result.data(), maxSize);
+
+    if (readBytes < maxSize) {
+        if (readBytes <= 0)
+            result.clear();
+        else
+            result.resize(readBytes);
+    }
+
+    return result;
 }
 
 /*!
@@ -1619,7 +1594,7 @@ xint64 iIODevice::skip(xint64 maxSize)
         if (!sequential)
             d_ptr->pos += skippedSoFar;
         if (d_ptr->buffer.isEmpty())
-            readData(nullptr, 0);
+            readData(IX_NULLPTR, 0);
         if (skippedSoFar == maxSize)
             return skippedSoFar;
 
@@ -1644,7 +1619,7 @@ xint64 iIODevice::skip(xint64 maxSize)
         }
     }
 
-    const xint64 skipResult = d_ptr->skip(maxSize);
+    const xint64 skipResult = skipData(maxSize);
     if (skippedSoFar == 0)
         return skipResult;
 
@@ -1686,12 +1661,12 @@ xint64 iIODevicePrivate::skipByReading(xint64 maxSize)
 /*!
     \internal
 */
-xint64 iIODevicePrivate::skip(xint64 maxSize)
+xint64 iIODevice::skipData(xint64 maxSize)
 {
     // Base implementation discards the data by reading into the dummy buffer.
     // It's slow, but this works for all types of devices. Subclasses can
     // reimplement this function to improve on that.
-    return skipByReading(maxSize);
+    return d_ptr->skipByReading(maxSize);
 }
 
 /*!

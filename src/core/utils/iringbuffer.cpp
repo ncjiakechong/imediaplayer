@@ -337,7 +337,7 @@ void IRingBuffer::append(const iByteArray &qba)
 
 xint64 IRingBuffer::readLine(char *data, xint64 maxLength)
 {
-    IX_ASSERT(data != nullptr && maxLength > 1);
+    IX_ASSERT(data != IX_NULLPTR && maxLength > 1);
 
     --maxLength;
     xint64 i = indexOf('\n', maxLength);

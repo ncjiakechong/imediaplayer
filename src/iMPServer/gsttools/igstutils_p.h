@@ -2,7 +2,7 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    igstutils.h
+/// @file    igstutils_p.h
 /// @brief   Short description
 /// @details description.
 /// @version 1.0
@@ -100,7 +100,7 @@ namespace iGstUtils {
     GstCaps *videoFilterCaps();
 
     iSize structureResolution(const GstStructure *s);
-    iVideoFrame::PixelFormat structurePixelFormat(const GstStructure *s, int *bpp = 0);
+    iVideoFrame::PixelFormat structurePixelFormat(const GstStructure *s, int *bpp = IX_NULLPTR);
     iSize structurePixelAspectRatio(const GstStructure *s);
     std::pair<xreal, xreal> structureFrameRateRange(const GstStructure *s);
 

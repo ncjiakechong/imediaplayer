@@ -45,6 +45,7 @@ public:
     static iEventDispatcher* createEventDispatcher();
 
     iEventDispatcher* eventDispatcher() const;
+
 protected:
     iCoreApplication(iCoreApplicationPrivate* priv);
 

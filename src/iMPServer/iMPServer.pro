@@ -42,8 +42,8 @@ HEADERS += \
 #    gsttools/qgstvideorenderersink_p.h
 
 SOURCES += \
+    gsttools/igstappsrc.cpp \
     gsttools/igstutils.cpp \
-    gsttools/qgstappsrc.cpp \
 #    gsttools/qgstcodecsinfo.cpp \
 #    gsttools/qgstreameraudioprobecontrol.cpp \
 #    gsttools/qgstreamerbufferprobe.cpp \

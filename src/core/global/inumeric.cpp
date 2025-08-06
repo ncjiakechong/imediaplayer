@@ -18,55 +18,46 @@ namespace iShell {
 
 /*!
     Returns \c true if the double \a {d} is equivalent to infinity.
-    \relates <QtGlobal>
 */
 bool iIsInf(double d) { return ix_is_inf(d); }
 
 /*!
     Returns \c true if the double \a {d} is not a number (NaN).
-    \relates <QtGlobal>
 */
 bool iIsNaN(double d) { return ix_is_nan(d); }
 
 /*!
     Returns \c true if the double \a {d} is a finite number.
-    \relates <QtGlobal>
 */
 bool iIsFinite(double d) { return ix_is_finite(d); }
 
 /*!
     Returns \c true if the float \a {f} is equivalent to infinity.
-    \relates <QtGlobal>
 */
 bool iIsInf(float f) { return ix_is_inf(f); }
 
 /*!
     Returns \c true if the float \a {f} is not a number (NaN).
-    \relates <QtGlobal>
 */
 bool iIsNaN(float f) { return ix_is_nan(f); }
 
 /*!
     Returns \c true if the float \a {f} is a finite number.
-    \relates <QtGlobal>
 */
 bool iIsFinite(float f) { return ix_is_finite(f); }
 
 /*!
     Returns the bit pattern of a signalling NaN as a double.
-    \relates <QtGlobal>
 */
 double iSNaN() { return ix_snan(); }
 
 /*!
     Returns the bit pattern of a quiet NaN as a double.
-    \relates <QtGlobal>
 */
 double iQNaN() { return ix_qnan(); }
 
 /*!
     Returns the bit pattern for an infinite number as a double.
-    \relates <QtGlobal>
 */
 double iInf() { return ix_inf(); }
 
@@ -106,8 +97,6 @@ static inline xuint32 f2i(float f)
     \snippet code/src_corelib_global_qnumeric.cpp 0
 
     \sa iFuzzyCompare()
-
-    \relates <QtGlobal>
 */
 xuint32 iFloatDistance(float a, float b)
 {
@@ -164,8 +153,6 @@ static inline xuint64 d2i(double d)
 
 
     \sa iFuzzyCompare()
-
-    \relates <QtGlobal>
 */
 xuint64 iFloatDistance(double a, double b)
 {

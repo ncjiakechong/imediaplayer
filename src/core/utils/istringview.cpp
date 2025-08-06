@@ -202,9 +202,9 @@ namespace iShell {
 
     The range \c{[str,len)} must remain valid for the lifetime of this string view object.
 
-    Passing \nullptr as \a str is safe if \a len is 0, too, and results in a null string view.
+    Passing \IX_NULLPTR as \a str is safe if \a len is 0, too, and results in a null string view.
 
-    The behavior is undefined if \a len is negative or, when positive, if \a str is \nullptr.
+    The behavior is undefined if \a len is negative or, when positive, if \a str is \IX_NULLPTR.
 
     This constructor only participates in overload resolution if \c Char is a compatible
     character type. The compatible character types are: \c iChar, \c ushort, \c char16_t and
@@ -219,11 +219,11 @@ namespace iShell {
     The range \c{[first,last)} must remain valid for the lifetime of
     this string view object.
 
-    Passing \c \nullptr as \a first is safe if \a last is \nullptr, too,
+    Passing \c \IX_NULLPTR as \a first is safe if \a last is \IX_NULLPTR, too,
     and results in a null string view.
 
     The behavior is undefined if \a last precedes \a first, or \a first
-    is \nullptr and \a last is not.
+    is \IX_NULLPTR and \a last is not.
 
     This constructor only participates in overload resolution if \c Char
     is a compatible character type. The compatible character types
@@ -239,7 +239,7 @@ namespace iShell {
 
     \a str must remain valid for the lifetime of this string view object.
 
-    Passing \nullptr as \a str is safe and results in a null string view.
+    Passing \IX_NULLPTR as \a str is safe and results in a null string view.
 
     This constructor only participates in overload resolution if \a
     str is not an array and if \c Char is a compatible character
@@ -302,7 +302,7 @@ namespace iShell {
 
     The string view will be empty if and only if \c{str.empty()}. It is unspecified
     whether this constructor can result in a null string view (\c{str.data()} would
-    have to return \nullptr for this).
+    have to return \IX_NULLPTR for this).
 
     \sa isNull(), isEmpty()
 */
@@ -447,7 +447,7 @@ namespace iShell {
 /*!
     \fn bool iStringView::isNull() const
 
-    Returns whether this string view is null - that is, whether \c{data() == nullptr}.
+    Returns whether this string view is null - that is, whether \c{data() == IX_NULLPTR}.
 
     This functions is provided for compatibility with other iShell containers.
 

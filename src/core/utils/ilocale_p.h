@@ -159,7 +159,7 @@ public:
     xuint64 stringToUnsLongLong(iStringView str, int base, bool *ok, iLocale::NumberOptions options) const;
 
     static double bytearrayToDouble(const char *num, bool *ok);
-    // this function is used in iIntValidator (QtGui)
+    // this function is used in iIntValidator
     static xint64 bytearrayToLongLong(const char *num, int base, bool *ok);
     static xuint64 bytearrayToUnsLongLong(const char *num, int base, bool *ok);
 
@@ -167,7 +167,7 @@ public:
                          CharBuff *result) const;
     inline char digitToCLocale(iChar c) const;
 
-    // this function is used in iIntValidator (QtGui)
+    // this function is used in iIntValidator
     bool validateChars(iStringView str, NumberMode numMode, iByteArray *buff, int decDigits = -1,
             iLocale::NumberOptions number_options = iLocale::DefaultNumberOptions) const;
 

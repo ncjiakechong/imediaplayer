@@ -79,7 +79,7 @@ uchar *iMemoryVideoBuffer::map(MapMode mode, int *numBytes, int *bytesPerLine)
 
         return reinterpret_cast<uchar *>(static_cast<iMemoryVideoBufferPrivate*>(d_ptr)->data.data());
     } else {
-        return nullptr;
+        return IX_NULLPTR;
     }
 }
 

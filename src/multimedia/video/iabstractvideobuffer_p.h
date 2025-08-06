@@ -30,7 +30,7 @@ class iAbstractVideoBufferPrivate
 {
 public:
     iAbstractVideoBufferPrivate()
-        : q_ptr(nullptr)
+        : q_ptr(IX_NULLPTR)
     {}
 
     virtual ~iAbstractVideoBufferPrivate()

@@ -36,7 +36,7 @@ class iStringRef;
 class iLatin1String
 {
 public:
-    inline iLatin1String() : m_size(0), m_data(nullptr) {}
+    inline iLatin1String() : m_size(0), m_data(IX_NULLPTR) {}
     inline explicit iLatin1String(const char *s) : m_size(s ? int(strlen(s)) : 0), m_data(s) {}
     explicit iLatin1String(const char *f, const char *l)
         : iLatin1String(f, int(l - f)) {}
@@ -474,16 +474,16 @@ public:
     static int localeAwareCompare(const iString& s1, const iStringRef& s2);
 
     // ### make inline except for the long long versions
-    short  toShort(bool *ok=nullptr, int base=10) const;
-    ushort toUShort(bool *ok=nullptr, int base=10) const;
-    int toInt(bool *ok=nullptr, int base=10) const;
-    uint toUInt(bool *ok=nullptr, int base=10) const;
-    long toLong(bool *ok=nullptr, int base=10) const;
-    ulong toULong(bool *ok=nullptr, int base=10) const;
-    xlonglong toLongLong(bool *ok=nullptr, int base=10) const;
-    xulonglong toULongLong(bool *ok=nullptr, int base=10) const;
-    float toFloat(bool *ok=nullptr) const;
-    double toDouble(bool *ok=nullptr) const;
+    short  toShort(bool *ok=IX_NULLPTR, int base=10) const;
+    ushort toUShort(bool *ok=IX_NULLPTR, int base=10) const;
+    int toInt(bool *ok=IX_NULLPTR, int base=10) const;
+    uint toUInt(bool *ok=IX_NULLPTR, int base=10) const;
+    long toLong(bool *ok=IX_NULLPTR, int base=10) const;
+    ulong toULong(bool *ok=IX_NULLPTR, int base=10) const;
+    xlonglong toLongLong(bool *ok=IX_NULLPTR, int base=10) const;
+    xulonglong toULongLong(bool *ok=IX_NULLPTR, int base=10) const;
+    float toFloat(bool *ok=IX_NULLPTR) const;
+    double toDouble(bool *ok=IX_NULLPTR) const;
 
     iString &setNum(short, int base=10);
     iString &setNum(ushort, int base=10);
@@ -1153,7 +1153,7 @@ public:
     typedef iString::const_reference const_reference;
 
     // ### make this constructor constexpr, after the destructor is made trivial
-    inline iStringRef() : m_string(nullptr), m_position(0), m_size(0) {}
+    inline iStringRef() : m_string(IX_NULLPTR), m_position(0), m_size(0) {}
     inline iStringRef(const iString *string, int position, int size);
     inline iStringRef(const iString *string);
 
@@ -1246,10 +1246,10 @@ public:
     iByteArray toLocal8Bit() const;
     std::vector<uint> toUcs4() const;
 
-    inline void clear() { m_string = nullptr; m_position = m_size = 0; }
+    inline void clear() { m_string = IX_NULLPTR; m_position = m_size = 0; }
     iString toString() const;
     inline bool isEmpty() const { return m_size == 0; }
-    inline bool isNull() const { return m_string == nullptr || m_string->isNull(); }
+    inline bool isNull() const { return m_string == IX_NULLPTR || m_string->isNull(); }
 
     iStringRef appendTo(iString *string) const;
 
@@ -1285,16 +1285,16 @@ public:
     static int localeAwareCompare(const iStringRef &s1, const iStringRef &s2);
 
     iStringRef trimmed() const;
-    short  toShort(bool *ok = nullptr, int base = 10) const;
-    ushort toUShort(bool *ok = nullptr, int base = 10) const;
-    int toInt(bool *ok = nullptr, int base = 10) const;
-    uint toUInt(bool *ok = nullptr, int base = 10) const;
-    long toLong(bool *ok = nullptr, int base = 10) const;
-    ulong toULong(bool *ok = nullptr, int base = 10) const;
-    xlonglong toLongLong(bool *ok = nullptr, int base = 10) const;
-    xulonglong toULongLong(bool *ok = nullptr, int base = 10) const;
-    float toFloat(bool *ok = nullptr) const;
-    double toDouble(bool *ok = nullptr) const;
+    short  toShort(bool *ok = IX_NULLPTR, int base = 10) const;
+    ushort toUShort(bool *ok = IX_NULLPTR, int base = 10) const;
+    int toInt(bool *ok = IX_NULLPTR, int base = 10) const;
+    uint toUInt(bool *ok = IX_NULLPTR, int base = 10) const;
+    long toLong(bool *ok = IX_NULLPTR, int base = 10) const;
+    ulong toULong(bool *ok = IX_NULLPTR, int base = 10) const;
+    xlonglong toLongLong(bool *ok = IX_NULLPTR, int base = 10) const;
+    xulonglong toULongLong(bool *ok = IX_NULLPTR, int base = 10) const;
+    float toFloat(bool *ok = IX_NULLPTR) const;
+    double toDouble(bool *ok = IX_NULLPTR) const;
 };
 IX_DECLARE_TYPEINFO(iStringRef, IX_PRIMITIVE_TYPE);
 

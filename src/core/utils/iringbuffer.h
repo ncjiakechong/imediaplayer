@@ -15,8 +15,8 @@
 //  W A R N I N G
 //  -------------
 //
-// This file is not part of the Qt API.  It exists for the convenience
-// of a number of Qt sources files.  This header file may change from
+// This file is not part of the API.  It exists for the convenience
+// of a number of sources files.  This header file may change from
 // version to version without notice, or even be removed.
 //
 // We mean it.
@@ -168,7 +168,7 @@ public:
     }
 
     inline const char *readPointer() const {
-        return bufferSize == 0 ? nullptr : buffers.front().data();
+        return bufferSize == 0 ? IX_NULLPTR : buffers.front().data();
     }
 
     const char *readPointerAtPosition(xint64 pos, xint64 &length) const;
