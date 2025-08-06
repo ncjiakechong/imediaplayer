@@ -61,6 +61,15 @@ void iVariant::unregisterConverterFunction(int from, int to)
     typesConversionRegistry()->erase(std::pair<int, int>(from, to));
 }
 
+iVariant::iAbstractVariantImpl::iAbstractVariantImpl(void* ptr)
+    : data(ptr)
+{
+}
+
+iVariant::iAbstractVariantImpl::~iAbstractVariantImpl()
+{
+}
+
 iVariant::iVariant()
     : m_typeId(0)
 {

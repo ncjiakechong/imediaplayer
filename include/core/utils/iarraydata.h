@@ -22,9 +22,9 @@ namespace iShell {
 struct iArrayData
 {
     iRefCount ref; // -1 means static, (!0 && !1) means shared
-    int size;
-    uint alloc : 31;
-    uint capacityReserved : 1;
+    int32_t size;
+    uint32_t alloc : 31;
+    uint32_t capacityReserved : 1;
 
     xptrdiff offset; // in bytes from beginning of header
 

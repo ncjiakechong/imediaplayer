@@ -62,7 +62,7 @@ namespace iShell {
 class iGstAppSrc  : public iObject
 {
 public:
-    iGstAppSrc(iObject *parent = 0);
+    iGstAppSrc(iObject *parent = IX_NULLPTR);
     ~iGstAppSrc();
 
     bool setup(GstElement *);
@@ -80,7 +80,7 @@ public:
 
     bool isStreamValid() const
     {
-        return m_stream != 0 &&
+        return m_stream != IX_NULLPTR &&
                m_stream->isOpen();
     }
 

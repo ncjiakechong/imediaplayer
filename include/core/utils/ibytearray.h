@@ -412,7 +412,7 @@ inline void iByteArray::reserve(int asize)
 inline void iByteArray::squeeze()
 {
     if (d->ref.isShared() || uint(d->size) + 1u < d->alloc) {
-        reallocData(uint(d->size) + 1u, d->detachFlags() & ~Data::CapacityReserved);
+        reallocData(uint(d->size) + 1u, d->detachFlags() & uint(~Data::CapacityReserved));
     } else {
         // cannot set unconditionally, since d could be shared_null or
         // otherwise static.
@@ -425,6 +425,9 @@ class iByteRef {
     int i;
     inline iByteRef(iByteArray &array, int idx)
         : a(array),i(idx) {}
+
+    iByteRef();
+    iByteRef(const iByteRef&);
     friend class iByteArray;
 public:
     inline operator char() const
@@ -452,7 +455,7 @@ public:
 inline iByteRef iByteArray::operator[](int i)
 { IX_ASSERT(i >= 0); return iByteRef(*this, i); }
 inline iByteRef iByteArray::operator[](uint i)
-{ return iByteRef(*this, i); }
+{ return iByteRef(*this, int(i)); }
 inline iByteRef iByteArray::front() { return operator[](0); }
 inline iByteRef iByteArray::back() { return operator[](size() - 1); }
 inline iByteArray::iterator iByteArray::begin()
@@ -508,7 +511,7 @@ inline int iByteArray::compare(const iByteArray &a, iShell::CaseSensitivity cs) 
                                      istrnicmp(data(), size(), a.data(), a.size());
 }
 inline bool operator==(const iByteArray &a1, const iByteArray &a2)
-{ return (a1.size() == a2.size()) && (memcmp(a1.constData(), a2.constData(), a1.size())==0); }
+{ return (a1.size() == a2.size()) && (memcmp(a1.constData(), a2.constData(), size_t(a1.size()))==0); }
 inline bool operator==(const iByteArray &a1, const char *a2)
 { return a2 ? istrcmp(a1,a2) == 0 : a1.isEmpty(); }
 inline bool operator==(const char *a1, const iByteArray &a2)
@@ -556,11 +559,11 @@ inline const iByteArray operator+(char a1, const iByteArray &a2)
 inline bool iByteArray::contains(const char *c) const
 { return indexOf(c) != -1; }
 inline iByteArray &iByteArray::replace(char before, const char *c)
-{ return replace(&before, 1, c, istrlen(c)); }
+{ return replace(&before, 1, c, int(istrlen(c))); }
 inline iByteArray &iByteArray::replace(const iByteArray &before, const char *c)
-{ return replace(before.constData(), before.size(), c, istrlen(c)); }
+{ return replace(before.constData(), before.size(), c, int(istrlen(c))); }
 inline iByteArray &iByteArray::replace(const char *before, const char *after)
-{ return replace(before, istrlen(before), after, istrlen(after)); }
+{ return replace(before, int(istrlen(before)), after, int(istrlen(after))); }
 
 inline iByteArray &iByteArray::setNum(short n, int base)
 { return base == 10 ? setNum(xint64(n), base) : setNum(xuint64(ushort(n)), base); }
@@ -574,7 +577,7 @@ inline iByteArray &iByteArray::setNum(float n, char f, int prec)
 { return setNum(double(n),f,prec); }
 
 inline std::string iByteArray::toStdString() const
-{ return std::string(constData(), length()); }
+{ return std::string(constData(), size_t(length())); }
 
 inline iByteArray iByteArray::fromStdString(const std::string &s)
 { return iByteArray(s.data(), int(s.size())); }

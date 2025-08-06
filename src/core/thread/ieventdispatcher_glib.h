@@ -25,7 +25,7 @@ struct iEventSourceWraper;
 class iEventDispatcher_Glib : public iEventDispatcher
 {
 public:
-    explicit iEventDispatcher_Glib(iObject *parent = 0);
+    explicit iEventDispatcher_Glib(iObject *parent = IX_NULLPTR);
     ~iEventDispatcher_Glib();
 
     virtual bool processEvents();

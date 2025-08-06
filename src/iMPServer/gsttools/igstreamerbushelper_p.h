@@ -61,12 +61,16 @@ namespace iShell {
 
 class iGstreamerSyncMessageFilter {
 public:
+    virtual ~iGstreamerSyncMessageFilter();
+
     //returns true if message was processed and should be dropped, false otherwise
     virtual bool processSyncMessage(const iGstreamerMessage &message) = 0;
 };
 
 class iGstreamerBusMessageFilter {
 public:
+    virtual ~iGstreamerBusMessageFilter();
+
     //returns true if message was processed and should be dropped, false otherwise
     virtual bool processBusMessage(const iGstreamerMessage &message) = 0;
 };
@@ -78,7 +82,7 @@ class iGstreamerBusHelper : public iObject
     friend class iGstreamerBusHelperPrivate;
 
 public:
-    iGstreamerBusHelper(GstBus* bus, iObject* parent = 0);
+    iGstreamerBusHelper(GstBus* bus, iObject* parent = IX_NULLPTR);
     ~iGstreamerBusHelper();
 
     void installMessageFilter(iObject *filter);

@@ -139,15 +139,15 @@ public:
     {
         if (iIsInf(d))
             return float(d);
-        if (std::fabs(d) > std::numeric_limits<float>::max()) {
-            if (ok != 0)
+        if (std::fabs(d) > double(std::numeric_limits<float>::max())) {
+            if (ok != IX_NULLPTR)
                 *ok = false;
             const float huge = std::numeric_limits<float>::infinity();
             return d < 0 ? -huge : huge;
         }
         if (d != 0 && float(d) == 0) {
             // Values that underflow double already failed. Match them:
-            if (ok != 0)
+            if (ok != IX_NULLPTR)
                 *ok = false;
             return 0;
         }
@@ -274,7 +274,7 @@ inline char iLocaleData::digitToCLocale(iChar in) const
     const ushort tenUnicode = m_zero + 10;
 
     if (in.unicode() >= m_zero && in.unicode() < tenUnicode)
-        return '0' + in.unicode() - m_zero;
+        return char('0' + in.unicode() - m_zero);
 
     if (in.unicode() >= '0' && in.unicode() <= '9')
         return in.toLatin1();

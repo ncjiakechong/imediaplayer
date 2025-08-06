@@ -85,6 +85,13 @@ public:
 
     _iconnection(iObject* obj, pobjfunc_t func, callback_t cb, ConnectionType type);
 
+protected:
+    _iconnection();
+    _iconnection(const _iconnection&);
+    ~_iconnection();
+
+    _iconnection& operator=(const _iconnection&);
+
     void ref();
     void deref();
 
@@ -93,20 +100,13 @@ public:
     _iconnection* clone() const;
     _iconnection* duplicate(iObject* newobj) const;
 
-    void emits(void* args) const;
-
-protected:
-    _iconnection();
-    _iconnection(const _iconnection&);
-    ~_iconnection();
-
-    _iconnection& operator=(const _iconnection&);
-
     void setOrphaned();
 
+    void emits(void* args) const;
+
 private:
-    bool m_orphaned;
-    int  m_ref;
+    int m_orphaned : 1;
+    int  m_ref : 31;
     ConnectionType m_type;
     iObject* m_pobject;
     void (iObject::*m_pfunc)();
@@ -621,8 +621,9 @@ struct iProperty : public _iproperty_base
     pgetfunc_t m_getFunc;
     psetfunc_t m_setFunc;
 };
+
 template<class desttype, typename ret, typename param>
-static _iproperty_base* newProperty(ret (desttype::*get)() const = IX_NULLPTR,
+_iproperty_base* newProperty(ret (desttype::*get)() const = IX_NULLPTR,
                         void (desttype::*set)(param) = IX_NULLPTR)
 {
     IX_COMPILER_VERIFY((is_same<typename type_wrapper<ret>::TYPE, typename type_wrapper<param>::TYPE>::VALUE));
