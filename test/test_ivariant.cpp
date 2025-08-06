@@ -110,6 +110,14 @@ int test_ivariant(void)
     r = iString(str1).replace(rx, "\\1");
     IX_ASSERT_X(r == iString("eaeaae"), "iString replace2 error");
 
+    iString var1("test124");
+    iString refVar1 = var1;
+    iString refVar2 = var1;
+    IX_ASSERT_X(refVar1 == refVar2, "iString ref error 1");
+
+    refVar2 += var1;
+    IX_ASSERT_X(refVar1 != refVar2, "iString ref error 2");
+
     iString chinese = iString::fromUtf8("中文输出验证");
     ilog_debug("Chinese output: ", chinese);
     iByteArray rawData = chinese.toUtf8();

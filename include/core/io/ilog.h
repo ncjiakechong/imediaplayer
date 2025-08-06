@@ -39,8 +39,8 @@ struct IX_CORE_EXPORT iLogTarget
 {
     void* user_data;
     bool (*filter)(void* user_data, const char* tag, ilog_level_t level);
-    void (*meta_callback)(void* user_data, const char* tag, ilog_level_t level, const iString& msg);
-    void (*data_callback)(void* user_data, const char* tag, ilog_level_t level, const uchar* msg, int size);
+    void (*meta_callback)(void* user_data, const char* tag, ilog_level_t level, const char* msg, int size);
+    void (*data_callback)(void* user_data, const char* tag, ilog_level_t level, const void* msg, int size);
 };
 
 struct iHexUInt8 {
@@ -129,13 +129,16 @@ class IX_CORE_EXPORT iLogger{
     // for iString
     void append(const iString& value);
 
+    // for string
+    void append(const char* value);
+
     // for pointer types
     void append(const void* value);
 
  private:
     const char* m_tags;
     ilog_level_t m_level;
-    iString m_buff;
+    iByteArray m_buff;
 };
 
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, bool);
@@ -397,7 +400,7 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1) {
     logger.end();
 }
 
-void iLogData(const char* tag, ilog_level_t level, const uchar* data, int size);
+IX_CORE_EXPORT void iLogData(const char* tag, ilog_level_t level, const void* data, int size);
 
 /* ISO varargs available */
 #define ilog_verbose(...) iLogMeta(ILOG_TAG, ILOG_VERBOSE, __VA_ARGS__)
