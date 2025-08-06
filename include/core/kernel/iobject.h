@@ -84,21 +84,19 @@ public:
     typedef void (*Callback)(iObject* obj, Function func, void* args);
 
     _iConnection(iObject* obj, Function func, Callback cb, ConnectionType type);
+    ~_iConnection();
 
 protected:
     _iConnection();
     _iConnection(const _iConnection&);
-    ~_iConnection();
-
     _iConnection& operator=(const _iConnection&);
 
     void ref();
     void deref();
+    void setOrphaned();
 
     _iConnection* clone() const;
     _iConnection* duplicate(iObject* newobj) const;
-
-    void setOrphaned();
 
     void emits(void* args) const;
 
@@ -132,10 +130,10 @@ protected:
     _iSignalBase();
     _iSignalBase(const _iSignalBase& s);
 
-    void slotConnect(_iConnection* conn);
     void slotDisconnect(iObject* pslot);
     void slotDuplicate(const iObject* oldtarget, iObject* newtarget);
 
+    void doConnect(const _iConnection& conn);
     void doDisconnect(iObject* obj, _iConnection::Function func);
     void doEmit(void* args, clone_args_t clone, free_args_t free);
 
@@ -203,8 +201,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -232,8 +230,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -263,8 +261,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -297,8 +295,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -332,8 +330,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -370,8 +368,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -411,8 +409,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -454,8 +452,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -499,8 +497,8 @@ public:
 
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iConnection* conn = new _iConnection(obj, tFunc, __emit_helper::callback, type);
-        slotConnect(conn);
+        _iConnection conn(obj, tFunc, __emit_helper::callback, type);
+        doConnect(conn);
     }
 
     /**
@@ -1122,12 +1120,11 @@ protected:
     std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc> m_propertyNofity;
 
 private:
-    typedef std::set<_iSignalBase*> sender_set;
-    typedef sender_set::const_iterator const_iterator;
+    typedef std::unordered_map<_iSignalBase*, int> sender_map;
     typedef std::list<iObject *> iObjectList;
 
-    void signalConnect(_iSignalBase* sender);
-    void signalDisconnect(_iSignalBase* sender);
+    int refSignal(_iSignalBase* sender);
+    int derefSignal(_iSignalBase* sender);
 
     void setThreadData_helper(iThreadData *currentData, iThreadData *targetData);
     void moveToThread_helper();
@@ -1138,7 +1135,7 @@ private:
 
     iMutex      m_objLock;
     iString     m_objName;
-    sender_set  m_senders;
+    sender_map  m_senders;
 
     iAtomicPointer< typename isharedpointer::ExternalRefCountData > m_refCount;
 

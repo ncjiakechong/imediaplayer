@@ -526,6 +526,7 @@ int test_object(void)
     // test multi deleteLater
     tst_sharedObj_7->deleteLater();
 
+    tst_sig.tst_sig_int0.emits();
 
     TestObjectDelete* signalObj = new TestObjectDelete();
     signalObj->setObjectName("signalObj");
@@ -544,6 +545,7 @@ int test_object(void)
     signalObj2.tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotDeleteObj);
     signalObj2.tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
     signalObj2.tst_sig.disconnect(&tst_slotObj, &TestObjectDeleteSlot::slotDeleteObj);
+    signalObj2.tst_sig.disconnect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
 
     signalObj2.tst_sig.emits(&signalObj2);
 

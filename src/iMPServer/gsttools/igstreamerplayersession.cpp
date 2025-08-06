@@ -1,65 +1,33 @@
-/****************************************************************************
-**
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
-**
-** This file is part of the Qt Toolkit.
-**
-** $QT_BEGIN_LICENSE:LGPL$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** GNU Lesser General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
-**
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
-**
-** $QT_END_LICENSE$
-**
-****************************************************************************/
-
-#include <private/qgstreamerplayersession_p.h>
-#include <private/qgstreamerbushelper_p.h>
+/////////////////////////////////////////////////////////////////
+/// Copyright 2018-2020
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    igstreamerplayersession.cpp
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/////////////////////////////////////////////////////////////////
 
 #include <private/qgstreameraudioprobecontrol_p.h>
 #include <private/qgstreamervideoprobecontrol_p.h>
 #include <private/qgstreamervideorendererinterface_p.h>
-#if !GST_CHECK_VERSION(1,0,0)
-#include <private/gstvideoconnector_p.h>
-#endif
-#include <private/qgstutils_p.h>
 #include <private/qvideosurfacegstsink_p.h>
 
 #include <gst/gstvalue.h>
 #include <gst/base/gstbasesrc.h>
 
+#include <core/utils/isize.h>
+#include <core/kernel/itimer.h>
+
+#include "igstutils_p.h"
+#include "igstreamerbushelper_p.h"
+#include "igstreamerplayersession_p.h"
+
+
 #include <QtMultimedia/qmediametadata.h>
 #include <QtCore/qdatetime.h>
-#include <QtCore/qdebug.h>
-#include <QtCore/qsize.h>
-#include <QtCore/qtimer.h>
-#include <QtCore/qdebug.h>
-#include <QtCore/qdir.h>
-#include <QtCore/qstandardpaths.h>
+
 #include <qvideorenderercontrol.h>
 
 //#define DEBUG_PLAYBIN
@@ -114,23 +82,21 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
     :iObject(parent),
      m_state(QMediaPlayer::StoppedState),
      m_pendingState(QMediaPlayer::StoppedState),
-     m_busHelper(0),
-     m_videoSink(0),
+     m_busHelper(IX_NULLPTR),
+     m_videoSink(IX_NULLPTR),
 #if !GST_CHECK_VERSION(1,0,0)
      m_usingColorspaceElement(false),
 #endif
-     m_pendingVideoSink(0),
-     m_nullVideoSink(0),
-     m_audioSink(0),
-     m_volumeElement(0),
-     m_bus(0),
-     m_videoOutput(0),
-     m_renderer(0),
-#if QT_CONFIG(gstreamer_app)
-     m_appSrc(0),
-#endif
-     m_videoProbe(0),
-     m_audioProbe(0),
+     m_pendingVideoSink(IX_NULLPTR),
+     m_nullVideoSink(IX_NULLPTR),
+     m_audioSink(IX_NULLPTR),
+     m_volumeElement(IX_NULLPTR),
+     m_bus(IX_NULLPTR),
+     m_videoOutput(IX_NULLPTR),
+     m_renderer(IX_NULLPTR),
+     m_appSrc(IX_NULLPTR),
+     m_videoProbe(IX_NULLPTR),
+     m_audioProbe(IX_NULLPTR),
      m_volume(100),
      m_playbackRate(1.0),
      m_muted(false),

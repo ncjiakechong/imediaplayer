@@ -51,7 +51,6 @@ typedef enum {
 
 class iGstreamerPlayerSession
     : public iObject
-    , public iGstreamerBusMessageFilter
 {
 public:
     iGstreamerPlayerSession(iObject *parent);
@@ -91,7 +90,7 @@ public:
     int activeStream(QMediaStreamsControl::StreamType streamType) const;
     void setActiveStream(QMediaStreamsControl::StreamType streamType, int streamNumber);
 
-    bool processBusMessage(const iGstreamerMessage &message) override;
+    // bool processBusMessage(const iGstreamerMessage &message) override;
 
     iGstAppSrc *appsrc() const { return m_appSrc; }
     static void configureAppSrcElement(GObject*, GObject*, GParamSpec*,iGstreamerPlayerSession* _this);
