@@ -20,7 +20,7 @@
 #include "core/io/ilog.h"
 #include "core/global/iglobalstatic.h"
 
-#define ILOG_TAG "core"
+#define ILOG_TAG "ix:utils"
 
 namespace iShell {
 

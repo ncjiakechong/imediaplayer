@@ -43,7 +43,7 @@
 
 #define IS_RAW_DATA(d) ((d)->offset != sizeof(iStringData))
 
-#define ILOG_TAG "utils"
+#define ILOG_TAG "ix:utils"
 
 namespace iShell {
 

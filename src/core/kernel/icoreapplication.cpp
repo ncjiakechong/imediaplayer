@@ -24,7 +24,7 @@
 #include "private/ieventdispatcher_glib.h"
 #endif
 
-#define ILOG_TAG "core"
+#define ILOG_TAG "ix:core"
 
 namespace iShell {
 
