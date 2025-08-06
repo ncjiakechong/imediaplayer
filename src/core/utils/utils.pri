@@ -5,10 +5,11 @@
 #-------------------------------------------------
 
 SOURCES += \
-    utils/ifreelist.cpp \
-    utils/irect.cpp \
-    utils/isharedptr.cpp \
-    utils/isize.cpp \
+    $$PWD/iarraydata.cpp \
+    $$PWD/ifreelist.cpp \
+    $$PWD/irect.cpp \
+    $$PWD/isharedptr.cpp \
+    $$PWD/isize.cpp \
 
 HEADERS += \
     ../../include/core/utils/ifreelist.h \
@@ -17,4 +18,5 @@ HEADERS += \
     ../../include/core/utils/isharedptr.h \
     ../../include/core/utils/isize.h \
     ../../include/core/utils/ituple.h \
-    ../../include/core/utils/itypelist.h
+    ../../include/core/utils/itypelist.h \
+    ../../include/core/utils/iarraydata.h

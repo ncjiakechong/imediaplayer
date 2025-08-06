@@ -346,7 +346,7 @@ GstCaps *iGstUtils::capsForAudioFormat(const QAudioFormat &format)
             gst_structure_set(structure, "signed", G_TYPE_BOOLEAN, FALSE, NULL);
 
         caps = gst_caps_new_empty();
-        Q_ASSERT(caps);
+        i_assert(caps);
         gst_caps_append_structure(caps, structure);
     }
 
