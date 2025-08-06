@@ -105,6 +105,7 @@ void iMediaObject::setNotifyInterval(int milliSeconds)
 */
 bool iMediaObject::bind(iObject *object)
 {
+    IX_UNUSED(object);
     return false;
 }
 
@@ -119,6 +120,7 @@ bool iMediaObject::bind(iObject *object)
 */
 void iMediaObject::unbind(iObject *object)
 {
+    IX_UNUSED(object);
 }
 
 /*!
@@ -236,6 +238,7 @@ bool iMediaObject::isMetaDataAvailable() const
 */
 iVariant iMediaObject::metaData(const iString &key) const
 {
+    IX_UNUSED(key);
     return iVariant();
 }
 

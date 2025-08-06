@@ -192,6 +192,7 @@ bool iGstAppSrc::doSeek(xint64 value)
 
 gboolean iGstAppSrc::on_seek_data(GstAppSrc *element, guint64 arg0, gpointer userdata)
 {
+    IX_UNUSED(element);
     iGstAppSrc *self = static_cast<iGstAppSrc*>(userdata);
     if (self && self->isStreamValid()) {
         if (!self->stream()->isSequential()) {
@@ -206,6 +207,7 @@ gboolean iGstAppSrc::on_seek_data(GstAppSrc *element, guint64 arg0, gpointer use
 
 void iGstAppSrc::on_enough_data(GstAppSrc *element, gpointer userdata)
 {
+    IX_UNUSED(element);
     iGstAppSrc *self = static_cast<iGstAppSrc*>(userdata);
     if (self)
         self->enoughData() = true;
@@ -213,6 +215,7 @@ void iGstAppSrc::on_enough_data(GstAppSrc *element, gpointer userdata)
 
 void iGstAppSrc::on_need_data(GstAppSrc *element, guint arg0, gpointer userdata)
 {
+    IX_UNUSED(element);
     iGstAppSrc *self = static_cast<iGstAppSrc*>(userdata);
     if (self) {
         self->dataRequested() = true;

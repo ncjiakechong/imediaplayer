@@ -135,6 +135,7 @@ iMediaPlayer::iMediaPlayer(iObject *parent, iMediaPlayer::Flags flags)
     , m_nestedPlaylists(0)
     , m_hasStreamPlaybackFeature(false)
 {
+    IX_UNUSED(flags);
     iGstUtils::initializeGst();
 
     m_control = new iGstreamerPlayerControl(new iGstreamerPlayerSession(this), this);
@@ -448,6 +449,9 @@ iMultimedia::SupportEstimate iMediaPlayer::hasSupport(const iString &mimeType,
                                                const std::list<iString>& codecs,
                                                Flags flags)
 {
+    IX_UNUSED(mimeType);
+    IX_UNUSED(codecs);
+    IX_UNUSED(flags);
     return iMultimedia::ProbablySupported;
 }
 
@@ -465,6 +469,7 @@ iMultimedia::SupportEstimate iMediaPlayer::hasSupport(const iString &mimeType,
 */
 std::list<iString> iMediaPlayer::supportedMimeTypes(Flags flags)
 {
+    IX_UNUSED(flags);
     return std::list<iString>();
 }
 
