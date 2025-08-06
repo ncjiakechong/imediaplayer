@@ -404,7 +404,7 @@ void iGstreamerPlayerSession::setBus(GstBus *bus)
     // It might still accept gst messages.
     if (m_busHelper)
         m_busHelper->deleteLater();
-    m_busHelper = nullptr;
+    m_busHelper = IX_NULLPTR;
 
     if (!m_bus)
         return;

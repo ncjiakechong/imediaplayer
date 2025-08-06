@@ -13,7 +13,7 @@
 
 #include <core/global/iglobal.h>
 #include <core/global/itypeinfo.h>
-#include <core/thread/iatomiccounter.h>
+#include <core/utils/irefcount.h>
 
 namespace iShell {
 
@@ -23,7 +23,7 @@ template <class T> class iSharedDataPointer;
 class IX_CORE_EXPORT iSharedData
 {
 public:
-    mutable iAtomicCounter<int> ref;
+    mutable iRefCount ref;
 
     inline iSharedData() : ref(0) { }
     inline iSharedData(const iSharedData &) : ref(0) { }

@@ -32,7 +32,7 @@ template <typename T>
 inline T *&iThreadStorage_localData(iThreadStorageData &d, T **)
 {
     void **v = d.get();
-    if (!v) v = d.set(nullptr);
+    if (!v) v = d.set(IX_NULLPTR);
     return *(reinterpret_cast<T**>(v));
 }
 
@@ -78,7 +78,6 @@ inline void iThreadStorage_deleteData(void *d, T *)
 template <class T>
 class iThreadStorage
 {
-private:
     iThreadStorageData d;
 
     IX_DISABLE_COPY(iThreadStorage)
@@ -91,7 +90,7 @@ public:
     inline ~iThreadStorage() { }
 
     inline bool hasLocalData() const
-    { return d.get() != nullptr; }
+    { return d.get() != IX_NULLPTR; }
 
     inline T& localData()
     { return iThreadStorage_localData(d, reinterpret_cast<T*>(0)); }

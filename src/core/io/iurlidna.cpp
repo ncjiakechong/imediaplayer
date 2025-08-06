@@ -2050,7 +2050,7 @@ bool ix_nameprep(iString *source, int from)
 
     // Normalize to Unicode 3.2 form KC
     extern void ix_string_normalize(iString *data, iString::NormalizationForm mode,
-                                    iChar::UnicodeVersion version, int from);
+                                    iChar::UnicodeVersion version, xsizetype from);
     ix_string_normalize(source, iString::NormalizationForm_KC, iChar::Unicode_3_2,
                         firstNonAscii > from ? firstNonAscii - 1 : from);
 
@@ -2113,19 +2113,19 @@ static const iChar *ix_find_nonstd3(const iChar *uc, int len, CaseSensitivity cs
         return uc + i;
     }
 
-    return nullptr;
+    return IX_NULLPTR;
 }
 
 bool ix_check_std3rules(const iChar *uc, int len)
 {
-    return ix_find_nonstd3(uc, len, CaseInsensitive) == nullptr;
+    return ix_find_nonstd3(uc, len, CaseInsensitive) == IX_NULLPTR;
 }
 
 static bool ix_check_nameprepped_std3(const iChar *in, int len)
 {
     // fast path: check for lowercase ASCII
     const iChar *firstNonAscii = ix_find_nonstd3(in, len, CaseSensitive);
-    if (firstNonAscii == nullptr) {
+    if (firstNonAscii == IX_NULLPTR) {
         // everything was lowercase ASCII, digits or hyphen
         return true;
     }

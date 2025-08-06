@@ -65,9 +65,9 @@ public:
     iAtomicCounter<xintptr>         threadHd;
     iAtomicPointer<iThread>         thread;
     iAtomicPointer<iEventDispatcher> dispatcher;
-
     iMutex                          eventMutex;
 
+    std::list<void*>                tls; 
 private:
     iAtomicCounter<int>             m_ref;
 };

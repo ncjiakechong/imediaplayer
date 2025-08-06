@@ -18,7 +18,7 @@
 #include <iterator>
 #include <list>
 
-#include <core/utils/iarraydata.h>
+#include <core/utils/iarraydatapointer.h>
 #include <core/global/inamespace.h>
 
 namespace iShell {
@@ -63,7 +63,7 @@ IX_CORE_EXPORT int istrnicmp(const char *, const char *, size_t len);
 IX_CORE_EXPORT int istrnicmp(const char *, xsizetype, const char *, xsizetype = -1);
 
 // iChecksum: Internet checksum
-IX_CORE_EXPORT xuint16 iChecksum(const char *s, uint len, iShell::ChecksumType standard); // ### Use iShell::ChecksumType standard = iShell::ChecksumIso3309
+IX_CORE_EXPORT xuint16 iChecksum(const char *s, xsizetype len, iShell::ChecksumType standard); // ### Use iShell::ChecksumType standard = iShell::ChecksumIso3309
 
 class iString;
 
@@ -262,7 +262,10 @@ public:
     static iByteArray number(xint64, int base = 10);
     static iByteArray number(xuint64, int base = 10);
     static iByteArray number(double, char f = 'g', int prec = 6);
-    static iByteArray fromRawData(const char *, xsizetype size);
+    static iByteArray fromRawData(const char * data, xsizetype size)
+    {
+        return iByteArray(DataPointer(IX_NULLPTR, const_cast<char *>(data), size));
+    }
     static iByteArray fromBase64(const iByteArray &base64, Base64Options options);
     static iByteArray fromHex(const iByteArray &hexEncoded);
     static iByteArray fromPercentEncoding(const iByteArray &pctEncoded, char percent = '%');
@@ -340,7 +343,7 @@ private:
 };
 
 #  define iByteArrayLiteral(str) \
-    (iByteArray(iByteArrayData(nullptr, const_cast<char *>(str), sizeof(str) - 1))) \
+    (iByteArray(iByteArray::DataPointer(IX_NULLPTR, const_cast<char *>(str), sizeof(str) - 1))) \
     /**/
 
 inline iByteArray::iByteArray() {}

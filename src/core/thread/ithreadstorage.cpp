@@ -30,7 +30,7 @@ IX_GLOBAL_STATIC(DestructorMap, destructors)
 
 iThreadStorageData::iThreadStorageData(void (*func)(void *))
 {
-    iMutex::ScopedLock locker(&destructorsMutex);
+    iMutex::ScopedLock locker(destructorsMutex);
     DestructorMap *destr = destructors();
     if (!destr) {
         /*
@@ -43,18 +43,19 @@ iThreadStorageData::iThreadStorageData(void (*func)(void *))
          no where to store it, and no way to actually call it.
          */
         iThreadData *data = iThreadData::current();
-        id = data->tls.count();
+        id = data->tls.size();
         ilog_debug("Allocated id ", id, ", destructor ", func, " cannot be stored");
         return;
     }
-    for (id = 0; id < destr->count(); id++) {
-        if (destr->at(id) == nullptr)
+    DestructorMap::iterator it = destr->begin();
+    for (id = 0, it = destr->begin(); id < destr->size() && it != destr->end(); ++id, ++it) {
+        if (*it == IX_NULLPTR)
             break;
     }
-    if (id == destr->count()) {
-        destr->append(func);
+    if (id == destr->size()) {
+        destr->push_back(func);
     } else {
-        (*destr)[id] = func;
+        *it = func;
     }
     ilog_debug("Allocated id ", id, ", destructor ", func);
 }
@@ -62,9 +63,13 @@ iThreadStorageData::iThreadStorageData(void (*func)(void *))
 iThreadStorageData::~iThreadStorageData()
 {
     ilog_debug("Released id ", id);
-    iMutex::ScopedLock locker(&destructorsMutex);
-    if (destructors())
-        (*destructors())[id] = nullptr;
+    iMutex::ScopedLock locker(destructorsMutex);
+    DestructorMap *destr = destructors();
+    if (destr) {
+        DestructorMap::iterator it = destr->begin();
+        std::advance(it, id);
+        *it = IX_NULLPTR;
+    }
 }
 
 void **iThreadStorageData::get() const
@@ -72,16 +77,19 @@ void **iThreadStorageData::get() const
     iThreadData *data = iThreadData::current();
     if (!data) {
         ilog_warn("iThreadStorage can only be used with threads started with iThread");
-        return nullptr;
+        return IX_NULLPTR;
     }
     std::list<void *> &tls = data->tls;
     if (tls.size() <= id)
         tls.resize(id + 1);
-    void **v = &tls[id];
 
-    ilog_debug("iThreadStorageData: Returning storage ", id, ", data ", *v, ", for thread ", data->thread.loadRelaxed());
+    std::list<void *>::iterator it = tls.begin();
+    std::advance(it, id);
+    void **v = &(*it);
 
-    return *v ? v : nullptr;
+    ilog_debug("iThreadStorageData: Returning storage ", id, ", data ", *v, ", for thread ", iThread::currentThreadId());
+
+    return *v ? v : IX_NULLPTR;
 }
 
 void **iThreadStorageData::set(void *p)
@@ -89,24 +97,30 @@ void **iThreadStorageData::set(void *p)
     iThreadData *data = iThreadData::current();
     if (!data) {
         ilog_warn("iThreadStorage can only be used with threads started with iThread");
-        return nullptr;
+        return IX_NULLPTR;
     }
     std::list<void *> &tls = data->tls;
     if (tls.size() <= id)
         tls.resize(id + 1);
 
-    void *&value = tls[id];
-    // delete any previous data
-    if (value != nullptr) {
-        ilog_debug("previous storage ", id, ", data ", value, ", for thread ", data->thread.loadRelaxed());
+    std::list<void *>::iterator it = tls.begin();
+    std::advance(it, id);
 
-        iMutex::ScopedLock locker(&destructorsMutex);
+    void *&value = *it;
+    // delete any previous data
+    if (value != IX_NULLPTR) {
+        ilog_debug("previous storage ", id, ", data ", value, ", for thread ", iThread::currentThreadId());
+
+        iMutex::ScopedLock locker(destructorsMutex);
         DestructorMap *destr = destructors();
-        void (*destructor)(void *) = destr ? destr->value(id) : nullptr;
+        DestructorMap::iterator destr_it = destr->begin();
+        std::advance(destr_it, id);
+
+        void (*destructor)(void *) = destr ? *destr_it : IX_NULLPTR;
         locker.unlock();
 
         void *q = value;
-        value = nullptr;
+        value = IX_NULLPTR;
 
         if (destructor)
             destructor(q);
@@ -114,21 +128,21 @@ void **iThreadStorageData::set(void *p)
 
     // store new data
     value = p;
-    ilog_debug("iThreadStorageData: Set storage ", id, " for thread ", data->thread.loadRelaxed(), "to ",p);
+    ilog_debug("iThreadStorageData: Set storage ", id, " for thread ", iThread::currentThreadId(), "to ",p);
     return &value;
 }
 
 void iThreadStorageData::finish(void **p)
 {
     std::list<void *> *tls = reinterpret_cast<std::list<void *> *>(p);
-    if (!tls || tls->isEmpty() || !destructors())
+    if (!tls || tls->empty() || !destructors())
         return; // nothing to do
 
-    ilog_debug("Destroying storage for thread ", iThread::currentThread());
-    while (!tls->isEmpty()) {
-        void *&value = tls->last();
+    ilog_debug("Destroying storage for thread ", iThread::currentThreadId());
+    while (!tls->empty()) {
+        void *&value = tls->back();
         void *q = value;
-        value = nullptr;
+        value = IX_NULLPTR;
         int i = tls->size() - 1;
         tls->resize(i);
 
@@ -137,20 +151,25 @@ void iThreadStorageData::finish(void **p)
             continue;
         }
 
-        iMutex::ScopedLock locker(&destructorsMutex);
-        void (*destructor)(void *) = destructors()->value(i);
+        iMutex::ScopedLock locker(destructorsMutex);
+        DestructorMap::iterator destr_it = destructors->begin();
+        std::advance(destr_it, i);
+
+        void (*destructor)(void *) = *destr_it;
         locker.unlock();
 
         if (!destructor) {
             if (iThread::currentThread())
-                ilog_warn("Thread[", iThread::currentThread(), "] exited after iThreadStorage", i, " destroyed");
+                ilog_warn("Thread[", iThread::currentThreadId(), "] exited after iThreadStorage", i, " destroyed");
             continue;
         }
         destructor(q); //crash here might mean the thread exited after qthreadstorage was destroyed
 
         if (tls->size() > i) {
             //re reset the tls in case it has been recreated by its own destructor.
-            (*tls)[i] = nullptr;
+            std::list<void *>::iterator tls_it = tls->begin();
+            std::advance(tls_it, i);
+            *tls_it = IX_NULLPTR;
         }
     }
     tls->clear();

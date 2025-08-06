@@ -642,7 +642,7 @@ namespace iShell {
 /*!
     \internal
 */
-static int convertToPcreOptions(iRegularExpression::PatternOptions patternOptions)
+static int convertToPcreOptions4Pattern(iRegularExpression::PatternOptions patternOptions)
 {
     int options = 0;
 
@@ -667,7 +667,7 @@ static int convertToPcreOptions(iRegularExpression::PatternOptions patternOption
 /*!
     \internal
 */
-static int convertToPcreOptions(iRegularExpression::MatchOptions matchOptions)
+static int convertToPcreOptions4Match(iRegularExpression::MatchOptions matchOptions)
 {
     int options = 0;
 
@@ -698,7 +698,7 @@ struct iRegularExpressionPrivate : iSharedData
     void doMatch(iRegularExpressionMatchPrivate *priv,
                  xsizetype offset,
                  CheckSubjectStringOption checkSubjectStringOption = CheckSubjectString,
-                 const iRegularExpressionMatchPrivate *previous = nullptr) const;
+                 const iRegularExpressionMatchPrivate *previous = IX_NULLPTR) const;
 
     int captureIndexForName(iStringView name) const;
 
@@ -784,7 +784,7 @@ iRegularExpressionPrivate::iRegularExpressionPrivate()
       patternOptions(),
       pattern(),
       mutex(),
-      compiledPattern(nullptr),
+      compiledPattern(IX_NULLPTR),
       errorCode(0),
       errorOffset(-1),
       capturingCount(0),
@@ -815,7 +815,7 @@ iRegularExpressionPrivate::iRegularExpressionPrivate(const iRegularExpressionPri
       patternOptions(other.patternOptions),
       pattern(other.pattern),
       mutex(),
-      compiledPattern(nullptr),
+      compiledPattern(IX_NULLPTR),
       errorCode(0),
       errorOffset(-1),
       capturingCount(0),
@@ -830,7 +830,7 @@ iRegularExpressionPrivate::iRegularExpressionPrivate(const iRegularExpressionPri
 void iRegularExpressionPrivate::cleanCompiledPattern()
 {
     pcre2_code_free_16(compiledPattern);
-    compiledPattern = nullptr;
+    compiledPattern = IX_NULLPTR;
     errorCode = 0;
     errorOffset = -1;
     capturingCount = 0;
@@ -842,7 +842,7 @@ void iRegularExpressionPrivate::cleanCompiledPattern()
 */
 void iRegularExpressionPrivate::compilePattern()
 {
-    const iMutex::ScopedLock lock(&mutex);
+    const iMutex::ScopedLock lock(mutex);
 
     if (!isDirty)
         return;
@@ -850,7 +850,7 @@ void iRegularExpressionPrivate::compilePattern()
     isDirty = false;
     cleanCompiledPattern();
 
-    int options = convertToPcreOptions(patternOptions);
+    int options = convertToPcreOptions4Pattern(patternOptions);
     options |= PCRE2_UTF;
 
     PCRE2_SIZE patternErrorOffset;
@@ -859,7 +859,7 @@ void iRegularExpressionPrivate::compilePattern()
                                        options,
                                        &errorCode,
                                        &patternErrorOffset,
-                                       nullptr);
+                                       IX_NULLPTR);
 
     if (!compiledPattern) {
         errorOffset = xsizetype(patternErrorOffset);
@@ -917,7 +917,7 @@ public:
     {
         // The default JIT stack size in PCRE is 32K,
         // we allocate from 32K up to 512K.
-        stack = pcre2_jit_stack_create_16(32 * 1024, 512 * 1024, nullptr);
+        stack = pcre2_jit_stack_create_16(32 * 1024, 512 * 1024, IX_NULLPTR);
     }
     /*!
         \internal
@@ -941,7 +941,7 @@ static pcre2_jit_stack_16 *itPcreCallback(void *)
     if (jitStacks()->hasLocalData())
         return jitStacks()->localData()->stack;
 
-    return nullptr;
+    return IX_NULLPTR;
 }
 
 /*!
@@ -1090,7 +1090,7 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
         return;
     }
 
-    int pcreOptions = convertToPcreOptions(priv->matchOptions);
+    int pcreOptions = convertToPcreOptions4Match(priv->matchOptions);
 
     if (priv->matchType == iRegularExpression::PartialPreferCompleteMatch)
         pcreOptions |= PCRE2_PARTIAL_SOFT;
@@ -1101,14 +1101,18 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
         pcreOptions |= PCRE2_NO_UTF_CHECK;
 
     bool previousMatchWasEmpty = false;
-    if (previous && previous->hasMatch &&
-            (previous->capturedOffsets.at(0) == previous->capturedOffsets.at(1))) {
-        previousMatchWasEmpty = true;
+    if (previous && previous->hasMatch) {
+        std::list<xsizetype>::const_iterator it0 = previous->capturedOffsets.cbegin();
+        std::list<xsizetype>::const_iterator it1 = previous->capturedOffsets.cbegin();
+        std::advance(it1, 1);
+        if ((*it0 == *it1)) {
+            previousMatchWasEmpty = true;
+        }
     }
 
-    pcre2_match_context_16 *matchContext = pcre2_match_context_create_16(nullptr);
-    pcre2_jit_stack_assign_16(matchContext, &itPcreCallback, nullptr);
-    pcre2_match_data_16 *matchData = pcre2_match_data_create_from_pattern_16(compiledPattern, nullptr);
+    pcre2_match_context_16 *matchContext = pcre2_match_context_create_16(IX_NULLPTR);
+    pcre2_jit_stack_assign_16(matchContext, &itPcreCallback, IX_NULLPTR);
+    pcre2_match_data_16 *matchData = pcre2_match_data_create_from_pattern_16(compiledPattern, IX_NULLPTR);
 
     const ushort * const subjectUtf16 = priv->subject.utf16();
 
@@ -1145,12 +1149,7 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
         }
     }
 
-#ifdef QREGULAREXPRESSION_DEBUG
-    qDebug() << "Matching" <<  pattern << "against" << subject
-             << "offset" << offset
-             << priv->matchType << priv->matchOptions << previousMatchWasEmpty
-             << "result" << result;
-#endif
+    ilog_debug("Matching", pattern, "against", /*subject,*/ priv->matchType , priv->matchOptions , previousMatchWasEmpty, "result" , result);
 
     // result == 0 means not enough space in captureOffsets; should never happen
     IX_ASSERT(result != 0);
@@ -1181,10 +1180,10 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
     // copy the captured substrings offsets, if any
     if (priv->capturedCount) {
         PCRE2_SIZE *ovector = pcre2_get_ovector_pointer_16(matchData);
-        xsizetype *const capturedOffsets = priv->capturedOffsets.data();
-
-        for (int i = 0; i < priv->capturedCount * 2; ++i)
-            capturedOffsets[i] = xsizetype(ovector[i]);
+        std::list<xsizetype>::iterator capturedOffsets = priv->capturedOffsets.begin();
+        for (int i = 0; i < priv->capturedCount * 2; ++i, ++capturedOffsets) {
+            *capturedOffsets = xsizetype(ovector[i]);
+        }
 
         // For partial matches, PCRE2 and PCRE1 differ in behavior when lookbehinds
         // are involved. PCRE2 reports the real begin of the match and the maximum
@@ -1200,7 +1199,8 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
         if (result == PCRE2_ERROR_PARTIAL) {
             unsigned int maximumLookBehind;
             pcre2_pattern_info_16(compiledPattern, PCRE2_INFO_MAXLOOKBEHIND, &maximumLookBehind);
-            capturedOffsets[0] -= maximumLookBehind;
+            capturedOffsets = priv->capturedOffsets.begin();
+            *capturedOffsets -= maximumLookBehind;
         }
     }
 
@@ -1242,8 +1242,10 @@ iRegularExpressionMatch iRegularExpressionMatchPrivate::nextMatch() const
     // if we're advancing a match on the same subject,
     // then that subject was already checked at least once (when this object
     // was created, or when the object that created this one was created, etc.)
+    std::list<xsizetype>::const_iterator it = capturedOffsets.cbegin();
+    std::advance(it, 1);
     regularExpression.d->doMatch(nextPrivate,
-                                 capturedOffsets.at(1),
+                                 *it,
                                  iRegularExpressionPrivate::DontCheckSubjectString,
                                  this);
     return iRegularExpressionMatch(*nextPrivate);
@@ -1442,7 +1444,9 @@ std::list<iString> iRegularExpression::namedCaptureGroups() const
                 reinterpret_cast<const char16_t *>(namedCapturingTable) + namedCapturingTableEntrySize * i;
 
         const int index = *currentNamedCapturingTableRow;
-        result[index] = iString::fromUtf16(currentNamedCapturingTableRow + 1);
+        std::list<iString>::iterator it = result.begin();
+        std::advance(it, index);
+        *it = iString::fromUtf16(currentNamedCapturingTableRow + 1);
     }
 
     return result;
@@ -1887,7 +1891,7 @@ iString iRegularExpression::anchoredPattern(iStringView expression)
 {
     return iString()
            + iLatin1String("\\A(?:")
-           + expression
+           + expression.toString()
            + iLatin1String(")\\z");
 }
 
@@ -2114,7 +2118,6 @@ iStringView iRegularExpressionMatch::capturedView(iStringView name) const
 std::list<iString> iRegularExpressionMatch::capturedTexts() const
 {
     std::list<iString> texts;
-    texts.reserve(d->capturedCount);
     for (int i = 0; i < d->capturedCount; ++i)
         texts.push_back(captured(i));
     return texts;
@@ -2133,7 +2136,9 @@ xsizetype iRegularExpressionMatch::capturedStart(int nth) const
     if (nth < 0 || nth > lastCapturedIndex())
         return -1;
 
-    return d->capturedOffsets.at(nth * 2);
+    std::list<xsizetype>::const_iterator it = d->capturedOffsets.cbegin();
+    std::advance(it, nth * 2);
+    return *it;
 }
 
 /*!
@@ -2162,7 +2167,9 @@ xsizetype iRegularExpressionMatch::capturedEnd(int nth) const
     if (nth < 0 || nth > lastCapturedIndex())
         return -1;
 
-    return d->capturedOffsets.at(nth * 2 + 1);
+    std::list<xsizetype>::const_iterator it = d->capturedOffsets.cbegin();
+    std::advance(it, nth * 2 + 1);
+    return *it;
 }
 
 /*!

@@ -1602,7 +1602,7 @@ void iString::reallocGrowData(xsizetype alloc, Data::ArrayOptions options)
     if (d.needsDetach()) {
         const auto newSize = std::min(alloc, d.size);
         DataPointer dd(DataPointer::allocateGrow(d, alloc, newSize, options));
-        dd->copyAppend(d.data(), d.data() + newSize);
+        dd.copyAppend(d.data(), d.data() + newSize);
         dd.data()[dd.size] = 0;
         d = dd;
     } else {
@@ -1820,7 +1820,7 @@ iString& iString::insert(xsizetype i, const iChar *unicode, xsizetype size)
 
     const auto oldSize = this->size();
     const auto newSize = std::max(i, oldSize) + size;
-    const bool shouldGrow = d.shouldGrowBeforeInsert(d.begin() + std::min(i, oldSize), size);
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), size);
 
     auto flags = d.detachFlags() | Data::GrowsForward;
     if (oldSize != 0 && i <= oldSize / 4)
@@ -1854,7 +1854,7 @@ iString& iString::insert(xsizetype i, iChar ch)
 
     const auto oldSize = size();
     const auto newSize = std::max(i, oldSize) + 1;
-    const bool shouldGrow = d.shouldGrowBeforeInsert(d.begin() + std::min(i, oldSize), 1);
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), 1);
 
     auto flags = d.detachFlags() | Data::GrowsForward;
     if (oldSize != 0 && i <= oldSize / 4)
@@ -1896,7 +1896,7 @@ iString &iString::append(const iString &str)
         if (isNull()) {
             operator=(str);
         } else {
-            const bool shouldGrow = d.shouldGrowBeforeInsert(d.end(), str.d.size);
+            const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), str.d.size);
             if (d.needsDetach() || size() + str.size() > capacity() || shouldGrow)
                 reallocGrowData(size() + str.size(),
                                 d.detachFlags() | Data::GrowsForward);
@@ -1916,7 +1916,7 @@ iString &iString::append(const iString &str)
 iString &iString::append(const iChar *str, xsizetype len)
 {
     if (str && len > 0) {
-        const bool shouldGrow = d.shouldGrowBeforeInsert(d.end(), len);
+        const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), len);
         if (d.needsDetach() || size() + len > capacity() || shouldGrow)
             reallocGrowData(size() + len, d.detachFlags() | Data::GrowsForward);
         IX_COMPILER_VERIFY(sizeof(iChar) == sizeof(ushort));
@@ -1938,7 +1938,7 @@ iString &iString::append(iLatin1String str)
     const char *s = str.latin1();
     if (s) {
         xsizetype len = str.size();
-        const bool shouldGrow = d.shouldGrowBeforeInsert(d.end(), len);
+        const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), len);
         if (d.needsDetach() || size() + len > capacity() || shouldGrow)
             reallocGrowData(size() + len, d.detachFlags() | Data::GrowsForward);
 
@@ -1991,7 +1991,7 @@ iString &iString::append(iLatin1String str)
 */
 iString &iString::append(iChar ch)
 {
-    const bool shouldGrow = d.shouldGrowBeforeInsert(d.end(), 1);
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), 1);
     if (d.needsDetach() || size() + 1 > capacity() || shouldGrow)
         reallocGrowData(d.size + 1u, d.detachFlags() | Data::GrowsForward);
     d.copyAppend(1, ch.unicode());
@@ -2251,7 +2251,7 @@ iString &iString::replace(xsizetype pos, xsizetype len, const iString &after)
   first \a size characters of the iChar array \a unicode and returns a
   reference to this string.
 */
-iString &iString::replace(xsizetype pos, xsizetype len, const iChar *unicode, int size)
+iString &iString::replace(xsizetype pos, xsizetype len, const iChar *unicode, xsizetype size)
 {
     if (size_t(pos) > size_t(this->size()))
         return *this;
@@ -2308,7 +2308,7 @@ iChar *textCopy(const iChar *start, xsizetype len)
     return copy;
 }
 
-bool pointsIntoRange(const iChar *ptr, const ushort *base, int len)
+bool pointsIntoRange(const iChar *ptr, const ushort *base, xsizetype len)
 {
     const iChar *const start = reinterpret_cast<const iChar *>(base);
     const std::less<const iChar *> less;
@@ -2323,7 +2323,7 @@ void iString::replace_helper(size_t *indices, xsizetype nIndices, xsizetype blen
 {
     // Copy after if it lies inside our own d.b area (which we could
     // possibly invalidate via a realloc or modify by replacement).
-    iChar *afterBuffer = nullptr;
+    iChar *afterBuffer = IX_NULLPTR;
     if (pointsIntoRange(after, d.data(), d.size)) // Use copy in place of vulnerable original:
         after = afterBuffer = textCopy(after, alen);
 
@@ -2403,7 +2403,7 @@ iString &iString::replace(const iChar *before, xsizetype blen,
         return *this;
 
     iStringMatcher matcher(before, blen, cs);
-    iChar *beforeBuffer = nullptr, *afterBuffer = nullptr;
+    iChar *beforeBuffer = IX_NULLPTR, *afterBuffer = IX_NULLPTR;
 
     xsizetype index = 0;
     while (1) {
@@ -3533,7 +3533,7 @@ iString iString::section(const iString &sep, xsizetype start, xsizetype end, Sec
     iString ret;
     xsizetype first_i = start, last_i = end;
     std::list<iStringView>::const_iterator it = sections.cbegin();
-    for (xsizetype x = 0, i = 0; x <= end && it != sections.cend(); ++it, ++i) {
+    for (xsizetype x = 0, i = 0; x <= end && i < sectionsSize && it != sections.cend(); ++it, ++i) {
         const iStringView &section = *it;
         const bool empty = section.isEmpty();
         if (x >= start) {
@@ -7251,9 +7251,8 @@ static int getEscape(const Char *uc, xsizetype *pos, xsizetype len, int maxNumbe
 namespace {
 struct Part
 {
-    Part(); // for iVarLengthArray; do not use
-    Part(iStringView s, int num = -1)
-        : number(num), data(s.utf16()), size(s.size()) {}
+    Part() : number(0), data(IX_NULLPTR), size(0) {} // for iVarLengthArray; do not use
+    Part(iStringView s, int num = -1) : number(num), data(s.utf16()), size(s.size()) {}
 
     void reset(iStringView s) { data = s.utf16(); size = s.size(); }
 
@@ -7287,8 +7286,8 @@ static ParseResult parseMultiArgFormatString(StringView s)
             int number = getEscape(uc, &i, len);
             if (number != -1) {
                 if (last != percent)
-                    result.push_back(Part{s.mid(last, percent - last)}); // literal text (incl. failed placeholders)
-                result.push_back(Part{s.mid(percent, i - percent), number});  // parsed placeholder
+                    result.push_back(Part(s.mid(last, percent - last))); // literal text (incl. failed placeholders)
+                result.push_back(Part(s.mid(percent, i - percent), number));  // parsed placeholder
                 last = i;
                 continue;
             }

@@ -24,7 +24,9 @@ public:
     explicit iStringMatcher(const iString &pattern,
                    iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iStringMatcher(const iChar *uc, xsizetype len,
-                   iShell::CaseSensitivity cs = iShell::CaseSensitive);
+                   iShell::CaseSensitivity cs = iShell::CaseSensitive)
+                   : iStringMatcher(iStringView(uc, len), cs)
+    {}
     iStringMatcher(iStringView str, 
                    iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iStringMatcher(const iStringMatcher &other);

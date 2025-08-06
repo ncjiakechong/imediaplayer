@@ -18,6 +18,9 @@ namespace iShell {
 class IX_CORE_EXPORT iRefCount
 {
 public:
+    iRefCount() {}
+    explicit iRefCount(int initialValue) : atomic(initialValue) {}
+
     inline bool ref() {
         int count = atomic.value();
         if (count == 0) // !isSharable
@@ -69,6 +72,17 @@ public:
 
     void initializeOwned() { atomic = 1; }
     void initializeUnsharable() { atomic = 0; }
+
+    int load() const { return atomic.value(); }
+    int value() const { return atomic.value(); }
+
+    iRefCount& operator= (int value) { atomic = value; return *this; }
+    int operator++ () { return ++atomic; }
+    int operator++ (int) { return atomic++; }
+    int operator-- ()  { return --atomic; }
+    int operator-- (int) { return atomic--; }
+    bool operator! () const { return atomic.value() == 0; }
+    bool testAndSet(int expectedValue, int newValue) { return atomic.testAndSet(expectedValue, newValue); }
 
     iAtomicCounter<int> atomic;
 };
