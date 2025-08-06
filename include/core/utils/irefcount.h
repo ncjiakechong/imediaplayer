@@ -15,7 +15,7 @@
 
 namespace iShell {
 
-class iRefCount
+class IX_CORE_EXPORT iRefCount
 {
 public:
     inline bool ref() {

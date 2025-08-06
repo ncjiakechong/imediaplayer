@@ -20,7 +20,7 @@ namespace iShell {
 class iByteArray;
 class iIODevicePrivate;
 
-class iIODevice : public iObject
+class IX_CORE_EXPORT iIODevice : public iObject
 {
     IX_OBJECT(iIODevice)
 public:

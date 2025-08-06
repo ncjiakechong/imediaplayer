@@ -14,6 +14,8 @@
 #include <cstddef>
 #include <utility>
 
+#include <core/global/iglobal.h>
+
 namespace iShell {
 
 class iChar;
@@ -24,7 +26,7 @@ class iStringView;
 class iBitArray;
 class iLatin1String;
 
-struct iKeyHashFunc
+struct IX_CORE_EXPORT iKeyHashFunc
 {
     size_t operator()(const iChar& key) const;
     size_t operator()(const iByteArray& key) const;
@@ -35,7 +37,7 @@ struct iKeyHashFunc
     size_t operator()(const std::pair<int, int>& key) const;
 };
 
-struct iKeyEqualFunc
+struct IX_CORE_EXPORT iKeyEqualFunc
 {
     bool operator()(const iChar& key1, const iChar& key2) const;
     bool operator()(const iByteArray& key1, const iByteArray& key2) const;

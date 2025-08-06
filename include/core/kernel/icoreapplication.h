@@ -19,13 +19,13 @@ namespace iShell {
 class iPostEvent;
 class iEventDispatcher;
 
-struct iCoreApplicationPrivate
+struct IX_CORE_EXPORT iCoreApplicationPrivate
 {
     virtual ~iCoreApplicationPrivate();
     virtual iEventDispatcher* createEventDispatcher() const;
 };
 
-class iCoreApplication : public iObject
+class IX_CORE_EXPORT iCoreApplication : public iObject
 {
     IX_OBJECT(iCoreApplication)
 public:

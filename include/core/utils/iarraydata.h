@@ -19,7 +19,7 @@
 
 namespace iShell {
 
-struct iArrayData
+struct IX_CORE_EXPORT iArrayData
 {
     iRefCount ref; // -1 means static, (!0 && !1) means shared
     int32_t size;
@@ -261,7 +261,7 @@ struct iArrayDataPointerRef
     /**/
 
 namespace iPrivate {
-struct iContainerImplHelper
+struct IX_CORE_EXPORT iContainerImplHelper
 {
     enum CutResult { Null, Empty, Full, Subset };
     static CutResult mid(int originalLength, int *position, int *length);

@@ -19,7 +19,7 @@ namespace iShell {
 
 class iLocalePrivate;
 
-class iLocale
+class IX_CORE_EXPORT iLocale
 {
     friend class iString;
     friend class iStringRef;

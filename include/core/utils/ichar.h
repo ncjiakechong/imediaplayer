@@ -30,8 +30,7 @@ private:
     char ch;
 };
 
-
-class iChar {
+class IX_CORE_EXPORT iChar {
 public:
     enum SpecialCharacter {
         Null = 0x0000,

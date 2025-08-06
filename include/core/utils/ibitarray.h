@@ -16,7 +16,7 @@
 namespace iShell {
 
 class iBitRef;
-class iBitArray
+class IX_CORE_EXPORT iBitArray
 {
     iByteArray d;
 
@@ -105,7 +105,7 @@ inline bool iBitArray::operator[](int i) const { return testBit(i); }
 inline bool iBitArray::operator[](uint i) const { return testBit(int(i)); }
 inline bool iBitArray::at(int i) const { return testBit(i); }
 
-class iBitRef
+class IX_CORE_EXPORT iBitRef
 {
 private:
     iBitArray& a;

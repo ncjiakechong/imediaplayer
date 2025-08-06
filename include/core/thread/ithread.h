@@ -23,7 +23,7 @@ class iThreadData;
 class iEventLoop;
 class iEventDispatcher;
 
-class iThread : public iObject
+class IX_CORE_EXPORT iThread : public iObject
 {
     IX_OBJECT(iThread)
 public:

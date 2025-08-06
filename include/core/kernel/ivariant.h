@@ -35,7 +35,7 @@ struct iAbstractConverterFunction
     iAbstractConverterFunction& operator=(const iAbstractConverterFunction&);
 };
 
-class iVariant
+class IX_CORE_EXPORT iVariant
 {
 public:
     iVariant();

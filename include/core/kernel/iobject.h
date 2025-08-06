@@ -31,7 +31,7 @@ struct ExternalRefCountData;
 /**
  * @brief object base
  */
-class iObject
+class IX_CORE_EXPORT iObject
 {
     using IX_ThisType = iObject;
     // IX_OBJECT(iObject)

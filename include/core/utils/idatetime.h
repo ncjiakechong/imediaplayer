@@ -19,7 +19,7 @@
 
 namespace iShell {
 
-class iDate
+class IX_CORE_EXPORT iDate
 {
 private:
     explicit iDate(xint64 julianDay) : jd(julianDay) {}
@@ -74,7 +74,7 @@ private:
     friend class iDateTimePrivate;
 };
 
-class iTime
+class IX_CORE_EXPORT iTime
 {
     explicit iTime(int ms) : mds(ms)
     {}
@@ -124,7 +124,7 @@ private:
 
 class iDateTimePrivate;
 
-class iDateTime
+class IX_CORE_EXPORT iDateTime
 {
     //revisit the optimization
     struct ShortData {

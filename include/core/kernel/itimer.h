@@ -15,7 +15,7 @@
 
 namespace iShell {
 
-class iTimer : public iObject
+class IX_CORE_EXPORT iTimer : public iObject
 {
     IX_OBJECT(iTimer)
 public:

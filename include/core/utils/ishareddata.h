@@ -20,7 +20,7 @@ namespace iShell {
 
 template <class T> class iSharedDataPointer;
 
-class iSharedData
+class IX_CORE_EXPORT iSharedData
 {
 public:
     mutable iAtomicCounter<int> ref;

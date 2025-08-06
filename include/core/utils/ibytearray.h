@@ -30,7 +30,7 @@ class iByteArray;
   Safe and portable C string functions; extensions to standard cstring
  *****************************************************************************/
 
-char *istrdup(const char *);
+IX_CORE_EXPORT char *istrdup(const char *);
 
 inline uint istrlen(const char *str)
 { return str ? uint(strlen(str)) : 0; }
@@ -45,12 +45,12 @@ inline uint istrnlen(const char *str, uint maxlen)
     return length;
 }
 
-char *istrcpy(char *dst, const char *src);
-char *istrncpy(char *dst, const char *src, uint len);
+IX_CORE_EXPORT char *istrcpy(char *dst, const char *src);
+IX_CORE_EXPORT char *istrncpy(char *dst, const char *src, uint len);
 
-int istrcmp(const char *str1, const char *str2);
-int istrcmp(const iByteArray &str1, const iByteArray &str2);
-int istrcmp(const iByteArray &str1, const char *str2);
+IX_CORE_EXPORT int istrcmp(const char *str1, const char *str2);
+IX_CORE_EXPORT int istrcmp(const iByteArray &str1, const iByteArray &str2);
+IX_CORE_EXPORT int istrcmp(const iByteArray &str1, const char *str2);
 inline int istrcmp(const char *str1, const iByteArray &str2)
 { return -istrcmp(str2, str1); }
 
@@ -59,12 +59,12 @@ inline int istrncmp(const char *str1, const char *str2, uint len)
     return (str1 && str2) ? strncmp(str1, str2, len)
         : (str1 ? 1 : (str2 ? -1 : 0));
 }
-int istricmp(const char *, const char *);
-int istrnicmp(const char *, const char *, uint len);
-int istrnicmp(const char *, xsizetype, const char *, xsizetype = -1);
+IX_CORE_EXPORT int istricmp(const char *, const char *);
+IX_CORE_EXPORT int istrnicmp(const char *, const char *, uint len);
+IX_CORE_EXPORT int istrnicmp(const char *, xsizetype, const char *, xsizetype = -1);
 
 // iChecksum: Internet checksum
-xuint16 iChecksum(const char *s, uint len, iShell::ChecksumType standard); // ### Use iShell::ChecksumType standard = iShell::ChecksumIso3309
+IX_CORE_EXPORT xuint16 iChecksum(const char *s, uint len, iShell::ChecksumType standard); // ### Use iShell::ChecksumType standard = iShell::ChecksumIso3309
 
 class iByteRef;
 class iString;
@@ -108,7 +108,7 @@ struct iByteArrayDataPtr
     }()) \
     /**/
 
-class iByteArray
+class IX_CORE_EXPORT iByteArray
 {
 private:
     typedef iTypedArrayData<char> Data;
@@ -420,7 +420,7 @@ inline void iByteArray::squeeze()
     }
 }
 
-class iByteRef {
+class IX_CORE_EXPORT iByteRef {
     iByteArray &a;
     int i;
     inline iByteRef(iByteArray &array, int idx)

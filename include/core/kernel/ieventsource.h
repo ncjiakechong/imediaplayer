@@ -25,7 +25,7 @@ typedef enum
   IX_EVENT_SOURCE_BLOCKED = 1 << 2
 } iEventSourceFlags;
 
-class iEventSource
+class IX_CORE_EXPORT iEventSource
 {
 public:
     iEventSource(int priority);

@@ -11,11 +11,13 @@
 #ifndef IEVENT_H
 #define IEVENT_H
 
+#include <core/global/iglobal.h>
+
 namespace iShell {
 
 class iObject;
 
-class iEvent
+class IX_CORE_EXPORT iEvent
 {
 public:
     enum Type {
@@ -55,7 +57,7 @@ protected:
     unsigned short m_reserved : 14;
 };
 
-class iTimerEvent : public iEvent
+class IX_CORE_EXPORT iTimerEvent : public iEvent
 {
 public:
     explicit iTimerEvent( int timerId );
@@ -65,7 +67,7 @@ protected:
     int id;
 };
 
-class iChildEvent : public iEvent
+class IX_CORE_EXPORT iChildEvent : public iEvent
 {
 public:
     iChildEvent(Type type, iObject *child);
@@ -78,7 +80,7 @@ protected:
     iObject *c;
 };
 
-class iDeferredDeleteEvent : public iEvent
+class IX_CORE_EXPORT iDeferredDeleteEvent : public iEvent
 {
 public:
     explicit iDeferredDeleteEvent();

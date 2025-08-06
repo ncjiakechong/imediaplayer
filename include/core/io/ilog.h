@@ -36,7 +36,7 @@ typedef enum ilog_level {
     ILOG_LEVEL_MAX
 } ilog_level_t;
 
-struct iLogTarget
+struct IX_CORE_EXPORT iLogTarget
 {
     void* user_data;
     bool (*filter)(void* user_data, const char* tag, ilog_level_t level);
@@ -60,7 +60,7 @@ struct iHexUInt64 {
     xuint64 value;
 };
 
-class iLogger{
+class IX_CORE_EXPORT iLogger{
  public:
     /* Set a log target. */
     static void setTarget(const iLogTarget& target);

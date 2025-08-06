@@ -15,7 +15,7 @@
 
 namespace iShell {
 
-class iWakeup
+class IX_CORE_EXPORT iWakeup
 {
 public:
     iWakeup();

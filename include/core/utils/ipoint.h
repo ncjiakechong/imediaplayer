@@ -15,7 +15,7 @@
 
 namespace iShell {
 
-class iPoint
+class IX_CORE_EXPORT iPoint
 {
 public:
     iPoint();
@@ -159,7 +159,7 @@ inline const iPoint operator/(const iPoint &p, double c)
     return iPoint(int(std::round(p.xp/c)), int(std::round(p.yp/c)));
 }
 
-class iPointF
+class IX_CORE_EXPORT iPointF
 {
 public:
     iPointF();

@@ -17,7 +17,7 @@ namespace iShell {
 
 class iConditionImpl;
 
-class iCondition
+class IX_CORE_EXPORT iCondition
     /// A Condition is a synchronization object used to block a thread
     /// until a particular condition is met.
     /// A Condition object is always used in conjunction with
