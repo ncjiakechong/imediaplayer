@@ -33,6 +33,7 @@ struct ExternalRefCountData;
  */
 class iObject
 {
+    using IX_ThisType = iObject;
     // IX_OBJECT(iObject)
     // IPROPERTY_BEGIN
     // IPROPERTY_ITEM("objectName", objectName, setObjectName)
@@ -40,7 +41,6 @@ class iObject
 public:
     iObject(iObject* parent = IX_NULLPTR);
     iObject(const iString& name, iObject* parent = IX_NULLPTR);
-    iObject(const iObject& other);
 
     virtual ~iObject();
 
@@ -49,8 +49,10 @@ public:
     void setObjectName(const iString& name);
     const iString& objectName() const { return m_objName; }
 
+    // SIGNALS start
     iSignal<iVariant> objectNameChanged;
-    iSignal<iObject*> destroyed;
+    void destroyed(iObject* obj) ISIGNAL(destroyed, obj)
+    // SIGNALS end
 
     void setParent(iObject *parent);
 
@@ -75,8 +77,6 @@ public:
         iSignal<iVariant>* singal = it->second;
         singal->connect(obj, func);
     }
-
-    void disconnectAll();
 
     //Connect a signal to a pointer to qobject member function
     template <typename Func1, typename Func2>
@@ -495,7 +495,7 @@ protected:
 
     virtual void initProperty();
     void doInitProperty(std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* pptNotify);
-    void activateImpl(_iConnection::MemberFunction signal, const _iArgumentHelper& arg);
+    void emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelper& arg);
 
     virtual bool event(iEvent *e);
 
@@ -503,13 +503,27 @@ protected:
 
 private:
     struct _iConnectionList {
-        _iConnectionList() : first(nullptr), last(nullptr) {}
+        _iConnectionList() : first(IX_NULLPTR), last(IX_NULLPTR) {}
         _iConnection *first;
         _iConnection *last;
     };
 
     typedef std::unordered_map<_iSignalBase*, int> __sender_map;
     typedef std::unordered_map<_iConnection::MemberFunction, _iConnectionList, iConKeyHashFunc> sender_map;
+
+    class _iObjectConnectionList
+    {
+    public:
+        bool orphaned; //the iObject owner of this vector has been destroyed while the vector was inUse
+        bool dirty; //some Connection have been disconnected (their receiver is 0) but not removed from the list yet
+        int inUse; //number of functions that are currently accessing this object or its connections
+        sender_map allsignals;
+
+        _iObjectConnectionList()
+            : orphaned(false), dirty(false), inUse(0)
+        { }
+    };
+
     typedef std::list<iObject *> iObjectList;
 
     static bool connectImpl(const _iConnection& conn);
@@ -531,10 +545,8 @@ private:
     uint m_wasDeleted : 1;
     uint m_isDeletingChildren : 1;
     uint m_deleteLaterCalled : 1;
-    uint m_connListDirty : 1;
-    uint m_unused : 28;
+    uint m_unused : 29;
     int  m_postedEvents;
-    int m_connListInUse;
 
     iString     m_objName;
     iMutex      m_objLock;
@@ -549,14 +561,13 @@ private:
     iObjectList m_children;
 
     // linked list of connections connected to this object
-    sender_map m_connectionLists;
+    _iObjectConnectionList* m_connectionLists;
     _iConnection* m_senders;
     iMutex     m_signalSlotLock;
 
     std::set<int> m_runningTimers;
 
-    iObject& operator=(const iObject&);
-
+    IX_DISABLE_COPY(iObject)
     friend class iThreadData;
     friend class _iSignalBase;
     friend class iCoreApplication;

@@ -661,7 +661,7 @@ void iIODevice::close()
     if (d_ptr->openMode == NotOpen)
         return;
 
-    aboutToClose.emits();
+    IEMIT aboutToClose();
 
     d_ptr->openMode = NotOpen;
     d_ptr->pos = 0;

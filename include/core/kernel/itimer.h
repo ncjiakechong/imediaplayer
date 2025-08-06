@@ -41,7 +41,8 @@ public:
     void start();
     void stop();
 
-    iSignal<> timeout;
+    // SIGNAL
+    void timeout() ISIGNAL(timeout)
 protected:
     virtual bool event(iEvent *);
 

@@ -37,7 +37,7 @@ public:
     int dayOfYear() const;
     int daysInMonth() const;
     int daysInYear() const;
-    int weekNumber(int *yearNum = nullptr) const;
+    int weekNumber(int *yearNum = IX_NULLPTR) const;
 
     bool setDate(int year, int month, int day);
     void getDate(int *year, int *month, int *day) const;

@@ -14,10 +14,12 @@
 namespace iShell {
 
 enum ConnectionType {
-    AutoConnection,
-    DirectConnection,
-    QueuedConnection,
-    BlockingQueuedConnection
+    AutoConnection              = 0x1 << 0,
+    DirectConnection            = 0x1 << 1,
+    QueuedConnection            = 0x1 << 2,
+    BlockingQueuedConnection    = 0x1 << 3,
+    Connection_PrimaryMask      = 0x0f,
+    UniqueConnection            = 0x1 << 4,
 };
 
 enum TimerType {
