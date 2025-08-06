@@ -16,27 +16,9 @@ namespace iShell {
     \class iMediaObject
 
     \brief The iMediaObject class provides a common base for multimedia objects.
-    \inmodule QtMultimedia
 
     \ingroup multimedia
     \ingroup multimedia_core
-
-    It provides some basic functionality that is common to other high level classes
-    like \l QMediaPlayer, \l QAudioDecoder and \l QCamera, including availability
-    and meta-data functionality, as well as functionality to connect media objects
-    with support classes like QMediaPlaylist.
-
-    The higher level iMediaObject derived classes provide the actual multimedia
-    functionality, by internally using a QMediaService.  Each media object
-    hosts a QMediaService and uses the QMediaControl interfaces implemented by the service to implement its
-    API.  These controls can be accessed from the media object if necessary, but in general
-    the useful functionality can be accessed from the higher level classes.
-
-    Most media objects when constructed will request a new
-    QMediaService instance, but some like
-    QMediaRecorder and QAudioRecorder will share a service with another object.
-
-    \sa QMediaService, QMediaControl
 */
 
 /*!
@@ -99,9 +81,9 @@ void iMediaObject::setNotifyInterval(int milliSeconds)
     that wrap this functionality, so this function rarely needs to be
     called directly.
 
-    The object passed must implement the QMediaBindableInterface interface.
+    The object passed must implement the iMediaBindableInterface interface.
 
-    \sa QMediaBindableInterface
+    \sa iMediaBindableInterface
 */
 bool iMediaObject::bind(iObject *object)
 {
@@ -116,7 +98,7 @@ bool iMediaObject::bind(iObject *object)
     will be generated if the object was not previously bound to this
     object.
 
-    \sa QMediaBindableInterface
+    \sa iMediaBindableInterface
 */
 void iMediaObject::unbind(iObject *object)
 {
@@ -234,7 +216,7 @@ bool iMediaObject::isMetaDataAvailable() const
 /*!
     Returns the value associated with a meta-data \a key.
 
-    See the list of predefined \l {QMediaMetaData}{meta-data keys}.
+    See the list of predefined \l {iMediaMetaData}{meta-data keys}.
 */
 iVariant iMediaObject::metaData(const iString &key) const
 {

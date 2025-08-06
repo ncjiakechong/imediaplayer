@@ -22,7 +22,6 @@ namespace iShell {
 /*!
     \class iMediaPlayer
     \brief The iMediaPlayer class allows the playing of a media source.
-    \inmodule QtMultimedia
     \ingroup multimedia
     \ingroup multimedia_playback
 
@@ -34,7 +33,7 @@ namespace iShell {
 
     \snippet multimedia-snippets/media.cpp Player
 
-    QVideoWidget can be used with iMediaPlayer for video rendering and QMediaPlaylist
+    iVideoWidget can be used with iMediaPlayer for video rendering and iMediaPlaylist
     for accessing playlist functionality.
 
     \snippet multimedia-snippets/media.cpp Movie playlist
@@ -43,11 +42,11 @@ namespace iShell {
     functions for things like:
 
     \list
-    \li Accessing the currently playing media's metadata (\l {iMediaObject::metaData()} and \l {QMediaMetaData}{predefined meta-data keys})
+    \li Accessing the currently playing media's metadata (\l {iMediaObject::metaData()} and \l {iMediaMetaData}{predefined meta-data keys})
     \li Checking to see if the media playback service is currently available (\l {iMediaObject::availability()})
     \endlist
 
-    \sa iMediaObject, QMediaService, QVideoWidget, QMediaPlaylist
+    \sa iMediaObject
 */
 
 void iMediaPlayer::_x_stateChanged(State ps)
@@ -196,7 +195,7 @@ iUrl iMediaPlayer::media() const
 
 const iIODevice *iMediaPlayer::mediaStream() const
 {
-    // When playing a resource file, we might have passed a QFile to the backend. Hide it from
+    // When playing a resource file, we might have passed a iFile to the backend. Hide it from
     // the user.
     if (m_control)
         return m_control->mediaStream();
@@ -657,7 +656,7 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
 
     If the media playlist is used as a source, iMediaPlayer::currentMedia is updated with
     a current playlist item. The current source should be selected with
-    QMediaPlaylist::setCurrentIndex(int) instead of iMediaPlayer::setMedia(),
+    iMediaPlaylist::setCurrentIndex(int) instead of iMediaPlayer::setMedia(),
     otherwise the current playlist will be discarded.
 
     \sa iString
@@ -744,12 +743,12 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
     \property iMediaPlayer::videoAvailable
     \brief the video availability status for the current media.
 
-    If available, the QVideoWidget class can be used to view the video. As the
+    If available, the iVideoWidget class can be used to view the video. As the
     life time of iMediaPlayer can be longer than the playback of one
     iString, this property may change over time, the
     videoAvailableChanged signal can be used to monitor it's status.
 
-    \sa QVideoWidget, iString
+    \sa iVideoWidget, iString
 */
 
 /*!
@@ -797,7 +796,7 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
     \brief the role of the audio stream played by the media player.
 
     It can be set to specify the type of audio being played when the backend supports
-    audio roles unknown to Qt. Specifying a role allows the system to make appropriate
+    audio roles unknown. Specifying a role allows the system to make appropriate
     decisions when it comes to volume, routing or post-processing.
 
     The audio role must be set before calling setMedia().
@@ -852,7 +851,7 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
 */
 
 /*!
-   \fn void iMediaPlayer::networkConfigurationChanged(const QNetworkConfiguration &configuration)
+   \fn void iMediaPlayer::networkConfigurationChanged(const iNetworkConfiguration &configuration)
 
     Signal that the active in use network access point  has been changed to \a configuration and all subsequent network access will use this \a configuration.
 */
@@ -869,7 +868,7 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
             streams playback will be chosen.
 
     \value VideoSurface     The player is expected to be able to render to a
-            QAbstractVideoSurface \l {setVideoOutput()}{output}.
+            iAbstractVideoSurface \l {setVideoOutput()}{output}.
 */
 
 } // namespace iShell

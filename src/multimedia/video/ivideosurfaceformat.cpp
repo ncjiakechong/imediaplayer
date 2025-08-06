@@ -109,7 +109,6 @@ public:
     \class iVideoSurfaceFormat
     \brief The iVideoSurfaceFormat class specifies the stream format of a video presentation
     surface.
-    \inmodule QtMultimedia
 
     \ingroup multimedia
     \ingroup multimedia_video
@@ -413,7 +412,7 @@ void iVideoSurfaceFormat::setYCbCrColorSpace(iVideoSurfaceFormat::YCbCrColorSpac
     Returns \c true if the surface is mirrored around its vertical axis.
     This is typically needed for video frames coming from a front camera of a mobile device.
 
-    \note The mirroring here differs from QImage::mirrored, as a vertically mirrored QImage
+    \note The mirroring here differs from iImage::mirrored, as a vertically mirrored iImage
     will be mirrored around its x-axis.
 
     \since 5.11
@@ -428,7 +427,7 @@ bool iVideoSurfaceFormat::isMirrored() const
     This is typically needed for video frames coming from a front camera of a mobile device.
     Default value is false.
 
-    \note The mirroring here differs from QImage::mirrored, as a vertically mirrored QImage
+    \note The mirroring here differs from iImage::mirrored, as a vertically mirrored iImage
     will be mirrored around its x-axis.
 
     \since 5.11

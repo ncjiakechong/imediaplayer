@@ -4406,7 +4406,7 @@ iString iString::fromLocal8Bit_helper(const char *str, int size)
     This function can be used to process incoming data incrementally as long as
     all UTF-8 characters are terminated within the incoming data. Any
     unterminated characters at the end of the string will be replaced or
-    suppressed. In order to do stateful decoding, please use \l QTextDecoder.
+    suppressed. In order to do stateful decoding, please use \l iTextDecoder.
 
     \sa toUtf8(), fromLatin1(), fromLocal8Bit()
 */

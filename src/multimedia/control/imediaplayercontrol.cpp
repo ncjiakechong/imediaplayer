@@ -15,16 +15,15 @@ namespace iShell {
 
 /*!
     \class iMediaPlayerControl
-    \inmodule QtMultimedia
 
 
     \ingroup multimedia_control
 
 
     \brief The iMediaPlayerControl class provides access to the media playing
-    functionality of a QMediaService.
+    functionality.
 
-    If a QMediaService can play media is will implement iMediaPlayerControl.
+    If a mediaService can play media is will implement iMediaPlayerControl.
     This control provides a means to set the \l {setMedia()}{media} to play,
     \l {play()}{start}, \l {pause()} {pause} and \l {stop()}{stop} playback,
     \l {setPosition()}{seek}, and control the \l {setVolume()}{volume}.
@@ -34,18 +33,9 @@ namespace iShell {
 
     The functionality provided by this control is exposed to application
     code through the iMediaPlayer class.
-
-    The interface name of iMediaPlayerControl is \c org.qt-project.qt.mediaplayercontrol/5.0 as
-    defined in QMediaPlayerControl_iid.
-
-    \sa QMediaService::requestControl(), iMediaPlayer
 */
 
 /*!
-    \macro QMediaPlayerControl_iid
-
-    \c org.qt-project.qt.mediaplayercontrol/5.0
-
     Defines the interface name of the iMediaPlayerControl class.
 
     \relates iMediaPlayerControl
@@ -293,11 +283,6 @@ iMediaPlayerControl::iMediaPlayerControl(iObject *parent):
     Setting the media to a null iString will cause the control to discard all
     information relating to the current media source and to cease all I/O operations related
     to that media.
-
-    Qt resource files are never passed as is. If the service supports
-    QMediaServiceProviderHint::StreamPlayback, a \a stream is supplied, pointing to an opened
-    QFile. Otherwise, the resource is copied into a temporary file and \a media contains the
-    url to that file.
 */
 
 /*!

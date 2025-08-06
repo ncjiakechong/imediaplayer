@@ -16,7 +16,6 @@ namespace iShell {
 /*!
     \class iMediaTimeInterval
     \brief The iMediaTimeInterval class represents a time interval with integer precision.
-    \inmodule QtMultimedia
 
     \ingroup multimedia
     \ingroup multimedia_core
@@ -292,7 +291,6 @@ void iMediaTimeRangePrivate::removeInterval(const iMediaTimeInterval &interval)
     \brief The iMediaTimeRange class represents a set of zero or more disjoint
     time intervals.
     \ingroup multimedia
-    \inmodule QtMultimedia
 
     \reentrant
 

@@ -161,7 +161,7 @@ bool iSingleShotTimer::event(iEvent *e)
     \a timerType is the timer type
     \a receiver is the receiver object, can be null. In such a case, it will be the same
                 as the final sender class.
-    \a slot a pointer only used when using Qt::UniqueConnection
+    \a slot a pointer only used when using UniqueConnection
     \a slotObj the slot object
  */
 void iTimer::singleShotImpl(int msec, TimerType timerType, const iObject *receiver, const _iConnection& conn)

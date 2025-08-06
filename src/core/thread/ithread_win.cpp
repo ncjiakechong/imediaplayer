@@ -129,7 +129,7 @@ static HANDLE ix_adopted_thread_wakeup = IX_NULLPTR;
 
 /*!
     \internal
-    Adds an adopted thread to the list of threads that Qt watches to make sure
+    Adds an adopted thread to the list of threads that watches to make sure
     the thread data is properly cleaned up. This function starts the watcher
     thread if necessary.
 */

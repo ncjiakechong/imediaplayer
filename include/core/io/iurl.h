@@ -89,7 +89,7 @@ public:
         RemovePath = 0x20,
         RemoveQuery = 0x40,
         RemoveFragment = 0x80,
-        // 0x100 was a private code in Qt 4, keep unused for a while
+        
         PreferLocalFile = 0x200,
         StripTrailingSlash = 0x400,
         RemoveFilename = 0x800,

@@ -9,14 +9,14 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#ifndef QGSTREAMERPLAYERCONTROL_P_H
-#define QGSTREAMERPLAYERCONTROL_P_H
+#ifndef IGSTREAMERPLAYERCONTROL_P_H
+#define IGSTREAMERPLAYERCONTROL_P_H
 
 //
 //  W A R N I N G
 //  -------------
 //
-// This file is not part of the Qt API.  It exists purely as an
+// This file is not part of the public API.  It exists purely as an
 // implementation detail.  This header file may change from version to
 // version without notice, or even be removed.
 //

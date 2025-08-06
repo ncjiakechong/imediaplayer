@@ -99,7 +99,7 @@ iIODevicePrivate::~iIODevicePrivate()
 
     iIODevice provides both a common implementation and an abstract
     interface for devices that support reading and writing of blocks
-    of data, such as QFile, QBuffer and QTcpSocket. iIODevice is
+    of data, such as iFile, iBuffer and iTcpSocket. iIODevice is
     abstract and cannot be instantiated, but it is common to use the
     interface it defines to provide device-independent I/O features.
     For example, XML classes operate on a iIODevice pointer,
@@ -118,13 +118,13 @@ iIODevicePrivate::~iIODevicePrivate()
     \list
     \li Random-access devices support seeking to arbitrary
     positions using seek(). The current position in the file is
-    available by calling pos(). QFile and QBuffer are examples of
+    available by calling pos(). iFile and iBuffer are examples of
     random-access devices.
 
     \li Sequential devices don't support seeking to arbitrary
     positions. The data must be read in one pass. The functions
     pos() and size() don't work for sequential devices.
-    QTcpSocket and QProcess are examples of sequential devices.
+    iTcpSocket and iProcess are examples of sequential devices.
     \endlist
 
     You can use isSequential() to determine the type of device.
@@ -135,13 +135,13 @@ iIODevicePrivate::~iIODevicePrivate()
     from. You can call bytesAvailable() to determine the number of
     bytes that are currently available for reading. It's common to use
     bytesAvailable() together with the readyRead() signal when
-    programming with asynchronous devices such as QTcpSocket, where
+    programming with asynchronous devices such as iTcpSocket, where
     fragments of data can arrive at arbitrary points in
     time. iIODevice emits the bytesWritten() signal every time a
     payload of data has been written to the device. Use bytesToWrite()
     to determine the current amount of data waiting to be written.
 
-    Certain subclasses of iIODevice, such as QTcpSocket and QProcess,
+    Certain subclasses of iIODevice, such as iTcpSocket and iProcess,
     are asynchronous. This means that I/O functions such as write()
     or read() always return immediately, while communication with the
     device itself may happen when control goes back to the event loop.
@@ -160,8 +160,8 @@ iIODevicePrivate::~iIODevicePrivate()
     device.
 
     \li waitFor....() - Subclasses of iIODevice implement blocking
-    functions for device-specific operations. For example, QProcess
-    has a function called \l {QProcess::}{waitForStarted()} which suspends operation in
+    functions for device-specific operations. For example, iProcess
+    has a function called \l {iProcess::}{waitForStarted()} which suspends operation in
     the calling thread until the process has started.
     \endlist
 
@@ -178,7 +178,7 @@ iIODevicePrivate::~iIODevicePrivate()
     also handles access control for you, so you can safely assume that
     the device is opened in write mode if writeData() is called.
 
-    Some subclasses, such as QFile and QTcpSocket, are implemented
+    Some subclasses, such as iFile and iTcpSocket, are implemented
     using a memory buffer for intermediate storing of data. This
     reduces the number of required device accessing calls, which are
     often very slow. Buffering makes functions like getChar() and
@@ -207,7 +207,7 @@ iIODevicePrivate::~iIODevicePrivate()
     iIODevice also provides additional signals to handle asynchronous
     communication on a per-channel basis.
 
-    \sa QBuffer, QFile, QTcpSocket
+    \sa iBuffer, iFile, iTcpSocket
 */
 
 /*!
@@ -219,7 +219,7 @@ iIODevicePrivate::~iIODevicePrivate()
     \value NotOpen   The device is not open.
     \value ReadOnly  The device is open for reading.
     \value WriteOnly The device is open for writing. Note that, for file-system
-                     subclasses (e.g. QFile), this mode implies Truncate unless
+                     subclasses (e.g. iFile), this mode implies Truncate unless
                      combined with ReadOnly, Append or NewOnly.
     \value ReadWrite The device is open for reading and writing.
     \value Append    The device is opened in append mode so that all data is
@@ -236,17 +236,17 @@ iIODevicePrivate::~iIODevicePrivate()
                      guarantee from the operating system that you are the only
                      one creating and opening the file. Note that this mode
                      implies WriteOnly, and combining it with ReadWrite is
-                     allowed. This flag currently only affects QFile. Other
+                     allowed. This flag currently only affects iFile. Other
                      classes might use this flag in the future, but until then
-                     using this flag with any classes other than QFile may
+                     using this flag with any classes other than iFile may
                      result in undefined behavior.
     \value ExistingOnly Fail if the file to be opened does not exist. This flag
                      must be specified alongside ReadOnly, WriteOnly, or
                      ReadWrite. Note that using this flag with ReadOnly alone
                      is redundant, as ReadOnly already fails when the file does
-                     not exist. This flag currently only affects QFile. Other
+                     not exist. This flag currently only affects iFile. Other
                      classes might use this flag in the future, but until then
-                     using this flag with any classes other than QFile may
+                     using this flag with any classes other than iFile may
                      result in undefined behavior.
 
     Certain flags, such as \c Unbuffered and \c Truncate, are
@@ -254,8 +254,8 @@ iIODevicePrivate::~iIODevicePrivate()
     restrictions are implied by the type of device that is represented
     by a subclass. In other cases, the restriction may be due to the
     implementation, or may be imposed by the underlying platform; for
-    example, QTcpSocket does not support \c Unbuffered mode, and
-    limitations in the native API prevent QFile from supporting \c
+    example, iTcpSocket does not support \c Unbuffered mode, and
+    limitations in the native API prevent iFile from supporting \c
     Unbuffered on Windows.
 */
 
@@ -504,7 +504,7 @@ bool iIODevice::isWritable() const
     Returns the number of available read channels if the device is open;
     otherwise returns 0.
 
-    \sa writeChannelCount(), QProcess
+    \sa writeChannelCount()
 */
 int iIODevice::readChannelCount() const
 {
@@ -529,7 +529,7 @@ int iIODevice::writeChannelCount() const
 
     Returns the index of the current read channel.
 
-    \sa setCurrentReadChannel(), readChannelCount(), QProcess
+    \sa setCurrentReadChannel(), readChannelCount(), iProcess
 */
 int iIODevice::currentReadChannel() const
 {
@@ -544,7 +544,7 @@ int iIODevice::currentReadChannel() const
     read(), readAll(), readLine(), and getChar(). It also determines
     which channel triggers iIODevice to IEMIT readyRead().
 
-    \sa currentReadChannel(), readChannelCount(), QProcess
+    \sa currentReadChannel(), readChannelCount(), iProcess
 */
 void iIODevice::setCurrentReadChannel(int channel)
 {
@@ -779,9 +779,9 @@ bool iIODevice::atEnd() const
     true on success; otherwise returns \c false (for example, if the
     device is not open).
 
-    Note that when using a QTextStream on a QFile, calling reset() on
-    the QFile will not have the expected result because QTextStream
-    buffers the file. Use the QTextStream::seek() function instead.
+    Note that when using a iTextStream on a iFile, calling reset() on
+    the iFile will not have the expected result because iTextStream
+    buffers the file. Use the iTextStream::seek() function instead.
 
     \sa seek()
 */
@@ -1419,7 +1419,7 @@ xint64 iIODevice::write(const char *data, xint64 maxSize)
     -1 if an error occurred. This is equivalent to
     \code
     ...
-    iIODevice::write(data, qstrlen(data));
+    iIODevice::write(data, istrlen(data));
     ...
     \endcode
 
@@ -1768,7 +1768,7 @@ iString iIODevice::errorString() const
 
     When reimplementing this function it is important that this function
     reads all the required data before returning. This is required in order
-    for QDataStream to be able to operate on the class. QDataStream assumes
+    for iDataStream to be able to operate on the class. iDataStream assumes
     all the requested information was read and therefore does not retry reading
     if there was a problem.
 
@@ -1789,7 +1789,7 @@ iString iIODevice::errorString() const
 
     When reimplementing this function it is important that this function
     writes all the data available before returning. This is required in order
-    for QDataStream to be able to operate on the class. QDataStream assumes
+    for iDataStream to be able to operate on the class. iDataStream assumes
     all the information was written and therefore does not retry writing if
     there was a problem.
 
