@@ -26,6 +26,7 @@ using namespace iShell;
 
 class TestStreamDevice : public iIODevice
 {
+    IX_OBJECT(TestStreamDevice)
 public:
     iString m_filePath;
     int m_fd;
@@ -81,6 +82,9 @@ public:
             return 0;
 
         xint64 remainSize = stat_results.st_size - m_currPos;
+        if (remainSize <= 0)
+            IEMIT noMoreData();
+
         return remainSize;
     }
 
@@ -96,6 +100,8 @@ public:
     {   
         return 0;
     }
+
+    void noMoreData() const ISIGNAL(noMoreData)
 };
 
 class TestPlayer : public iObject
@@ -141,6 +147,8 @@ public:
     int play(const iString& path) {
         streamDevice = new TestStreamDevice(path, this);
         streamDevice->open(iIODevice::ReadOnly);
+        iObject::connect(streamDevice, &TestStreamDevice::noMoreData, player, &iMediaPlayer::stop);
+
         player->setMedia(iUrl(path));
         // player->setMedia(iUrl("appsrc://"), streamDevice);
         player->play();

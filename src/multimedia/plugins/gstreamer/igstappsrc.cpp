@@ -125,6 +125,12 @@ void iGstAppSrc::streamDestroyed(iObject *obj)
      }
 }
 
+static void freeBuffer(gpointer data)
+{
+    iByteArray* bufferData = static_cast<iByteArray*>(data);
+    delete bufferData;
+}
+
 void iGstAppSrc::pushDataToAppSrc()
 {
     if (!isStreamValid() || !m_appSrc)
@@ -138,23 +144,15 @@ void iGstAppSrc::pushDataToAppSrc()
             size = std::min(m_stream->bytesAvailable(), (xint64)m_dataRequestSize);
 
         if (size) {
-            GstBuffer* buffer = gst_buffer_new_and_alloc(size);
+            xint64 bufferOffset = m_stream->pos();
+            iByteArray* bufferData = new iByteArray(m_stream->read(size));
+            xint64 bytesRead = bufferData->size();
 
-            #if GST_CHECK_VERSION(1,0,0)
-            GstMapInfo mapInfo;
-            gst_buffer_map(buffer, &mapInfo, GST_MAP_WRITE);
-            void* bufferData = mapInfo.data;
-            #else
-            void* bufferData = GST_BUFFER_DATA(buffer);
-            #endif
-
-            buffer->offset = m_stream->pos();
-            xint64 bytesRead = m_stream->read((char*)bufferData, size);
+            GstBuffer* buffer = gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY,
+                                bufferData->data(), bytesRead, 0, bytesRead,
+                                bufferData, freeBuffer);
+            buffer->offset = bufferOffset;
             buffer->offset_end =  buffer->offset + bytesRead - 1;
-
-            #if GST_CHECK_VERSION(1,0,0)
-            gst_buffer_unmap(buffer, &mapInfo);
-            #endif
 
             if (bytesRead > 0) {
                 m_dataRequested = false;

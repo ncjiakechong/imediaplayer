@@ -61,7 +61,7 @@ private:
     void onDataReady();
 
     void streamDestroyed(iObject* obj);
-private:
+
     static gboolean on_seek_data(GstAppSrc *element, guint64 arg0, gpointer userdata);
     static void on_enough_data(GstAppSrc *element, gpointer userdata);
     static void on_need_data(GstAppSrc *element, uint arg0, gpointer userdata);
