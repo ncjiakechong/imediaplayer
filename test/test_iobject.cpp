@@ -170,6 +170,11 @@ public:
         ++value;
     }
 
+    void tst_slot_disconnect() {
+        ++slot_disconnect;
+        disconnectAll();
+    }
+
     int m_testProp;
 
     int slot_arg1;
@@ -180,6 +185,8 @@ public:
     int slot_arg6;
     int slot_arg7;
     int slot_arg8;
+
+    int slot_disconnect;
 };
 
 void destoryObj(TestObject* ptr) {
@@ -477,6 +484,20 @@ int test_object(void)
     tst_sig.tst_sig_int0.connect(tst_sharedObj_6, &TestObject::tst_slot_int0);
     tst_sig.tst_sig_int0.disconnect(tst_sharedObj_6);
     delete tst_sharedObj_6;
+
+    TestObject* tst_sharedObj_7 = new TestObject();
+    tst_sharedObj_7->slot_disconnect = 0;
+    tst_sig.tst_sig_int0.connect(tst_sharedObj_7, &TestObject::tst_slot_disconnect);
+    tst_sig.tst_sig_int0.emits();
+    IX_ASSERT(0 < tst_sharedObj_7->slot_disconnect);
+
+    tst_sharedObj_7->slot_disconnect = 0;
+    tst_sig.tst_sig_int0.emits();
+    IX_ASSERT(0 == tst_sharedObj_7->slot_disconnect);
+
+    tst_sharedObj_7->deleteLater();
+    // test multi deleteLater
+    tst_sharedObj_7->deleteLater();
 
     return 0;
 }

@@ -1717,7 +1717,7 @@ xint64 iIODevicePrivate::skip(xint64 maxSize)
 
     \sa waitForBytesWritten()
 */
-bool iIODevice::waitForReadyRead(int msecs)
+bool iIODevice::waitForReadyRead(int)
 {
     return false;
 }
@@ -1748,7 +1748,7 @@ bool iIODevice::waitForReadyRead(int msecs)
 
     \sa waitForReadyRead()
 */
-bool iIODevice::waitForBytesWritten(int msecs)
+bool iIODevice::waitForBytesWritten(int)
 {
     return false;
 }

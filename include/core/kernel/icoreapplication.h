@@ -16,6 +16,7 @@
 
 namespace iShell {
 
+class iPostEvent;
 class iEventDispatcher;
 
 struct iCoreApplicationPrivate
@@ -49,6 +50,8 @@ protected:
 
     virtual bool event(iEvent *);
     virtual bool notify(iObject *, iEvent *);
+
+    virtual bool compressEvent(iEvent *, iObject *receiver, std::list<iPostEvent> *);
 
     static bool threadRequiresCoreApplication();
     static bool doNotify(iObject *receiver, iEvent *event);

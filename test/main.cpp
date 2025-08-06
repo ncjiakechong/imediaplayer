@@ -86,7 +86,7 @@ int main(void)
     wakeup.getPollfd(&wakeupFd);
     source->addPoll(&wakeupFd);
     source->attach(app.eventDispatcher());
-    source->unref();
+    source->deref();
 
     TestCase* tstCase = new TestCase;
 
@@ -95,7 +95,7 @@ int main(void)
     app.exec();
 
 //    source->detach();
-//    source->unref();
+//    source->deref();
 
     delete tstCase;
 

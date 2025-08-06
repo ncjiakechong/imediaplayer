@@ -113,11 +113,11 @@ iEventDispatcher_generic::iEventDispatcher_generic(iObject *parent)
 iEventDispatcher_generic::~iEventDispatcher_generic()
 {
     m_timerSource->detach();
-    m_timerSource->unref();
+    m_timerSource->deref();
     m_timerSource = IX_NULLPTR;
 
     m_postSource->detach();
-    m_postSource->unref();
+    m_postSource->deref();
     m_postSource = IX_NULLPTR;
 
     std::map<int, std::list<iEventSource*>>::iterator mapIt;
@@ -129,7 +129,7 @@ iEventDispatcher_generic::~iEventDispatcher_generic()
             iEventSource* source = *listIt;
             listIt = list.erase(listIt);
             source->detach();
-            source->unref();
+            source->deref();
         }
     }
 
@@ -267,7 +267,7 @@ int iEventDispatcher_generic::removeEventSource(iEventSource* source)
     for (itemIt = item.cbegin(); itemIt != item.cend(); ++itemIt) {
         if ((*itemIt) == source) {
             item.erase(itemIt);
-            source->unref();
+            source->deref();
             break;
         }
     }
@@ -528,7 +528,7 @@ void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingD
         if (need_deattch)
             source->detach();
 
-        source->unref();
+        source->deref();
     }
 }
 

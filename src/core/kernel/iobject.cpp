@@ -51,6 +51,9 @@ iObject::iObject(iObject *parent)
     , m_currentChildBeingDeleted(IX_NULLPTR)
     , m_wasDeleted(false)
     , m_isDeletingChildren(false)
+    , m_deleteLaterCalled(false)
+    , m_unused(0)
+    , m_postedEvents(0)
 {
     m_threadData->ref();
 
@@ -64,6 +67,9 @@ iObject::iObject(const iString& name, iObject* parent)
     , m_currentChildBeingDeleted(IX_NULLPTR)
     , m_wasDeleted(false)
     , m_isDeletingChildren(false)
+    , m_deleteLaterCalled(false)
+    , m_unused(0)
+    , m_postedEvents(0)
 {
     m_threadData->ref();
 
@@ -76,6 +82,9 @@ iObject::iObject(const iObject& other)
     , m_currentChildBeingDeleted(IX_NULLPTR)
     , m_wasDeleted(false)
     , m_isDeletingChildren(false)
+    , m_deleteLaterCalled(false)
+    , m_unused(0)
+    , m_postedEvents(0)
 {
     m_threadData->ref();
 
@@ -108,8 +117,7 @@ iObject::~iObject()
         refcount->weakUnref();
     }
 
-    if (destroyed.isConnected())
-        destroyed.emits(this);
+    destroyed.emits(this);
 
     disconnectAll();
 
@@ -141,8 +149,15 @@ iObject::~iObject()
         }
     }
 
-    iCoreApplication::removePostedEvents(this, iEvent::None);
+    if (m_postedEvents)
+        iCoreApplication::removePostedEvents(this, iEvent::None);
+
     m_threadData->deref();
+}
+
+void iObject::deleteLater()
+{
+    iCoreApplication::postEvent(this, new iDeferredDeleteEvent());
 }
 
 iThread* iObject::thread() const
@@ -431,6 +446,11 @@ void iObject::doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_b
     }
 }
 
+static void iDeleteInEventHandler(iObject* obj)
+{
+    delete  obj;
+}
+
 bool iObject::event(iEvent *e)
 {
     IX_ASSERT(e);
@@ -458,6 +478,11 @@ bool iObject::event(iEvent *e)
 
     case iEvent::ChildAdded:
     case iEvent::ChildRemoved: {
+        break;
+    }
+
+    case iEvent::DeferredDelete: {
+        iDeleteInEventHandler(this);
         break;
     }
 
@@ -504,7 +529,7 @@ bool iObject::invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::
                 "receiver is ", receiver->objectName(), "(", receiver, ")");
         }
         iSemaphore semaphore;
-        iSharedPtr<_iconnection> _c(c.clone());
+        iSharedPtr<_iconnection> _c(c.clone(), &_iconnection::deref);
         iSharedPtr<void> _a(clone(args), free);
         iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
         iCoreApplication::postEvent(receiver, event);
@@ -512,7 +537,7 @@ bool iObject::invokeMethodImpl(const _iconnection& c, void* args, _isignalBase::
         return true;
     }
 
-    iSharedPtr<_iconnection> _c(c.clone());
+    iSharedPtr<_iconnection> _c(c.clone(), &_iconnection::deref);
     iSharedPtr<void> _a(clone(args), free);
     iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
     iCoreApplication::postEvent(receiver, event);
@@ -532,7 +557,8 @@ _isignalBase::_isignalBase(const _isignalBase& s)
 
     while(it != itEnd) {
         (*it)->getdest()->signalConnect(this);
-        m_connected_slots.push_back((*it)->clone());
+        (*it)->ref();
+        m_connected_slots.push_back(*it);
 
         ++it;
     }
@@ -543,19 +569,14 @@ _isignalBase::~_isignalBase()
     disconnectAll();
 }
 
-bool _isignalBase::isConnected()
-{
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
-    return !m_connected_slots.empty();
-}
-
 void _isignalBase::disconnectAll()
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     while (!m_connected_slots.empty()) {
         _iconnection* conn = m_connected_slots.front();
         conn->getdest()->signalDisconnect(this);
-        delete conn;
+        conn->setOrphaned();
+        conn->deref();
 
         m_connected_slots.pop_front();
     }
@@ -569,7 +590,8 @@ void _isignalBase::disconnect(iObject* pclass)
 
     while(it != itEnd) {
         if((*it)->getdest() == pclass) {
-            delete *it;
+            (*it)->setOrphaned();
+            (*it)->deref();
             it = m_connected_slots.erase(it);
             return;
         }
@@ -600,7 +622,8 @@ void _isignalBase::slotDisconnect(iObject* pslot)
 
     while(it != itEnd) {
         if((*it)->getdest() == pslot) {
-            delete *it;
+            (*it)->setOrphaned();
+            (*it)->deref();
             it = m_connected_slots.erase(it);
             continue;
         }
@@ -627,15 +650,25 @@ void _isignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
 void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
 {
     IX_ASSERT(clone);
-    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
+    connections_list tmp_connected_slots;
+
+    {
+        iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
+        for (connections_list::iterator it = m_connected_slots.begin(); it != m_connected_slots.end(); ++it) {
+            (*it)->ref();
+            tmp_connected_slots.push_back(*it);
+        }
+    }
 
     iThreadData* currentThreadData = iThreadData::current();
-    for (connections_list::const_iterator it = m_connected_slots.begin();
-         it != m_connected_slots.end();
-         ++ it) {
-        _iconnection* conn = *it;
-        if (!conn->m_pobject)
+    while(!tmp_connected_slots.empty()) {
+        _iconnection* conn = tmp_connected_slots.front();
+        tmp_connected_slots.pop_front();
+
+        if (!conn->m_pobject) {
+            conn->deref();
             continue;
+        }
 
         iObject * const receiver = conn->m_pobject;
         const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
@@ -644,43 +677,59 @@ void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
         // put into the event queue
         if ((AutoConnection == conn->m_type && receiverInSameThread)
             || (DirectConnection == conn->m_type)) {
-            lock.unlock();
             conn->emits(args);
-            lock.relock();
+            conn->deref();
             continue;
         } else if (conn->m_type == BlockingQueuedConnection) {
             if (receiverInSameThread) {
                 ilog_warn("iObject Dead lock detected while activating a BlockingQueuedConnection: "
                     "receiver is ", receiver->objectName(), "(", receiver, ")");
             }
+
+            conn->ref();
             iSemaphore semaphore;
-            iSharedPtr<_iconnection> _c(conn->clone());
+            iSharedPtr<_iconnection> _c(conn, &_iconnection::deref);
             iSharedPtr<void> _a(clone(args), free);
             iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
             iCoreApplication::postEvent(receiver, event);
-            lock.unlock();
             semaphore.acquire();
-            lock.relock();
+            conn->deref();
             continue;
         }
 
-        iSharedPtr<_iconnection> _c(conn->clone());
+        conn->ref();
+        iSharedPtr<_iconnection> _c(conn, &_iconnection::deref);
         iSharedPtr<void> _a(clone(args), free);
         iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
         iCoreApplication::postEvent(receiver, event);
+        conn->deref();
     }
 }
 
 _iconnection::_iconnection()
-    : m_type(AutoConnection)
+    : m_orphaned(false)
+    , m_ref(1)
+    , m_type(AutoConnection)
     , m_pobject(IX_NULLPTR)
     , m_pfunc(IX_NULLPTR)
     , m_emitcb(IX_NULLPTR)
 {
 }
 
+_iconnection::_iconnection(const _iconnection& other)
+    : m_orphaned(false)
+    , m_ref(1)
+    , m_type(other.m_type)
+    , m_pobject(other.m_pobject)
+    , m_pfunc(other.m_pfunc)
+    , m_emitcb(other.m_emitcb)
+{
+}
+
 _iconnection::_iconnection(iObject* obj, void (iObject::*func)(), callback_t cb, ConnectionType type)
-    : m_type(type)
+    : m_orphaned(false)
+    , m_ref(1)
+    , m_type(type)
     , m_pobject(obj)
     , m_pfunc(func)
     , m_emitcb(cb)
@@ -689,6 +738,26 @@ _iconnection::_iconnection(iObject* obj, void (iObject::*func)(), callback_t cb,
 
 _iconnection::~_iconnection()
 {
+}
+
+void _iconnection::ref()
+{
+    if (m_ref <= 0)
+        ilog_warn("_iconnection::ref error: ", m_ref);
+
+    ++m_ref;
+}
+
+void _iconnection::deref()
+{
+    --m_ref;
+    if (0 == m_ref)
+        delete this;
+}
+
+void _iconnection::setOrphaned()
+{
+    m_orphaned = true;
 }
 
 _iconnection* _iconnection::clone() const
@@ -703,7 +772,7 @@ _iconnection* _iconnection::duplicate(iObject* newobj) const
 
 void _iconnection::emits(void* args) const
 {
-    if (IX_NULLPTR == m_emitcb) {
+    if (m_orphaned || (IX_NULLPTR == m_emitcb)) {
         return;
     }
 

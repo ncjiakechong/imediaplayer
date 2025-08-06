@@ -42,18 +42,14 @@ void iEventSource::ref()
     ++m_refCount;
 }
 
-void iEventSource::unref()
+void iEventSource::deref()
 {
-    int nowRef = -1;
-
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
         ilog_warn("iEventSource::ref in diffrent thread");
     }
 
     --m_refCount;
-    nowRef = m_refCount;
-
-    if (0 == nowRef)
+    if (0 == m_refCount)
         delete this;
 }
 
@@ -105,7 +101,7 @@ int iEventSource::detach()
 
     m_dispatcher->removeEventSource(this);
 
-    // unref();
+    // deref();
     m_dispatcher = IX_NULLPTR;
     return 0;
 }

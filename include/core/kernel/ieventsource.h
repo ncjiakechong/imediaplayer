@@ -31,7 +31,7 @@ public:
     iEventSource(int priority);
 
     void ref();
-    void unref();
+    void deref();
 
     int attach(iEventDispatcher* dispatcher);
     int detach();

@@ -81,4 +81,14 @@ iChildEvent::~iChildEvent()
 {
 }
 
+iDeferredDeleteEvent::iDeferredDeleteEvent()
+    : iEvent(iEvent::DeferredDelete)
+{ }
+
+/*!
+    \internal
+*/
+iDeferredDeleteEvent::~iDeferredDeleteEvent()
+{ }
+
 } // namespace iShell
