@@ -47,6 +47,8 @@ include_directories(
     ${GSTREAMER_AUDIO_INCLUDE_DIRS}
     ${GSTREAMER_PBUTILS_INCLUDE_DIRS} )
 
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+
 add_library(${PROJECT_NAME} SHARED ${Source})
 
 target_link_libraries(
