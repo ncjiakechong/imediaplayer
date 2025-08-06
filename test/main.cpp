@@ -58,6 +58,7 @@ public:
         case 4:
             test_timer();
             break;
+        #ifdef ITEST_PLAYER
         case 5:
         {
             std::list<iString> args = iCoreApplication::arguments();
@@ -71,6 +72,7 @@ public:
                 return;
         }
             break;
+        #endif
         default:
             iCoreApplication::quit();
             return;

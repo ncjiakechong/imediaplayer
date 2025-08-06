@@ -361,7 +361,7 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
 void iObject::moveToThread_helper()
 {
     iEvent e(iEvent::ThreadChange);
-    iCoreApplication::sendEvent(this, &e);
+    this->event(&e);
     for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
         iObject *child = *it;
         child->moveToThread_helper();
@@ -432,7 +432,7 @@ void iObject::setParent(iObject *o)
                 m_parent->m_children.erase(it);
                 // remove children
                 iChildEvent e(iEvent::ChildRemoved, this);
-                iCoreApplication::sendEvent(m_parent, &e);
+                m_parent->event(&e);
             }
         }
     }
@@ -450,7 +450,7 @@ void iObject::setParent(iObject *o)
         // object hierarchies are constrained to a single thread
         m_parent->m_children.push_back(this);
         iChildEvent e(iEvent::ChildAdded, this);
-        iCoreApplication::sendEvent(m_parent, &e);
+        m_parent->event(&e);
     }
 }
 

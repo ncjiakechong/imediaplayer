@@ -869,10 +869,6 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
             #endif
 
     gst_object_unref(GST_OBJECT(srcPad));
-
-    gst_debug_bin_to_dot_file_with_ts(GST_BIN(m_playbin),
-                                  GstDebugGraphDetails(GST_DEBUG_GRAPH_SHOW_ALL /* | GST_DEBUG_GRAPH_SHOW_MEDIA_TYPE | GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS | GST_DEBUG_GRAPH_SHOW_STATES */),
-                                  "playbin_finish");
 }
 
 #if !GST_CHECK_VERSION(1,0,0)
@@ -930,6 +926,12 @@ bool iGstreamerPlayerSession::isSeekable() const
 bool iGstreamerPlayerSession::play()
 {
     ilog_verbose("enter");
+
+    #if GST_CHECK_VERSION(1,0,0)
+    static bool dumpDot = g_getenv("GST_DEBUG_DUMP_DOT_DIR");
+    if (dumpDot)
+        gst_debug_bin_to_dot_file_with_ts(GST_BIN(m_pipeline), GstDebugGraphDetails(GST_DEBUG_GRAPH_SHOW_ALL), "gst.play");
+    #endif
 
     m_everPlayed = false;
     if (m_pipeline) {
