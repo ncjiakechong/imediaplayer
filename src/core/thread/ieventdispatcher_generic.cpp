@@ -133,8 +133,8 @@ iEventDispatcher_generic::~iEventDispatcher_generic()
         }
     }
 
-    std::list<iPollRec*>::const_iterator it =  m_pollRecords.begin();
-    std::list<iPollRec*>::const_iterator itEnd = m_pollRecords.end();
+    std::list<iPollRec*>::iterator it =  m_pollRecords.begin();
+    std::list<iPollRec*>::iterator itEnd = m_pollRecords.end();
 
     while(it != itEnd) {
         iPollRec* rec = *it;
@@ -263,8 +263,8 @@ int iEventDispatcher_generic::removeEventSource(iEventSource* source)
     }
 
     std::list<iEventSource*>& item = it->second;
-    std::list<iEventSource*>::const_iterator itemIt;
-    for (itemIt = item.cbegin(); itemIt != item.cend(); ++itemIt) {
+    std::list<iEventSource*>::iterator itemIt;
+    for (itemIt = item.begin(); itemIt != item.end(); ++itemIt) {
         if ((*itemIt) == source) {
             item.erase(itemIt);
             source->deref();
@@ -312,8 +312,8 @@ int iEventDispatcher_generic::removePoll(iPollFD* fd, iEventSource*)
         return -1;
     }
 
-    std::list<iPollRec*>::const_iterator it = m_pollRecords.cbegin();
-    while (it != m_pollRecords.cend()) {
+    std::list<iPollRec*>::iterator it = m_pollRecords.begin();
+    while (it != m_pollRecords.end()) {
         iPollRec* rec = *it;
         if (rec->fd != fd) {
             ++it;

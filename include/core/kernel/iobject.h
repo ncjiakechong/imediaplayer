@@ -36,7 +36,7 @@ class iObject
     using IX_ThisType = iObject;
     // IX_OBJECT(iObject)
     // IPROPERTY_BEGIN
-    // IPROPERTY_ITEM("objectName", objectName, setObjectName)
+    // IPROPERTY_ITEM("objectName", objectName, setObjectName, objectNameChanged)
     // IPROPERTY_END
 public:
     iObject(iObject* parent = IX_NULLPTR);
@@ -50,7 +50,7 @@ public:
     const iString& objectName() const { return m_objName; }
 
     // SIGNALS start
-    iSignal<iVariant> objectNameChanged;
+    void objectNameChanged(const iString& name) ISIGNAL(objectNameChanged, name)
     void destroyed(iObject* obj) ISIGNAL(destroyed, obj)
     // SIGNALS end
 
@@ -65,17 +65,33 @@ public:
     iVariant property(const char *name) const;
     bool setProperty(const char *name, const iVariant& value);
 
-    template<class Obj, class param>
-    void observeProperty(const char *name, Obj* obj, void (Obj::*func)(param)) {
+    template<typename Func>
+    bool observeProperty(const char *name, const typename FunctionPointer<Func>::Object* obj, Func slot) {
+        typedef void (FunctionPointer<Func>::Object::*SignalFunc)(iVariant);
+        typedef void (FunctionPointer<Func>::Object::*FuncAdaptor)();
+
+        IX_COMPILER_VERIFY(int(FunctionPointer<Func>::ArgumentCount) <= 1);
+
         initProperty();
+        const iMetaObject* mo = metaObject();
 
-        std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-        it = m_propertyNofity.find(iString(name));
-        if (it == m_propertyNofity.cend() || !it->second)
-            return;
+        do {
+            std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+            const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
+            if (!propertys)
+                continue;
 
-        iSignal<iVariant>* singal = it->second;
-        singal->connect(obj, func);
+            it = propertys->find(iString(name));
+            if (it == propertys->cend() || !it->second)
+                continue;
+
+            FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(it->second->_signal);
+            SignalFunc tFunc = reinterpret_cast<SignalFunc>(tFuncAdptor);
+            _iConnectionHelper<SignalFunc, Func> conn(this, tFunc, obj, slot, ConnectionType(AutoConnection | AgrumentsAdaptor));
+            return connectImpl(conn);
+        } while ((mo = mo->superClass()));
+
+        return false;
     }
 
     //Connect a signal to a pointer to qobject member function
@@ -178,7 +194,7 @@ public:
     {
         typedef Ret (Obj::*Function)();
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -190,7 +206,7 @@ public:
 
         Arguments tArgs(a1);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -205,7 +221,7 @@ public:
 
         Arguments tArgs(a1, a2);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -221,7 +237,7 @@ public:
 
         Arguments tArgs(a1, a2, a3);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -238,7 +254,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -257,7 +273,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -278,7 +294,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -300,7 +316,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -323,7 +339,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -332,7 +348,7 @@ public:
     {
         typedef Ret (Obj::*Function)() const;
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -344,7 +360,7 @@ public:
 
         Arguments tArgs(a1);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -359,7 +375,7 @@ public:
 
         Arguments tArgs(a1, a2);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -375,7 +391,7 @@ public:
 
         Arguments tArgs(a1, a2, a3);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -392,7 +408,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -411,7 +427,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -432,7 +448,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -454,7 +470,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -477,7 +493,7 @@ public:
 
         Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs};
+        _iArgumentHelper argHelper = {&tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs, IX_NULLPTR, IX_NULLPTR};
         return invokeMethodImpl(conn, argHelper);
     }
 
@@ -485,21 +501,19 @@ public:
 
 protected:
     struct _iArgumentHelper {
-        typedef void* (*cloneArgs)(void*);
-        typedef void (*freeArgs)(void*);
+        typedef void* (*clone)(void*);
+        typedef void (*free)(void*);
 
         void*  args;
-        cloneArgs clone;
-        freeArgs  free;
+        clone cloneArgs;
+        free  freeArgs;
+        clone cloneAdaptor;
+        free  freeAdaptor;
     };
 
     virtual void initProperty();
-    void doInitProperty(std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc>* pptNotify);
-    void emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelper& arg);
-
     virtual bool event(iEvent *e);
-
-    std::unordered_map<iString, iSignal<iVariant>*, iKeyHashFunc, iKeyEqualFunc> m_propertyNofity;
+    void emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelper& arg);
 
 private:
     struct _iConnectionList {
@@ -508,7 +522,6 @@ private:
         _iConnection *last;
     };
 
-    typedef std::unordered_map<_iSignalBase*, int> __sender_map;
     typedef std::unordered_map<_iConnection::MemberFunction, _iConnectionList, iConKeyHashFunc> sender_map;
 
     class _iObjectConnectionList
@@ -532,9 +545,6 @@ private:
     void cleanConnectionLists();
     bool disconnectHelper(const _iConnection& conn);
 
-    int refSignal(_iSignalBase* sender);
-    int derefSignal(_iSignalBase* sender);
-
     void setThreadData_helper(iThreadData *currentData, iThreadData *targetData);
     void moveToThread_helper();
 
@@ -550,9 +560,8 @@ private:
 
     iString     m_objName;
     iMutex      m_objLock;
-    __sender_map  __m_senders;
 
-    iAtomicPointer< typename isharedpointer::ExternalRefCountData > m_refCount;
+    iAtomicPointer< isharedpointer::ExternalRefCountData > m_refCount;
 
     iThreadData* m_threadData;
 
@@ -569,7 +578,6 @@ private:
 
     IX_DISABLE_COPY(iObject)
     friend class iThreadData;
-    friend class _iSignalBase;
     friend class iCoreApplication;
     friend struct isharedpointer::ExternalRefCountData;
 };

@@ -63,14 +63,14 @@ public:
     void setTestProperty(int value)
     {
         m_testProp = value;
-        testPropertyChanged.emits(m_testProp);
+        IEMIT testPropertyChanged(m_testProp);
     }
 
     void tst_slot_prop(const iVariant& arg1) {
         ilog_debug(this, " tst_slot_prop changed ", arg1.value<int>());
     }
 
-    iSignal<iVariant> testPropertyChanged;
+    void testPropertyChanged(int value) ISIGNAL(testPropertyChanged, value)
 
     void signal_void() ISIGNAL(signal_void)
     void signal_struct(int arg1, struct E arg2, int arg3) ISIGNAL(signal_struct, arg1, arg2, arg3)
@@ -549,15 +549,19 @@ int test_object(void)
     iWeakPtr<TestObject> share_weakprt_5(shared_5);
     IX_ASSERT(tst_sharedObj_5 == share_weakprt_5.data());
 
+    tst_sharedObj_5->observeProperty("objectName", tst_sharedObj_5, &TestObject::tst_slot_int0);
     tst_sharedObj_5->setProperty("objectName", iVariant("tst_sharedObj_5"));
     ilog_debug("tst_sharedObj_5 name ", tst_sharedObj_5->property("objectName").value<iString>());
     IX_ASSERT(tst_sharedObj_5->property("objectName").value<iString>() == iString("tst_sharedObj_5"));
 
-    tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_prop);
+    tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_int0);
     tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_int1);
+    tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_prop);
 
+    tst_sharedObj_5->slot_arg1 = 0;
     tst_sharedObj_5->setProperty("testProperty", iVariant(5));
     IX_ASSERT(5 == tst_sharedObj_5->property("testProperty").value<int>());
+    IX_ASSERT(5 == tst_sharedObj_5->slot_arg1);
 
 
     delete tst_sharedObj_5;

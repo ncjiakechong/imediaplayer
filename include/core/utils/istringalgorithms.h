@@ -25,7 +25,7 @@ class iStringView;
 namespace iPrivate {
 
 xsizetype xustrlen(const ushort *str);
-const ushort *xustrchr(iStringView str, ushort ch) noexcept;
+const ushort *xustrchr(iStringView str, ushort ch);
 
 int compareStrings(iStringView   lhs, iStringView   rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
 int compareStrings(iStringView   lhs, iLatin1String rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);

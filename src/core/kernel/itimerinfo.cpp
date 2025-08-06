@@ -57,7 +57,7 @@ void iTimerInfoList::timerInsert(TimerInfo *ti)
         ++it;
     }
 
-    std::list<TimerInfo*>::const_iterator insert_it = timers.cbegin();
+    std::list<TimerInfo*>::iterator insert_it = timers.begin();
     std::advance(insert_it, timers.size() - std::distance(timers.crbegin(), it));
     timers.insert(insert_it, ti);
 }

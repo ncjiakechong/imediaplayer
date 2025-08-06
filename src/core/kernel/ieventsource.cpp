@@ -128,7 +128,7 @@ int iEventSource::removePoll(iPollFD* fd)
         return -1;
     }
 
-    for (std::list<iPollFD*>::const_iterator it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+    for (std::list<iPollFD*>::iterator it = m_pollFds.begin(); it != m_pollFds.end(); ++it) {
         if ((*it) == fd) {
             m_pollFds.erase(it);
             break;
