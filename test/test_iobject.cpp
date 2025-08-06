@@ -560,14 +560,12 @@ int test_object(void)
     tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_prop);
 
     tst_sharedObj_5->slot_arg1 = 0;
-    tst_sharedObj_5->setProperty("testProperty", iVariant(5));
+    tst_sharedObj_5->setProperty("testProperty", iVariant(5.0));
     IX_ASSERT(5 == tst_sharedObj_5->property("testProperty").value<int>());
     IX_ASSERT(5 == tst_sharedObj_5->slot_arg1);
 
-
     delete tst_sharedObj_5;
     IX_ASSERT(IX_NULLPTR == share_weakprt_5.data());
-
 
     ilog_debug("-------------slot disconnect");
     TestObject* tst_sharedObj_6 = new TestObject();

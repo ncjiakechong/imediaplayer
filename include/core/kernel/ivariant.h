@@ -97,17 +97,19 @@ public:
     template <typename T>
     static int iMetaTypeId(int hint)
     {
-        static iAtomicCounter<int> typeId = {iAtomicCounter<int>(0)};
-        if (0 != typeId.value())
-            return typeId.value();
+        static int typeId = 0;
+        if (0 != typeId)
+            return typeId;
 
-        int newId = iRegisterMetaType(hint);
-        typeId.testAndSet(0, newId);
-        return typeId.value();
+        const char* func_name = IX_FUNC_INFO;
+        const size_t header = sizeof("int iShell::iVariant::iMetaTypeId");
+
+        typeId = iRegisterMetaType(func_name + header, hint);
+        return typeId;
     }
 
 private:
-    struct iAbstractVariantImpl
+    struct IX_CORE_EXPORT iAbstractVariantImpl
     {
         iAbstractVariantImpl(void* ptr);
         virtual ~iAbstractVariantImpl();
@@ -123,7 +125,7 @@ private:
         T mValue;
     };
 
-    static int iRegisterMetaType(int hint);
+    static int iRegisterMetaType(const char* type, int hint);
 
     bool convert(int t, void *result) const;
 

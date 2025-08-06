@@ -9,6 +9,8 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
+#include <cstdlib>
+
 #include "core/global/iglobal.h"
 #include "core/io/ilog.h"
 

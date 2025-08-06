@@ -87,44 +87,54 @@ void iLogger::append(bool value)
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(xint8 value)
+void iLogger::append(char value)
 {
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(xuint8 value)
+void iLogger::append(unsigned char value)
 {
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(xint16 value)
+void iLogger::append(short value)
 {
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(xuint16 value)
+void iLogger::append(unsigned short value)
 {
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(xint32 value)
+void iLogger::append(int value)
 {
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(xuint32 value)
+void iLogger::append(unsigned int value)
 {
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(xint64 value)
+void iLogger::append(long value)
 {
     m_buff += iString("%1").arg(value);
 }
 
-void iLogger::append(xuint64 value)
+void iLogger::append(unsigned long value)
 {
     m_buff += iString("%1").arg(value);
+}
+
+void iLogger::append(long long value)
+{
+    m_buff += iString("%1").arg(xlonglong(value));
+}
+
+void iLogger::append(unsigned long long value)
+{
+    m_buff += iString("%1").arg(xulonglong(value));
 }
 
 void iLogger::append(iHexUInt8 value)
@@ -178,49 +188,61 @@ iLogger& operator<<(iLogger& logger, bool value)
     return logger;
 }
 
-iLogger& operator<<(iLogger& logger, xint8 value)
+iLogger& operator<<(iLogger& logger, char value)
 {
     logger.append(value);
     return logger;
 }
 
-iLogger& operator<<(iLogger& logger, xuint8 value)
+iLogger& operator<<(iLogger& logger, unsigned char value)
 {
     logger.append(value);
     return logger;
 }
 
-iLogger& operator<<(iLogger& logger, xint16 value)
+iLogger& operator<<(iLogger& logger, short value)
 {
     logger.append(value);
     return logger;
 }
 
-iLogger& operator<<(iLogger& logger, xuint16 value)
+iLogger& operator<<(iLogger& logger, unsigned short value)
 {
     logger.append(value);
     return logger;
 }
 
-iLogger& operator<<(iLogger& logger, xint32 value)
+iLogger& operator<<(iLogger& logger, int value)
 {
     logger.append(value);
     return logger;
 }
 
-iLogger& operator<<(iLogger& logger, xuint32 value)
+iLogger& operator<<(iLogger& logger, unsigned int value)
 {
     logger.append(value);
     return logger;
 }
 
-iLogger& operator<<(iLogger& logger, xint64 value)
+iLogger& operator<<(iLogger& logger, long value)
 {
     logger.append(value);
     return logger;
 }
 
-iLogger& operator<<(iLogger& logger, xuint64 value)
+iLogger& operator<<(iLogger& logger, unsigned long value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, long long value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, unsigned long long value)
 {
     logger.append(value);
     return logger;
