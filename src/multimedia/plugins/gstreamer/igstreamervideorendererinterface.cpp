@@ -14,7 +14,7 @@
 namespace iShell {
 
 iGstreamerVideoRendererInterface::iGstreamerVideoRendererInterface(iObject *parent)
-    : iObject (parent)
+    : iObject(parent)
 {
 }
 

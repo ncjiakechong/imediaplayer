@@ -44,5 +44,4 @@ private:
 
 } // namespace iShell
 
-
 #endif

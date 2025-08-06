@@ -42,7 +42,6 @@ private:
     iMutex m_bufferMutex;
 };
 
-
 } // namespace iShell
 
 #endif // IGSTREAMERAUDIOPROBECONTROL_P_H

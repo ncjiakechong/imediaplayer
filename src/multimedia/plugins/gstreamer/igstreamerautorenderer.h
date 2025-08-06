@@ -35,7 +35,6 @@ private:
     GstElement *m_videoSink;
 };
 
-
 } // namespace iShell
 
 #endif // IGSTREAMERAUTORENDERER_H
