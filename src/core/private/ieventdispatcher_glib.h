@@ -1,5 +1,5 @@
 /////////////////////////////////////////////////////////////////
-/// Copyright 2012-2018
+/// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ieventdispatcher_glib.h
@@ -7,12 +7,6 @@
 /// @details description.
 /// @version 1.0
 /// @author  anfengce@
-/// @date    2018-11-15
-/////////////////////////////////////////////////////////////////
-/// Edit History
-/// -----------------------------------------------------------
-/// DATE                     NAME          DESCRIPTION
-/// 2018-11-15          anfengce@        Create.
 /////////////////////////////////////////////////////////////////
 #ifndef IEVENTDISPATCHER_GLIB_H
 #define IEVENTDISPATCHER_GLIB_H
