@@ -165,6 +165,13 @@
 #define IX_TYPEOF(expr) typeof(expr)
 #endif
 
+#ifdef IX_HAVE_CXX11
+#define IX_CONSTEXPR constexpr
+#else
+#define IX_CONSTEXPR const
+#endif
+
+
 // combine arguments (after expanding arguments)
 #define IX_GLUE(a,b) __IX_GLUE(a,b)
 #define __IX_GLUE(a,b) a ## b

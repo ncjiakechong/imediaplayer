@@ -21,16 +21,13 @@ namespace iShell {
 */
 
 template <typename T>
-constexpr bool iIsRelocatable()
-{
-    return std::is_enum<T>::value || std::is_integral<T>::value;
-}
+struct iIsRelocatable
+{ enum { value = is_enum<T>::value || is_integral<T>::value }; };
+
 
 template <typename T>
-constexpr bool iIsTrivial()
-{
-    return std::is_enum<T>::value || std::is_integral<T>::value;
-}
+struct iIsTrivial
+{ enum { value = is_enum<T>::value || is_integral<T>::value }; };
 
 /*
   The catch-all template.
@@ -41,12 +38,12 @@ class iTypeInfo
 {
 public:
     enum {
-        isSpecialized = std::is_enum<T>::value, // don't require every enum to be marked manually
+        isSpecialized = is_enum<T>::value, // don't require every enum to be marked manually
         isPointer = false,
-        isIntegral = std::is_integral<T>::value,
-        isComplex = !iIsTrivial<T>(),
+        isIntegral = is_integral<T>::value,
+        isComplex = !iIsTrivial<T>::value,
         isStatic = true,
-        isRelocatable = iIsRelocatable<T>(),
+        isRelocatable = iIsRelocatable<T>::value,
         isLarge = (sizeof(T)>sizeof(void*)),
         sizeOf = sizeof(T)
     };
@@ -170,12 +167,12 @@ class iTypeInfo<TYPE > \
 public: \
     enum { \
         isSpecialized = true, \
-        isComplex = (((FLAGS) & IX_PRIMITIVE_TYPE) == 0) && !iIsTrivial<TYPE>(), \
+        isComplex = (((FLAGS) & IX_PRIMITIVE_TYPE) == 0) && !iIsTrivial<TYPE>::value, \
         isStatic = (((FLAGS) & (IX_MOVABLE_TYPE | IX_PRIMITIVE_TYPE)) == 0), \
-        isRelocatable = !isStatic || ((FLAGS) & IX_RELOCATABLE_TYPE) || iIsRelocatable<TYPE>(), \
+        isRelocatable = !isStatic || ((FLAGS) & IX_RELOCATABLE_TYPE) || iIsRelocatable<TYPE>::value, \
         isLarge = (sizeof(TYPE)>sizeof(void*)), \
         isPointer = false, \
-        isIntegral = std::is_integral< TYPE >::value, \
+        isIntegral = is_integral< TYPE >::value, \
         sizeOf = sizeof(TYPE) \
     }; \
     static inline const char *name() { return #TYPE; } \

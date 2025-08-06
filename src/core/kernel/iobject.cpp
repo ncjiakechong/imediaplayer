@@ -859,7 +859,9 @@ void iObject::initProperty(iMetaObject* mobj) const
 
     pptImp.insert(std::pair<iString, iSharedPtr<_iProperty>>(
                         iString("objectName"),
-                        iSharedPtr<_iProperty>(newProperty(&iObject::objectName, &iObject::setObjectName, &iObject::objectNameChanged))));
+                        iSharedPtr<_iProperty>(newProperty(_iProperty::E_READ, &iObject::objectName,
+                                                           _iProperty::E_WRITE, &iObject::setObjectName,
+                                                           _iProperty::E_NOTIFY, &iObject::objectNameChanged))));
 
     mobj->setProperty(pptImp);
 }

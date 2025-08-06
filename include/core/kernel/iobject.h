@@ -36,7 +36,7 @@ class IX_CORE_EXPORT iObject
     using IX_ThisType = iObject;
     // IX_OBJECT(iObject)
     // IPROPERTY_BEGIN
-    // IPROPERTY_ITEM("objectName", objectName, setObjectName, objectNameChanged)
+    // IPROPERTY_ITEM("objectName", IREAD objectName, IWRITE setObjectName, INOTIFY objectNameChanged)
     // IPROPERTY_END
 public:
     iObject(iObject* parent = IX_NULLPTR);

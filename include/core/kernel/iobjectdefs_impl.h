@@ -1249,6 +1249,10 @@ struct IX_CORE_EXPORT _iProperty
     typedef void (*set_t)(const _iProperty*, iObject*, const iVariant&);
     typedef void (*signal_t)(const _iProperty*, iObject*, const iVariant&);
 
+    enum READ {E_READ};
+    enum WRITE {E_WRITE};
+    enum NOTIFY {E_NOTIFY};
+
     _iProperty(get_t get, set_t set, signal_t signal)
         : _get(get), _set(set), _signal(signal)
         , _signalRaw(IX_NULLPTR), _argWraper(IX_NULLPTR), _argDeleter(IX_NULLPTR) {}
@@ -1262,7 +1266,7 @@ struct IX_CORE_EXPORT _iProperty
     _iConnection::ArgumentDeleter _argDeleter;
 };
 
-template<typename GetFunc, typename SetFunc, typename SignalFunc>
+template<typename GetFunc = iVariant (iObject::*)() const, typename SetFunc = void (iObject::*)(const iVariant&), typename SignalFunc = void (iObject::*)(const iVariant&)>
 struct _iPropertyHelper : public _iProperty
 {
     _iPropertyHelper(GetFunc _getfunc = IX_NULLPTR, SetFunc _setfunc = IX_NULLPTR, SignalFunc _signalfunc = IX_NULLPTR)
@@ -1333,23 +1337,47 @@ struct _iPropertyHelper : public _iProperty
         delete tArgs;
     }
 
+    template<typename NewGetFunc>
+    _iPropertyHelper<NewGetFunc, SetFunc, SignalFunc> parseProperty(READ, NewGetFunc get) const {
+        return _iPropertyHelper<NewGetFunc, SetFunc, SignalFunc>(get, _setFunc, _signalFunc);
+    }
+
+    template<typename NewSetFunc>
+    _iPropertyHelper<GetFunc, NewSetFunc, SignalFunc> parseProperty(WRITE, NewSetFunc set) const {
+        return _iPropertyHelper<GetFunc, NewSetFunc, SignalFunc>(_getFunc, set, _signalFunc);
+    }
+
+    template<typename NewSignalFunc>
+    _iPropertyHelper<GetFunc, SetFunc, NewSignalFunc> parseProperty(NOTIFY, NewSignalFunc signal) const {
+        return _iPropertyHelper<GetFunc, SetFunc, NewSignalFunc>(_getFunc, _setFunc, signal);
+    }
+
+    _iPropertyHelper* clone() const {
+        return new _iPropertyHelper(_getFunc, _setFunc, _signalFunc);
+    }
+
     GetFunc _getFunc;
     SetFunc _setFunc;
     SignalFunc _signalFunc;
 };
 
-template<typename GetFunc, typename SetFunc, typename SignalFunc>
-_iProperty* newProperty(GetFunc _getfunc, SetFunc _setfunc, SignalFunc _signalfunc)
+template<typename Flag1, typename Func1, typename Flag2, typename Func2, typename Flag3, typename Func3>
+_iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2, Flag3 flag3, Func3 func3)
 {
-    typedef FunctionPointer<GetFunc> GetType;
-    typedef FunctionPointer<SetFunc> SetType;
-    typedef FunctionPointer<SignalFunc> SignalType;
+    _iPropertyHelper<> propInfo;
+    return propInfo.parseProperty(flag1, func1)
+                   .parseProperty(flag2, func2)
+                   .parseProperty(flag3, func3)
+                   .clone();
+}
 
-    IX_COMPILER_VERIFY(!(is_same<typename GetType::ReturnType, void>::value));
-    IX_COMPILER_VERIFY((is_same<typename GetType::Object, typename SetType::Object>::value));
-    IX_COMPILER_VERIFY((is_same<typename GetType::Object, typename SignalType::Object>::value));
-    IX_COMPILER_VERIFY((CheckCompatibleArguments<SignalType::ArgumentCount, typename SetType::Arguments::Type, typename SignalType::Arguments::Type>::value));
-    return new _iPropertyHelper<GetFunc, SetFunc, SignalFunc>(_getfunc, _setfunc, _signalfunc);
+template<typename Flag1, typename Func1, typename Flag2, typename Func2>
+_iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2)
+{
+    _iPropertyHelper<> propInfo;
+    return propInfo.parseProperty(flag1, func1)
+                   .parseProperty(flag2, func2)
+                   .clone();
 }
 
 class IX_CORE_EXPORT iMetaObject
@@ -1394,6 +1422,10 @@ public: \
     } \
 private:
 
+#define IREAD _iProperty::E_READ, &IX_ThisType::
+#define IWRITE _iProperty::E_WRITE, &IX_ThisType::
+#define INOTIFY _iProperty::E_NOTIFY, &IX_ThisType::
+
 #define IPROPERTY_BEGIN \
     void initProperty(iMetaObject* mobj) const { \
         const iMetaObject* _mobj = IX_ThisType::metaObject(); \
@@ -1402,12 +1434,10 @@ private:
         \
         std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> pptImp;
 
-
-#define IPROPERTY_ITEM(NAME, GETFUNC, SETFUNC, SIGNAL) \
+#define IPROPERTY_ITEM(...) IPROPERTY_ITEM2(__VA_ARGS__)
+#define IPROPERTY_ITEM2(NAME, ...) \
         pptImp.insert(std::pair< iString, iSharedPtr<_iProperty> >( \
-                    iString(NAME), \
-                    iSharedPtr<_iProperty>(newProperty(&IX_ThisType::GETFUNC, \
-                                    &IX_ThisType::SETFUNC, &IX_ThisType::SIGNAL))));
+                    iString(NAME), iSharedPtr<_iProperty>(newProperty(__VA_ARGS__))));
 
 #define IPROPERTY_END \
         mobj->setProperty(pptImp); \
