@@ -65,6 +65,8 @@ bool iGstAppSrc::setup(GstElement* appsrc)
     gst_app_src_set_stream_type(m_appSrc, m_streamType);
     gst_app_src_set_size(m_appSrc, (m_sequential) ? -1 : m_stream->size());
 
+    g_object_set(G_OBJECT(m_appSrc), "typefind", TRUE, IX_NULLPTR);
+
     return true;
 }
 
@@ -217,9 +219,9 @@ void iGstAppSrc::on_need_data(GstAppSrc *element, guint arg0, gpointer userdata)
     IX_UNUSED(element);
     iGstAppSrc *self = static_cast<iGstAppSrc*>(userdata);
     if (self) {
-        self->dataRequested() = true;
-        self->enoughData() = false;
-        self->dataRequestSize()= arg0;
+        self->m_dataRequested = true;
+        self->m_enoughData = false;
+        self->m_dataRequestSize= arg0;
         invokeMethod(self, &iGstAppSrc::pushDataToAppSrc, AutoConnection);
     }
 }

@@ -180,6 +180,7 @@ protected:
     xint64 readImpl(char *data, xint64 maxSize, bool peeking = false);
     xint64 skipByReading(xint64 maxSize);
 
+private:
     iIODevice::OpenMode m_openMode;
     iString m_errorString;
 

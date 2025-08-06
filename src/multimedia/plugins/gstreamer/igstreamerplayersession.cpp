@@ -1080,7 +1080,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
 
                         //check for seekable
                         if (oldState == GST_STATE_READY) {
-                            if (m_sourceType == SoupHTTPSrc || m_sourceType == MMSSrc) {
+                            if (m_sourceType == SoupHTTPSrc || m_sourceType == MMSSrc || m_sourceType == APPSrc) {
                                 //since udpsrc is a live source, it is not applicable here
                                 m_everPlayed = true;
                             }
@@ -1561,6 +1561,10 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
         self->m_sourceType = RTSPSrc;
         self->m_isLiveSource = true;
         g_object_set(G_OBJECT(source), "buffer-mode", 1, IX_NULLPTR);
+    } else if (istrcmp(G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)), "GstAppSrc") == 0) {
+        self->m_sourceType = APPSrc;
+        self->m_isLiveSource = true;
+        g_object_set(G_OBJECT(source), "is-live", TRUE, IX_NULLPTR);
     } else {
         self->m_sourceType = UnknownSrc;
         self->m_isLiveSource = gst_base_src_is_live(GST_BASE_SRC(source));
