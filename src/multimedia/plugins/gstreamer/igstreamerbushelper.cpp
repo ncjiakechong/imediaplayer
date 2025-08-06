@@ -31,13 +31,29 @@ int iGstreamerMsgEvent::eventType()
     return s_eventType;
 }
 
+iGstreamerSyncMsgEvent::iGstreamerSyncMsgEvent(GstMessage *message)
+    : iEvent(eventType())
+    , m_message(message)
+{
+}
+
+iGstreamerSyncMsgEvent::~iGstreamerSyncMsgEvent()
+{
+}
+
+int iGstreamerSyncMsgEvent::eventType()
+{
+    static int s_eventType = registerEventType();
+    return s_eventType;
+}
+
 GstBusSyncReply iGstreamerBusHelper::syncGstBusFilter(GstBus* , GstMessage* message, iGstreamerBusHelper *d)
 {
     iScopedLock<iMutex> lock(d->m_filterMutex);
     for (std::list<iObject*>::iterator it = d->m_syncFilters.begin();
          it != d->m_syncFilters.end(); ++it) {
         iObject *filter = *it;
-        iGstreamerMsgEvent evt(message);
+        iGstreamerSyncMsgEvent evt(message);
         // TODO
         if (iCoreApplication::sendEvent(filter, &evt)) {
             gst_message_unref(message);
