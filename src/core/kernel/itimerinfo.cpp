@@ -298,6 +298,7 @@ void iTimerInfoList::registerTimer(int timerId, int interval, TimerType timerTyp
         t->interval += 1;
         t->interval >>= 1;
         t->timeout = currentTime + (t->interval * 1000);
+        break;
     }
 
     timerInsert(t);

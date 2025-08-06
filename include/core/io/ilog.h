@@ -14,7 +14,6 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cstdint>
-#include <iostream>
 
 #include <core/global/iglobal.h>
 #include <core/global/imacro.h>

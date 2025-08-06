@@ -182,7 +182,7 @@ void ix_assert_x(const char *what, const char *file, int line);
 
 
 #ifndef IX_FALLTHROUGH
-#  if (defined(__GNUC__) && __GNUC__ >= 7) && !defined(__INTEL_COMPILER)
+#  if (defined(__GNUC__) && __GNUC__ >= 4) && !defined(__INTEL_COMPILER)
 #    define IX_FALLTHROUGH() __attribute__((fallthrough))
 #  else
 #    define IX_FALLTHROUGH() (void)0

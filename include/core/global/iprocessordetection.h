@@ -33,17 +33,17 @@
   code will fail to detect the target byte order.
 */
 // Some processors support either endian format, try to detect which we are using.
-#  if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == IX_BIG_ENDIAN || __BYTE_ORDER__ == IX_LITTLE_ENDIAN)
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == IX_BIG_ENDIAN || __BYTE_ORDER__ == IX_LITTLE_ENDIAN)
 // Reuse __BYTE_ORDER__ as-is, since our IX_*_ENDIAN #defines match the preprocessor defaults
-#    define IX_BYTE_ORDER __BYTE_ORDER__
-#  elif defined(__BIG_ENDIAN__) || defined(_big_endian__) || defined(_BIG_ENDIAN)
-#    define IX_BYTE_ORDER IX_BIG_ENDIAN
-#  elif defined(__LITTLE_ENDIAN__) || defined(_little_endian__) || defined(_LITTLE_ENDIAN) \
+#  define IX_BYTE_ORDER __BYTE_ORDER__
+#elif defined(__BIG_ENDIAN__) || defined(_big_endian__) || defined(_BIG_ENDIAN)
+#  define IX_BYTE_ORDER IX_BIG_ENDIAN
+#elif defined(__LITTLE_ENDIAN__) || defined(_little_endian__) || defined(_LITTLE_ENDIAN) \
         || defined(WINAPI_FAMILY) // WinRT is always little-endian according to MSDN.
-#    define IX_BYTE_ORDER IX_LITTLE_ENDIAN
-#  else
-#    error "Unable to determine byte order!"
-#  endif
+#  define IX_BYTE_ORDER IX_LITTLE_ENDIAN
+#else
+#  error "Unable to determine byte order!"
+#endif
 
 
 #endif // IPROCESSORDETECTION_H

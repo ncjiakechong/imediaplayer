@@ -22,6 +22,9 @@
 
 #ifdef IX_OS_WIN
 #include <windows.h>
+#else
+#include <sys/syscall.h>
+#include <unistd.h>
 #endif
 
 #define ILOG_TAG "ix:core"
@@ -84,7 +87,7 @@ void iThreadImpl::internalThreadFunc()
 
     {
         iMutex::ScopedLock locker(thread->m_mutex);
-        data->threadId = iThread::currentThreadId();
+        data->threadHd = iThread::currentThreadHd();
         data->setCurrent();
         data->ref();
     }
@@ -136,7 +139,7 @@ bool iThreadImpl::start()
     }
 
     thread = new std::thread(__internal_thread_func, this);
-    m_thread->m_data->threadId = (xintptr)thread->native_handle();
+    m_thread->m_data->threadHd = (xintptr)thread->native_handle();
     m_platform = thread;
 
     return true;
@@ -147,12 +150,21 @@ void iThread::msleep(unsigned long t)
     std::this_thread::sleep_for(std::chrono::milliseconds(t));
 }
 
-xintptr iThread::currentThreadId()
+xintptr iThread::currentThreadHd()
 {
 #ifdef IX_OS_WIN
-    return (xintptr)GetCurrentThreadId();
+    return (xintptr)GetCurrentThread();
 #else
     return (xintptr)pthread_self();
+#endif
+}
+
+int iThread::currentThreadId()
+{
+#ifdef IX_OS_WIN
+    return (int)GetCurrentThreadId();
+#else
+    return (int)syscall(__NR_gettid);
 #endif
 }
 

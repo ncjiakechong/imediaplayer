@@ -2715,6 +2715,7 @@ int iRegExpEngine::getEscape()
         } else {
             break;
         }
+        IX_FALLTHROUGH();
     case 'i':
         if (xmlSchemaExtensions) {
             yyCharClass->addCategories(FLAG(iChar::Mark_NonSpacing) |
@@ -2754,6 +2755,7 @@ int iRegExpEngine::getEscape()
         } else {
             break;
         }
+        IX_FALLTHROUGH();
     case 'c':
         if (xmlSchemaExtensions) {
             yyCharClass->addCategories(FLAG(iChar::Mark_NonSpacing) |
@@ -2799,6 +2801,7 @@ int iRegExpEngine::getEscape()
         } else {
             break;
         }
+        IX_FALLTHROUGH();
     case 'p':
         if (xmlSchemaExtensions) {
             if (yyCh != '{') {
