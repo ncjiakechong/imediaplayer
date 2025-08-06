@@ -129,7 +129,7 @@ void iGstCodecsInfo::updateCodecs(ElementType elementType)
                         }
                     }
 
-                    GstCaps *newCaps = gst_caps_new_full(newStructure, NULL);
+                    GstCaps *newCaps = gst_caps_new_full(newStructure, IX_NULLPTR);
 
                     gchar *capsString = gst_caps_to_string(newCaps);
                     iString codec = iLatin1String(capsString);

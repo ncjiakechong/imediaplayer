@@ -14,7 +14,7 @@
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
 
-#define ILOG_TAG "ix:io"
+#define ILOG_TAG "ix_io"
 
 namespace iShell {
 
@@ -549,7 +549,7 @@ int iIODevice::currentReadChannel() const
 void iIODevice::setCurrentReadChannel(int channel)
 {
     if (d_ptr->transactionStarted) {
-        ilog_warn(this, __FUNCTION__, " Failed due to read transaction being in progress");
+        ilog_warn(this, " Failed due to read transaction being in progress");
         return;
     }
 
@@ -719,15 +719,15 @@ xint64 iIODevice::size() const
 bool iIODevice::seek(xint64 pos)
 {
     if (d_ptr->isSequential()) {
-        ilog_warn(__FUNCTION__, ": Cannot call seek on a sequential device");
+        ilog_warn("Cannot call seek on a sequential device");
         return false;
     }
     if (d_ptr->openMode == NotOpen) {
-        ilog_warn(__FUNCTION__, ": The device is not open");
+        ilog_warn("The device is not open");
         return false;
     }
     if (pos < 0) {
-        ilog_warn(__FUNCTION__, ": Invalid pos: %lld", pos);
+        ilog_warn("Invalid pos: %lld", pos);
         return false;
     }
 
@@ -1118,7 +1118,7 @@ iByteArray iIODevice::readAll()
 xint64 iIODevice::readLine(char *data, xint64 maxSize)
 {
     if (maxSize < 2) {
-        ilog_warn(this, __FUNCTION__, ": Called with maxSize < 2");
+        ilog_warn(this, ": Called with maxSize < 2");
         return xint64(-1);
     }
 
@@ -1318,7 +1318,7 @@ bool iIODevice::canReadLine() const
 void iIODevice::startTransaction()
 {
     if (d_ptr->transactionStarted) {
-        ilog_warn(__FUNCTION__, ": Called while transaction already in progress");
+        ilog_warn("Called while transaction already in progress");
         return;
     }
     d_ptr->transactionPos = d_ptr->pos;
@@ -1338,7 +1338,7 @@ void iIODevice::startTransaction()
 void iIODevice::commitTransaction()
 {
     if (!d_ptr->transactionStarted) {
-        ilog_warn(__FUNCTION__, ": Called while no transaction in progress");
+        ilog_warn("Called while no transaction in progress");
         return;
     }
     if (d_ptr->isSequential())
@@ -1361,7 +1361,7 @@ void iIODevice::commitTransaction()
 void iIODevice::rollbackTransaction()
 {
     if (!d_ptr->transactionStarted) {
-        ilog_warn(__FUNCTION__, ": Called while no transaction in progress");
+        ilog_warn("Called while no transaction in progress");
         return;
     }
     if (!d_ptr->isSequential())
@@ -1456,7 +1456,7 @@ void iIODevice::ungetChar(char c)
     CHECK_READABLE(read, IX_VOID);
 
     if (d_ptr->transactionStarted) {
-        ilog_warn(__FUNCTION__, ": Called while transaction is in progress");
+        ilog_warn("Called while transaction is in progress");
         return;
     }
 

@@ -23,7 +23,7 @@
 #include "core/thread/imutex.h"
 #include "core/io/ilog.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 

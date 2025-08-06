@@ -141,13 +141,13 @@ inline bool is_little_endian()
 #  define IX_CORE_EXPORT IX_DECL_IMPORT
 #endif
 
-IX_CORE_EXPORT void ix_assert(const char *assertion, const char *file, int line);
-IX_CORE_EXPORT void ix_assert_x(const char *what, const char *file, int line);
+IX_CORE_EXPORT void ix_assert(const char *assertion, const char* file, const char* function, int line);
+IX_CORE_EXPORT void ix_assert_x(const char *what, const char* file, const char* function, int line);
 
-#define IX_CHECK_PTR(ptr)             do { if (!(ptr)) ix_assert(#ptr, __FILE__, __LINE__); } while (0)
+#define IX_CHECK_PTR(ptr)             do { if (!(ptr)) ix_assert(#ptr, __FILE__, __FUNCTION__, __LINE__); } while (0)
 
-#define IX_ASSERT(cond) ((cond) ? static_cast<void>(0) : ix_assert(#cond, __FILE__, __LINE__))
-#define IX_ASSERT_X(cond, what) ((cond) ? static_cast<void>(0) : ix_assert_x(what, __FILE__, __LINE__))
+#define IX_ASSERT(cond) ((cond) ? static_cast<void>(0) : ix_assert(#cond, __FILE__, __FUNCTION__, __LINE__))
+#define IX_ASSERT_X(cond, what) ((cond) ? static_cast<void>(0) : ix_assert_x(what, __FILE__, __FUNCTION__, __LINE__))
 
 } // namespace iShell
 

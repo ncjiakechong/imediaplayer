@@ -24,7 +24,7 @@
 #include <algorithm>
 #endif
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -256,7 +256,7 @@ iObject::~iObject()
             if (m_threadData->dispatcher.load())
                 m_threadData->dispatcher.load()->unregisterTimers(this, true);
         } else {
-            ilog_warn(__FUNCTION__, ": Timers cannot be stopped from another thread");
+            ilog_warn("Timers cannot be stopped from another thread");
         }
     }
 
@@ -284,7 +284,7 @@ void iObject::moveToThread(iThread *targetThread)
     }
 
     if (IX_NULLPTR != m_parent) {
-        ilog_warn(__FUNCTION__, ": Cannot move objects with a parent");
+        ilog_warn("Cannot move objects with a parent");
         return;
     }
 
@@ -294,7 +294,7 @@ void iObject::moveToThread(iThread *targetThread)
         // one exception to the rule: we allow moving objects with no thread affinity to the current thread
         currentData = m_threadData;
     } else if (m_threadData != currentData) {
-        ilog_warn(__FUNCTION__, ": Current thread (", currentData->thread.load(), ")"
+        ilog_warn("Current thread (", currentData->thread.load(), ")"
                   " is not the object's thread (", m_threadData->thread.load(), ").\n"
                   "Cannot move to target thread (", targetData ? targetData->thread.load() : IX_NULLPTR,")\n");
 
@@ -371,15 +371,15 @@ void iObject::moveToThread_helper()
 int iObject::startTimer(int interval, TimerType timerType)
 {
     if (interval < 0) {
-        ilog_warn(__FUNCTION__, ": Timers cannot have negative intervals");
+        ilog_warn("Timers cannot have negative intervals");
         return 0;
     }
     if (!m_threadData->dispatcher.load()) {
-        ilog_warn(__FUNCTION__, ": Timers can only be used with threads started with iThread");
+        ilog_warn("Timers can only be used with threads started with iThread");
         return 0;
     }
     if (m_threadData != iThreadData::current()) {
-        ilog_warn(__FUNCTION__, ": Timers cannot be started from another thread");
+        ilog_warn("Timers cannot be started from another thread");
         return 0;
     }
 
@@ -391,18 +391,18 @@ int iObject::startTimer(int interval, TimerType timerType)
 void iObject::killTimer(int id)
 {
     if (0 == id) {
-        ilog_warn(__FUNCTION__, ": id invalid");
+        ilog_warn("id invalid");
         return;
     }
 
     if (m_threadData != iThreadData::current()) {
-        ilog_warn(__FUNCTION__, ": Timers cannot be stopped from another thread");
+        ilog_warn("Timers cannot be stopped from another thread");
         return;
     }
 
     std::set<int>::const_iterator at = m_runningTimers.find(id);
     if (at == m_runningTimers.cend()) {
-        ilog_warn(__FUNCTION__, ": Error: timer id ", id,
+        ilog_warn("Error: timer id ", id,
                   " is not valid for object ", this,
                   " (", objectName(), "), timer has not been killed");
         return;
@@ -442,7 +442,7 @@ void iObject::setParent(iObject *o)
     if (m_parent) {
         // object hierarchies are constrained to a single thread
         if (m_threadData != m_parent->m_threadData) {
-            ilog_warn(__FUNCTION__, ": Cannot set parent, new parent is in a different thread");
+            ilog_warn("Cannot set parent, new parent is in a different thread");
             m_parent = IX_NULLPTR;
             return;
         }
@@ -510,12 +510,12 @@ bool iObject::connectImpl(const _iConnection& conn)
         || (IX_NULLPTR == conn._sender)
         || (IX_NULLPTR == conn._receiver)
         || (IX_NULLPTR == conn._signal)) {
-        ilog_warn(__FUNCTION__, ": invalid null parameter");
+        ilog_warn("invalid null parameter");
         return false;
     }
 
     if (conn.compare(reinterpret_cast<void* const *>(&conn._signal))) {
-        ilog_warn(__FUNCTION__, ": invalid argument for connecting same signal/slot");
+        ilog_warn("invalid argument for connecting same signal/slot");
         return false;
     }
 
@@ -630,7 +630,7 @@ bool iObject::disconnectImpl(const _iConnection& conn)
 {
     if ((IX_NULLPTR == conn._sender)
         || ((IX_NULLPTR == conn._receiver) && (IX_NULLPTR != conn._slot))) {
-        ilog_warn(__FUNCTION__, ": invalid null parameter");
+        ilog_warn("invalid null parameter");
         return false;
     }
 
@@ -830,7 +830,7 @@ iVariant iObject::property(const char *name) const
         return tProperty->_get(tProperty, this);
     } while ((mo = mo->superClass()));
 
-    ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] not found!");
+    ilog_warn("obj[", objectName(), "] property[", name, "] not found!");
     return iVariant();
 }
 
@@ -845,12 +845,12 @@ bool iObject::setProperty(const char *name, const iVariant& value)
 
         bool ret = tProperty->_set(tProperty, this, value);
         if (!ret)
-            ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] no set function!");
+            ilog_warn("obj[", objectName(), "] property[", name, "] no set function!");
 
         return ret;
     } while ((mo = mo->superClass()));
 
-    ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] not found!");
+    ilog_warn("obj[", objectName(), "] property[", name, "] not found!");
     return false;
 }
 
@@ -870,12 +870,12 @@ bool iObject::observePropertyImp(const char* name, _iConnection& conn)
 
         bool ret = connectImpl(conn);
         if (!ret)
-            ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] no signal func!");
+            ilog_warn("obj[", objectName(), "] property[", name, "] no signal func!");
 
         return ret;
     } while ((mo = mo->superClass()));
 
-    ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] not found!");
+    ilog_warn("obj[", objectName(), "] property[", name, "] not found!");
     return false;
 }
 
@@ -1020,7 +1020,7 @@ _iConnection::~_iConnection()
 void _iConnection::ref()
 {
     if (_ref <= 0)
-        ilog_warn(__FUNCTION__, ": error: ", _ref);
+        ilog_warn("error: ", _ref);
 
     ++_ref;
 }

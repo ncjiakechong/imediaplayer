@@ -16,7 +16,7 @@
 #include <gst/app/gstappbuffer.h>
 #endif
 
-#define ILOG_TAG "ix:media"
+#define ILOG_TAG "ix_media"
 
 namespace iShell {
 

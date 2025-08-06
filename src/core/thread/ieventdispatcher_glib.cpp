@@ -20,7 +20,7 @@
 #include "kernel/itimerinfo.h"
 #include "thread/ieventdispatcher_glib.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -330,10 +330,10 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
 void iEventDispatcher_Glib::registerTimer(int timerId, int interval, TimerType timerType, iObject *object)
 {
     if (timerId < 1 || interval < 0 || !object) {
-        ilog_warn(__FUNCTION__, ": invalid arguments");
+        ilog_warn("invalid arguments");
         return;
     } else if (object->thread() != thread() || thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": timers cannot be started from another thread");
+        ilog_warn("timers cannot be started from another thread");
         return;
     }
 
@@ -343,10 +343,10 @@ void iEventDispatcher_Glib::registerTimer(int timerId, int interval, TimerType t
 bool iEventDispatcher_Glib::unregisterTimer(int timerId)
 {
     if (timerId < 1) {
-        ilog_warn(__FUNCTION__, ": invalid argument");
+        ilog_warn("invalid argument");
         return false;
     } else if (thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": timers cannot be stopped from another thread");
+        ilog_warn("timers cannot be stopped from another thread");
         return false;
     }
 
@@ -356,10 +356,10 @@ bool iEventDispatcher_Glib::unregisterTimer(int timerId)
 bool iEventDispatcher_Glib::unregisterTimers(iObject *object, bool releaseId)
 {
     if (!object) {
-        ilog_warn(__FUNCTION__, ": invalid argument");
+        ilog_warn("invalid argument");
         return false;
     } else if (object->thread() != thread() || thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": timers cannot be stopped from another thread");
+        ilog_warn("timers cannot be stopped from another thread");
         return false;
     }
 
@@ -369,7 +369,7 @@ bool iEventDispatcher_Glib::unregisterTimers(iObject *object, bool releaseId)
 std::list<iEventDispatcher::TimerInfo> iEventDispatcher_Glib::registeredTimers(iObject *object) const
 {
     if (!object) {
-        ilog_warn(__FUNCTION__, ": invalid argument");
+        ilog_warn("invalid argument");
         return std::list<iEventDispatcher::TimerInfo>();
     }
 
@@ -379,7 +379,7 @@ std::list<iEventDispatcher::TimerInfo> iEventDispatcher_Glib::registeredTimers(i
 int iEventDispatcher_Glib::remainingTime(int timerId)
 {
     if (timerId < 1) {
-        ilog_warn(__FUNCTION__, ": invalid argument");
+        ilog_warn("invalid argument");
         return -1;
     }
 
@@ -407,7 +407,7 @@ int iEventDispatcher_Glib::addEventSource(iEventSource* source)
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
     if (it != m_wraperMap.cend()) {
-        ilog_warn(__FUNCTION__, ": source has added->", source);
+        ilog_warn("source has added->", source);
         return -1;
     }
 
@@ -426,7 +426,7 @@ int iEventDispatcher_Glib::removeEventSource(iEventSource* source)
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
     if (it == m_wraperMap.cend()) {
-        ilog_warn(__FUNCTION__, ": source has removed->", source);
+        ilog_warn("source has removed->", source);
         return -1;
     }
 
@@ -445,7 +445,7 @@ int iEventDispatcher_Glib::addPoll(iPollFD* fd, iEventSource* source)
     std::map<iPollFD*, GPollFD*>::const_iterator itMap;
     itMap = m_fd2gfdMap.find(fd);
     if (itMap != m_fd2gfdMap.cend()) {
-        ilog_warn(__FUNCTION__, ": fd has added->", fd);
+        ilog_warn("fd has added->", fd);
         return -1;
     }
 
@@ -489,7 +489,7 @@ int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource* source)
     std::map<iPollFD*, GPollFD*>::const_iterator itMap;
     itMap = m_fd2gfdMap.find(fd);
     if (itMap == m_fd2gfdMap.cend()) {
-        ilog_warn(__FUNCTION__, ": fd has removed->", fd);
+        ilog_warn("fd has removed->", fd);
         return -1;
     }
 

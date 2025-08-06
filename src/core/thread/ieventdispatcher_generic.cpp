@@ -21,7 +21,7 @@
 #include "thread/ieventdispatcher_generic.h"
 #include "thread/ithread_p.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -176,10 +176,10 @@ bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flag
 void iEventDispatcher_generic::registerTimer(int timerId, int interval, TimerType timerType, iObject *object)
 {
     if ((timerId < 1) || interval < 0 || !object) {
-        ilog_warn(__FUNCTION__, ": invalid arguments");
+        ilog_warn("invalid arguments");
         return;
     } else if ((thread() != object->thread()) || (thread() != iThread::currentThread())) {
-        ilog_warn(__FUNCTION__, ": timers cannot be started from another thread");
+        ilog_warn("timers cannot be started from another thread");
         return;
     }
 
@@ -189,10 +189,10 @@ void iEventDispatcher_generic::registerTimer(int timerId, int interval, TimerTyp
 bool iEventDispatcher_generic::unregisterTimer(int timerId)
 {
     if (timerId < 1) {
-        ilog_warn(__FUNCTION__, ": invalid argument");
+        ilog_warn("invalid argument");
         return false;
     } else if (thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": timer cannot be stopped from another thread");
+        ilog_warn("timer cannot be stopped from another thread");
         return false;
     }
 
@@ -202,7 +202,7 @@ bool iEventDispatcher_generic::unregisterTimer(int timerId)
 bool iEventDispatcher_generic::unregisterTimers(iObject *object, bool releaseId)
 {
     if (thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": timers cannot be stopped from another thread");
+        ilog_warn("timers cannot be stopped from another thread");
         return false;
     }
 
@@ -212,7 +212,7 @@ bool iEventDispatcher_generic::unregisterTimers(iObject *object, bool releaseId)
 std::list<iEventDispatcher::TimerInfo> iEventDispatcher_generic::registeredTimers(iObject *object) const
 {
     if (!object) {
-        ilog_warn(__FUNCTION__, ": invalid argument");
+        ilog_warn("invalid argument");
         return std::list<iEventDispatcher::TimerInfo>();
     }
 
@@ -222,7 +222,7 @@ std::list<iEventDispatcher::TimerInfo> iEventDispatcher_generic::registeredTimer
 int iEventDispatcher_generic::remainingTime(int timerId)
 {
     if (timerId < 1) {
-        ilog_warn(__FUNCTION__, ": invalid argument");
+        ilog_warn("invalid argument");
         return -1;
     }
 
@@ -233,7 +233,7 @@ int iEventDispatcher_generic::remainingTime(int timerId)
 int iEventDispatcher_generic::addEventSource(iEventSource* source)
 {
     if (thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": source cannot be added from another thread");
+        ilog_warn("source cannot be added from another thread");
         return -1;
     }
 
@@ -254,7 +254,7 @@ int iEventDispatcher_generic::addEventSource(iEventSource* source)
 int iEventDispatcher_generic::removeEventSource(iEventSource* source)
 {
     if (thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": source cannot be removed from another thread");
+        ilog_warn("source cannot be removed from another thread");
         return -1;
     }
 
@@ -281,7 +281,7 @@ int iEventDispatcher_generic::addPoll(iPollFD* fd, iEventSource* source)
 {
     IX_ASSERT(fd);
     if (thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": fd cannot be added from another thread");
+        ilog_warn("fd cannot be added from another thread");
         return -1;
     }
 
@@ -310,7 +310,7 @@ int iEventDispatcher_generic::addPoll(iPollFD* fd, iEventSource* source)
 int iEventDispatcher_generic::removePoll(iPollFD* fd, iEventSource*)
 {
     if (thread() != iThread::currentThread()) {
-        ilog_warn(__FUNCTION__, ": fd cannot be removed from another thread");
+        ilog_warn("fd cannot be removed from another thread");
         return -1;
     }
 
@@ -333,7 +333,7 @@ int iEventDispatcher_generic::removePoll(iPollFD* fd, iEventSource*)
 bool iEventDispatcher_generic::eventPrepare(int* priority, int* timeout)
 {
     if (m_inCheckOrPrepare) {
-        ilog_warn(__FUNCTION__, ": called recursively from within a source's check() or prepare() member.");
+        ilog_warn("called recursively from within a source's check() or prepare() member.");
         return false;
     }
 
@@ -440,7 +440,7 @@ int iEventDispatcher_generic::eventQuery(int max_priority, int*, iPollFD* fds, i
 bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_fds, std::list<iEventSource *> *pendingDispatches)
 {
     if (m_inCheckOrPrepare) {
-        ilog_warn (__FUNCTION__, ": called recursively from within a source's check() or prepare() member.");
+        ilog_warn ("called recursively from within a source's check() or prepare() member.");
         return false;
     }
 
@@ -567,7 +567,7 @@ bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
         ret = iPoll(fds, nfds, timeout);
 
     if (ret < 0)
-        ilog_warn(__FUNCTION__, ": poll error:", ret);
+        ilog_warn("poll error:", ret);
 
     std::list<iEventSource *> pendingDispatches;
     some_ready = eventCheck (max_priority, fds, nfds, &pendingDispatches);

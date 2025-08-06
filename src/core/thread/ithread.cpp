@@ -15,7 +15,7 @@
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -79,7 +79,7 @@ bool iThread::wait(long time)
     iMutex::ScopedLock lock(m_mutex);
 
     if (iThreadData::current(false) == m_data) {
-        ilog_warn(__FUNCTION__, ": Thread tried to wait on itself");
+        ilog_warn("Thread tried to wait on itself");
         return false;
     }
 
@@ -136,7 +136,7 @@ iThread::~iThread()
     }
 
     if (m_running && !m_finished && !m_data->isAdopted)
-        ilog_error(__FUNCTION__, ": Destroyed while thread is still running");
+        ilog_error("Destroyed while thread is still running");
 
     m_data->thread = IX_NULLPTR;
     delete m_impl;
@@ -153,7 +153,7 @@ void iThread::setPriority(Priority priority)
 {
     iMutex::ScopedLock lock(m_mutex);
     if (!m_running) {
-        ilog_warn(__FUNCTION__, ": Cannot set priority, thread is not running");
+        ilog_warn("Cannot set priority, thread is not running");
         return;
     }
     m_priority = priority;
@@ -233,7 +233,7 @@ void iThread::start(Priority pri)
     m_priority = pri;
 
     if (!m_impl->start()) {
-        ilog_warn(__FUNCTION__, ": Thread creation error");
+        ilog_warn("Thread creation error");
         m_running = false;
         m_finished = false;
         m_data->threadHd = (xintptr)IX_NULLPTR;

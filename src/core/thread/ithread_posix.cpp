@@ -26,7 +26,7 @@
 #include <unistd.h>
 #endif
 
-#define ILOG_TAG "ix:core"
+#define ILOG_TAG "ix_core"
 
 namespace iShell {
 
@@ -86,7 +86,7 @@ public:
 protected:
     void run() {
         // this function should never be called
-        ilog_error(__FUNCTION__, ": Internal error, this implementation should never be called.");
+        ilog_error("Internal error, this implementation should never be called.");
     }
 };
 
@@ -177,7 +177,7 @@ void iThreadImpl::setPriority()
     if (pthread_getschedparam((pthread_t)m_thread->m_data->threadHd.value(), &sched_policy, &param) != 0) {
         // failed to get the scheduling policy, don't bother setting
         // the priority
-        ilog_warn(__FUNCTION__, ": Cannot get scheduler parameters");
+        ilog_warn("Cannot get scheduler parameters");
         return;
     }
 
@@ -185,7 +185,7 @@ void iThreadImpl::setPriority()
     if (!calculateUnixPriority(priority, &sched_policy, &prio)) {
         // failed to get the scheduling parameters, don't
         // bother setting the priority
-        ilog_warn(__FUNCTION__, ": Cannot determine scheduler priority range");
+        ilog_warn("Cannot determine scheduler priority range");
         return;
     }
 
@@ -274,7 +274,7 @@ bool iThreadImpl::start()
             if (pthread_attr_getschedpolicy(&attr, &sched_policy) != 0) {
                 // failed to get the scheduling policy, don't bother
                 // setting the priority
-                ilog_warn(__FUNCTION__, ": Cannot determine default scheduler policy");
+                ilog_warn("Cannot determine default scheduler policy");
                 break;
             }
 
@@ -282,7 +282,7 @@ bool iThreadImpl::start()
             if (!calculateUnixPriority(priority, &sched_policy, &prio)) {
                 // failed to get the scheduling parameters, don't
                 // bother setting the priority
-                ilog_warn(__FUNCTION__, ": Cannot determine scheduler priority range");
+                ilog_warn("Cannot determine scheduler priority range");
                 break;
             }
 
@@ -303,7 +303,7 @@ bool iThreadImpl::start()
     if (m_thread->m_stackSize > 0) {
         int code = pthread_attr_setstacksize(&attr, m_thread->m_stackSize);
         if (code) {
-            ilog_warn(__FUNCTION__, ": Thread stack size error: ", code);
+            ilog_warn("Thread stack size error: ", code);
             pthread_attr_destroy(&attr);
             return false;
         }

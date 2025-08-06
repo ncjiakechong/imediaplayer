@@ -382,7 +382,7 @@
 #include "iurl_p.h"
 #include "iipaddress_p.h"
 
-#define ILOG_TAG "ix:io"
+#define ILOG_TAG "ix_io"
 
 namespace iShell {
 
@@ -2090,7 +2090,7 @@ void iUrl::clear()
 void iUrl::setUrl(const iString &url, ParsingMode parsingMode)
 {
     if (parsingMode == DecodedMode) {
-        ilog_warn(__FUNCTION__, ": iUrl::DecodedMode is not permitted when parsing a full URL");
+        ilog_warn("iUrl::DecodedMode is not permitted when parsing a full URL");
     } else {
         detach();
         d->parse(url, parsingMode);
@@ -2201,7 +2201,7 @@ void iUrl::setAuthority(const iString &authority, ParsingMode mode)
     d->clearError();
 
     if (mode == DecodedMode) {
-        ilog_warn(__FUNCTION__, ": iUrl::DecodedMode is not permitted in this function");
+        ilog_warn("iUrl::DecodedMode is not permitted in this function");
         return;
     }
 
@@ -2235,7 +2235,7 @@ iString iUrl::authority(ComponentFormattingOptions options) const
         return result;
 
     if (options == iUrl::FullyDecoded) {
-        ilog_warn(__FUNCTION__, ": iUrl::FullyDecoded is not permitted in this function");
+        ilog_warn("iUrl::FullyDecoded is not permitted in this function");
         return result;
     }
 
@@ -2272,7 +2272,7 @@ void iUrl::setUserInfo(const iString &userInfo, ParsingMode mode)
     d->clearError();
     iString trimmed = userInfo.trimmed();
     if (mode == DecodedMode) {
-        ilog_warn(__FUNCTION__, ": iUrl::DecodedMode is not permitted in this function");
+        ilog_warn("iUrl::DecodedMode is not permitted in this function");
         return;
     }
 
@@ -2309,7 +2309,7 @@ iString iUrl::userInfo(ComponentFormattingOptions options) const
         return result;
 
     if (options == iUrl::FullyDecoded) {
-        ilog_warn(__FUNCTION__, ": iUrl::FullyDecoded is not permitted in this function");
+        ilog_warn("iUrl::FullyDecoded is not permitted in this function");
         return result;
     }
 
@@ -3415,7 +3415,7 @@ iString iUrl::toString(FormattingOptions options) const
         return url;
     }
     if (options == iUrl::FullyDecoded) {
-        ilog_warn(__FUNCTION__, ": iUrl::FullyDecoded is not permitted when reconstructing the full URL");
+        ilog_warn("iUrl::FullyDecoded is not permitted when reconstructing the full URL");
         options = iUrl::PrettyDecoded;
     }
 
