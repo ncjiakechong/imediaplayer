@@ -24,6 +24,7 @@ static thread_local iThreadData *currentThreadData = IX_NULLPTR;
 // thread wrapper for the main() thread
 class iAdoptedThread : public iThread
 {
+    IX_OBJECT(iAdoptedThread)
 public:
     iAdoptedThread(iThreadData *data)
         : iThread(data)

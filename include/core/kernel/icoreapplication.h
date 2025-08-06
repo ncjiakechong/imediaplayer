@@ -27,6 +27,7 @@ struct iCoreApplicationPrivate
 
 class iCoreApplication : public iObject
 {
+    IX_OBJECT(iCoreApplication)
 public:
     iCoreApplication(int argc, char **argv);
     virtual ~iCoreApplication();

@@ -25,6 +25,7 @@ class iEventDispatcher;
 
 class iThread : public iObject
 {
+    IX_OBJECT(iThread)
 public:
     static int currentThreadId();
     static xintptr currentThreadHd();

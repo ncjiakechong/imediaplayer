@@ -17,6 +17,7 @@ namespace iShell {
 
 class iTimer : public iObject
 {
+    IX_OBJECT(iTimer)
 public:
     explicit iTimer(iObject *parent = IX_NULLPTR);
     ~iTimer();

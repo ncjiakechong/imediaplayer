@@ -26,6 +26,7 @@ class iTimerEventSource;
 
 class iEventDispatcher_generic : public iEventDispatcher
 {
+    IX_OBJECT(iEventDispatcher_generic)
 public:
     iEventDispatcher_generic(iObject* parent = IX_NULLPTR);
     ~iEventDispatcher_generic();

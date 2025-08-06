@@ -63,6 +63,7 @@ public:
 
 class iGstreamerBusHelper : public iObject
 {
+    IX_OBJECT(iGstreamerBusHelper)
 public:
     iGstreamerBusHelper(GstBus* bus, iObject* parent = IX_NULLPTR);
     ~iGstreamerBusHelper();

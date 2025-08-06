@@ -25,6 +25,7 @@ class iEventSource;
 
 class iEventDispatcher : public iObject
 {
+    IX_OBJECT(iEventDispatcher)
 public:
     struct TimerInfo
     {

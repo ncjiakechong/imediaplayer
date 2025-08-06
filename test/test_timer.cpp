@@ -28,6 +28,7 @@ using namespace iShell;
 
 class TestTimer : public iObject
 {
+    IX_OBJECT(TestTimer)
 public:
     TestTimer(iObject* parent = IX_NULLPTR)
         : iObject(parent), m_quit(this)
