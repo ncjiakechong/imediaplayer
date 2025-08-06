@@ -33,7 +33,7 @@ static void ilog_default_callback(void*, const char* tag, ilog_level_t level, co
     }
 
     iTime current = iDateTime::currentDateTime().time();
-    iString log_buf = iString::asprintf("%02d:%02d:%02d:%03d %5d %s:%c %s",
+    iString log_buf = iString::asprintf("%02d:%02d:%02d.%03d %5d %s:%c %s",
                                         current.hour(), current.minute(), current.second(), current.msec(),
                                         iThread::currentThreadId(), tag, cur_level, msg);
     fprintf(stdout, "%s\n", log_buf.toUtf8().data());
