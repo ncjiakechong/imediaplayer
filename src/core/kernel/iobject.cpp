@@ -559,7 +559,7 @@ _iSignalBase::_iSignalBase(const _iSignalBase& s)
     connections_list::const_iterator itEnd = s.m_connected_slots.end();
 
     while(it != itEnd) {
-        (*it)->getdest()->signalConnect(this);
+        (*it)->m_pobject->signalConnect(this);
         (*it)->ref();
         m_connected_slots.push_back(*it);
 
@@ -577,7 +577,7 @@ void _iSignalBase::disconnectAll()
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     while (!m_connected_slots.empty()) {
         _iConnection* conn = m_connected_slots.front();
-        conn->getdest()->signalDisconnect(this);
+        conn->m_pobject->signalDisconnect(this);
         conn->setOrphaned();
         conn->deref();
 
@@ -585,36 +585,44 @@ void _iSignalBase::disconnectAll()
     }
 }
 
-void _iSignalBase::disconnect(iObject* pclass)
+void _iSignalBase::doDisconnect(iObject* obj, _iConnection::Function func)
 {
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::iterator it = m_connected_slots.begin();
     connections_list::iterator itEnd = m_connected_slots.end();
 
+    bool blockDisObj = false;
     while(it != itEnd) {
-        if((*it)->getdest() == pclass) {
+        if (obj != (*it)->m_pobject) {
+            ++it;
+            continue;
+        }
+
+        if(func == (*it)->m_pfunc) {
             (*it)->setOrphaned();
             (*it)->deref();
             it = m_connected_slots.erase(it);
-            return;
+            continue;
         }
 
+        blockDisObj = true;
         ++it;
     }
 
-    pclass->signalDisconnect(this);
+    if (!blockDisObj && (IX_NULLPTR != obj))
+        obj->signalDisconnect(this);
 }
 
 void _iSignalBase::slotConnect(_iConnection* conn)
 {
-    if (!conn || !conn->getdest()) {
+    if ((IX_NULLPTR == conn) || (IX_NULLPTR == conn->m_pobject)) {
         ilog_error("conn | conn->getdest is null!!!");
         return;
     }
 
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     m_connected_slots.push_back(conn);
-    conn->getdest()->signalConnect(this);
+    conn->m_pobject->signalConnect(this);
 }
 
 void _iSignalBase::slotDisconnect(iObject* pslot)
@@ -624,7 +632,7 @@ void _iSignalBase::slotDisconnect(iObject* pslot)
     connections_list::iterator itEnd = m_connected_slots.end();
 
     while(it != itEnd) {
-        if((*it)->getdest() == pslot) {
+        if((*it)->m_pobject == pslot) {
             (*it)->setOrphaned();
             (*it)->deref();
             it = m_connected_slots.erase(it);
@@ -642,7 +650,7 @@ void _iSignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
     connections_list::iterator itEnd = m_connected_slots.end();
 
     while(it != itEnd) {
-        if((*it)->getdest() == oldtarget) {
+        if((*it)->m_pobject == oldtarget) {
             m_connected_slots.push_back((*it)->duplicate(newtarget));
         }
 

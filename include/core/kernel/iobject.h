@@ -95,8 +95,6 @@ protected:
     void ref();
     void deref();
 
-    iObject* getdest() const { return m_pobject; }
-
     _iConnection* clone() const;
     _iConnection* duplicate(iObject* newobj) const;
 
@@ -125,7 +123,6 @@ public:
     virtual ~_iSignalBase();
 
     void disconnectAll();
-    void disconnect(iObject* obj);
 
 protected:
     typedef std::list<_iConnection *>  connections_list;
@@ -139,6 +136,7 @@ protected:
     void slotDisconnect(iObject* pslot);
     void slotDuplicate(const iObject* oldtarget, iObject* newtarget);
 
+    void doDisconnect(iObject* obj, _iConnection::Function func);
     void doEmit(void* args, clone_args_t clone, free_args_t free);
 
 private:
@@ -170,6 +168,19 @@ public:
     iSignal(const iSignal<Arg1, Arg2, Arg3, Arg4,
         Arg5, Arg6, Arg7, Arg8>& s)
         : _iSignalBase(s) {}
+
+    /**
+     * disconnect
+     */
+    template<class Obj, class Func>
+    void disconnect(Obj* obj, Func func)
+    {
+        typedef void (Obj::*FuncAdaptor)();
+        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
+        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
+
+        doDisconnect(obj, tFunc);
+    }
 
     /**
      * connect 0
@@ -212,10 +223,10 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()));
+                (tObj->*tFunc)(static_cast<Slot1>(tArgs->template get<0>()));
             }
         };
 
@@ -242,11 +253,11 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
-                                      static_cast<Slot2>(t->template get<1>()));
+                (tObj->*tFunc)(static_cast<Slot1>(tArgs->template get<0>()),
+                                      static_cast<Slot2>(tArgs->template get<1>()));
             }
         };
 
@@ -274,12 +285,12 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
-                                      static_cast<Slot2>(t->template get<1>()),
-                                      static_cast<Slot3>(t->template get<2>()));
+                (tObj->*tFunc)(static_cast<Slot1>(tArgs->template get<0>()),
+                                      static_cast<Slot2>(tArgs->template get<1>()),
+                                      static_cast<Slot3>(tArgs->template get<2>()));
 
             }
         };
@@ -309,13 +320,13 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
-                                      static_cast<Slot2>(t->template get<1>()),
-                                      static_cast<Slot3>(t->template get<2>()),
-                                      static_cast<Slot4>(t->template get<3>()));
+                (tObj->*tFunc)(static_cast<Slot1>(tArgs->template get<0>()),
+                                      static_cast<Slot2>(tArgs->template get<1>()),
+                                      static_cast<Slot3>(tArgs->template get<2>()),
+                                      static_cast<Slot4>(tArgs->template get<3>()));
             }
         };
 
@@ -346,14 +357,14 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
-                                      static_cast<Slot2>(t->template get<1>()),
-                                      static_cast<Slot3>(t->template get<2>()),
-                                      static_cast<Slot4>(t->template get<3>()),
-                                      static_cast<Slot5>(t->template get<4>()));
+                (tObj->*tFunc)(static_cast<Slot1>(tArgs->template get<0>()),
+                                      static_cast<Slot2>(tArgs->template get<1>()),
+                                      static_cast<Slot3>(tArgs->template get<2>()),
+                                      static_cast<Slot4>(tArgs->template get<3>()),
+                                      static_cast<Slot5>(tArgs->template get<4>()));
             }
         };
 
@@ -386,15 +397,15 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
-                                      static_cast<Slot2>(t->template get<1>()),
-                                      static_cast<Slot3>(t->template get<2>()),
-                                      static_cast<Slot4>(t->template get<3>()),
-                                      static_cast<Slot5>(t->template get<4>()),
-                                      static_cast<Slot6>(t->template get<5>()));
+                (tObj->*tFunc)(static_cast<Slot1>(tArgs->template get<0>()),
+                                      static_cast<Slot2>(tArgs->template get<1>()),
+                                      static_cast<Slot3>(tArgs->template get<2>()),
+                                      static_cast<Slot4>(tArgs->template get<3>()),
+                                      static_cast<Slot5>(tArgs->template get<4>()),
+                                      static_cast<Slot6>(tArgs->template get<5>()));
             }
         };
 
@@ -428,16 +439,16 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
-                                      static_cast<Slot2>(t->template get<1>()),
-                                      static_cast<Slot3>(t->template get<2>()),
-                                      static_cast<Slot4>(t->template get<3>()),
-                                      static_cast<Slot5>(t->template get<4>()),
-                                      static_cast<Slot6>(t->template get<5>()),
-                                      static_cast<Slot7>(t->template get<6>()));
+                (tObj->*tFunc)(static_cast<Slot1>(tArgs->template get<0>()),
+                                      static_cast<Slot2>(tArgs->template get<1>()),
+                                      static_cast<Slot3>(tArgs->template get<2>()),
+                                      static_cast<Slot4>(tArgs->template get<3>()),
+                                      static_cast<Slot5>(tArgs->template get<4>()),
+                                      static_cast<Slot6>(tArgs->template get<5>()),
+                                      static_cast<Slot7>(tArgs->template get<6>()));
             }
         };
 
@@ -472,17 +483,17 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Slot1>(t->template get<0>()),
-                                      static_cast<Slot2>(t->template get<1>()),
-                                      static_cast<Slot3>(t->template get<2>()),
-                                      static_cast<Slot4>(t->template get<3>()),
-                                      static_cast<Slot5>(t->template get<4>()),
-                                      static_cast<Slot6>(t->template get<5>()),
-                                      static_cast<Slot7>(t->template get<6>()),
-                                      static_cast<Slot8>(t->template get<7>()));
+                (tObj->*tFunc)(static_cast<Slot1>(tArgs->template get<0>()),
+                                      static_cast<Slot2>(tArgs->template get<1>()),
+                                      static_cast<Slot3>(tArgs->template get<2>()),
+                                      static_cast<Slot4>(tArgs->template get<3>()),
+                                      static_cast<Slot5>(tArgs->template get<4>()),
+                                      static_cast<Slot6>(tArgs->template get<5>()),
+                                      static_cast<Slot7>(tArgs->template get<6>()),
+                                      static_cast<Slot8>(tArgs->template get<7>()));
             }
         };
 
@@ -496,27 +507,27 @@ public:
      * clone arguments
      */
     static void* cloneArgs(void* args) {
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* impArgs =
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                 static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
         return new iTuple<Arg1, Arg2, Arg3, Arg4,
-                Arg5, Arg6, Arg7, Arg8>(impArgs->template get<0>(),
-                                                            impArgs->template get<1>(),
-                                                            impArgs->template get<2>(),
-                                                            impArgs->template get<3>(),
-                                                            impArgs->template get<4>(),
-                                                            impArgs->template get<5>(),
-                                                            impArgs->template get<6>(),
-                                                            impArgs->template get<7>());
+                Arg5, Arg6, Arg7, Arg8>(tArgs->template get<0>(),
+                                        tArgs->template get<1>(),
+                                        tArgs->template get<2>(),
+                                        tArgs->template get<3>(),
+                                        tArgs->template get<4>(),
+                                        tArgs->template get<5>(),
+                                        tArgs->template get<6>(),
+                                        tArgs->template get<7>());
     }
 
     /**
      * free arguments
      */
     static void freeArgs(void* args) {
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* impArgs =
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                 static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
-        delete impArgs;
+        delete tArgs;
     }
 
     /**
@@ -532,8 +543,8 @@ public:
               typename type_wrapper<Arg8>::CONSTREFTYPE a8 = TYPEWRAPPER_DEFAULTVALUE(Arg8))
     {
         iTuple<Arg1, Arg2, Arg3, Arg4,
-               Arg5, Arg6, Arg7, Arg8> args(a1, a2, a3, a4, a5, a6, a7, a8);
-        doEmit(&args, &cloneArgs, &freeArgs);
+               Arg5, Arg6, Arg7, Arg8> tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
+        doEmit(&tArgs, &cloneArgs, &freeArgs);
     }
 
 private:
@@ -697,20 +708,20 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1>* t = static_cast<iTuple<Arg1>*>(args);
+                iTuple<Arg1>* tArgs = static_cast<iTuple<Arg1>*>(args);
 
-                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()));
+                (tObj->*tFunc)(static_cast<Arg1>(tArgs->template get<0>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<Arg1>* impArgs = static_cast<iTuple<Arg1>*>(args);
+                iTuple<Arg1>* tArgs = static_cast<iTuple<Arg1>*>(args);
 
-                return new iTuple<Arg1>(impArgs->template get<0>());
+                return new iTuple<Arg1>(tArgs->template get<0>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<Arg1>* impArgs = static_cast<iTuple<Arg1>*>(args);
-                delete impArgs;
+                iTuple<Arg1>* tArgs = static_cast<iTuple<Arg1>*>(args);
+                delete tArgs;
             }
         };
 
@@ -718,9 +729,8 @@ public:
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
         _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<Arg1> args(a1);
-
-        return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        iTuple<Arg1> tArgs(a1);
+        return invokeMethodImpl(conn, &tArgs, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Ret>
@@ -737,22 +747,22 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2>* t = static_cast<iTuple<Arg1, Arg2>*>(args);
+                iTuple<Arg1, Arg2>* tArgs = static_cast<iTuple<Arg1, Arg2>*>(args);
 
-                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
-                                      static_cast<Arg2>(t->template get<1>()));
+                (tObj->*tFunc)(static_cast<Arg1>(tArgs->template get<0>()),
+                                      static_cast<Arg2>(tArgs->template get<1>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<Arg1, Arg2>* impArgs = static_cast<iTuple<Arg1, Arg2>*>(args);
+                iTuple<Arg1, Arg2>* tArgs = static_cast<iTuple<Arg1, Arg2>*>(args);
 
-                return new iTuple<Arg1, Arg2>(impArgs->template get<0>(),
-                                                        impArgs->template get<1>());
+                return new iTuple<Arg1, Arg2>(tArgs->template get<0>(),
+                                                        tArgs->template get<1>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<Arg1, Arg2>* impArgs = static_cast<iTuple<Arg1, Arg2>*>(args);
-                delete impArgs;
+                iTuple<Arg1, Arg2>* tArgs = static_cast<iTuple<Arg1, Arg2>*>(args);
+                delete tArgs;
             }
         };
 
@@ -760,8 +770,8 @@ public:
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
         _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<Arg1, Arg2> args(a1, a2);
-        return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        iTuple<Arg1, Arg2> tArgs(a1, a2);
+        return invokeMethodImpl(conn, &tArgs, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
@@ -779,27 +789,27 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3>* t =
+                iTuple<Arg1, Arg2, Arg3>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3>*>(args);
 
-                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
-                                      static_cast<Arg2>(t->template get<1>()),
-                                      static_cast<Arg3>(t->template get<2>()));
+                (tObj->*tFunc)(static_cast<Arg1>(tArgs->template get<0>()),
+                                      static_cast<Arg2>(tArgs->template get<1>()),
+                                      static_cast<Arg3>(tArgs->template get<2>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3>* impArgs =
+                iTuple<Arg1, Arg2, Arg3>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3>*>(args);
 
-                return new iTuple<Arg1, Arg2, Arg3>(impArgs->template get<0>(),
-                                                        impArgs->template get<1>(),
-                                                        impArgs->template get<2>());
+                return new iTuple<Arg1, Arg2, Arg3>(tArgs->template get<0>(),
+                                                        tArgs->template get<1>(),
+                                                        tArgs->template get<2>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3>* impArgs =
+                iTuple<Arg1, Arg2, Arg3>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3>*>(args);
-                delete impArgs;
+                delete tArgs;
             }
         };
 
@@ -807,8 +817,8 @@ public:
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
         _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<Arg1, Arg2, Arg3> args(a1, a2, a3);
-        return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        iTuple<Arg1, Arg2, Arg3> tArgs(a1, a2, a3);
+        return invokeMethodImpl(conn, &tArgs, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
@@ -827,29 +837,29 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4>*>(args);
 
-                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
-                                      static_cast<Arg2>(t->template get<1>()),
-                                      static_cast<Arg3>(t->template get<2>()),
-                                      static_cast<Arg4>(t->template get<3>()));
+                (tObj->*tFunc)(static_cast<Arg1>(tArgs->template get<0>()),
+                                      static_cast<Arg2>(tArgs->template get<1>()),
+                                      static_cast<Arg3>(tArgs->template get<2>()),
+                                      static_cast<Arg4>(tArgs->template get<3>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4>*>(args);
 
-                return new iTuple<Arg1, Arg2, Arg3, Arg4>(impArgs->template get<0>(),
-                                                        impArgs->template get<1>(),
-                                                        impArgs->template get<2>(),
-                                                        impArgs->template get<3>());
+                return new iTuple<Arg1, Arg2, Arg3, Arg4>(tArgs->template get<0>(),
+                                                        tArgs->template get<1>(),
+                                                        tArgs->template get<2>(),
+                                                        tArgs->template get<3>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4>*>(args);
-                delete impArgs;
+                delete tArgs;
             }
         };
 
@@ -857,8 +867,8 @@ public:
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
         _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<Arg1, Arg2, Arg3, Arg4> args(a1, a2, a3, a4);
-        return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        iTuple<Arg1, Arg2, Arg3, Arg4> tArgs(a1, a2, a3, a4);
+        return invokeMethodImpl(conn, &tArgs, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
@@ -879,31 +889,31 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>*>(args);
 
-                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
-                                      static_cast<Arg2>(t->template get<1>()),
-                                      static_cast<Arg3>(t->template get<2>()),
-                                      static_cast<Arg4>(t->template get<3>()),
-                                      static_cast<Arg5>(t->template get<4>()));
+                (tObj->*tFunc)(static_cast<Arg1>(tArgs->template get<0>()),
+                                      static_cast<Arg2>(tArgs->template get<1>()),
+                                      static_cast<Arg3>(tArgs->template get<2>()),
+                                      static_cast<Arg4>(tArgs->template get<3>()),
+                                      static_cast<Arg5>(tArgs->template get<4>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>*>(args);
 
-                return new iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>(impArgs->template get<0>(),
-                                              impArgs->template get<1>(),
-                                              impArgs->template get<2>(),
-                                              impArgs->template get<3>(),
-                                              impArgs->template get<4>());
+                return new iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>(tArgs->template get<0>(),
+                                              tArgs->template get<1>(),
+                                              tArgs->template get<2>(),
+                                              tArgs->template get<3>(),
+                                              tArgs->template get<4>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5>*>(args);
-                delete impArgs;
+                delete tArgs;
             }
         };
 
@@ -911,8 +921,8 @@ public:
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
         _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> args(a1, a2, a3, a4, a5);
-        return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> tArgs(a1, a2, a3, a4, a5);
+        return invokeMethodImpl(conn, &tArgs, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -935,34 +945,34 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>*>(args);
 
-                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
-                                      static_cast<Arg2>(t->template get<1>()),
-                                      static_cast<Arg3>(t->template get<2>()),
-                                      static_cast<Arg4>(t->template get<3>()),
-                                      static_cast<Arg5>(t->template get<4>()),
-                                      static_cast<Arg6>(t->template get<5>()));
+                (tObj->*tFunc)(static_cast<Arg1>(tArgs->template get<0>()),
+                                      static_cast<Arg2>(tArgs->template get<1>()),
+                                      static_cast<Arg3>(tArgs->template get<2>()),
+                                      static_cast<Arg4>(tArgs->template get<3>()),
+                                      static_cast<Arg5>(tArgs->template get<4>()),
+                                      static_cast<Arg6>(tArgs->template get<5>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>*>(args);
 
                 return new iTuple<Arg1, Arg2, Arg3, Arg4,
-                        Arg5, Arg6>(impArgs->template get<0>(),
-                                              impArgs->template get<1>(),
-                                              impArgs->template get<2>(),
-                                              impArgs->template get<3>(),
-                                              impArgs->template get<4>(),
-                                              impArgs->template get<5>());
+                        Arg5, Arg6>(tArgs->template get<0>(),
+                                              tArgs->template get<1>(),
+                                              tArgs->template get<2>(),
+                                              tArgs->template get<3>(),
+                                              tArgs->template get<4>(),
+                                              tArgs->template get<5>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>*>(args);
-                delete impArgs;
+                delete tArgs;
             }
         };
 
@@ -970,8 +980,8 @@ public:
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
         _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<Arg1, Arg2, Arg3, Arg4,Arg5, Arg6> args(a1, a2, a3, a4, a5, a6);
-        return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        iTuple<Arg1, Arg2, Arg3, Arg4,Arg5, Arg6> tArgs(a1, a2, a3, a4, a5, a6);
+        return invokeMethodImpl(conn, &tArgs, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -995,36 +1005,36 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>*>(args);
 
-                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
-                                      static_cast<Arg2>(t->template get<1>()),
-                                      static_cast<Arg3>(t->template get<2>()),
-                                      static_cast<Arg4>(t->template get<3>()),
-                                      static_cast<Arg5>(t->template get<4>()),
-                                      static_cast<Arg6>(t->template get<5>()),
-                                      static_cast<Arg7>(t->template get<6>()));
+                (tObj->*tFunc)(static_cast<Arg1>(tArgs->template get<0>()),
+                                      static_cast<Arg2>(tArgs->template get<1>()),
+                                      static_cast<Arg3>(tArgs->template get<2>()),
+                                      static_cast<Arg4>(tArgs->template get<3>()),
+                                      static_cast<Arg5>(tArgs->template get<4>()),
+                                      static_cast<Arg6>(tArgs->template get<5>()),
+                                      static_cast<Arg7>(tArgs->template get<6>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>*>(args);
 
                 return new iTuple<Arg1, Arg2, Arg3, Arg4,
-                        Arg5, Arg6, Arg7>(impArgs->template get<0>(),
-                                                        impArgs->template get<1>(),
-                                                        impArgs->template get<2>(),
-                                                        impArgs->template get<3>(),
-                                                        impArgs->template get<4>(),
-                                                        impArgs->template get<5>(),
-                                                        impArgs->template get<6>());
+                        Arg5, Arg6, Arg7>(tArgs->template get<0>(),
+                                                        tArgs->template get<1>(),
+                                                        tArgs->template get<2>(),
+                                                        tArgs->template get<3>(),
+                                                        tArgs->template get<4>(),
+                                                        tArgs->template get<5>(),
+                                                        tArgs->template get<6>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>*>(args);
-                delete impArgs;
+                delete tArgs;
             }
         };
 
@@ -1032,8 +1042,8 @@ public:
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
         _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> args(a1, a2, a3, a4, a5, a6, a7);
-        return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> tArgs(a1, a2, a3, a4, a5, a6, a7);
+        return invokeMethodImpl(conn, &tArgs, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -1058,38 +1068,38 @@ public:
                 Obj* tObj = static_cast<Obj*>(obj);
                 FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(func);
                 Function tFunc = reinterpret_cast<Function>(tFuncAdptor);
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* t =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
-                (tObj->*tFunc)(static_cast<Arg1>(t->template get<0>()),
-                                      static_cast<Arg2>(t->template get<1>()),
-                                      static_cast<Arg3>(t->template get<2>()),
-                                      static_cast<Arg4>(t->template get<3>()),
-                                      static_cast<Arg5>(t->template get<4>()),
-                                      static_cast<Arg6>(t->template get<5>()),
-                                      static_cast<Arg7>(t->template get<6>()),
-                                      static_cast<Arg8>(t->template get<7>()));
+                (tObj->*tFunc)(static_cast<Arg1>(tArgs->template get<0>()),
+                                      static_cast<Arg2>(tArgs->template get<1>()),
+                                      static_cast<Arg3>(tArgs->template get<2>()),
+                                      static_cast<Arg4>(tArgs->template get<3>()),
+                                      static_cast<Arg5>(tArgs->template get<4>()),
+                                      static_cast<Arg6>(tArgs->template get<5>()),
+                                      static_cast<Arg7>(tArgs->template get<6>()),
+                                      static_cast<Arg8>(tArgs->template get<7>()));
             }
 
             static void* cloneArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
 
                 return new iTuple<Arg1, Arg2, Arg3, Arg4,
-                        Arg5, Arg6, Arg7, Arg8>(impArgs->template get<0>(),
-                                                        impArgs->template get<1>(),
-                                                        impArgs->template get<2>(),
-                                                        impArgs->template get<3>(),
-                                                        impArgs->template get<4>(),
-                                                        impArgs->template get<5>(),
-                                                        impArgs->template get<6>(),
-                                                        impArgs->template get<7>());
+                        Arg5, Arg6, Arg7, Arg8>(tArgs->template get<0>(),
+                                                        tArgs->template get<1>(),
+                                                        tArgs->template get<2>(),
+                                                        tArgs->template get<3>(),
+                                                        tArgs->template get<4>(),
+                                                        tArgs->template get<5>(),
+                                                        tArgs->template get<6>(),
+                                                        tArgs->template get<7>());
             }
 
             static void freeArgs(void* args) {
-                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* impArgs =
+                iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>* tArgs =
                         static_cast<iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>*>(args);
-                delete impArgs;
+                delete tArgs;
             }
         };
 
@@ -1097,8 +1107,8 @@ public:
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
         _iConnection conn(obj, tFunc, __invoke_helper::callback, type);
 
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> args(a1, a2, a3, a4, a5, a6, a7, a8);
-        return invokeMethodImpl(conn, &args, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
+        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
+        return invokeMethodImpl(conn, &tArgs, &__invoke_helper::cloneArgs, &__invoke_helper::freeArgs);
     }
 
 protected:

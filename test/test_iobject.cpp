@@ -269,6 +269,31 @@ public:
     iSignal<int&> tst_sig_refAdd;
 };
 
+
+class TestObjectDelete : public iObject
+{
+public:
+    TestObjectDelete(iObject* parent = IX_NULLPTR) : iObject(parent) {}
+
+    iSignal<iObject*> tst_sig;
+};
+
+class TestObjectDeleteSlot : public iObject
+{
+public:
+    TestObjectDeleteSlot(iObject* parent = IX_NULLPTR) : iObject(parent) {}
+
+    void slotDeleteObj(iObject* obj) {
+        ilog_debug("slotDeleteObj ", obj->objectName());
+        delete obj;
+    }
+
+    void slotNothing(iObject* obj) {
+        ilog_debug("slotNothing ", obj->objectName());
+    }
+};
+
+
 int test_object(void)
 {
     TestSignals tst_sig;
@@ -420,8 +445,8 @@ int test_object(void)
     tst_sig.emit_signals();
 
     ilog_debug("-------------emit_signals3");
-    tst_sig.tst_sig_struct.disconnect(&tst_obj);
-    tst_sig.tst_sig_ref.disconnect(&tst_obj);
+    tst_sig.tst_sig_struct.disconnect(&tst_obj, &TestObject::tst_slot_struct);
+    tst_sig.tst_sig_ref.disconnect(&tst_obj, &TestObject::tst_slot_ref);
 
     tst_sig.emit_signals();
 
@@ -484,7 +509,7 @@ int test_object(void)
     ilog_debug("-------------slot disconnect");
     TestObject* tst_sharedObj_6 = new TestObject();
     tst_sig.tst_sig_int0.connect(tst_sharedObj_6, &TestObject::tst_slot_int0);
-    tst_sig.tst_sig_int0.disconnect(tst_sharedObj_6);
+    tst_sig.tst_sig_int0.disconnect(tst_sharedObj_6, &TestObject::tst_slot_int0);
     delete tst_sharedObj_6;
 
     TestObject* tst_sharedObj_7 = new TestObject();
@@ -500,6 +525,29 @@ int test_object(void)
     tst_sharedObj_7->deleteLater();
     // test multi deleteLater
     tst_sharedObj_7->deleteLater();
+
+
+    TestObjectDelete* signalObj = new TestObjectDelete();
+    signalObj->setObjectName("signalObj");
+
+    TestObjectDeleteSlot tst_slotObj;
+    signalObj->tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
+    signalObj->tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotDeleteObj);
+    signalObj->tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
+    signalObj->tst_sig.connect(&tst_obj, &TestObject::tst_slot_int0);
+
+    signalObj->tst_sig.emits(signalObj);
+
+    TestObjectDelete signalObj2;
+    signalObj2.setObjectName("signalObj2");
+    signalObj2.tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
+    signalObj2.tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotDeleteObj);
+    signalObj2.tst_sig.connect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
+    signalObj2.tst_sig.disconnect(&tst_slotObj, &TestObjectDeleteSlot::slotDeleteObj);
+
+    signalObj2.tst_sig.emits(&signalObj2);
+
+    signalObj2.tst_sig.disconnect(&tst_slotObj, &TestObjectDeleteSlot::slotNothing);
 
     return 0;
 }
