@@ -49,10 +49,8 @@ public:
         ilog_debug(__FUNCTION__, ": ", position, "/", player->duration());
     }
 
-    int play() {
-//        player->setMedia(iUrl("gst-pipeline:playbin uri=\"file:///home/jiakechong/Downloads/Video.mp4\""));
-        player->setMedia(iUrl("file:///home/jiakechong/Downloads/Video.mp4"));
-//        player->setMedia(iUrl("file:///home/jiakechong/Downloads/thatgirl.mp3"));
+    int play(const iString& path) {
+        player->setMedia(iUrl(path));
         player->play();
 
         if (iMediaPlayer::StoppedState != player->state())
@@ -64,8 +62,8 @@ public:
     iMediaPlayer* player;
 };
 
-int test_player(void)
+int test_player(const iString& path)
 {
     TestPlayer* player = new TestPlayer();
-    return player->play();
+    return player->play(path);
 }
