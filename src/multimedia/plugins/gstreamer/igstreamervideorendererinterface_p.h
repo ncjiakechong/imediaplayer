@@ -28,9 +28,11 @@
 
 namespace iShell {
 
-class iGstreamerVideoRendererInterface
+class iGstreamerVideoRendererInterface : public iObject
 {
+    IX_OBJECT(iGstreamerVideoRendererInterface)
 public:
+    iGstreamerVideoRendererInterface(iObject *parent = IX_NULLPTR);
     virtual ~iGstreamerVideoRendererInterface();
     virtual GstElement *videoSink() = 0;
     virtual void setVideoSink(GstElement *) {}
@@ -44,9 +46,9 @@ public:
     //(winId is known,
     virtual bool isReady() const { return true; }
 
-    //signals:
-    //void sinkChanged();
-    //void readyChanged(bool);
+public: //signals:
+    void sinkChanged() ISIGNAL(sinkChanged)
+    void readyChanged(bool ready) ISIGNAL(readyChanged, ready)
 };
 
 } // namespace iShell

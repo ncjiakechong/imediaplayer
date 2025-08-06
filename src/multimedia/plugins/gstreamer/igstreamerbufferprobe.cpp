@@ -123,7 +123,7 @@ gboolean iGstreamerBufferProbe::bufferProbe(GstElement *, GstBuffer *buffer, gpo
     if (control->m_flags & ProbeCaps) {
         GstCaps *caps = gst_buffer_get_caps(buffer);
         if (caps && (!control->m_caps || !gst_caps_is_equal(control->m_caps, caps))) {
-            qSwap(caps, control->m_caps);
+            std::swap(caps, control->m_caps);
             control->probeCaps(control->m_caps);
         }
         if (caps)

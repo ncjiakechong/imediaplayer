@@ -169,4 +169,4 @@ void iTimer::singleShotImpl(int msec, TimerType timerType, const iObject *receiv
     new iSingleShotTimer(msec, timerType, receiver, conn);
 }
 
-}
+} // namespace iShell

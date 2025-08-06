@@ -72,6 +72,8 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
      m_state(iMediaPlayer::StoppedState),
      m_pendingState(iMediaPlayer::StoppedState),
      m_busHelper(IX_NULLPTR),
+     m_playbin(IX_NULLPTR),
+     m_pipeline(IX_NULLPTR),
      m_videoSink(IX_NULLPTR),
     #if !GST_CHECK_VERSION(1,0,0)
      m_usingColorspaceElement(false),
@@ -81,7 +83,6 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
      m_audioSink(IX_NULLPTR),
      m_volumeElement(IX_NULLPTR),
      m_bus(IX_NULLPTR),
-     m_videoOutput(IX_NULLPTR),
      m_renderer(IX_NULLPTR),
      m_appSrc(IX_NULLPTR),
      m_videoProbe(IX_NULLPTR),
@@ -148,24 +149,17 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
     ix_gst_object_ref_sink(GST_OBJECT(m_colorSpace));
     #endif
 
-
     m_nullVideoSink = gst_element_factory_make("fakesink", IX_NULLPTR);
     g_object_set(G_OBJECT(m_nullVideoSink), "sync", true, IX_NULLPTR);
     gst_object_ref(GST_OBJECT(m_nullVideoSink));
 
-    m_videoSink = gst_element_factory_make("autovideosink", IX_NULLPTR);
-    g_object_set(G_OBJECT(m_videoSink), "sync", true, IX_NULLPTR);
-    gst_object_ref(GST_OBJECT(m_videoSink));
-
     m_videoOutputBin = gst_bin_new("video-output-bin");
     // might not get a parent, take ownership to avoid leak
     ix_gst_object_ref_sink(GST_OBJECT(m_videoOutputBin));
-//    gst_bin_add_many(GST_BIN(m_videoOutputBin), m_videoIdentity, m_nullVideoSink, IX_NULLPTR);
-//    gst_element_link(m_videoIdentity, m_nullVideoSink);
-    gst_bin_add_many(GST_BIN(m_videoOutputBin), m_videoIdentity, m_videoSink, IX_NULLPTR);
-    gst_element_link(m_videoIdentity, m_videoSink);
+    gst_bin_add_many(GST_BIN(m_videoOutputBin), m_videoIdentity, m_nullVideoSink, IX_NULLPTR);
+    gst_element_link(m_videoIdentity, m_nullVideoSink);
 
-//    m_videoSink = m_nullVideoSink;
+    m_videoSink = m_nullVideoSink;
 
     // add ghostpads
     GstPad *pad = gst_element_get_static_pad(m_videoIdentity,"sink");
@@ -242,9 +236,9 @@ void iGstreamerPlayerSession::configureAppSrcElement(GObject*, GObject *orig, GP
     g_object_unref(G_OBJECT(appsrc));
 }
 
-void iGstreamerPlayerSession::loadFromStream(const iString& url, iIODevice *appSrcStream)
+void iGstreamerPlayerSession::loadFromStream(const iUrl &url, iIODevice *appSrcStream)
 {
-    ilog_debug(__FUNCTION__, " url: ", url);
+    ilog_debug(__FUNCTION__, " url: ", url.toEncoded().constData());
     m_request = url;
     m_duration = 0;
     m_lastPosition = 0;
@@ -268,9 +262,9 @@ void iGstreamerPlayerSession::loadFromStream(const iString& url, iIODevice *appS
     }
 }
 
-void iGstreamerPlayerSession::loadFromUri(const iString& url)
+void iGstreamerPlayerSession::loadFromUri(const iUrl& url)
 {
-    ilog_debug(__FUNCTION__, " url: ", url);
+    ilog_debug(__FUNCTION__, " url: ", url.toEncoded().constData());
     m_request = url;
     m_duration = 0;
     m_lastPosition = 0;
@@ -280,16 +274,10 @@ void iGstreamerPlayerSession::loadFromUri(const iString& url)
         m_appSrc = 0;
     }
 
-    if (url.startsWith(iLatin1String("gst-pipeline"))) {
+    if (m_request.scheme() == iLatin1String("gst-pipeline")) {
         // Set current surface to video sink before creating a pipeline.
-        // TODO
-#if 0
-        auto renderer = iobject_cast<iVideoRendererControl*>(m_videoOutput);
-        if (renderer)
-            QVideoSurfaceGstSink::setSurface(renderer->surface());
-#endif
-
-        iString pipeline = iString(url).remove(iLatin1String("gst-pipeline://"));
+        iString url = m_request.toString(iUrl::RemoveScheme);
+        iString pipeline = iUrl::fromPercentEncoding(url.toLatin1().constData());
         GError *err = IX_NULLPTR;
         GstElement *element = gst_parse_launch(pipeline.toUtf8().constData(), &err);
         if (err) {
@@ -307,7 +295,7 @@ void iGstreamerPlayerSession::loadFromUri(const iString& url)
         m_tags.clear();
         IEMIT tagsChanged();
 
-        g_object_set(G_OBJECT(m_playbin), "uri", url.toUtf8().constData(), IX_NULLPTR);
+        g_object_set(G_OBJECT(m_playbin), "uri", m_request.toEncoded().constData(), IX_NULLPTR);
 
         if (!m_streamTypes.empty()) {
             m_streamProperties.clear();
@@ -332,8 +320,8 @@ void iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
     m_busHelper = new iGstreamerBusHelper(m_bus, this);
     m_busHelper->installMessageFilter(this);
 
-    if (m_videoOutput)
-        m_busHelper->installMessageFilter(m_videoOutput);
+    if (m_renderer)
+        m_busHelper->installMessageFilter(m_renderer);
 
     if (m_playbin) {
         gst_element_set_state(m_playbin, GST_STATE_NULL);
@@ -542,47 +530,34 @@ void iGstreamerPlayerSession::updateVideoRenderer()
 {
     ilog_debug(__FUNCTION__, " : Video sink has chaged, reload video output");
 
-    if (m_videoOutput)
-        setVideoRenderer(m_videoOutput);
+    if (m_renderer)
+        setVideoRenderer(m_renderer);
 }
 
-void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
+void iGstreamerPlayerSession::setVideoRenderer(iGstreamerVideoRendererInterface *videoOutput)
 {
-    if (m_videoOutput != videoOutput) {
-        if (m_videoOutput) {
-            // TODO:
-#if 0
-            disconnect(m_videoOutput, &sinkChanged,
+    if (m_renderer != videoOutput) {
+        if (m_renderer) {
+            disconnect(m_renderer, &iGstreamerVideoRendererInterface::sinkChanged,
                        this, &iGstreamerPlayerSession::updateVideoRenderer);
-            disconnect(m_videoOutput, SIGNAL(readyChanged(bool)),
-                   this, SLOT(updateVideoRenderer()));
-#endif
+            disconnect(m_renderer, &iGstreamerVideoRendererInterface::readyChanged,
+                   this, &iGstreamerPlayerSession::updateVideoRenderer);
 
-            m_busHelper->removeMessageFilter(m_videoOutput);
+            m_busHelper->removeMessageFilter(m_renderer);
         }
 
-        m_videoOutput = videoOutput;
+        m_renderer = videoOutput;
 
-        if (m_videoOutput) {
-            // TODO:
-#if 0
-            connect(m_videoOutput, SIGNAL(sinkChanged()),
-                    this, SLOT(updateVideoRenderer()));
-            connect(m_videoOutput, SIGNAL(readyChanged(bool)),
-                   this, SLOT(updateVideoRenderer()));
-#endif
+        if (m_renderer) {
+            connect(m_renderer, &iGstreamerVideoRendererInterface::sinkChanged,
+                       this, &iGstreamerPlayerSession::updateVideoRenderer);
+            connect(m_renderer, &iGstreamerVideoRendererInterface::readyChanged,
+                   this, &iGstreamerPlayerSession::updateVideoRenderer);
 
-            m_busHelper->installMessageFilter(m_videoOutput);
+            m_busHelper->installMessageFilter(m_renderer);
         }
     }
 
-    // TODO:
-#if 0
-    iGstreamerVideoRendererInterface* renderer = iobject_cast<iGstreamerVideoRendererInterface*>(videoOutput);
-#else
-    iGstreamerVideoRendererInterface* renderer = IX_NULLPTR;
-#endif
-    m_renderer = renderer;
     IEMIT rendererChanged();
 
     // No sense to continue if custom pipeline requested.
@@ -593,7 +568,7 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
                                   GstDebugGraphDetails(GST_DEBUG_GRAPH_SHOW_ALL /* GST_DEBUG_GRAPH_SHOW_MEDIA_TYPE | GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS | GST_DEBUG_GRAPH_SHOW_STATES*/),
                                   "playbin_set");
 
-    GstElement *videoSink = 0;
+    GstElement *videoSink = IX_NULLPTR;
     if (m_renderer && m_renderer->isReady())
         videoSink = m_renderer->videoSink();
 
@@ -606,7 +581,7 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
              , "new sink: ", (videoSink ? GST_ELEMENT_NAME(videoSink) : ""), videoSink);
 
     if (m_pendingVideoSink == videoSink ||
-        (m_pendingVideoSink == 0 && m_videoSink == videoSink)) {
+        (m_pendingVideoSink == IX_NULLPTR && m_videoSink == videoSink)) {
         ilog_debug(__FUNCTION__, " : Video sink has not changed, skip video output reconfiguration");
         return;
     }
@@ -618,7 +593,7 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
 
         //the pipeline has not started yet
         flushVideoProbes();
-        m_pendingVideoSink = 0;
+        m_pendingVideoSink = IX_NULLPTR;
         gst_element_set_state(m_videoSink, GST_STATE_NULL);
         gst_element_set_state(m_playbin, GST_STATE_NULL);
 
@@ -644,9 +619,7 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
         m_usingColorspaceElement = false;
         if (!linked) {
             m_usingColorspaceElement = true;
-        #ifdef DEBUG_PLAYBIN
-            ilog_debug(__FUNCTION__, " Failed to connect video output, inserting the colorspace element.";
-        #endif
+            ilog_debug(__FUNCTION__, ": Failed to connect video output, inserting the colorspace element.");
             gst_bin_add(GST_BIN(m_videoOutputBin), m_colorSpace);
             linked = gst_element_link_many(m_videoIdentity, m_colorSpace, m_videoSink, IX_NULLPTR);
         }
@@ -761,7 +734,7 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
     gst_bin_remove(GST_BIN(m_videoOutputBin), m_videoSink);
 
     m_videoSink = m_pendingVideoSink;
-    m_pendingVideoSink = 0;
+    m_pendingVideoSink = IX_NULLPTR;
 
     gst_bin_add(GST_BIN(m_videoOutputBin), m_videoSink);
 
@@ -901,7 +874,7 @@ bool iGstreamerPlayerSession::play()
     if (m_pipeline) {
         m_pendingState = iMediaPlayer::PlayingState;
         if (gst_element_set_state(m_pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
-            ilog_warn(__FUNCTION__, " : GStreamer; Unable to play -", m_request);
+            ilog_warn(__FUNCTION__, " : GStreamer; Unable to play -", m_request.toEncoded().constData());
             m_pendingState = m_state = iMediaPlayer::StoppedState;
             IEMIT stateChanged(m_state);
         } else {
@@ -923,7 +896,7 @@ bool iGstreamerPlayerSession::pause()
             return true;
 
         if (gst_element_set_state(m_pipeline, GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE) {
-            ilog_warn(__FUNCTION__, " : GStreamer; Unable to pause -", m_request);
+            ilog_warn(__FUNCTION__, " : GStreamer; Unable to pause -", m_request.toEncoded().constData());
             m_pendingState = m_state = iMediaPlayer::StoppedState;
             IEMIT stateChanged(m_state);
         } else {
@@ -1244,7 +1217,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
             if (istrcmp(GST_OBJECT_NAME(GST_MESSAGE_SRC(gm)), "source") == 0) {
                 bool everPlayed = m_everPlayed;
                 // Try and differentiate network related resource errors from the others
-                if (m_request.startsWith(iLatin1String("file"), CaseInsensitive) != 0 ) {
+                if (!m_request.isRelative() && m_request.scheme().compare(iLatin1String("file"), CaseInsensitive) != 0 ) {
                     if (everPlayed ||
                         (err->domain == GST_RESOURCE_ERROR && (
                          err->code == GST_RESOURCE_ERROR_BUSY ||
@@ -1390,11 +1363,9 @@ void iGstreamerPlayerSession::getStreamsInfo()
         if (tags && gst_is_tag_list(tags)) {
         #endif
             gchar *languageCode = IX_NULLPTR;
-            // TODO
-#if 0
             if (gst_tag_list_get_string(tags, GST_TAG_LANGUAGE_CODE, &languageCode))
-                streamProperties["Language"] = iString::fromUtf8(languageCode);
-#endif
+                streamProperties.insert(std::pair<iString, iVariant>("Language", iString::fromUtf8(languageCode)));
+
 
             //ilog_debug(__FUNCTION__, " language for setream", i << iString::fromUtf8(languageCode);
             g_free (languageCode);
@@ -1418,9 +1389,7 @@ void iGstreamerPlayerSession::getStreamsInfo()
     }
 
     // TODO:
-#if 0
-    if (oldProperties != m_streamProperties || oldTypes != m_streamTypes || oldOffset != m_playbin2StreamOffset)
-#endif
+    if (oldProperties.size() != m_streamProperties.size() || oldTypes.size() != m_streamTypes.size() || oldOffset.size() != m_playbin2StreamOffset.size())
         IEMIT streamsChanged();
 }
 
@@ -1523,17 +1492,16 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
 
     // User-Agent - special case, souphhtpsrc will always set something, even if
     // defined in extra-headers
-    if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-agent") != 0
-        && self->m_request.startsWith(userAgentString)) {
+    if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-agent") != 0) {
         g_object_set(G_OBJECT(source), "user-agent",
-                     self->m_request.constData(), IX_NULLPTR);
+                     self->m_request.toEncoded().constData(), IX_NULLPTR);
     }
 
     // The rest
     if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "extra-headers") != 0) {
         GstStructure *extras = ix_gst_structure_new_empty("extras");
-        // TODO
-#if 0
+        // TODO:
+        #if 0
         const auto rawHeaderList = self->m_request.rawHeaderList();
         for (const iByteArray &rawHeader : rawHeaderList) {
             if (rawHeader == userAgentString) // Filter User-Agent
@@ -1550,7 +1518,7 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
                 gst_structure_set_value(extras, rawHeader.constData(), &headerValue);
             }
         }
-#endif
+        #endif
 
         if (gst_structure_n_fields(extras) > 0)
             g_object_set(G_OBJECT(source), "extra-headers", extras, IX_NULLPTR);

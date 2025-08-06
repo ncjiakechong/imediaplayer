@@ -18,6 +18,7 @@ PKGCONFIG += gstreamer-app-1.0
 PKGCONFIG += gstreamer-base-1.0
 PKGCONFIG += gstreamer-video-1.0
 PKGCONFIG += gstreamer-audio-1.0
+PKGCONFIG += gstreamer-pbutils-1.0
 
 INCLUDEPATH += \
     ../../include
@@ -36,6 +37,7 @@ HEADERS += \
     ../../include/multimedia/audio/iaudiobuffer.h \
     ../../include/multimedia/imediaobject.h \
     plugins/gstreamer/igstreameraudioprobecontrol_p.h \
+    plugins/gstreamer/igstreamerautorenderer.h \
     plugins/gstreamer/igstreamerplayercontrol_p.h \
     plugins/gstreamer/igstreamervideoprobecontrol_p.h \
     video/iabstractvideobuffer_p.h \
@@ -58,10 +60,13 @@ SOURCES += \
     imediaobject.cpp \
     imediatimerange.cpp \
     playback/imediaplayer.cpp \
+    plugins/gstreamer/igstcodecsinfo.cpp \
     plugins/gstreamer/igstreameraudioprobecontrol.cpp \
+    plugins/gstreamer/igstreamerautorenderer.cpp \
     plugins/gstreamer/igstreamerbufferprobe.cpp \
     plugins/gstreamer/igstreamerplayercontrol.cpp \
     plugins/gstreamer/igstreamervideoprobecontrol.cpp \
+    plugins/gstreamer/igstreamervideorendererinterface.cpp \
     plugins/gstreamer/igstvideobuffer.cpp \
     video/iabstractvideobuffer.cpp \
     video/imemoryvideobuffer.cpp \

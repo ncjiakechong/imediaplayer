@@ -12,6 +12,7 @@
 #define IMEDIAPLAYER_H
 
 #include <core/io/iiodevice.h>
+#include <core/io/iurl.h>
 
 #include <multimedia/imultimediaglobal.h>
 #include <multimedia/imultimedia.h>
@@ -72,9 +73,11 @@ public:
                                                    Flags flags = Flags());
     static std::list<iString> supportedMimeTypes(Flags flags = Flags());
 
-    iString media() const;
+    void setVideoOutput(iObject* render);
+
+    iUrl media() const;
     const iIODevice *mediaStream() const;
-    iString currentMedia() const;
+    iUrl currentMedia() const;
 
     State state() const;
     MediaStatus mediaStatus() const;
@@ -108,11 +111,11 @@ public: // slot
 
     void setPlaybackRate(xreal rate);
 
-    void setMedia(const iString &media, iIODevice *stream = IX_NULLPTR);
+    void setMedia(const iUrl&media, iIODevice *stream = IX_NULLPTR);
 
 public: // signal
-    void mediaChanged(const iString &media) ISIGNAL(mediaChanged, media)
-    void currentMediaChanged(const iString &media) ISIGNAL(currentMediaChanged, media)
+    void mediaChanged(const iUrl &media) ISIGNAL(mediaChanged, media)
+    void currentMediaChanged(const iUrl &media) ISIGNAL(currentMediaChanged, media)
 
     void stateChanged(State newState) ISIGNAL(stateChanged, newState)
     void mediaStatusChanged(MediaStatus status) ISIGNAL(mediaStatusChanged, status)
@@ -148,7 +151,7 @@ private:
 
     iWeakPtr<iObject> m_videoOutput;
 
-    iString m_rootMedia;
+    iUrl m_rootMedia;
     iString m_pendingPlaylist;
     State m_state;
     MediaStatus m_status;

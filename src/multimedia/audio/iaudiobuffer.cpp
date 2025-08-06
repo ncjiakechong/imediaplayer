@@ -379,7 +379,7 @@ xint64 iAudioBuffer::startTime() const
 
     \code
     // With a 16bit sample buffer:
-    const quint16 *data = buffer->constData<quint16>();
+    const xuint16 *data = buffer->constData<xuint16>();
     \endcode
 
 */
@@ -403,7 +403,7 @@ const void* iAudioBuffer::constData() const
 
     \code
     // With a 16bit sample const buffer:
-    const quint16 *data = buffer->data<quint16>();
+    const xuint16 *data = buffer->data<xuint16>();
     \endcode
 */
 const void* iAudioBuffer::data() const
@@ -442,7 +442,7 @@ const void* iAudioBuffer::data() const
 
     \code
     // With a 16bit sample buffer:
-    quint16 *data = buffer->data<quint16>(); // May cause deep copy
+    xuint16 *data = buffer->data<xuint16>(); // May cause deep copy
     \endcode
 */
 void *iAudioBuffer::data()
@@ -515,7 +515,7 @@ void *iAudioBuffer::data()
     // Assuming 'buffer' is an unsigned 16 bit stereo buffer..
     iAudioBuffer::S16U *frames = buffer->data<iAudioBuffer::S16U>();
     for (int i=0; i < buffer->frameCount(); i++) {
-        qSwap(frames[i].left, frames[i].right);
+        std::swap(frames[i].left, frames[i].right);
     }
     \endcode
 

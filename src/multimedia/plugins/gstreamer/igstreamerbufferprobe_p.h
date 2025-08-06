@@ -26,7 +26,6 @@
 
 #include <core/global/iglobal.h>
 
-
 namespace iShell {
 
 class iGstreamerBufferProbe

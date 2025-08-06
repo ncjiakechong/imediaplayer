@@ -14,6 +14,7 @@
 
 #include "core/utils/isize.h"
 #include "core/utils/iregexp.h"
+#include "core/utils/idatetime.h"
 #include "core/global/iglobalstatic.h"
 #include "core/global/iprocessordetection.h"
 #include "multimedia/video/ivideosurfaceformat.h"
@@ -73,14 +74,41 @@ static void addTagToMap(const GstTagList *list,
             if (G_VALUE_TYPE(&val) == GST_TYPE_DATE) {
                 const GDate *date = gst_value_get_date(&val);
             #endif
-                if (G_VALUE_TYPE(&val) == GST_TYPE_FRACTION) {
+                if (g_date_valid(date)) {
+                    int year = g_date_get_year(date);
+                    int month = g_date_get_month(date);
+                    int day = g_date_get_day(date);
+                    map->insert(std::pair<iByteArray, iVariant>(iByteArray(tag), iDate(year,month,day)));
+                    if (map->end() == map->find(iByteArray("year")))
+                        map->insert(std::pair<iByteArray, iVariant>(iByteArray("year"), year));
+                }
+            #if GST_CHECK_VERSION(1,0,0)
+            } else if (G_VALUE_TYPE(&val) == GST_TYPE_DATE_TIME) {
+                const GstDateTime *dateTime = (const GstDateTime *)g_value_get_boxed(&val);
+                int year = gst_date_time_has_year(dateTime) ? gst_date_time_get_year(dateTime) : 0;
+                int month = gst_date_time_has_month(dateTime) ? gst_date_time_get_month(dateTime) : 0;
+                int day = gst_date_time_has_day(dateTime) ? gst_date_time_get_day(dateTime) : 0;
+                if (gst_date_time_has_time(dateTime)) {
+                    int hour = gst_date_time_get_hour(dateTime);
+                    int minute = gst_date_time_get_minute(dateTime);
+                    int second = gst_date_time_get_second(dateTime);
+                    float tz = gst_date_time_get_time_zone_offset(dateTime);
+                    iDateTime dateTime(iDate(year, month, day), iTime(hour, minute, second),
+                                       OffsetFromUTC, tz * 60 * 60);
+                    map->insert(std::pair<iByteArray, iVariant>(iByteArray(tag), dateTime));
+                } else if (year > 0 && month > 0 && day > 0) {
+                    map->insert(std::pair<iByteArray, iVariant>(iByteArray(tag), iDate(year,month,day)));
+                }
+                if (map->end() == map->find(iByteArray("year")) && year > 0)
+                    map->insert(std::pair<iByteArray, iVariant>(iByteArray("year"), year));
+            #endif
+            } else if (G_VALUE_TYPE(&val) == GST_TYPE_FRACTION) {
                     int nom = gst_value_get_fraction_numerator(&val);
                     int denom = gst_value_get_fraction_denominator(&val);
 
                     if (denom > 0) {
                         map->insert(std::pair<iByteArray, iVariant>(iByteArray(tag), double(nom)/denom));
                     }
-                }
             }
             break;
     }
@@ -853,7 +881,16 @@ void iGstUtils::setMetaData(GstElement *element, const std::multimap<iByteArray,
                 tagName.toUtf8().constData(),
                 tagValue.value<double>(),
                 IX_NULLPTR);
-        } else {}
+        } if (tagValue.type() == iVariant::iMetaTypeId<iDateTime>(0)) {
+            iDateTime date = tagValue.value<iDateTime>().toLocalTime();
+            gst_tag_setter_add_tags(GST_TAG_SETTER(element),
+                GST_TAG_MERGE_REPLACE,
+                tagName.toUtf8().constData(),
+                gst_date_time_new_local_time(
+                            date.date().year(), date.date().month(), date.date().day(),
+                            date.time().hour(), date.time().minute(), date.time().second()),
+                NULL);
+        }else {}
     }
 }
 

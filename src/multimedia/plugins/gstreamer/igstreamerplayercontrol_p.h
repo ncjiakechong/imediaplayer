@@ -87,9 +87,9 @@ public:
     xreal playbackRate() const override;
     void setPlaybackRate(xreal rate) override;
 
-    iString media() const override;
+    iUrl media() const override;
     const iIODevice *mediaStream() const override;
-    void setMedia(const iString&, iIODevice *) override;
+    void setMedia(const iUrl&, iIODevice *) override;
 
 public: // slot
     void setPosition(xint64 pos) override;
@@ -129,7 +129,7 @@ private:
     int m_bufferProgress;
     xint64 m_pendingSeekPosition;
     bool m_setMediaPending;
-    iString m_currentResource;
+    iUrl m_currentResource;
     iIODevice *m_stream;
 };
 

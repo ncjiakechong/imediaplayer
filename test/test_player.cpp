@@ -37,7 +37,7 @@ public:
 
     void stateChanged(iMediaPlayer::State newState)
     {
-        ilog_warn(__FUNCTION__, " : ", newState);
+        ilog_debug(__FUNCTION__, " : ", newState);
         if (newState == iMediaPlayer::StoppedState) {
             deleteLater();
             iCoreApplication::quit();
@@ -46,17 +46,13 @@ public:
 
     void positionChanged(xint64 position)
     {
-        ilog_debug(__FUNCTION__, " : ", position);
-        if ((player->duration() > 0) && (position >= player->duration()) && (iMediaPlayer::PlayingState == player->state())) {
-           deleteLater();
-           iCoreApplication::quit();
-        }
+        ilog_debug(__FUNCTION__, " : ", position, "/", player->duration());
     }
 
     int play() {
-        //    player->setMedia("gst-pipeline://playbin uri='file:///home/jiakechong/Downloads/Video.mp4'");
-        player->setMedia("file:///home/jiakechong/Downloads/Video.mp4");
-        //    player->setMedia("file:///home/jiakechong/Downloads/thatgirl.mp3");
+//        player->setMedia(iUrl("gst-pipeline:playbin uri=\"file:///home/jiakechong/Downloads/Video.mp4\""));
+        player->setMedia(iUrl("file:///home/jiakechong/Downloads/Video.mp4"));
+//        player->setMedia(iUrl("file:///home/jiakechong/Downloads/thatgirl.mp3"));
         player->play();
 
         if (iMediaPlayer::StoppedState != player->state())
