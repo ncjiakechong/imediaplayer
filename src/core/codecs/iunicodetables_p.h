@@ -34,13 +34,13 @@ struct Properties {
     xuint16 direction           : 8; /* 5 used */
     xuint16 combiningClass      : 8;
     xuint16 joining             : 3;
-    xint16 digitValue    : 5;
-    xint16 mirrorDiff    : 16;
+    xint16 digitValue           : 5;
+    xint16 mirrorDiff           : 16;
     xuint16 unicodeVersion      : 8; /* 5 used */
     xuint16 nfQuickCheck        : 8;
     struct {
-        xuint16 special    : 1;
-        xint16 diff : 15;
+        xuint16 special         : 1;
+        xint16 diff             : 15;
     } cases[NumCases];
     xuint16 graphemeBreakClass  : 5; /* 5 used */
     xuint16 wordBreakClass      : 5; /* 5 used */

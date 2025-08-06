@@ -152,20 +152,21 @@ static iArrayData *allocateData(xsizetype allocSize, uint options)
         header->ref_.atomic = 1;
         header->flags = options;
         header->alloc = 0;
+        header->ptr_ = IX_NULLPTR;
+        header->user_ = IX_NULLPTR;
+        header->notify_ = IX_NULLPTR;
     }
     return header;
 }
 
-void *iArrayData::allocate(iArrayData **dptr, xsizetype objectSize, xsizetype alignment,
+iArrayData* iArrayData::allocate(xsizetype objectSize, xsizetype alignment,
         xsizetype capacity, ArrayOptions options)
 {
-    IX_ASSERT(dptr);
     // Alignment is a power of two
     IX_ASSERT(alignment >= xsizetype(alignof(iArrayData))
             && !(alignment & (alignment - 1)));
 
     if (capacity == 0) {
-        *dptr = IX_NULLPTR;
         return IX_NULLPTR;
     }
 
@@ -183,7 +184,6 @@ void *iArrayData::allocate(iArrayData **dptr, xsizetype objectSize, xsizetype al
     xsizetype allocSize = calculateBlockSize(capacity, objectSize, headerSize, options);
     allocSize = reserveExtraBytes(allocSize);
     if (allocSize < 0) {  // handle overflow. cannot allocate reliably
-        *dptr = IX_NULLPTR;
         return IX_NULLPTR;
     }
 
@@ -193,14 +193,15 @@ void *iArrayData::allocate(iArrayData **dptr, xsizetype objectSize, xsizetype al
         // find where offset should point to so that data() is aligned to alignment bytes
         data = iTypedArrayData<void>::dataStart(header, alignment);
         header->alloc = xsizetype(capacity);
+        header->ptr_ = data;
+        header->user_ = IX_NULLPTR;
+        header->notify_ = IX_NULLPTR;
     }
 
-    *dptr = header;
-    return data;
+    return header;
 }
 
-std::pair<iArrayData *, void *>
-iArrayData::reallocateUnaligned(iArrayData *data, void *dataPointer,
+iArrayData* iArrayData::reallocateUnaligned(iArrayData *data, void *dataPointer,
                                 xsizetype objectSize, xsizetype capacity, ArrayOptions options)
 {
     IX_ASSERT(!data || !data->isShared());
@@ -210,16 +211,19 @@ iArrayData::reallocateUnaligned(iArrayData *data, void *dataPointer,
     xptrdiff offset = dataPointer ? reinterpret_cast<char *>(dataPointer) - reinterpret_cast<char *>(data) : headerSize;
 
     allocSize = reserveExtraBytes(allocSize);
-    if (allocSize < 0)  // handle overflow. cannot reallocate reliably
-        return std::pair<iArrayData *, void *>(data, dataPointer);
+    if (allocSize < 0) // handle overflow. cannot reallocate reliably
+        return data;
 
     iArrayData *header = static_cast<iArrayData *>(::realloc(data, size_t(allocSize)));
     if (header) {
         header->flags = options;
         header->alloc = uint(capacity);
         dataPointer = reinterpret_cast<char *>(header) + offset;
+        header->ptr_ = dataPointer;
+        header->user_ = IX_NULLPTR;
+        header->notify_ = IX_NULLPTR;
     }
-    return std::pair<iArrayData *, void *>(static_cast<iArrayData *>(header), dataPointer);
+    return header;
 }
 
 void iArrayData::deallocate(iArrayData *data, xsizetype objectSize,
@@ -230,6 +234,9 @@ void iArrayData::deallocate(iArrayData *data, xsizetype objectSize,
             && !(alignment & (alignment - 1)));
     IX_UNUSED(objectSize);
     IX_UNUSED(alignment);
+
+    if (data->notify_)
+        data->notify_(data->ptr_, data->user_);
 
     ::free(data);
 }
