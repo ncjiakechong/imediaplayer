@@ -204,6 +204,11 @@ iThread::~iThread()
     m_data->deref();
 }
 
+intptr_t iThread::threadId() const
+{
+    return m_data->threadId;
+}
+
 void iThread::setPriority(Priority priority)
 {
     iMutex::ScopedLock lock(m_mutex);

@@ -92,8 +92,6 @@ void iThreadImpl::internalThreadFunc()
         #endif
     }
 
-
-
     {
         iMutex::ScopedLock locker(thread->m_mutex);
         data->threadId = iThread::currentThreadId();
