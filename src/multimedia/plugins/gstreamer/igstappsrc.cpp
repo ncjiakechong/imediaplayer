@@ -177,10 +177,10 @@ void iGstAppSrc::pushDataToAppSrc()
                 }
                 #endif
             }
-        } else {
+        } else if (!m_sequential) {
             sendEOS();
         }
-    } else if (m_stream->atEnd()) {
+    } else if (m_stream->atEnd() && !m_sequential) {
         sendEOS();
     }
 }

@@ -1058,11 +1058,12 @@ void iGstreamerPlayerSession::setSeekable(bool seekable)
 
 bool iGstreamerPlayerSession::event(iEvent *e)
 {
-    if (e->type() != iGstreamerMsgEvent::eventType()) {
+    if (e->type() != iGstBusMsgEvent::eventType()) {
         return iObject::event(e);
     }
 
-    iGstreamerMsgEvent* event = static_cast<iGstreamerMsgEvent*>(e);
+    // invoke in object thread
+    iGstBusMsgEvent* event = static_cast<iGstBusMsgEvent*>(e);
     processBusMessage(event->m_message);
     return true;
 }
