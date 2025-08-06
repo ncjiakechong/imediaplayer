@@ -31,6 +31,7 @@ protected:
 
     bool processEvents();
 
+    bool m_inExec;
     iAtomicCounter<int> m_exit; // bool
     iAtomicCounter<int> m_returnCode;
 };

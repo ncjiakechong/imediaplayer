@@ -23,6 +23,7 @@ namespace iShell {
 
 iEventLoop::iEventLoop(iObject* parent)
     : iObject(parent)
+    , m_inExec(false)
 {
     if (!iCoreApplication::instance() && iCoreApplication::threadRequiresCoreApplication()) {
         ilog_warn(__FUNCTION__, ": Cannot be used without iApplication");
@@ -44,29 +45,50 @@ bool iEventLoop::processEvents()
 
 int iEventLoop::exec()
 {
+    //we need to protect from race condition with iThread::exit
     iThreadData *threadData = iThread::get2(thread());
-    {
-        iMutex::ScopedLock  _lock(threadData->eventMutex);
-        if (threadData->quitNow)
-            return -1;
+    iMutex::ScopedLock  _lock(threadData->eventMutex);
+    if (threadData->quitNow)
+        return -1;
 
-        if (!threadData->eventLoop.testAndSet(IX_NULLPTR, this)) {
-            ilog_warn(__FUNCTION__, ": The event loop is already running");
-            return -1;
-        }
+    if (m_inExec) {
+        ilog_warn(__FUNCTION__, ": instance ", this, " has already called exec()");
+        return -1;
     }
 
-    threadData->ref();
+    struct LoopReference {
+        iEventLoop *d;
+        iMutex::ScopedLock &locker;
+
+        LoopReference(iEventLoop *d, iMutex::ScopedLock &locker) : d(d), locker(locker)
+        {
+            iThreadData *threadData = iThread::get2(d->thread());
+
+            d->m_inExec = true;
+            d->m_exit = false;
+            ++threadData->loopLevel;
+            threadData->eventLoops.push_back(d);
+            threadData->ref();
+            locker.unlock();
+        }
+
+        ~LoopReference()
+        {
+            iThreadData *threadData = iThread::get2(d->thread());
+
+            locker.relock();
+            iEventLoop *eventLoop = threadData->eventLoops.back();
+            threadData->eventLoops.pop_back();
+            IX_ASSERT_X(eventLoop == d, "iEventLoop::exec() internal error");
+            d->m_inExec = false;
+            --threadData->loopLevel;
+            threadData->deref();
+        }
+    };
+    LoopReference ref(this, _lock);
 
     while (0 == m_exit.value())
         processEvents();
-
-    threadData->deref();
-
-    if (!threadData->eventLoop.testAndSet(this, IX_NULLPTR)) {
-        ilog_error(__FUNCTION__, ": exit inner error");
-        return -1;
-    }
 
     return m_returnCode.value();
 }

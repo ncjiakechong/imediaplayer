@@ -57,16 +57,30 @@ public:
     bool                            isAdopted;
     bool                            requiresCoreApplication;
 
+    int                             loopLevel;
+    int                             scopeLevel;
+
+    std::list<iEventLoop *>         eventLoops;
     std::list<iPostEvent>           postEventList;
-    iAtomicCounter<xintptr>        threadHd;
+    iAtomicCounter<xintptr>         threadHd;
     iAtomicPointer<iThread>         thread;
     iAtomicPointer<iEventDispatcher> dispatcher;
-    iAtomicPointer<iEventLoop>      eventLoop;
 
     iMutex                          eventMutex;
 
 private:
     iAtomicCounter<int>             m_ref;
+};
+
+class iScopedScopeLevelCounter
+{
+    iThreadData *threadData;
+public:
+    inline iScopedScopeLevelCounter(iThreadData *threadData)
+        : threadData(threadData)
+    { ++threadData->scopeLevel; }
+    inline ~iScopedScopeLevelCounter()
+    { --threadData->scopeLevel; }
 };
 
 class iThreadImpl {

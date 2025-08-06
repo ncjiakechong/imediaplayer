@@ -42,8 +42,7 @@ static void destroy_current_thread_data(void *p)
     // right value...
     pthread_setspecific(current_thread_data_key, p);
     iThreadData *data = static_cast<iThreadData *>(p);
-    if (data->isAdopted)
-        data->deref();
+    data->deref();
 
     // ... but we must reset it to zero before returning so we aren't
     // called again (POSIX allows implementations to call destructor
@@ -55,6 +54,19 @@ static void create_current_thread_data_key()
 {
     pthread_key_create(&current_thread_data_key, destroy_current_thread_data);
 }
+
+static void destroy_current_thread_data_key()
+{
+    pthread_once(&current_thread_data_once, create_current_thread_data_key);
+    pthread_key_delete(current_thread_data_key);
+
+    // Reset current_thread_data_once in case we end up recreating
+    // the thread-data in the rare case of iObject construction
+    // after destroying the iThreadData.
+    pthread_once_t pthread_once_init = PTHREAD_ONCE_INIT;
+    current_thread_data_once = pthread_once_init;
+}
+IX_DESTRUCTOR_FUNCTION(destroy_current_thread_data_key)
 
 // thread wrapper for the main() thread
 class iAdoptedThread : public iThread
@@ -197,8 +209,8 @@ void iThreadImpl::internalThreadFunc()
     {
         iMutex::ScopedLock locker(thread->m_mutex);
         data->threadHd = iThread::currentThreadHd();
-        data->ref();
         set_thread_data(data);
+        data->ref();
     }
 
     if (IX_NULLPTR == data->dispatcher.load())
@@ -230,7 +242,6 @@ void iThreadImpl::internalThreadFunc()
         thread->m_finished = true;
         thread->m_isInFinish = false;
         thread->m_doneCond.broadcast();
-        data->deref();
         thread->m_mutex.unlock();
     }
 }
