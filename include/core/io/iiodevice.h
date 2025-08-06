@@ -180,6 +180,10 @@ protected:
     xint64 readImpl(char *data, xint64 maxSize, bool peeking = false);
     xint64 skipByReading(xint64 maxSize);
 
+protected:
+    iRingBufferRef m_buffer;
+    iRingBufferRef m_writeBuffer;
+
 private:
     iIODevice::OpenMode m_openMode;
     iString m_errorString;
@@ -187,8 +191,6 @@ private:
     std::vector<IRingBuffer> m_readBuffers;
     std::vector<IRingBuffer> m_writeBuffers;
 
-    iRingBufferRef m_buffer;
-    iRingBufferRef m_writeBuffer;
     xint64 m_pos;
     xint64 m_devicePos;
     int m_readChannelCount;

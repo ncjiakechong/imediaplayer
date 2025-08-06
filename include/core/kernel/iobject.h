@@ -481,7 +481,6 @@ private:
     int  m_postedEvents;
 
     iString     m_objName;
-    iMutex      m_objLock;
 
     iAtomicPointer< isharedpointer::ExternalRefCountData > m_refCount;
 

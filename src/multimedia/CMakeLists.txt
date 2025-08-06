@@ -29,13 +29,23 @@ set (Source
 
 find_package(PkgConfig)
 pkg_check_modules(GLIB_PKG REQUIRED glib-2.0)
-pkg_check_modules(GST_PKG REQUIRED gstreamer-1.0 gstreamer-app-1.0 gstreamer-base-1.0 gstreamer-video-1.0 gstreamer-audio-1.0 gstreamer-pbutils-1.0)
+pkg_check_modules(GST_PKG REQUIRED gstreamer-1.0)
+pkg_check_modules(GST_PKG_APP REQUIRED gstreamer-app-1.0)
+pkg_check_modules(GST_PKG_BAES REQUIRED gstreamer-base-1.0)
+pkg_check_modules(GST_PKG_VIDEO REQUIRED gstreamer-video-1.0)
+pkg_check_modules(GST_PKG_AUDIO REQUIRED gstreamer-audio-1.0)
+pkg_check_modules(GST_PKG_PBUTILS REQUIRED gstreamer-pbutils-1.0)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/../../include
     ${GLIB_PKG_INCLUDE_DIRS}
-    ${GST_PKG_INCLUDE_DIRS})
+    ${GST_PKG_INCLUDE_DIRS}
+    ${GST_PKG_APP_INCLUDE_DIRS}
+    ${GST_PKG_BAES_INCLUDE_DIRS}
+    ${GST_PKG_VIDEO_INCLUDE_DIRS}
+    ${GST_PKG_AUDIO_INCLUDE_DIRS}
+    ${GST_PKG_PBUTILS_INCLUDE_DIRS})
 
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
@@ -44,4 +54,9 @@ add_library(${PROJECT_NAME} SHARED ${Source})
 target_link_libraries(
     ${PROJECT_NAME}
     ${GLIB_PKG_LIBRARIES}
-    ${GST_PKG_LIBRARIES})
+    ${GST_PKG_LIBRARIES}
+    ${GST_PKG_APP_LIBRARIES}
+    ${GST_PKG_BAES_LIBRARIES}
+    ${GST_PKG_VIDEO_LIBRARIES}
+    ${GST_PKG_AUDIO_LIBRARIES}
+    ${GST_PKG_PBUTILS_LIBRARIES})

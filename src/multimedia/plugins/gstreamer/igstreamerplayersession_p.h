@@ -227,7 +227,6 @@ private:
         UDPSrc,
         MMSSrc,
         RTSPSrc,
-        APPSrc,
     };
     SourceType m_sourceType;
     bool m_everPlayed;

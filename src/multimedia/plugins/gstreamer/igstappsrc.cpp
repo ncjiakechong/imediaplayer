@@ -46,7 +46,7 @@ bool iGstAppSrc::setup(GstElement* appsrc)
 {
     if (m_appSrc) {
         gst_object_unref(G_OBJECT(m_appSrc));
-        m_appSrc = 0;
+        m_appSrc = IX_NULLPTR;
     }
 
     if (!appsrc || !m_stream)
@@ -65,7 +65,8 @@ bool iGstAppSrc::setup(GstElement* appsrc)
     gst_app_src_set_stream_type(m_appSrc, m_streamType);
     gst_app_src_set_size(m_appSrc, (m_sequential) ? -1 : m_stream->size());
 
-    g_object_set(G_OBJECT(m_appSrc), "typefind", TRUE, IX_NULLPTR);
+    g_object_set(appsrc, "block", TRUE, IX_NULLPTR);
+    g_object_set(appsrc, "is-live", (m_sequential) ? TRUE : FALSE, IX_NULLPTR);
 
     return true;
 }
@@ -75,12 +76,12 @@ void iGstAppSrc::setStream(iIODevice *stream)
     if (m_stream) {
         disconnect(m_stream, &iIODevice::destroyed, this, &iGstAppSrc::streamDestroyed);
         disconnect(m_stream, &iIODevice::readyRead, this, &iGstAppSrc::onDataReady);
-        m_stream = 0;
+        m_stream = IX_NULLPTR;
     }
 
     if (m_appSrc) {
         gst_object_unref(G_OBJECT(m_appSrc));
-        m_appSrc = 0;
+        m_appSrc = IX_NULLPTR;
     }
 
     m_dataRequestSize = ~0;
@@ -119,7 +120,7 @@ void iGstAppSrc::onDataReady()
 void iGstAppSrc::streamDestroyed(iObject *obj)
 {
      if (obj == m_stream) {
-        m_stream = 0;
+        m_stream = IX_NULLPTR;
         sendEOS();
      }
 }
@@ -158,7 +159,7 @@ void iGstAppSrc::pushDataToAppSrc()
             if (bytesRead > 0) {
                 m_dataRequested = false;
                 m_enoughData = false;
-                GstFlowReturn ret = gst_app_src_push_buffer (GST_APP_SRC (element()), buffer);
+                GstFlowReturn ret = gst_app_src_push_buffer (GST_APP_SRC (m_appSrc), buffer);
                 if (ret == GST_FLOW_ERROR) {
                     ilog_warn("appsrc: push buffer error");
                 #if GST_CHECK_VERSION(1,0,0)
@@ -211,7 +212,7 @@ void iGstAppSrc::on_enough_data(GstAppSrc *element, gpointer userdata)
     IX_UNUSED(element);
     iGstAppSrc *self = static_cast<iGstAppSrc*>(userdata);
     if (self)
-        self->enoughData() = true;
+        self->m_enoughData = true;
 }
 
 void iGstAppSrc::on_need_data(GstAppSrc *element, guint arg0, gpointer userdata)

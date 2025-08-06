@@ -33,9 +33,9 @@ int iGstreamerMsgEvent::eventType()
 
 GstBusSyncReply iGstreamerBusHelper::syncGstBusFilter(GstBus* , GstMessage* message, iGstreamerBusHelper *d)
 {
-    iScopedLock<iMutex> lock(d->filterMutex);
-    for (std::list<iObject*>::iterator it = d->syncFilters.begin();
-         it != d->syncFilters.end(); ++it) {
+    iScopedLock<iMutex> lock(d->m_filterMutex);
+    for (std::list<iObject*>::iterator it = d->m_syncFilters.begin();
+         it != d->m_syncFilters.end(); ++it) {
         iObject *filter = *it;
         iGstreamerMsgEvent evt(message);
         // TODO
@@ -58,11 +58,12 @@ gboolean iGstreamerBusHelper::busCallback(GstBus *, GstMessage *message, gpointe
     \class iGstreamerBusHelper
     \internal
 */
-iGstreamerBusHelper::iGstreamerBusHelper(GstBus* bus, iObject* parent):
-    iObject(parent),
-    m_tag(0),
-    m_bus(bus),
-    m_intervalTimer(IX_NULLPTR)
+iGstreamerBusHelper::iGstreamerBusHelper(GstBus* bus, iObject* parent)
+    : iObject(parent)
+    , m_tag(0)
+    , m_bus(bus)
+    , m_intervalTimer(IX_NULLPTR)
+    , m_filterMutex(iMutex::Recursive)
 {
     m_intervalTimer = new iTimer(this);
     m_intervalTimer->setInterval(250);
@@ -100,24 +101,24 @@ iGstreamerBusHelper::~iGstreamerBusHelper()
 void iGstreamerBusHelper::installMessageFilter(iObject *filter)
 {
     if (filter) {
-        iScopedLock<iMutex> lock(filterMutex);
-        if (std::find(syncFilters.cbegin(), syncFilters.cend(), filter) == syncFilters.cend())
-            syncFilters.push_front(filter);
+        iScopedLock<iMutex> lock(m_filterMutex);
+        if (std::find(m_syncFilters.cbegin(), m_syncFilters.cend(), filter) == m_syncFilters.cend())
+            m_syncFilters.push_front(filter);
     }
 
-    if (filter && std::find(busFilters.cbegin(), busFilters.cend(), filter) == busFilters.cend())
-        busFilters.push_front(filter);
+    if (filter && std::find(m_busFilters.cbegin(), m_busFilters.cend(), filter) == m_busFilters.cend())
+        m_busFilters.push_front(filter);
 }
 
 void iGstreamerBusHelper::removeMessageFilter(iObject *filter)
 {
     if (filter) {
-        iScopedLock<iMutex> lock(filterMutex);
-        syncFilters.erase(std::find(syncFilters.begin(), syncFilters.end(), filter));
+        iScopedLock<iMutex> lock(m_filterMutex);
+        m_syncFilters.erase(std::find(m_syncFilters.begin(), m_syncFilters.end(), filter));
     }
 
     if (filter)
-        busFilters.erase(std::find(busFilters.begin(), busFilters.end(), filter));
+        m_busFilters.erase(std::find(m_busFilters.begin(), m_busFilters.end(), filter));
 }
 
 void iGstreamerBusHelper::interval()
@@ -143,8 +144,8 @@ void iGstreamerBusHelper::queueMessage(GstMessage* message)
 
 void iGstreamerBusHelper::doProcessMessage(const iGstreamerMessage& msg)
 {
-    for (std::list<iObject*>::iterator it = busFilters.begin();
-         it != busFilters.end(); ++it) {
+    for (std::list<iObject*>::iterator it = m_busFilters.begin();
+         it != m_busFilters.end(); ++it) {
         iObject *filter = *it;
         iGstreamerMsgEvent evt(msg.rawMessage());
         // TODO
