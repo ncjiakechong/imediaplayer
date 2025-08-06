@@ -274,7 +274,7 @@ bool iVariant::convert(int t, void *result) const
 
     } while (0);
 
-    std::map< std::pair<int, int>, const iAbstractConverterFunction*>::const_iterator it;
+    convert_map_t::const_iterator it;
     it = s_convertFuncs.find(std::pair<int, int>(m_typeId, t));
     if (it == s_convertFuncs.end() || !it->second)
         return false;

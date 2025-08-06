@@ -70,6 +70,21 @@ size_t iHashFunc::operator()(const iLatin1String& key) const
     return hash_internal(key.data(), size_t(key.size()), 0);
 }
 
+template <typename T>
+static size_t hash_combine(size_t seed, const T &t)
+{
+    return seed ^ (std::hash<T>()(t) + 0x9e3779b9 + (seed << 6) + (seed >> 2)) ;
+}
+
+size_t iHashFunc::operator()(const std::pair<int, int>& key) const
+{
+    size_t seed = 0;
+    seed = hash_combine(seed, key.first);
+    seed = hash_combine(seed, key.second);
+
+    return seed;
+}
+
 bool iHashFunc::operator()(const iChar& key1, const iChar& key2) const
 {
     return key1 == key2;
@@ -98,6 +113,11 @@ bool iHashFunc::operator()(const iStringView& key1, const iStringView& key2) con
 bool iHashFunc::operator()(const iLatin1String& key1, const iLatin1String& key2) const
 {
     return key1 == key2;
+}
+
+bool iHashFunc::operator()(const std::pair<int, int>& key1, const std::pair<int, int>& key2) const
+{
+    return (key1.first == key2.first) && (key1.second == key2.second);
 }
 
 } // namespace iShell
