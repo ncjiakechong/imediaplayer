@@ -93,11 +93,14 @@ iObject::iObject(iObject *parent)
     :m_wasDeleted(false)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
+    , m_connListDirty(false)
     , m_unused(0)
     , m_postedEvents(0)
+    , m_connListInUse(0)
     , m_threadData(iThreadData::current())
     , m_parent(IX_NULLPTR)
     , m_currentChildBeingDeleted(IX_NULLPTR)
+    , m_senders(IX_NULLPTR)
 {
     m_threadData->ref();
 
@@ -108,12 +111,15 @@ iObject::iObject(const iString& name, iObject* parent)
     : m_wasDeleted(false)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
+    , m_connListDirty(false)
     , m_unused(0)
     , m_postedEvents(0)
+    , m_connListInUse(0)
     , m_objName(name)
     , m_threadData(iThreadData::current())
     , m_parent(IX_NULLPTR)
     , m_currentChildBeingDeleted(IX_NULLPTR)
+    , m_senders(IX_NULLPTR)
 {
     m_threadData->ref();
 
@@ -124,11 +130,14 @@ iObject::iObject(const iObject& other)
     : m_wasDeleted(false)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
+    , m_connListDirty(false)
     , m_unused(0)
     , m_postedEvents(0)
+    , m_connListInUse(0)
     , m_objName(other.m_objName)
     , m_threadData(iThreadData::current())
     , m_currentChildBeingDeleted(IX_NULLPTR)
+    , m_senders(IX_NULLPTR)
 {
     m_threadData->ref();
 
@@ -164,6 +173,81 @@ iObject::~iObject()
     destroyed.emits(this);
 
     disconnectAll();
+
+    if (!m_connectionLists.empty() || (IX_NULLPTR != m_senders)) {
+        iMutex *signalSlotMutex = &m_signalSlotLock;
+        iScopedLock<iMutex> locker(*signalSlotMutex);
+
+        // disconnect all receivers
+        if (!m_connectionLists.empty()) {
+            ++m_connListInUse;
+            for (sender_map::iterator it = m_connectionLists.begin(); it != m_connectionLists.end(); ++it) {
+                _iConnectionList& connectionList = it->second;
+                while (_iConnection *c = connectionList.first) {
+                    if (c->_orphaned) {
+                        connectionList.first = c->_nextConnectionList;
+                        c->deref();
+                        continue;
+                    }
+
+                    iMutex *m = &c->_receiver->m_signalSlotLock;
+                    bool needToUnlock = iOrderedMutexLocker::relock(signalSlotMutex, m);
+
+                    if (c->_receiver) {
+                        *c->_prev = c->_next;
+                        if (c->_next) { c->_next->_prev = c->_prev; }
+                    }
+                    c->_orphaned = true;
+                    if (needToUnlock)
+                        m->unlock();
+
+                    connectionList.first = c->_nextConnectionList;
+
+                    c->deref(); // for sender
+                    c->deref(); // for receiver
+                }
+            }
+
+            m_connectionLists.clear();
+        }
+
+        /* Disconnect all senders:
+         * This loop basically just does
+         *     for (node = d->senders; node; node = node->next) { ... }
+         *
+         * We need to temporarily unlock the receiver mutex to destroy the functors or to lock the
+         * sender's mutex. And when the mutex is released, node->next might be destroyed by another
+         * thread. That's why we set node->prev to &node, that way, if node is destroyed, node will
+         * be updated.
+         */
+        _iConnection *node = m_senders;
+        while (node) {
+            iObject *sender = node->_sender;
+            // Send disconnectNotify before removing the connection from sender's connection list.
+            // This ensures any eventual destructor of sender will block on getting receiver's lock
+            // and not finish until we release it.
+            iMutex *m = &sender->m_signalSlotLock;
+            node->_prev = &node;
+            bool needToUnlock = iOrderedMutexLocker::relock(signalSlotMutex, m);
+            //the node has maybe been removed while the mutex was unlocked in relock?
+            if (!node || node->_sender != sender) {
+                // We hold the wrong mutex
+                IX_ASSERT(needToUnlock);
+                m->unlock();
+                continue;
+            }
+            node->_orphaned = true;
+            if (!sender->m_connectionLists.empty())
+                sender->m_connListDirty = true;
+
+            _iConnection* oldNode = node;
+            node = node->_next;
+            if (needToUnlock)
+                m->unlock();
+
+            oldNode->deref();
+        }
+    }
 
     m_isDeletingChildren = true;
     // delete children objects
@@ -440,33 +524,172 @@ void iObject::disconnectAll()
     __m_senders.clear();
 }
 
-bool iObject::connectImpl(const _iConnection& conn)
+void iObject::cleanConnectionLists()
 {
-    if ((IX_NULLPTR == conn._senderObj)
-        || (IX_NULLPTR == conn._receiverObj)
-        || (IX_NULLPTR == conn._sigFunc)) {
-        ilog_warn(__func__, " invalid argument for NULL pointer");
+    if (m_connListDirty && (0 == m_connListInUse)) {
+        // remove broken connections
+        for (sender_map::iterator it = m_connectionLists.begin(); it != m_connectionLists.end(); ++it) {
+            _iConnectionList& connectionList = it->second;
+
+            // Set to the last entry in the connection list that was *not*
+            // deleted.  This is needed to update the list's last pointer
+            // at the end of the cleanup.
+            _iConnection* last = IX_NULLPTR;
+
+            _iConnection** prev = &connectionList.first;
+            _iConnection* c = *prev;
+            while (c) {
+                if (!c->_orphaned) {
+                    last = c;
+                    prev = &c->_nextConnectionList;
+                    c = *prev;
+                } else {
+                    _iConnection* next = c->_nextConnectionList;
+                    *prev = next;
+                    c->deref();
+                    c = next;
+                }
+            }
+
+            // Correct the connection list's last pointer.
+            // As conectionList.last could equal last, this could be a noop
+            connectionList.last = last;
+        }
+
+        m_connListDirty = false;
+    }
+}
+
+bool iObject::disconnectHelper(const _iConnection &conn)
+{
+    sender_map::iterator it = m_connectionLists.find(conn._signal);
+    if (m_connectionLists.end() == it) {
         return false;
     }
 
-    _iConnection::MemberFunction __slotFunc = *reinterpret_cast<_iConnection::MemberFunction *>(conn._slotFunc);
-    if (conn._sigFunc == __slotFunc) {
-        ilog_warn(__func__, " invalid argument for connecting same signal/slot");
+    bool success = false;
+    _iConnection* c = it->second.first;
+
+    while (c) {
+        _iConnection* next = c->_nextConnectionList;
+
+        if (c->_receiver
+            && !c->_orphaned
+            && ((IX_NULLPTR == conn._receiver)
+                || ((c->_receiver == conn._receiver)
+                    && ((IX_NULLPTR == conn._slot) || (c->compare(conn._slot)))))) {
+            bool needToUnlock = false;
+            iMutex *receiverMutex = IX_NULLPTR;
+            if (c->_receiver) {
+                receiverMutex = &c->_receiver->m_signalSlotLock;
+                // need to relock this receiver and sender in the correct order
+                needToUnlock = iOrderedMutexLocker::relock(&m_signalSlotLock, receiverMutex);
+            }
+            if (c->_receiver) {
+                *c->_prev = c->_next;
+                if (c->_next)
+                    c->_next->_prev = c->_prev;
+            }
+
+            if (needToUnlock)
+                receiverMutex->unlock();
+
+            c->_orphaned = true;
+            c->deref();
+            success = true;
+        }
+
+        c = next;
+    }
+    return success;
+}
+
+bool iObject::connectImpl(const _iConnection& conn)
+{
+    if ((IX_NULLPTR == conn._sender)
+        || (IX_NULLPTR == conn._receiver)
+        || (IX_NULLPTR == conn._signal)) {
+        ilog_warn(__func__, ": invalid null parameter");
         return false;
     }
+
+    if (conn.compare(reinterpret_cast<void* const *>(&conn._signal))) {
+        ilog_warn(__func__, ": invalid argument for connecting same signal/slot");
+        return false;
+    }
+
+    iObject *s = conn._sender;
+    iObject *r = conn._receiver;
+
+    iOrderedMutexLocker locker(&s->m_signalSlotLock, &r->m_signalSlotLock);
+    _iConnection* c = conn.clone();
+    c->ref(); // both link sender/reciver
+
+    sender_map::iterator it = s->m_connectionLists.find(c->_signal);
+    if (s->m_connectionLists.end() == it) {
+        it = s->m_connectionLists.insert(std::pair<_iConnection::MemberFunction, _iConnectionList>(c->_signal, _iConnectionList())).first;
+    }
+
+    IX_ASSERT(s->m_connectionLists.end() != it);
+    _iConnectionList& connectionList = it->second;
+
+    if (connectionList.last) {
+        connectionList.last->_nextConnectionList = c;
+    } else {
+        connectionList.first = c;
+    }
+    connectionList.last = c;
+
+    s->cleanConnectionLists();
+
+    c->_prev = &(r->m_senders);
+    c->_next = *c->_prev;
+    *c->_prev = c;
+    if (c->_next)
+        c->_next->_prev = &c->_next;
+
+    locker.unlock();
 
     return true;
 }
 
 bool iObject::disconnectImpl(const _iConnection& conn)
 {
-    if ((IX_NULLPTR == conn._senderObj)
-        || (IX_NULLPTR == conn._sigFunc)) {
-        ilog_warn(__func__, " invalid argument for NULL pointer");
+    if ((IX_NULLPTR == conn._sender)
+        || ((IX_NULLPTR == conn._receiver) && (IX_NULLPTR != conn._slot))) {
+        ilog_warn(__func__, ": invalid null parameter");
         return false;
     }
 
-    return true;
+    iObject *s = conn._sender;
+
+    iMutex *senderMutex = &s->m_signalSlotLock;
+    iScopedLock<iMutex> locker(*senderMutex);
+    if (s->m_connectionLists.empty())
+        return false;
+
+    // prevent incoming connections changing the connectionLists while unlocked
+    ++s->m_connListInUse;
+
+    bool success = false;
+    if (IX_NULLPTR == conn._signal) {
+        // remove from all connection lists
+        for (sender_map::iterator it = s->m_connectionLists.begin(); it != s->m_connectionLists.end(); ++it) {
+            _iConnection* c = const_cast<_iConnection*>(&conn);
+            c->setSignal(s, it->first);
+            if (s->disconnectHelper(*c)) {
+                success = true;
+                s->m_connListDirty = true;
+            }
+        }
+    } else if (s->disconnectHelper(conn)) {
+        success = true;
+        s->m_connListDirty = true;
+    }
+
+    --s->m_connListInUse;
+    IX_ASSERT(s->m_connListInUse >= 0);
+    return success;
 }
 
 const iMetaObject* iObject::metaObject() const
@@ -612,11 +835,11 @@ void iObject::reregisterTimers(void* args)
 
 bool iObject::invokeMethodImpl(const _iConnection& c, void* args, _iSignalBase::clone_args_t clone, _iSignalBase::free_args_t free)
 {
-    if (!c._receiverObj)
+    if (!c._receiver)
         return false;
 
     iThreadData* currentThreadData = iThreadData::current();
-    iObject * const receiver = c._receiverObj;
+    iObject* const receiver = c._receiver;
     const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
 
     // determine if this connection should be sent immediately or
@@ -658,7 +881,7 @@ _iSignalBase::_iSignalBase(const _iSignalBase& s)
     connections_list::const_iterator itEnd = s.m_connected_slots.end();
 
     while(it != itEnd) {
-        (*it)->_receiverObj->refSignal(this);
+        (*it)->_receiver->refSignal(this);
         (*it)->ref();
         m_connected_slots.push_back(*it);
 
@@ -676,8 +899,8 @@ void _iSignalBase::disconnectAll()
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     while (!m_connected_slots.empty()) {
         _iConnection* conn = m_connected_slots.front();
-        conn->_receiverObj->derefSignal(this);
-        conn->setOrphaned();
+        conn->_receiver->derefSignal(this);
+        conn->_orphaned = true;
         conn->deref();
 
         m_connected_slots.pop_front();
@@ -691,14 +914,14 @@ void _iSignalBase::doDisconnect(iObject* obj, _iConnection::MemberFunction func)
     connections_list::iterator itEnd = m_connected_slots.end();
 
     while(it != itEnd) {
-        if (obj != (*it)->_receiverObj) {
+        if (obj != (*it)->_receiver) {
             ++it;
             continue;
         }
 
-        _iConnection::MemberFunction __slotFunc = *reinterpret_cast<_iConnection::MemberFunction *>((*it)->_slotFunc);
+        _iConnection::MemberFunction __slotFunc = *reinterpret_cast<const _iConnection::MemberFunction *>((*it)->_slot);
         if(func == __slotFunc) {
-            (*it)->setOrphaned();
+            (*it)->_orphaned = true;
             (*it)->deref();
             it = m_connected_slots.erase(it);
             obj->derefSignal(this);
@@ -711,14 +934,14 @@ void _iSignalBase::doDisconnect(iObject* obj, _iConnection::MemberFunction func)
 
 void _iSignalBase::doConnect(const _iConnection &conn)
 {
-    if ((IX_NULLPTR == conn._receiverObj) || conn._receiverObj->m_wasDeleted) {
+    if ((IX_NULLPTR == conn._receiver) || conn._receiver->m_wasDeleted) {
         ilog_error("conn | conn->getdest is null!!!");
         return;
     }
 
     iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     m_connected_slots.push_back(conn.clone());
-    conn._receiverObj->refSignal(this);
+    conn._receiver->refSignal(this);
 }
 
 void _iSignalBase::slotDisconnect(iObject* pslot)
@@ -728,8 +951,8 @@ void _iSignalBase::slotDisconnect(iObject* pslot)
     connections_list::iterator itEnd = m_connected_slots.end();
 
     while(it != itEnd) {
-        if((*it)->_receiverObj == pslot) {
-            (*it)->setOrphaned();
+        if((*it)->_receiver == pslot) {
+            (*it)->_orphaned = true;
             (*it)->deref();
             it = m_connected_slots.erase(it);
             continue;
@@ -746,7 +969,7 @@ void _iSignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
     connections_list::iterator itEnd = m_connected_slots.end();
 
     while(it != itEnd) {
-        if((*it)->_receiverObj == oldtarget) {
+        if((*it)->_receiver == oldtarget) {
             m_connected_slots.push_back((*it)->duplicate(newtarget));
         }
 
@@ -772,12 +995,12 @@ void _iSignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
         _iConnection* conn = tmp_connected_slots.front();
         tmp_connected_slots.pop_front();
 
-        if (!conn->_receiverObj) {
+        if (!conn->_receiver) {
             conn->deref();
             continue;
         }
 
-        iObject * const receiver = conn->_receiverObj;
+        iObject * const receiver = conn->_receiver;
         const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
 
         // determine if this connection should be sent immediately or
@@ -817,14 +1040,14 @@ _iConnection::_iConnection(ImplFn impl, ConnectionType type)
     : _orphaned(false)
     , _ref(1)
     , _type(type)
-    , _recvNext(IX_NULLPTR)
-    , _sendNext(IX_NULLPTR)
-    , _sendPrev(IX_NULLPTR)
-    , _senderObj(IX_NULLPTR)
-    , _receiverObj(IX_NULLPTR)
+    , _nextConnectionList(IX_NULLPTR)
+    , _next(IX_NULLPTR)
+    , _prev(IX_NULLPTR)
+    , _sender(IX_NULLPTR)
+    , _receiver(IX_NULLPTR)
     , _impl(impl)
-    , _sigFunc(IX_NULLPTR)
-    , _slotFunc(IX_NULLPTR)
+    , _signal(IX_NULLPTR)
+    , _slot(IX_NULLPTR)
 {
 }
 
@@ -845,37 +1068,20 @@ void _iConnection::deref()
     --_ref;
     if (0 == _ref) {
         IX_ASSERT(_impl);
-        _impl(Destroy, this, IX_NULLPTR, _slotFunc, IX_NULLPTR);
+        _impl(Destroy, this, IX_NULLPTR, _slot, IX_NULLPTR);
     }
 }
 
-void _iConnection::setOrphaned()
+void _iConnection::setSignal(iObject* sender, MemberFunction signal)
 {
-    _orphaned = true;
+    _sender = sender;
+    _signal = signal;
 }
 
-_iConnection* _iConnection::clone() const
+void _iConnection::setSlot(iObject* receiver, void * const *slot)
 {
-    IX_ASSERT(_impl);
-    return static_cast<_iConnection*>(_impl(Clone, this, _receiverObj, _slotFunc, IX_NULLPTR));
-}
-
-_iConnection* _iConnection::duplicate(iObject* newobj) const
-{
-    IX_ASSERT(_impl);
-    return static_cast<_iConnection*>(_impl(Clone, this, newobj, _slotFunc, IX_NULLPTR));
-}
-
-void _iConnection::setSignal(iObject* senderObj, MemberFunction sigFunc)
-{
-    _senderObj = senderObj;
-    _sigFunc = sigFunc;
-}
-
-void _iConnection::setSlot(iObject* receiverObj, void **slotFunc)
-{
-    _receiverObj = receiverObj;
-    _slotFunc = slotFunc;
+    _receiver = receiver;
+    _slot = slot;
 }
 
 void _iConnection::emits(void* args) const
@@ -884,7 +1090,7 @@ void _iConnection::emits(void* args) const
         return;
     }
 
-    _impl(Call, this, _receiverObj, _slotFunc, args);
+    _impl(Call, this, _receiver, _slot, args);
 }
 
 size_t iConKeyHashFunc::operator()(const _iConnection::MemberFunction& key) const
