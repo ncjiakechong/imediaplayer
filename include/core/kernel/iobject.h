@@ -200,9 +200,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1);
+        Arguments args(a1);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Ret>
@@ -214,9 +214,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2);
+        Arguments args(a1, a2);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
@@ -229,9 +229,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3);
+        Arguments args(a1, a2, a3);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
@@ -245,9 +245,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4);
+        Arguments args(a1, a2, a3, a4);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
@@ -263,9 +263,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4, a5);
+        Arguments args(a1, a2, a3, a4, a5);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -283,9 +283,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4, a5, a6);
+        Arguments args(a1, a2, a3, a4, a5, a6);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -304,9 +304,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
+        Arguments args(a1, a2, a3, a4, a5, a6, a7);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -326,9 +326,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
+        Arguments args(a1, a2, a3, a4, a5, a6, a7, a8);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Ret>
@@ -345,9 +345,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1);
+        Arguments args(a1);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Ret>
@@ -359,9 +359,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2);
+        Arguments args(a1, a2);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Ret>
@@ -374,9 +374,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3);
+        Arguments args(a1, a2, a3);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Ret>
@@ -390,9 +390,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4);
+        Arguments args(a1, a2, a3, a4);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4, class Arg5, class Ret>
@@ -408,9 +408,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4, a5);
+        Arguments args(a1, a2, a3, a4, a5);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -428,9 +428,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4, a5, a6);
+        Arguments args(a1, a2, a3, a4, a5, a6);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -449,9 +449,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
+        Arguments args(a1, a2, a3, a4, a5, a6, a7);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     template<class Obj, class Arg1, class Arg2, class Arg3, class Arg4,
@@ -471,9 +471,9 @@ public:
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
+        Arguments args(a1, a2, a3, a4, a5, a6, a7, a8);
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
-        return invokeMethodImpl(conn, &tArgs);
+        return invokeMethodImpl(conn, &args);
     }
 
     virtual const iMetaObject *metaObject() const;

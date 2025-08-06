@@ -85,39 +85,4 @@ size_t iKeyHashFunc::operator()(const std::pair<int, int>& key) const
     return seed;
 }
 
-bool iKeyEqualFunc::operator()(const iChar& key1, const iChar& key2) const
-{
-    return key1 == key2;
-}
-
-bool iKeyEqualFunc::operator()(const iByteArray& key1, const iByteArray& key2) const
-{
-    return key1 == key2;
-}
-
-bool iKeyEqualFunc::operator()(const iString& key1, const iString& key2) const
-{
-    return key1 == key2;
-}
-
-bool iKeyEqualFunc::operator()(const iStringRef& key1, const iStringRef& key2) const
-{
-    return key1 == key2;
-}
-
-bool iKeyEqualFunc::operator()(const iStringView& key1, const iStringView& key2) const
-{
-    return key1 == key2;
-}
-
-bool iKeyEqualFunc::operator()(const iLatin1String& key1, const iLatin1String& key2) const
-{
-    return key1 == key2;
-}
-
-bool iKeyEqualFunc::operator()(const std::pair<int, int>& key1, const std::pair<int, int>& key2) const
-{
-    return (key1.first == key2.first) && (key1.second == key2.second);
-}
-
 } // namespace iShell

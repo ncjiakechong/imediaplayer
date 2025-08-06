@@ -21,8 +21,8 @@ namespace iShell {
 
 typedef iBasicAtomicBitField<4096> iTypeIdContainer;
 typedef std::unordered_map< int, iVariant::iTypeHandler> iMetaTypeHandler;
-typedef std::unordered_map< iLatin1String, int, iKeyHashFunc, iKeyEqualFunc > iTypeIdRegister;
-typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc, iKeyEqualFunc > iMetaTypeConverter;
+typedef std::unordered_map< iLatin1String, int, iKeyHashFunc > iTypeIdRegister;
+typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc > iMetaTypeConverter;
 
 struct _iMetaType {
     iMutex           _lock;
