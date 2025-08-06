@@ -139,23 +139,23 @@ public:
     inline ~iExplicitlySharedDataPointer() { if (d && (0 == --d->ref)) delete d; }
 
     explicit iExplicitlySharedDataPointer(T *data);
-    inline iExplicitlySharedDataPointer(const iExplicitlySharedDataPointer<T> &o) : d(o.d) { if (d) d->ref.ref(); }
+    inline iExplicitlySharedDataPointer(const iExplicitlySharedDataPointer<T> &o) : d(o.d) { if (d) ++d->ref; }
 
     template<class X>
     inline iExplicitlySharedDataPointer(const iExplicitlySharedDataPointer<X> &o)
         : d(static_cast<T *>(o.data()))
     {
         if(d)
-            d->ref.ref();
+            ++d->ref;
     }
 
     inline iExplicitlySharedDataPointer<T> & operator=(const iExplicitlySharedDataPointer<T> &o) {
         if (o.d != d) {
             if (o.d)
-                o.d->ref.ref();
+                ++o.d->ref;
             T *old = d;
             d = o.d;
-            if (old && !old->ref.deref())
+            if (old && (0 == --old->ref))
                 delete old;
         }
         return *this;
@@ -163,10 +163,10 @@ public:
     inline iExplicitlySharedDataPointer &operator=(T *o) {
         if (o != d) {
             if (o)
-                o->ref.ref();
+                ++o->ref;
             T *old = d;
             d = o;
-            if (old && !old->ref.deref())
+            if (old && (0 == --old->ref))
                 delete old;
         }
         return *this;
