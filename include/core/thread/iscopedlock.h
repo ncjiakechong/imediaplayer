@@ -27,7 +27,7 @@ class iScopedLock
 public:
     explicit iScopedLock(M& mutex): m_mutex(xuintptr(&mutex))
     {
-        // ix_assert((m_mutex & xuintptr(1u)) == xuintptr(0));
+        // IX_ASSERT((m_mutex & xuintptr(1u)) == xuintptr(0));
         mutex.lock();
         m_mutex |= xuintptr(1u);
     }

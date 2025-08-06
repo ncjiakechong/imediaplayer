@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 SOURCES += \
+    $$PWD/imacro.cpp \
     $$PWD/inumeric.cpp
 
 HEADERS += \
@@ -12,4 +13,7 @@ HEADERS += \
     ../../include/core/global/imacro.h \
     ../../include/core/global/imetaprogramming.h \
     ../../include/core/global/inamespace.h \
-    ../../include/core/global/inumeric.h
+    ../../include/core/global/inumeric.h \
+    ../../include/core/global/itypeinfo.h \
+    ../../include/core/global/iglobalstatic.h
+

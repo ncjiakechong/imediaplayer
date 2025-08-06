@@ -303,7 +303,7 @@ iEventDispatcher_Glib::~iEventDispatcher_Glib()
     g_source_unref(&m_postEventSource->source);
     m_postEventSource = IX_NULLPTR;
 
-    ix_assert(m_mainContext != IX_NULLPTR);
+    IX_ASSERT(m_mainContext != IX_NULLPTR);
     #if GLIB_CHECK_VERSION (2, 22, 0)
     g_main_context_pop_thread_default (m_mainContext);
     #endif

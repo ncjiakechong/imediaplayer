@@ -46,6 +46,13 @@ enum CaseSensitivity {
     CaseSensitive
 };
 
+enum LayoutDirection {
+    LeftToRight,
+    RightToLeft,
+    LayoutDirectionAuto
+};
+
+
 } // namespace iShell
 
 #endif // INAMESPACE_H

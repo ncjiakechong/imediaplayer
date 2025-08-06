@@ -109,9 +109,9 @@ void iThreadImpl::internalThreadFunc()
     if (data->dispatcher.load()) // custom event dispatcher set?
         data->dispatcher.load()->startingUp();
 
-    if (!thread->objectName().empty()) {
+    if (!thread->objectName().isEmpty()) {
         char buf[16];
-        snprintf(buf, sizeof(buf), "%s", thread->objectName().c_str());
+        snprintf(buf, sizeof(buf), "%s", thread->objectName().toUtf8().data());
         // buf[15] = '\0';
 
         pthread_setname_np(pthread_self(), buf);

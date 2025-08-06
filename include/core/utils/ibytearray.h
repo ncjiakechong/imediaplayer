@@ -82,7 +82,7 @@ template<int N> struct iStaticByteArrayData
 
     iByteArrayData *data_ptr() const
     {
-        ix_assert(ba.ref.isStatic());
+        IX_ASSERT(ba.ref.isStatic());
         return const_cast<iByteArrayData *>(&ba);
     }
 };
@@ -175,6 +175,13 @@ public:
     int lastIndexOf(const char *c, int from = -1) const;
     int lastIndexOf(const iByteArray &a, int from = -1) const;
 
+//    inline bool operator==(const iString &s2) const;
+//    inline bool operator!=(const iString &s2) const;
+//    inline bool operator<(const iString &s2) const;
+//    inline bool operator>(const iString &s2) const;
+//    inline bool operator<=(const iString &s2) const;
+//    inline bool operator>=(const iString &s2) const;
+
     inline bool contains(char c) const;
     inline bool contains(const char *a) const;
     inline bool contains(const iByteArray &a) const;
@@ -189,7 +196,7 @@ public:
     iByteArray right(int len) const;
     iByteArray mid(int index, int len = -1) const;
     iByteArray chopped(int len) const
-    { ix_assert(len >= 0); ix_assert(len <= size()); return left(size() - len); }
+    { IX_ASSERT(len >= 0); IX_ASSERT(len <= size()); return left(size() - len); }
 
     bool startsWith(const iByteArray &a) const;
     bool startsWith(char c) const;
@@ -365,11 +372,11 @@ inline int iByteArray::size() const
 { return d->size; }
 
 inline char iByteArray::at(int i) const
-{ ix_assert(uint(i) < uint(size())); return d->data()[i]; }
+{ IX_ASSERT(uint(i) < uint(size())); return d->data()[i]; }
 inline char iByteArray::operator[](int i) const
-{ ix_assert(uint(i) < uint(size())); return d->data()[i]; }
+{ IX_ASSERT(uint(i) < uint(size())); return d->data()[i]; }
 inline char iByteArray::operator[](uint i) const
-{ ix_assert(i < uint(size())); return d->data()[i]; }
+{ IX_ASSERT(i < uint(size())); return d->data()[i]; }
 
 inline bool iByteArray::isEmpty() const
 { return d->size == 0; }
@@ -442,7 +449,7 @@ public:
 };
 
 inline iByteRef iByteArray::operator[](int i)
-{ ix_assert(i >= 0); return iByteRef(*this, i); }
+{ IX_ASSERT(i >= 0); return iByteRef(*this, i); }
 inline iByteRef iByteArray::operator[](uint i)
 { return iByteRef(*this, i); }
 inline iByteRef iByteArray::front() { return operator[](0); }

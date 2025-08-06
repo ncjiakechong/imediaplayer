@@ -121,7 +121,7 @@ class iFreeList
                 return i;
             x -= size;
         }
-        ix_assert(false);
+        IX_ASSERT(false);
         return -1;
     }
 
@@ -209,7 +209,7 @@ inline int iFreeList<T, ConstantsType>::next()
                 // race with another thread lost
                 delete [] v;
                 v = _v[block].load();
-                ix_assert(v != 0);
+                IX_ASSERT(v != 0);
             }
         }
 

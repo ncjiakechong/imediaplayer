@@ -117,7 +117,7 @@ xuint32 iFloatDistance(float a, float b)
        * Integers and floats have the same endian
     */
     IX_COMPILER_VERIFY(sizeof(xuint32) == sizeof(float));
-    ix_assert(iIsFinite(a) && iIsFinite(b));
+    IX_ASSERT(iIsFinite(a) && iIsFinite(b));
     if (a == b)
         return 0;
     if ((a < 0) != (b < 0)) {
@@ -175,7 +175,7 @@ xuint64 iFloatDistance(double a, double b)
        * Integers and floats have the same endian
     */
     IX_COMPILER_VERIFY(sizeof(xuint64) == sizeof(double));
-    ix_assert(iIsFinite(a) && iIsFinite(b));
+    IX_ASSERT(iIsFinite(a) && iIsFinite(b));
     if (a == b)
         return 0;
     if ((a < 0) != (b < 0)) {

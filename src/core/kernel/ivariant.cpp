@@ -11,6 +11,7 @@
 #include <map>
 #include "core/io/ilog.h"
 #include "core/kernel/ivariant.h"
+#include "core/utils/istring.h"
 
 #define ILOG_TAG "core"
 
@@ -91,7 +92,7 @@ bool iVariant::canConvert(int targetTypeId) const
 
 bool iVariant::convert(int t, void *result) const
 {
-    ix_assert(m_typeId != t);
+    IX_ASSERT(m_typeId != t);
 
     const int charTypeId = iMetaTypeId<char>();
     const int ccharTypeId = iMetaTypeId<const char>();
@@ -178,6 +179,95 @@ bool iVariant::convert(int t, void *result) const
 
             return true;
         }
+
+        if (wcCharXTypeId == m_typeId) {
+            iVariantImpl<const wchar_t*>* imp = static_cast< iVariantImpl<const wchar_t*>* >(m_dataImpl.data());
+            if (str)
+                *str = imp->mValue;
+
+            return true;
+        }
+    } while (0);
+
+    const int iStringTypeId = iMetaTypeId<iString>();
+    do {
+        if (iStringTypeId != t)
+            break;
+
+        iString *str = static_cast<iString *>(result);
+        if (charTypeId == m_typeId) {
+            iVariantImpl<char>* imp = static_cast< iVariantImpl<char>* >(m_dataImpl.data());
+            if (str)
+                *str = imp->mValue;
+
+            return true;
+        }
+
+        if (ccharTypeId == m_typeId) {
+            iVariantImpl<const char>* imp = static_cast< iVariantImpl<const char>* >(m_dataImpl.data());
+            if (str)
+                *str = imp->mValue;
+
+            return true;
+        }
+
+        if (charXTypeId == m_typeId) {
+            iVariantImpl<char*>* imp = static_cast< iVariantImpl<char*>* >(m_dataImpl.data());
+            if (str)
+                *str = iString::fromUtf8(imp->mValue);
+
+            return true;
+        }
+
+        if (ccharXTypeId == m_typeId) {
+            iVariantImpl<const char*>* imp = static_cast< iVariantImpl<const char*>* >(m_dataImpl.data());
+            if (str)
+                *str = iString::fromUtf8(imp->mValue);
+
+            return true;
+        }
+
+        if (stringTypeId == m_typeId) {
+            iVariantImpl<std::string>* imp = static_cast< iVariantImpl<std::string>* >(m_dataImpl.data());
+            if (str)
+                *str = iString::fromStdString(imp->mValue);
+
+            return true;
+        }
+
+        if (wCharTypeId == m_typeId) {
+            iVariantImpl<wchar_t>* imp = static_cast< iVariantImpl<wchar_t>* >(m_dataImpl.data());
+            if (str)
+                *str = imp->mValue;
+
+            return true;
+        }
+
+        if (wcCharTypeId == m_typeId) {
+            iVariantImpl<const wchar_t>* imp = static_cast< iVariantImpl<const wchar_t>* >(m_dataImpl.data());
+            if (str)
+                *str = imp->mValue;
+
+            return true;
+        }
+
+        if (wCharXTypeId == m_typeId) {
+            iVariantImpl<wchar_t*>* imp = static_cast< iVariantImpl<wchar_t*>* >(m_dataImpl.data());
+            if (str)
+                *str = iString::fromWCharArray(imp->mValue);
+
+            return true;
+        }
+
+        if (wStringTypeId == m_typeId) {
+            iVariantImpl<std::wstring>* imp = static_cast< iVariantImpl<std::wstring>* >(m_dataImpl.data());
+            if (str)
+                *str = iString::fromStdWString(imp->mValue);
+
+            return true;
+        }
+
+
     } while (0);
 
     std::map< std::pair<int, int>, const iAbstractConverterFunction*>::const_iterator it;
@@ -344,6 +434,7 @@ struct systemConvertHelper
 
         iRegisterConverter(&std::string::c_str);
         iRegisterConverter(&std::wstring::c_str);
+        iRegisterConverter(&iString::utf16);
     }
 };
 

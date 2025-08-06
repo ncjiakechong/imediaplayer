@@ -14,8 +14,13 @@
 #include <cstdlib> // for abort
 #include <algorithm>
 
-#define ix_assert(cond)               do { if (!(cond)) std::abort(); } while (0)
-#define ix_check_ptr(ptr)             do { if (!(ptr)) std::abort(); } while (0)
+void ix_assert(const char *assertion, const char *file, int line);
+void ix_assert_x(const char *what, const char *file, int line);
+
+#define IX_CHECK_PTR(ptr)             do { if (!(ptr)) std::abort(); } while (0)
+
+#define IX_ASSERT(cond) ((cond) ? static_cast<void>(0) : ix_assert(#cond, __FILE__, __LINE__))
+#define IX_ASSERT_X(cond, what) ((cond) ? static_cast<void>(0) : ix_assert_x(what, __FILE__, __LINE__))
 
 /** \file
  * GCC attribute macros */
@@ -184,7 +189,13 @@
 #  endif
 #endif
 
-#define IS_LITTLE_ENDIAN ((union {uint16_t u16; uint8_t c;}){1}.c)
+// enable gcc warnings for printf-style functions
+#if defined(__GNUC__) && !defined(__INSURE__)
+#  define IX_ATTRIBUTE_FORMAT_PRINTF(A, B) \
+         __attribute__((format(printf, (A), (B))))
+#else
+#  define IX_ATTRIBUTE_FORMAT_PRINTF(A, B)
+#endif
 
 /*
    Some classes do not permit copies to be made of an object. These

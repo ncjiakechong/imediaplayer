@@ -336,56 +336,56 @@ int test_object(void)
 
     tst_sig.tst_sig_int0.emits();
     tst_sig.tst_sig_int1.emits(1);
-    ix_assert(1 == tst_obj.slot_arg1);
+    IX_ASSERT(1 == tst_obj.slot_arg1);
 
     tst_sig.tst_sig_int2.emits(2, 1);
-    ix_assert(2 == tst_obj.slot_arg1);
-    ix_assert(1 == tst_obj.slot_arg2);
+    IX_ASSERT(2 == tst_obj.slot_arg1);
+    IX_ASSERT(1 == tst_obj.slot_arg2);
 
     tst_sig.tst_sig_int3.emits(3, 2, 1);
-    ix_assert(3 == tst_obj.slot_arg1);
-    ix_assert(2 == tst_obj.slot_arg2);
-    ix_assert(1 == tst_obj.slot_arg3);
+    IX_ASSERT(3 == tst_obj.slot_arg1);
+    IX_ASSERT(2 == tst_obj.slot_arg2);
+    IX_ASSERT(1 == tst_obj.slot_arg3);
 
     tst_sig.tst_sig_int4.emits(4, 3, 2, 1);
-    ix_assert(4 == tst_obj.slot_arg1);
-    ix_assert(3 == tst_obj.slot_arg2);
-    ix_assert(2 == tst_obj.slot_arg3);
-    ix_assert(1 == tst_obj.slot_arg4);
+    IX_ASSERT(4 == tst_obj.slot_arg1);
+    IX_ASSERT(3 == tst_obj.slot_arg2);
+    IX_ASSERT(2 == tst_obj.slot_arg3);
+    IX_ASSERT(1 == tst_obj.slot_arg4);
 
     tst_sig.tst_sig_int5.emits(5, 4, 3, 2, 1);
-    ix_assert(5 == tst_obj.slot_arg1);
-    ix_assert(4 == tst_obj.slot_arg2);
-    ix_assert(3 == tst_obj.slot_arg3);
-    ix_assert(2 == tst_obj.slot_arg4);
-    ix_assert(1 == tst_obj.slot_arg5);
+    IX_ASSERT(5 == tst_obj.slot_arg1);
+    IX_ASSERT(4 == tst_obj.slot_arg2);
+    IX_ASSERT(3 == tst_obj.slot_arg3);
+    IX_ASSERT(2 == tst_obj.slot_arg4);
+    IX_ASSERT(1 == tst_obj.slot_arg5);
 
     tst_sig.tst_sig_int6.emits(6, 5, 4, 3, 2, 1);
-    ix_assert(6 == tst_obj.slot_arg1);
-    ix_assert(5 == tst_obj.slot_arg2);
-    ix_assert(4 == tst_obj.slot_arg3);
-    ix_assert(3 == tst_obj.slot_arg4);
-    ix_assert(2 == tst_obj.slot_arg5);
-    ix_assert(1 == tst_obj.slot_arg6);
+    IX_ASSERT(6 == tst_obj.slot_arg1);
+    IX_ASSERT(5 == tst_obj.slot_arg2);
+    IX_ASSERT(4 == tst_obj.slot_arg3);
+    IX_ASSERT(3 == tst_obj.slot_arg4);
+    IX_ASSERT(2 == tst_obj.slot_arg5);
+    IX_ASSERT(1 == tst_obj.slot_arg6);
 
     tst_sig.tst_sig_int7.emits(7, 6, 5, 4, 3, 2, 1);
-    ix_assert(7 == tst_obj.slot_arg1);
-    ix_assert(6 == tst_obj.slot_arg2);
-    ix_assert(5 == tst_obj.slot_arg3);
-    ix_assert(4 == tst_obj.slot_arg4);
-    ix_assert(3 == tst_obj.slot_arg5);
-    ix_assert(2 == tst_obj.slot_arg6);
-    ix_assert(1 == tst_obj.slot_arg7);
+    IX_ASSERT(7 == tst_obj.slot_arg1);
+    IX_ASSERT(6 == tst_obj.slot_arg2);
+    IX_ASSERT(5 == tst_obj.slot_arg3);
+    IX_ASSERT(4 == tst_obj.slot_arg4);
+    IX_ASSERT(3 == tst_obj.slot_arg5);
+    IX_ASSERT(2 == tst_obj.slot_arg6);
+    IX_ASSERT(1 == tst_obj.slot_arg7);
 
     tst_sig.tst_sig_int8.emits(8, 7, 6, 5, 4, 3, 2, 1);
-    ix_assert(8 == tst_obj.slot_arg1);
-    ix_assert(7 == tst_obj.slot_arg2);
-    ix_assert(6 == tst_obj.slot_arg3);
-    ix_assert(5 == tst_obj.slot_arg4);
-    ix_assert(4 == tst_obj.slot_arg5);
-    ix_assert(3 == tst_obj.slot_arg6);
-    ix_assert(2 == tst_obj.slot_arg7);
-    ix_assert(1 == tst_obj.slot_arg8);
+    IX_ASSERT(8 == tst_obj.slot_arg1);
+    IX_ASSERT(7 == tst_obj.slot_arg2);
+    IX_ASSERT(6 == tst_obj.slot_arg3);
+    IX_ASSERT(5 == tst_obj.slot_arg4);
+    IX_ASSERT(4 == tst_obj.slot_arg5);
+    IX_ASSERT(3 == tst_obj.slot_arg6);
+    IX_ASSERT(2 == tst_obj.slot_arg7);
+    IX_ASSERT(1 == tst_obj.slot_arg8);
 
 
     ilog_debug("+++++++++connect 2");
@@ -421,29 +421,29 @@ int test_object(void)
     tst_sig.tst_sig_refAdd.connect(&tst_obj, &TestObject::tst_slot_refAdd);
     tst_sig.tst_sig_refAdd.emits(value);
     ilog_debug("tst_sig_refAdd ", value);
-    ix_assert(6 == value);
+    IX_ASSERT(6 == value);
 
     iSharedPtr<TestObject> shareprt_1(new TestObject(&tst_obj), &TestObject::destory);
     shareprt_1.clear();
-    ix_assert(IX_NULLPTR == shareprt_1.data());
+    IX_ASSERT(IX_NULLPTR == shareprt_1.data());
 
     TestObject* tst_weakObj = new TestObject(&tst_obj);
     iWeakPtr<TestObject> weak_1(tst_weakObj);
-    ix_assert(tst_weakObj == weak_1.data());
+    IX_ASSERT(tst_weakObj == weak_1.data());
     iSharedPtr<TestObject> share_weakprt_1(weak_1);
-    ix_assert(IX_NULLPTR == share_weakprt_1.data());
+    IX_ASSERT(IX_NULLPTR == share_weakprt_1.data());
     delete tst_weakObj;
-    ix_assert(IX_NULLPTR == weak_1.data());
+    IX_ASSERT(IX_NULLPTR == weak_1.data());
 
     iWeakPtr<TestObject> weak_2;
     {
         iSharedPtr<TestObject> shareprt_2(new TestObject(&tst_obj), &destoryObj);
-        ix_assert(IX_NULLPTR != shareprt_2.data());
+        IX_ASSERT(IX_NULLPTR != shareprt_2.data());
 
         weak_2 = shareprt_2;
-        ix_assert(shareprt_2.data() == weak_2.data());
+        IX_ASSERT(shareprt_2.data() == weak_2.data());
     }
-    ix_assert(IX_NULLPTR == weak_2.data());
+    IX_ASSERT(IX_NULLPTR == weak_2.data());
 
     // iWeakPtr<int> weak_3(new int(1));
     iSharedPtr<int> shareprt_3(new int(3));
@@ -453,9 +453,9 @@ int test_object(void)
 
     TestObject* tst_sharedObj_5 = new TestObject(&tst_obj);
     iSharedPtr<TestObject> shared_5(tst_sharedObj_5, &TestObject::destory);
-    ix_assert(tst_sharedObj_5 == shared_5.data());
+    IX_ASSERT(tst_sharedObj_5 == shared_5.data());
     iWeakPtr<TestObject> share_weakprt_5(shared_5);
-    ix_assert(tst_sharedObj_5 == share_weakprt_5.data());
+    IX_ASSERT(tst_sharedObj_5 == share_weakprt_5.data());
 
     tst_sharedObj_5->setProperty("objectName", iVariant("tst_sharedObj_5"));
     ilog_debug("tst_sharedObj_5 name ", tst_sharedObj_5->property("objectName").value<const char*>());
@@ -464,11 +464,11 @@ int test_object(void)
     tst_sharedObj_5->observeProperty("testProperty", tst_sharedObj_5, &TestObject::tst_slot_int1);
 
     tst_sharedObj_5->setProperty("testProperty", iVariant(5));
-    ix_assert(5 == tst_sharedObj_5->property("testProperty").value<int>());
+    IX_ASSERT(5 == tst_sharedObj_5->property("testProperty").value<int>());
 
 
     delete tst_sharedObj_5;
-    ix_assert(IX_NULLPTR == share_weakprt_5.data());
+    IX_ASSERT(IX_NULLPTR == share_weakprt_5.data());
 
 
     ilog_debug("-------------slot disconnect");

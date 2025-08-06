@@ -20,8 +20,8 @@ namespace isharedpointer {
 
 ExternalRefCountData::~ExternalRefCountData()
 {
-    ix_assert(!_weakRef.value());
-    ix_assert(_strongRef.value() <= 0);
+    IX_ASSERT(!_weakRef.value());
+    IX_ASSERT(_strongRef.value() <= 0);
 }
 
 int ExternalRefCountData::strongUnref()
@@ -52,7 +52,7 @@ int ExternalRefCountData::weakUnref()
 
 void ExternalRefCountData::setObjectShared(const iObject *obj, bool share)
 {
-    ix_check_ptr(obj);
+    IX_CHECK_PTR(obj);
     if (!share)
         return;
 
@@ -70,7 +70,7 @@ void ExternalRefCountData::checkObjectShared(const iObject *)
 
 ExternalRefCountData* ExternalRefCountData::getAndTest(const iObject* obj, ExternalRefCountData* data)
 {
-    ix_check_ptr(obj);
+    IX_CHECK_PTR(obj);
 
     ExternalRefCountData *that = obj->m_refCount.load();
     if (that) {

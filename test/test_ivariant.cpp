@@ -36,7 +36,7 @@ int test_ivariant(void)
 
     iObject* obj = new iObject;
     iVariant var_obj = iVariant(obj);
-    var_obj.value<iObject*>()->setProperty("objectName", std::string("var_obj"));
+    var_obj.value<iObject*>()->setProperty("objectName", iString("var_obj"));
     ilog_debug("var_obj name ", var_obj.value<iObject*>()->objectName());
 
 
@@ -53,23 +53,27 @@ int test_ivariant(void)
     ilog_debug("var_tst1 ", var_tst1.value<tst_Variant*>());
     delete var_tst1.value<tst_Variant*>();
 
-    var_int.setValue("var int to char* to std::string");
-    ilog_debug("var_int convert ", var_int.value<std::string>());
+    var_int.setValue("var int to char* to iString");
+    ilog_debug("var_int convert ", var_int.value<iString>());
 
-    var_int.setValue(std::string("var int to std::string to char*"));
-    ilog_debug("var_int as string: ", var_int.value<std::string>());
+    var_int.setValue(iString("var int to iString to char*"));
+    ilog_debug("var_int as string: ", var_int.value<iString>());
     ilog_debug("var_int as char*: ", var_int.value<char*>());
     ilog_debug("var_int as const char*: ", var_int.value<const char*>());
+    ilog_debug("var_int as wchar_t*: ", var_int.value<wchar_t*>());
+    ilog_debug("var_int as const wchar_t*: ", var_int.value<const wchar_t*>());
 
     var_int.setValue(std::wstring(L"var int to std::wstring to char*"));
     ilog_debug("var_int as wstring: ", var_int.value<std::wstring>());
     ilog_debug("var_int as wchar_t*: ", var_int.value<wchar_t*>());
     ilog_debug("var_int as const wchar_t*: ", var_int.value<const wchar_t*>());
+    ilog_debug("var_int as const istring: ", var_int.value<iString>());
 
-    iVariant var_str1 = iVariant(std::wstring(L"wstring 123"));
+    iVariant var_str1 = iVariant(std::string("string 123"));
     ilog_debug("var_str1 as wstring:[ ", var_str1.value<std::wstring>(), "]");
     ilog_debug("var_str1 as wchar*:[ ", var_str1.value<wchar_t*>(), "]");
     ilog_debug("var_str1 as const wchar*:[ ", var_str1.value<const wchar_t*>(), "]");
+    ilog_debug("var_int as const istring: ", var_str1.value<iString>());
 
     // build error
 //    iVariant var_tst2 = iVariant(tst_Variant());

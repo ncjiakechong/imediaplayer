@@ -23,7 +23,8 @@
 //
 
 #include <type_traits>
-#include <core/global/iglobal.h>
+
+#include <core/utils/ichar.h>
 #include <core/global/inamespace.h>
 #include "private/ilocale_tools_p.h"
 
@@ -39,7 +40,7 @@ struct iStringAlgorithms
 
 
     static inline bool isSpace(char ch) { return ascii_isspace(ch); }
-    // static inline bool isSpace(QChar ch) { return ch.isSpace(); }
+    static inline bool isSpace(iChar ch) { return ch.isSpace(); }
 
     // Surrogate pairs are not handled in either of the functions below. That is
     // not a problem because there are no space characters (Zs, Zl, Zp) outside the

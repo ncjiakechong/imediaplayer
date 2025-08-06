@@ -84,7 +84,7 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
     uint interval = uint(t->interval);
     uint msec = uint(t->timeout % 1000);
     uint msec_bak = msec;
-    ix_assert(interval >= 20);
+    IX_ASSERT(interval >= 20);
 
     // Calculate how much we can round and still keep within 5% error
     uint absMaxRounding = interval / 20;

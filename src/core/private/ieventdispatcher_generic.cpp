@@ -162,7 +162,7 @@ void iEventDispatcher_generic::interrupt()
 bool iEventDispatcher_generic::processEvents()
 {
     iThreadData* data = iThread::get2(thread());
-    ix_assert(data == iThreadData::current());
+    IX_ASSERT(data == iThreadData::current());
 
     bool result = eventIterate(true, true);
     while (!result)
@@ -277,7 +277,7 @@ int iEventDispatcher_generic::removeEventSource(iEventSource* source)
 
 int iEventDispatcher_generic::addPoll(iPollFD* fd, iEventSource* source)
 {
-    ix_assert(fd);
+    IX_ASSERT(fd);
     if (thread() != iThread::currentThread()) {
         ilog_warn("iEventDispatcher_generic::addPoll: fd cannot be added from another thread");
         return -1;
@@ -510,7 +510,7 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
 
 void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingDispatches)
 {
-    ix_assert(pendingDispatches);
+    IX_ASSERT(pendingDispatches);
     std::list<iEventSource*>::const_iterator it;
 
     for (it = pendingDispatches->cbegin(); it != pendingDispatches->cend(); ++it) {
