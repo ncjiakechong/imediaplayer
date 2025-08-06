@@ -39,7 +39,7 @@ public:
 
     template<typename T>
     iVariant(T data)
-        : m_typeId(iMetaTypeId<typename type_wrapper<T>::TYPE>())
+        : m_typeId(iMetaTypeId<typename type_wrapper<T>::TYPE>(0))
         , m_dataImpl(new iVariantImpl<typename type_wrapper<T>::TYPE>(data))
     {}
 
@@ -56,7 +56,7 @@ public:
 
     template<typename T>
     bool canConvert() const
-    { return canConvert(iMetaTypeId<typename type_wrapper<T>::TYPE>()); }
+    { return canConvert(iMetaTypeId<typename type_wrapper<T>::TYPE>(0)); }
 
     template<typename T>
     typename type_wrapper<T>::TYPE value() const
@@ -64,7 +64,7 @@ public:
         if (m_dataImpl.isNull())
             return TYPEWRAPPER_DEFAULTVALUE(T);
 
-        int toTypeId = iMetaTypeId<typename type_wrapper<T>::TYPE>();
+        int toTypeId = iMetaTypeId<typename type_wrapper<T>::TYPE>(0);
         if (toTypeId == m_typeId)
             return static_cast< iVariantImpl<typename type_wrapper<T>::TYPE>* >(m_dataImpl.data())->mValue;
 
@@ -76,7 +76,7 @@ public:
     template<typename T>
     void setValue(T data)
     {
-        m_typeId = iMetaTypeId<typename type_wrapper<T>::TYPE>();
+        m_typeId = iMetaTypeId<typename type_wrapper<T>::TYPE>(0);
         m_dataImpl.reset(new iVariantImpl<typename type_wrapper<T>::TYPE>(data));
     }
 
@@ -89,13 +89,13 @@ public:
     static void unregisterConverterFunction(int from, int to);
 
     template <typename T>
-    static int iMetaTypeId()
+    static int iMetaTypeId(int hint)
     {
         static iAtomicCounter<int> typeId = iAtomicCounter<int>(0);
         if (0 != typeId.value())
             return typeId.value();
 
-        int newId = iRegisterMetaType();
+        int newId = iRegisterMetaType(hint);
         typeId.testAndSet(0, newId);
         return typeId.value();
     }
@@ -118,7 +118,7 @@ private:
         T mValue;
     };
 
-    static int iRegisterMetaType();
+    static int iRegisterMetaType(int hint);
 
     bool convert(int t, void *result) const;
 
@@ -195,25 +195,25 @@ struct iConverterFunctor : public iAbstractConverterFunction
 template<typename From, typename To>
 iConverterMemberFunction<From, To>::~iConverterMemberFunction()
 {
-    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(), iVariant::iMetaTypeId<To>());
+    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0));
 }
 template<typename From, typename To>
 iConverterMemberFunctionOk<From, To>::~iConverterMemberFunctionOk()
 {
-    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(), iVariant::iMetaTypeId<To>());
+    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0));
 }
 template<typename From, typename To, typename UnaryFunction>
 iConverterFunctor<From, To, UnaryFunction>::~iConverterFunctor()
 {
-    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(), iVariant::iMetaTypeId<To>());
+    iVariant::unregisterConverterFunction(iVariant::iMetaTypeId<From>(0), iVariant::iMetaTypeId<To>(0));
 }
 
 // member function as "int XXX::toInt() const"
 template<typename From, typename To>
 static bool iRegisterConverter(To(From::*function)() const)
 {
-    const int fromTypeId = iVariant::iMetaTypeId<From>();
-    const int toTypeId = iVariant::iMetaTypeId<To>();
+    const int fromTypeId = iVariant::iMetaTypeId<From>(0);
+    const int toTypeId = iVariant::iMetaTypeId<To>(0);
     static const iConverterMemberFunction<From, To> f(function);
     return iVariant::registerConverterFunction(&f, fromTypeId, toTypeId);
 }
@@ -222,8 +222,8 @@ static bool iRegisterConverter(To(From::*function)() const)
 template<typename From, typename To>
 static bool iRegisterConverter(To(From::*function)(bool*) const)
 {
-    const int fromTypeId = iVariant::iMetaTypeId<From>();
-    const int toTypeId = iVariant::iMetaTypeId<To>();
+    const int fromTypeId = iVariant::iMetaTypeId<From>(0);
+    const int toTypeId = iVariant::iMetaTypeId<To>(0);
     static const iConverterMemberFunctionOk<From, To> f(function);
     return iVariant::registerConverterFunction(&f, fromTypeId, toTypeId);
 }
@@ -232,8 +232,8 @@ static bool iRegisterConverter(To(From::*function)(bool*) const)
 template<typename From, typename To, typename UnaryFunction>
 static bool iRegisterConverter(UnaryFunction function)
 {
-    const int fromTypeId = iVariant::iMetaTypeId<From>();
-    const int toTypeId = iVariant::iMetaTypeId<To>();
+    const int fromTypeId = iVariant::iMetaTypeId<From>(0);
+    const int toTypeId = iVariant::iMetaTypeId<To>(0);
     static const iConverterFunctor<From, To, UnaryFunction> f(function);
     return iVariant::registerConverterFunction(&f, fromTypeId, toTypeId);
 }

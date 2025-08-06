@@ -12,6 +12,7 @@
 #include "core/io/ilog.h"
 #include "core/kernel/ivariant.h"
 #include "core/utils/istring.h"
+#include "private/ibasicatomicbitfield.h"
 
 #define ILOG_TAG "ix:core"
 
@@ -19,10 +20,13 @@ namespace iShell {
 
 iVariant::convert_map_t iVariant::s_convertFuncs;
 
-int iVariant::iRegisterMetaType()
+int iVariant::iRegisterMetaType(int hint)
 {
-    static iAtomicCounter<int> s_totalTypeId(0);
-    return ++s_totalTypeId;
+    static iBasicAtomicBitField< std::numeric_limits<uint>::max() > s_totalTypeId;
+    if ((hint > 0) && s_totalTypeId.allocateSpecific(hint))
+        return hint;
+
+    return s_totalTypeId.allocateNext();
 }
 
 bool iVariant::registerConverterFunction(const iAbstractConverterFunction *f, int from, int to)
@@ -94,11 +98,11 @@ bool iVariant::convert(int t, void *result) const
 {
     IX_ASSERT(m_typeId != t);
 
-    const int charTypeId = iMetaTypeId<char>();
-    const int ccharTypeId = iMetaTypeId<const char>();
-    const int charXTypeId = iMetaTypeId<char*>();
-    const int ccharXTypeId = iMetaTypeId<const char*>();
-    const int stringTypeId = iMetaTypeId<std::string>();
+    const int charTypeId = iMetaTypeId<char>(0);
+    const int ccharTypeId = iMetaTypeId<const char>(0);
+    const int charXTypeId = iMetaTypeId<char*>(0);
+    const int ccharXTypeId = iMetaTypeId<const char*>(0);
+    const int stringTypeId = iMetaTypeId<std::string>(0);
 
     do {
         if (stringTypeId != t)
@@ -138,11 +142,11 @@ bool iVariant::convert(int t, void *result) const
         }
     } while (0);
 
-    const int wCharTypeId = iMetaTypeId<wchar_t>();
-    const int wcCharTypeId = iMetaTypeId<const wchar_t>();
-    const int wCharXTypeId = iMetaTypeId<wchar_t*>();
-    const int wcCharXTypeId = iMetaTypeId<const wchar_t*>();
-    const int wStringTypeId = iMetaTypeId<std::wstring>();
+    const int wCharTypeId = iMetaTypeId<wchar_t>(0);
+    const int wcCharTypeId = iMetaTypeId<const wchar_t>(0);
+    const int wCharXTypeId = iMetaTypeId<wchar_t*>(0);
+    const int wcCharXTypeId = iMetaTypeId<const wchar_t*>(0);
+    const int wStringTypeId = iMetaTypeId<std::wstring>(0);
 
     do {
         if (wStringTypeId != t)
@@ -189,7 +193,7 @@ bool iVariant::convert(int t, void *result) const
         }
     } while (0);
 
-    const int iStringTypeId = iMetaTypeId<iString>();
+    const int iStringTypeId = iMetaTypeId<iString>(0);
     do {
         if (iStringTypeId != t)
             break;
