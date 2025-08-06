@@ -17,7 +17,7 @@
 #include "core/kernel/icoreapplication.h"
 #include "core/kernel/ieventdispatcher.h"
 #include "core/io/ilog.h"
-#include "private/ithread_p.h"
+#include "thread/ithread_p.h"
 
 #ifdef IX_HAVE_CXX11
 #include <algorithm>

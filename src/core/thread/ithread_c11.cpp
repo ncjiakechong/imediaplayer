@@ -14,10 +14,10 @@
 #include "core/kernel/icoreapplication.h"
 #include "core/thread/ithread.h"
 #include "core/io/ilog.h"
-#include "private/ithread_p.h"
+#include "thread/ithread_p.h"
 
 #ifdef IX_HAVE_CXX11
-#include "private/ieventdispatcher_generic.h"
+#include "thread/ieventdispatcher_generic.h"
 #endif
 
 #ifdef IX_OS_WIN

@@ -15,13 +15,13 @@
 #include "core/thread/ithread.h"
 #include "core/kernel/ievent.h"
 #include "core/io/ilog.h"
-#include "private/ithread_p.h"
+#include "thread/ithread_p.h"
 
 #ifdef IX_OS_WIN
-#include "private/ieventdispatcher_generic.h"
+#include "thread/ieventdispatcher_generic.h"
 #else
-#include "private/ieventdispatcher_generic.h"
-#include "private/ieventdispatcher_glib.h"
+#include "thread/ieventdispatcher_generic.h"
+#include "thread/ieventdispatcher_glib.h"
 #endif
 
 #define ILOG_TAG "ix:core"

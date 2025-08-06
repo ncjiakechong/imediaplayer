@@ -10,6 +10,8 @@ SOURCES += \
     $$PWD/inumeric.cpp
 
 HEADERS += \
+    $$PWD/iendian_p.h \
+    $$PWD/inumeric_p.h \
     $$PWD/../../../include/core/global/iendian.h \
     ../../include/core/global/iglobal.h \
     ../../include/core/global/imacro.h \

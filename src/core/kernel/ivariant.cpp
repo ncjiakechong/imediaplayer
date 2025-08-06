@@ -13,7 +13,7 @@
 #include "core/kernel/ivariant.h"
 #include "core/utils/istring.h"
 #include "core/global/iglobalstatic.h"
-#include "private/ibasicatomicbitfield.h"
+#include "utils/ibasicatomicbitfield.h"
 
 #define ILOG_TAG "ix:core"
 

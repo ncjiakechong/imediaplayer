@@ -23,7 +23,7 @@
 
 #include <core/global/iglobal.h>
 #include <core/utils/ilocale.h>
-#include "private/ilocale_p.h"
+#include "utils/ilocale_p.h"
 
 namespace iShell {
 

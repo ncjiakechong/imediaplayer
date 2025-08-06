@@ -16,7 +16,7 @@
 #include <ctime>
 #include <chrono>
 #else
-#include "private/icoreposix.h"
+#include "kernel/icoreposix.h"
 #endif
 
 namespace iShell {

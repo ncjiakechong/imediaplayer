@@ -16,7 +16,7 @@
 #include "core/kernel/ideadlinetimer.h"
 #include "core/kernel/icoreapplication.h"
 
-#include "private/itimerinfo.h"
+#include "kernel/itimerinfo.h"
 
 #define ILOG_TAG "ix:core"
 

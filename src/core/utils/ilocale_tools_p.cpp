@@ -17,8 +17,8 @@
 #include <cstdlib>
 #include <time.h>
 
-#include "private/ilocale_tools_p.h"
-#include "private/inumeric_p.h"
+#include "utils/ilocale_tools_p.h"
+#include "global/inumeric_p.h"
 
 // Sizes as defined by the ISO C99 standard - fallback
 #ifndef LLONG_MAX

@@ -13,7 +13,7 @@
 
 /* This file is generated from the Unicode 10.0 database */
 
-#include "private/iunicodetables_p.h"
+#include "codecs/iunicodetables_p.h"
 
 namespace iShell {
 

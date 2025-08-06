@@ -18,8 +18,8 @@
 #include "core/io/ilog.h"
 #include "core/kernel/ipoll.h"
 
-#include "private/ieventdispatcher_generic.h"
-#include "private/ithread_p.h"
+#include "thread/ieventdispatcher_generic.h"
+#include "thread/ithread_p.h"
 
 #define ILOG_TAG "ix:core"
 

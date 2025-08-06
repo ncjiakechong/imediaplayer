@@ -53,6 +53,11 @@ enum {
     MaxAllocSize = INT_MAX
 };
 
+enum {
+    // Define as enum to force inlining. Don't expose MaxAllocSize in a public header.
+    MaxByteArraySize = MaxAllocSize - sizeof(std::remove_pointer<iByteArray::DataPtr>::type)
+};
+
 struct CalculateGrowingBlockSizeResult {
     size_t size;
     size_t elementCount;

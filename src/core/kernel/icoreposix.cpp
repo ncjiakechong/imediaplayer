@@ -14,7 +14,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 
-#include "private/icoreposix.h"
+#include "kernel/icoreposix.h"
 
 namespace iShell {
 

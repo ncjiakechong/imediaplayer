@@ -5,6 +5,7 @@
 #-------------------------------------------------
 
 SOURCES += \
+    $$PWD/ieventdispatcher_generic.cpp \
     thread/icondition.cpp \
     thread/isemaphore.cpp \
     thread/ithread.cpp \
@@ -12,6 +13,8 @@ SOURCES += \
     thread/iwakeup.cpp
 
 HEADERS += \
+    $$PWD/ieventdispatcher_generic.h \
+    $$PWD/ithread_p.h \
     ../../include/core/thread/iatomiccounter.h \
     ../../include/core/thread/icondition.h \
     ../../include/core/thread/iscopedlock.h \
@@ -22,8 +25,12 @@ HEADERS += \
     ../../include/core/thread/iwakeup.h
 
 unix {
+    HEADERS += \
+        $$PWD/ieventdispatcher_glib.h
+
     SOURCES += \
-        thread/ithread_posix.cpp
+        $$PWD/ieventdispatcher_glib.cpp \
+        $$PWD/ithread_posix.cpp
 
     QMAKE_USE += glib
 } else {

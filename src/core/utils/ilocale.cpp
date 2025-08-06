@@ -13,10 +13,10 @@
 
 
 #include "core/utils/ilocale.h"
-#include "private/ilocale_p.h"
-#include "private/ilocale_tools_p.h"
-#include "private/inumeric_p.h"
-#include "private/ilocale_data_p.h"
+#include "utils/ilocale_p.h"
+#include "utils/ilocale_tools_p.h"
+#include "global/inumeric_p.h"
+#include "utils/ilocale_data_p.h"
 #include "core/io/ilog.h"
 #include "core/global/iglobalstatic.h"
 

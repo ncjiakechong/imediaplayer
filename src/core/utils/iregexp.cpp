@@ -24,7 +24,7 @@
 #include <core/thread/iscopedlock.h>
 #include <core/io/ilog.h>
 
-#include "private/istringmatcher.h"
+#include "utils/istringmatcher.h"
 
 #define ILOG_TAG "ix:utils"
 

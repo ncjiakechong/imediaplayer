@@ -26,7 +26,7 @@
 
 #include <core/utils/ichar.h>
 #include <core/global/inamespace.h>
-#include "private/ilocale_tools_p.h"
+#include "utils/ilocale_tools_p.h"
 
 namespace iShell {
 

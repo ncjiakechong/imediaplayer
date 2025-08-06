@@ -15,10 +15,10 @@
 #include "core/thread/ithread.h"
 #include "core/io/ilog.h"
 
-#include "private/ithread_p.h"
-#include "private/icoreposix.h"
-#include "private/itimerinfo.h"
-#include "private/ieventdispatcher_glib.h"
+#include "thread/ithread_p.h"
+#include "kernel/icoreposix.h"
+#include "kernel/itimerinfo.h"
+#include "thread/ieventdispatcher_glib.h"
 
 #define ILOG_TAG "ix:core"
 
