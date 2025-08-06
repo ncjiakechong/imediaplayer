@@ -110,7 +110,7 @@ typedef enum {
 static GstStaticCaps static_RawCaps = GST_STATIC_CAPS(DEFAULT_RAW_CAPS);
 #endif
 
-QGstreamerPlayerSession::QGstreamerPlayerSession(iObject *parent)
+iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
     :iObject(parent),
      m_state(QMediaPlayer::StoppedState),
      m_pendingState(QMediaPlayer::StoppedState),
@@ -247,7 +247,7 @@ QGstreamerPlayerSession::QGstreamerPlayerSession(iObject *parent)
     }
 }
 
-QGstreamerPlayerSession::~QGstreamerPlayerSession()
+iGstreamerPlayerSession::~iGstreamerPlayerSession()
 {
     if (m_pipeline) {
         stop();
@@ -268,13 +268,13 @@ QGstreamerPlayerSession::~QGstreamerPlayerSession()
     }
 }
 
-GstElement *QGstreamerPlayerSession::playbin() const
+GstElement *iGstreamerPlayerSession::playbin() const
 {
     return m_playbin;
 }
 
 #if QT_CONFIG(gstreamer_app)
-void QGstreamerPlayerSession::configureAppSrcElement(GObject* object, GObject *orig, GParamSpec *pspec, QGstreamerPlayerSession* self)
+void iGstreamerPlayerSession::configureAppSrcElement(GObject* object, GObject *orig, GParamSpec *pspec, iGstreamerPlayerSession* self)
 {
     IX_GCC_UNUSED(object);
     IX_GCC_UNUSED(pspec);
@@ -292,7 +292,7 @@ void QGstreamerPlayerSession::configureAppSrcElement(GObject* object, GObject *o
 }
 #endif
 
-void QGstreamerPlayerSession::loadFromStream(const QNetworkRequest &request, QIODevice *appSrcStream)
+void iGstreamerPlayerSession::loadFromStream(const QNetworkRequest &request, QIODevice *appSrcStream)
 {
 #if QT_CONFIG(gstreamer_app)
 #ifdef DEBUG_PLAYBIN
@@ -322,7 +322,7 @@ void QGstreamerPlayerSession::loadFromStream(const QNetworkRequest &request, QIO
 #endif
 }
 
-void QGstreamerPlayerSession::loadFromUri(const QNetworkRequest &request)
+void iGstreamerPlayerSession::loadFromUri(const QNetworkRequest &request)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO << request.url();
@@ -374,7 +374,7 @@ void QGstreamerPlayerSession::loadFromUri(const QNetworkRequest &request)
     }
 }
 
-void QGstreamerPlayerSession::setPipeline(GstElement *pipeline)
+void iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
 {
     GstBus *bus = pipeline ? gst_element_get_bus(pipeline) : nullptr;
     if (!bus)
@@ -421,12 +421,12 @@ void QGstreamerPlayerSession::setPipeline(GstElement *pipeline)
     emit pipelineChanged();
 }
 
-xint64 QGstreamerPlayerSession::duration() const
+xint64 iGstreamerPlayerSession::duration() const
 {
     return m_duration;
 }
 
-xint64 QGstreamerPlayerSession::position() const
+xint64 iGstreamerPlayerSession::position() const
 {
     gint64      position = 0;
 
@@ -435,12 +435,12 @@ xint64 QGstreamerPlayerSession::position() const
     return m_lastPosition;
 }
 
-xreal QGstreamerPlayerSession::playbackRate() const
+xreal iGstreamerPlayerSession::playbackRate() const
 {
     return m_playbackRate;
 }
 
-void QGstreamerPlayerSession::setPlaybackRate(xreal rate)
+void iGstreamerPlayerSession::setPlaybackRate(xreal rate)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO << rate;
@@ -457,7 +457,7 @@ void QGstreamerPlayerSession::setPlaybackRate(xreal rate)
     }
 }
 
-QMediaTimeRange QGstreamerPlayerSession::availablePlaybackRanges() const
+QMediaTimeRange iGstreamerPlayerSession::availablePlaybackRanges() const
 {
     QMediaTimeRange ranges;
 
@@ -495,7 +495,7 @@ QMediaTimeRange QGstreamerPlayerSession::availablePlaybackRanges() const
     return ranges;
 }
 
-int QGstreamerPlayerSession::activeStream(QMediaStreamsControl::StreamType streamType) const
+int iGstreamerPlayerSession::activeStream(QMediaStreamsControl::StreamType streamType) const
 {
     int streamNumber = -1;
     if (m_playbin) {
@@ -520,7 +520,7 @@ int QGstreamerPlayerSession::activeStream(QMediaStreamsControl::StreamType strea
     return streamNumber;
 }
 
-void QGstreamerPlayerSession::setActiveStream(QMediaStreamsControl::StreamType streamType, int streamNumber)
+void iGstreamerPlayerSession::setActiveStream(QMediaStreamsControl::StreamType streamType, int streamNumber)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO << streamType << streamNumber;
@@ -546,17 +546,17 @@ void QGstreamerPlayerSession::setActiveStream(QMediaStreamsControl::StreamType s
     }
 }
 
-int QGstreamerPlayerSession::volume() const
+int iGstreamerPlayerSession::volume() const
 {
     return m_volume;
 }
 
-bool QGstreamerPlayerSession::isMuted() const
+bool iGstreamerPlayerSession::isMuted() const
 {
     return m_muted;
 }
 
-bool QGstreamerPlayerSession::isAudioAvailable() const
+bool iGstreamerPlayerSession::isAudioAvailable() const
 {
     return m_audioAvailable;
 }
@@ -577,13 +577,13 @@ static void block_pad_cb(GstPad *pad, gboolean blocked, gpointer user_data)
     qDebug() << "block_pad_cb, blocked:" << blocked;
 #endif
     if (blocked && user_data) {
-        QGstreamerPlayerSession *session = reinterpret_cast<QGstreamerPlayerSession*>(user_data);
+        iGstreamerPlayerSession *session = reinterpret_cast<iGstreamerPlayerSession*>(user_data);
         QMetaObject::invokeMethod(session, "finishVideoOutputChange", Qt::QueuedConnection);
     }
 #endif
 }
 
-void QGstreamerPlayerSession::updateVideoRenderer()
+void iGstreamerPlayerSession::updateVideoRenderer()
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << "Video sink has chaged, reload video output";
@@ -593,7 +593,7 @@ void QGstreamerPlayerSession::updateVideoRenderer()
         setVideoRenderer(m_videoOutput);
 }
 
-void QGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
+void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO;
@@ -760,7 +760,7 @@ void QGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
     }
 }
 
-void QGstreamerPlayerSession::finishVideoOutputChange()
+void iGstreamerPlayerSession::finishVideoOutputChange()
 {
     if (!m_playbin || !m_pendingVideoSink)
         return;
@@ -904,13 +904,13 @@ void QGstreamerPlayerSession::finishVideoOutputChange()
 
 #if !GST_CHECK_VERSION(1,0,0)
 
-void QGstreamerPlayerSession::insertColorSpaceElement(GstElement *element, gpointer data)
+void iGstreamerPlayerSession::insertColorSpaceElement(GstElement *element, gpointer data)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO;
 #endif
     IX_GCC_UNUSED(element);
-    QGstreamerPlayerSession* session = reinterpret_cast<QGstreamerPlayerSession*>(data);
+    iGstreamerPlayerSession* session = reinterpret_cast<iGstreamerPlayerSession*>(data);
 
     if (session->m_usingColorspaceElement)
         return;
@@ -950,17 +950,17 @@ void QGstreamerPlayerSession::insertColorSpaceElement(GstElement *element, gpoin
 
 #endif
 
-bool QGstreamerPlayerSession::isVideoAvailable() const
+bool iGstreamerPlayerSession::isVideoAvailable() const
 {
     return m_videoAvailable;
 }
 
-bool QGstreamerPlayerSession::isSeekable() const
+bool iGstreamerPlayerSession::isSeekable() const
 {
     return m_seekable;
 }
 
-bool QGstreamerPlayerSession::play()
+bool iGstreamerPlayerSession::play()
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO;
@@ -982,7 +982,7 @@ bool QGstreamerPlayerSession::play()
     return false;
 }
 
-bool QGstreamerPlayerSession::pause()
+bool iGstreamerPlayerSession::pause()
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO;
@@ -1005,7 +1005,7 @@ bool QGstreamerPlayerSession::pause()
     return false;
 }
 
-void QGstreamerPlayerSession::stop()
+void iGstreamerPlayerSession::stop()
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO;
@@ -1032,7 +1032,7 @@ void QGstreamerPlayerSession::stop()
     }
 }
 
-bool QGstreamerPlayerSession::seek(xint64 ms)
+bool iGstreamerPlayerSession::seek(xint64 ms)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO << ms;
@@ -1058,7 +1058,7 @@ bool QGstreamerPlayerSession::seek(xint64 ms)
     return false;
 }
 
-void QGstreamerPlayerSession::setVolume(int volume)
+void iGstreamerPlayerSession::setVolume(int volume)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO << volume;
@@ -1074,7 +1074,7 @@ void QGstreamerPlayerSession::setVolume(int volume)
     }
 }
 
-void QGstreamerPlayerSession::setMuted(bool muted)
+void iGstreamerPlayerSession::setMuted(bool muted)
 {
 #ifdef DEBUG_PLAYBIN
         qDebug() << Q_FUNC_INFO << muted;
@@ -1090,7 +1090,7 @@ void QGstreamerPlayerSession::setMuted(bool muted)
 }
 
 
-void QGstreamerPlayerSession::setSeekable(bool seekable)
+void iGstreamerPlayerSession::setSeekable(bool seekable)
 {
 #ifdef DEBUG_PLAYBIN
         qDebug() << Q_FUNC_INFO << seekable;
@@ -1101,7 +1101,7 @@ void QGstreamerPlayerSession::setSeekable(bool seekable)
     }
 }
 
-bool QGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message)
+bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message)
 {
     GstMessage* gm = message.rawMessage();
     if (gm) {
@@ -1393,7 +1393,7 @@ bool QGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
     return false;
 }
 
-void QGstreamerPlayerSession::getStreamsInfo()
+void iGstreamerPlayerSession::getStreamsInfo()
 {
     if (!m_playbin)
         return;
@@ -1487,7 +1487,7 @@ void QGstreamerPlayerSession::getStreamsInfo()
         emit streamsChanged();
 }
 
-void QGstreamerPlayerSession::updateVideoResolutionTag()
+void iGstreamerPlayerSession::updateVideoResolutionTag()
 {
     if (!m_videoIdentity)
         return;
@@ -1536,7 +1536,7 @@ void QGstreamerPlayerSession::updateVideoResolutionTag()
     }
 }
 
-void QGstreamerPlayerSession::updateDuration()
+void iGstreamerPlayerSession::updateDuration()
 {
     gint64 gstDuration = 0;
     int duration = 0;
@@ -1570,7 +1570,7 @@ void QGstreamerPlayerSession::updateDuration()
 #endif
 }
 
-void QGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpointer d)
+void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpointer d)
 {
     IX_GCC_UNUSED(p);
 
@@ -1586,7 +1586,7 @@ void QGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
     // Set Headers
     const iByteArray userAgentString("User-Agent");
 
-    QGstreamerPlayerSession *self = reinterpret_cast<QGstreamerPlayerSession *>(d);
+    iGstreamerPlayerSession *self = reinterpret_cast<iGstreamerPlayerSession *>(d);
 
     // User-Agent - special case, souphhtpsrc will always set something, even if
     // defined in extra-headers
@@ -1672,20 +1672,20 @@ void QGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
     gst_object_unref(source);
 }
 
-bool QGstreamerPlayerSession::isLiveSource() const
+bool iGstreamerPlayerSession::isLiveSource() const
 {
     return m_isLiveSource;
 }
 
-void QGstreamerPlayerSession::handleVolumeChange(GObject *o, GParamSpec *p, gpointer d)
+void iGstreamerPlayerSession::handleVolumeChange(GObject *o, GParamSpec *p, gpointer d)
 {
     IX_GCC_UNUSED(o);
     IX_GCC_UNUSED(p);
-    QGstreamerPlayerSession *session = reinterpret_cast<QGstreamerPlayerSession *>(d);
+    iGstreamerPlayerSession *session = reinterpret_cast<iGstreamerPlayerSession *>(d);
     QMetaObject::invokeMethod(session, "updateVolume", Qt::QueuedConnection);
 }
 
-void QGstreamerPlayerSession::updateVolume()
+void iGstreamerPlayerSession::updateVolume()
 {
     double volume = 1.0;
     g_object_get(m_playbin, "volume", &volume, IX_NULLPTR);
@@ -1699,15 +1699,15 @@ void QGstreamerPlayerSession::updateVolume()
     }
 }
 
-void QGstreamerPlayerSession::handleMutedChange(GObject *o, GParamSpec *p, gpointer d)
+void iGstreamerPlayerSession::handleMutedChange(GObject *o, GParamSpec *p, gpointer d)
 {
     IX_GCC_UNUSED(o);
     IX_GCC_UNUSED(p);
-    QGstreamerPlayerSession *session = reinterpret_cast<QGstreamerPlayerSession *>(d);
+    iGstreamerPlayerSession *session = reinterpret_cast<iGstreamerPlayerSession *>(d);
     QMetaObject::invokeMethod(session, "updateMuted", Qt::QueuedConnection);
 }
 
-void QGstreamerPlayerSession::updateMuted()
+void iGstreamerPlayerSession::updateMuted()
 {
     gboolean muted = FALSE;
     g_object_get(G_OBJECT(m_playbin), "mute", &muted, IX_NULLPTR);
@@ -1749,7 +1749,7 @@ static gboolean factory_can_src_any_caps (GstElementFactory *factory, const GstC
 }
 #endif
 
-GstAutoplugSelectResult QGstreamerPlayerSession::handleAutoplugSelect(GstBin *bin, GstPad *pad, GstCaps *caps, GstElementFactory *factory, QGstreamerPlayerSession *session)
+GstAutoplugSelectResult iGstreamerPlayerSession::handleAutoplugSelect(GstBin *bin, GstPad *pad, GstCaps *caps, GstElementFactory *factory, iGstreamerPlayerSession *session)
 {
     IX_GCC_UNUSED(bin);
     IX_GCC_UNUSED(pad);
@@ -1782,7 +1782,7 @@ GstAutoplugSelectResult QGstreamerPlayerSession::handleAutoplugSelect(GstBin *bi
     return res;
 }
 
-void QGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *element, QGstreamerPlayerSession *session)
+void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *element, iGstreamerPlayerSession *session)
 {
     IX_GCC_UNUSED(bin);
     //we have to configure queue2 element to enable media downloading
@@ -1816,16 +1816,16 @@ void QGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *elemen
     g_free(elementName);
 }
 
-void QGstreamerPlayerSession::handleStreamsChange(GstBin *bin, gpointer user_data)
+void iGstreamerPlayerSession::handleStreamsChange(GstBin *bin, gpointer user_data)
 {
     IX_GCC_UNUSED(bin);
 
-    QGstreamerPlayerSession* session = reinterpret_cast<QGstreamerPlayerSession*>(user_data);
+    iGstreamerPlayerSession* session = reinterpret_cast<iGstreamerPlayerSession*>(user_data);
     QMetaObject::invokeMethod(session, "getStreamsInfo", Qt::QueuedConnection);
 }
 
 //doing proper operations when detecting an invalidMedia: change media status before signal the erorr
-void QGstreamerPlayerSession::processInvalidMedia(QMediaPlayer::Error errorCode, const iString& errorString)
+void iGstreamerPlayerSession::processInvalidMedia(QMediaPlayer::Error errorCode, const iString& errorString)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO;
@@ -1835,7 +1835,7 @@ void QGstreamerPlayerSession::processInvalidMedia(QMediaPlayer::Error errorCode,
     emit error(int(errorCode), errorString);
 }
 
-void QGstreamerPlayerSession::showPrerollFrames(bool enabled)
+void iGstreamerPlayerSession::showPrerollFrames(bool enabled)
 {
 #ifdef DEBUG_PLAYBIN
     qDebug() << Q_FUNC_INFO << enabled;
@@ -1849,28 +1849,28 @@ void QGstreamerPlayerSession::showPrerollFrames(bool enabled)
     }
 }
 
-void QGstreamerPlayerSession::addProbe(QGstreamerVideoProbeControl* probe)
+void iGstreamerPlayerSession::addProbe(QGstreamerVideoProbeControl* probe)
 {
     IX_ASSERT(!m_videoProbe);
     m_videoProbe = probe;
     addVideoBufferProbe();
 }
 
-void QGstreamerPlayerSession::removeProbe(QGstreamerVideoProbeControl* probe)
+void iGstreamerPlayerSession::removeProbe(QGstreamerVideoProbeControl* probe)
 {
     IX_ASSERT(m_videoProbe == probe);
     removeVideoBufferProbe();
     m_videoProbe = 0;
 }
 
-void QGstreamerPlayerSession::addProbe(QGstreamerAudioProbeControl* probe)
+void iGstreamerPlayerSession::addProbe(QGstreamerAudioProbeControl* probe)
 {
     IX_ASSERT(!m_audioProbe);
     m_audioProbe = probe;
     addAudioBufferProbe();
 }
 
-void QGstreamerPlayerSession::removeProbe(QGstreamerAudioProbeControl* probe)
+void iGstreamerPlayerSession::removeProbe(QGstreamerAudioProbeControl* probe)
 {
     IX_ASSERT(m_audioProbe == probe);
     removeAudioBufferProbe();
@@ -1880,7 +1880,7 @@ void QGstreamerPlayerSession::removeProbe(QGstreamerAudioProbeControl* probe)
 // This function is similar to stop(),
 // but does not set m_everPlayed, m_lastPosition,
 // and setSeekable() values.
-void QGstreamerPlayerSession::endOfMediaReset()
+void iGstreamerPlayerSession::endOfMediaReset()
 {
     if (m_renderer)
         m_renderer->stopRenderer();
@@ -1897,7 +1897,7 @@ void QGstreamerPlayerSession::endOfMediaReset()
         emit stateChanged(m_state);
 }
 
-void QGstreamerPlayerSession::removeVideoBufferProbe()
+void iGstreamerPlayerSession::removeVideoBufferProbe()
 {
     if (!m_videoProbe)
         return;
@@ -1909,7 +1909,7 @@ void QGstreamerPlayerSession::removeVideoBufferProbe()
     }
 }
 
-void QGstreamerPlayerSession::addVideoBufferProbe()
+void iGstreamerPlayerSession::addVideoBufferProbe()
 {
     if (!m_videoProbe)
         return;
@@ -1921,7 +1921,7 @@ void QGstreamerPlayerSession::addVideoBufferProbe()
     }
 }
 
-void QGstreamerPlayerSession::removeAudioBufferProbe()
+void iGstreamerPlayerSession::removeAudioBufferProbe()
 {
     if (!m_audioProbe)
         return;
@@ -1933,7 +1933,7 @@ void QGstreamerPlayerSession::removeAudioBufferProbe()
     }
 }
 
-void QGstreamerPlayerSession::addAudioBufferProbe()
+void iGstreamerPlayerSession::addAudioBufferProbe()
 {
     if (!m_audioProbe)
         return;
@@ -1945,13 +1945,13 @@ void QGstreamerPlayerSession::addAudioBufferProbe()
     }
 }
 
-void QGstreamerPlayerSession::flushVideoProbes()
+void iGstreamerPlayerSession::flushVideoProbes()
 {
     if (m_videoProbe)
         m_videoProbe->startFlushing();
 }
 
-void QGstreamerPlayerSession::resumeVideoProbes()
+void iGstreamerPlayerSession::resumeVideoProbes()
 {
     if (m_videoProbe)
         m_videoProbe->stopFlushing();

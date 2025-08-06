@@ -59,7 +59,7 @@ public:
         ilog_debug("tst_slot_prop changed ", arg1.value<int>());
     }
 
-    isignal<iVariant> testPropertyChanged;
+    iSignal<iVariant> testPropertyChanged;
 
     void destory() {
         delete this;
@@ -251,22 +251,22 @@ public:
 
 public:
 
-    isignal<> tst_sig_int0;
-    isignal<int> tst_sig_int1;
-    isignal<int, int> tst_sig_int2;
-    isignal<int, int, int> tst_sig_int3;
-    isignal<int, int, int, int> tst_sig_int4;
-    isignal<int, int, int, int, int> tst_sig_int5;
-    isignal<int, int, int, int, int, int> tst_sig_int6;
-    isignal<int, int, int, int, int, int, int> tst_sig_int7;
-    isignal<int, int, int, int, int, int, int, int> tst_sig_int8;
+    iSignal<> tst_sig_int0;
+    iSignal<int> tst_sig_int1;
+    iSignal<int, int> tst_sig_int2;
+    iSignal<int, int, int> tst_sig_int3;
+    iSignal<int, int, int, int> tst_sig_int4;
+    iSignal<int, int, int, int, int> tst_sig_int5;
+    iSignal<int, int, int, int, int, int> tst_sig_int6;
+    iSignal<int, int, int, int, int, int, int> tst_sig_int7;
+    iSignal<int, int, int, int, int, int, int, int> tst_sig_int8;
 
 
-    isignal<int, struct E, int> tst_sig_struct;
-    isignal<int, struct E&, float> tst_sig_ref;
-    isignal<int, struct E*, float> tst_sig_point;
+    iSignal<int, struct E, int> tst_sig_struct;
+    iSignal<int, struct E&, float> tst_sig_ref;
+    iSignal<int, struct E*, float> tst_sig_point;
 
-    isignal<int&> tst_sig_refAdd;
+    iSignal<int&> tst_sig_refAdd;
 };
 
 int test_object(void)

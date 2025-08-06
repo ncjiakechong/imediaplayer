@@ -12,6 +12,7 @@
 #define ISCOPEDLOCK_H
 
 #include <cstdint>
+#include <core/global/imacro.h>
 #include <core/global/iglobal.h>
 
 namespace iShell {

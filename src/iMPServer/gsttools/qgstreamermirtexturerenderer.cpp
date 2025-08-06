@@ -89,7 +89,7 @@ private:
 };
 
 QGstreamerMirTextureRenderer::QGstreamerMirTextureRenderer(iObject *parent
-        , const QGstreamerPlayerSession *playerSession)
+        , const iGstreamerPlayerSession *playerSession)
     : QVideoRendererControl(0), m_videoSink(0), m_surface(0),
       m_glSurface(0),
       m_context(0),
@@ -277,9 +277,9 @@ void QGstreamerMirTextureRenderer::setSurface(QAbstractVideoSurface *surface)
     }
 }
 
-void QGstreamerMirTextureRenderer::setPlayerSession(const QGstreamerPlayerSession *playerSession)
+void QGstreamerMirTextureRenderer::setPlayerSession(const iGstreamerPlayerSession *playerSession)
 {
-    m_playerSession = const_cast<QGstreamerPlayerSession*>(playerSession);
+    m_playerSession = const_cast<iGstreamerPlayerSession*>(playerSession);
 }
 
 void QGstreamerMirTextureRenderer::handleFormatChange()

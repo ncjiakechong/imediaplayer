@@ -72,7 +72,7 @@ public:
         iCoreApplication::postEvent(iCoreApplication::instance(), new iEvent(iEvent::Quit));
     }
 
-    isignal<int> tstcase_sig;
+    iSignal<int> tstcase_sig;
 };
 
 int main(void)

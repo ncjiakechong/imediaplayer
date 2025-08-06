@@ -58,16 +58,16 @@
 namespace iShell {
 
 class QMediaPlayerResourceSetInterface;
-class QGstreamerPlayerSession;
+class iGstreamerPlayerSession;
 class QGstreamerPlayerControl : public QMediaPlayerControl
 {
     Q_OBJECT
 
 public:
-    QGstreamerPlayerControl(QGstreamerPlayerSession *session, iObject *parent = 0);
+    QGstreamerPlayerControl(iGstreamerPlayerSession *session, iObject *parent = 0);
     ~QGstreamerPlayerControl();
 
-    QGstreamerPlayerSession *session() { return m_session; }
+    iGstreamerPlayerSession *session() { return m_session; }
 
     QMediaPlayer::State state() const override;
     QMediaPlayer::MediaStatus mediaStatus() const override;
@@ -124,7 +124,7 @@ private:
     void pushState();
     void popAndNotifyState();
 
-    QGstreamerPlayerSession *m_session;
+    iGstreamerPlayerSession *m_session;
     QMediaPlayer::State m_userRequestedState;
     QMediaPlayer::State m_currentState;
     QMediaPlayer::MediaStatus m_mediaStatus;

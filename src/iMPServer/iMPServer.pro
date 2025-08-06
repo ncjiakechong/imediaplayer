@@ -26,13 +26,13 @@ HEADERS += \
     gsttools/igstreamerbufferprobe_p.h \
     gsttools/igstreamerbushelper_p.h \
     gsttools/igstreamermessage_p.h \
+#    gsttools/igstreamerplayersession_p.h \
     gsttools/igstreamervideorendererinterface_p.h \
     gsttools/igstutils_p.h \
     gsttools/igstvideobuffer_p.h \
 #    gsttools/qgstreameraudioprobecontrol_p.h \
 #    gsttools/qgstreamermirtexturerenderer_p.h \
 #    gsttools/qgstreamerplayercontrol_p.h \
-#    gsttools/qgstreamerplayersession_p.h \
 #    gsttools/qgstreamervideooverlay_p.h \
 #    gsttools/qgstreamervideoprobecontrol_p.h \
 #    gsttools/qgstreamervideorenderer_p.h \
@@ -43,15 +43,15 @@ HEADERS += \
 
 SOURCES += \
     gsttools/igstappsrc.cpp \
+    gsttools/igstreamerbushelper.cpp \
+    gsttools/igstreamermessage.cpp \
+#    gsttools/igstreamerplayersession.cpp \
     gsttools/igstutils.cpp \
 #    gsttools/qgstcodecsinfo.cpp \
 #    gsttools/qgstreameraudioprobecontrol.cpp \
 #    gsttools/qgstreamerbufferprobe.cpp \
-#    gsttools/qgstreamerbushelper.cpp \
-#    gsttools/qgstreamermessage.cpp \
 #    gsttools/qgstreamermirtexturerenderer.cpp \
 #    gsttools/qgstreamerplayercontrol.cpp \
-#    gsttools/qgstreamerplayersession.cpp \
 #    gsttools/qgstreamervideooverlay.cpp \
 #    gsttools/qgstreamervideoprobecontrol.cpp \
 #    gsttools/qgstreamervideorenderer.cpp \

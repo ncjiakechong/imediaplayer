@@ -61,7 +61,7 @@
 namespace iShell {
 
 class QGstreamerMirTextureBuffer;
-class QGstreamerPlayerSession;
+class iGstreamerPlayerSession;
 class QGLContext;
 class QOpenGLContext;
 class QSurfaceFormat;
@@ -71,13 +71,13 @@ class QGstreamerMirTextureRenderer : public QVideoRendererControl, public iGstre
     Q_OBJECT
     Q_INTERFACES(iGstreamerVideoRendererInterface)
 public:
-    QGstreamerMirTextureRenderer(iObject *parent = 0, const QGstreamerPlayerSession *playerSession = 0);
+    QGstreamerMirTextureRenderer(iObject *parent = 0, const iGstreamerPlayerSession *playerSession = 0);
     virtual ~QGstreamerMirTextureRenderer();
 
     QAbstractVideoSurface *surface() const;
     void setSurface(QAbstractVideoSurface *surface);
 
-    void setPlayerSession(const QGstreamerPlayerSession *playerSession);
+    void setPlayerSession(const iGstreamerPlayerSession *playerSession);
 
     GstElement *videoSink();
 
@@ -107,7 +107,7 @@ private:
     QOpenGLContext *m_glContext;
     unsigned int m_textureId;
     QWindow *m_offscreenSurface;
-    QGstreamerPlayerSession *m_playerSession;
+    iGstreamerPlayerSession *m_playerSession;
     QGstreamerMirTextureBuffer *m_textureBuffer;
     iSize m_nativeSize;
 

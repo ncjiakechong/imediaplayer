@@ -101,12 +101,12 @@ public:
     iString errorString() const;
 
     // SIGNALS
-    isignal<> readyRead;
-    isignal<int> channelReadyRead;
-    isignal<xint64> bytesWritten;
-    isignal<int, xint64> channelBytesWritten;
-    isignal<> aboutToClose;
-    isignal<> readChannelFinished;
+    iSignal<> readyRead;
+    iSignal<int> channelReadyRead;
+    iSignal<xint64> bytesWritten;
+    iSignal<int, xint64> channelBytesWritten;
+    iSignal<> aboutToClose;
+    iSignal<> readChannelFinished;
 
 protected:
     virtual xint64 readData(char *data, xint64 maxlen) = 0;
