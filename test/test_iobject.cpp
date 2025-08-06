@@ -34,6 +34,16 @@ struct F
     F(const F&){ilog_debug("F copy constract");}
 };
 
+iLogger& operator<<(iLogger& logger, const iObject* value)
+{
+    if (IX_NULLPTR == value) {
+        logger << static_cast<const void*>(value);
+        return logger;
+    }
+
+    logger << value->objectName() << "[" << static_cast<const void*>(value) << "]";
+    return logger;
+}
 
 class TestObject : public iObject
 {
@@ -56,7 +66,7 @@ public:
     }
 
     void tst_slot_prop(const iVariant& arg1) {
-        ilog_debug("tst_slot_prop changed ", arg1.value<int>());
+        ilog_debug(this, " tst_slot_prop changed ", arg1.value<int>());
     }
 
     iSignal<iVariant> testPropertyChanged;
@@ -66,27 +76,27 @@ public:
     }
 
     int tst_slot_return() {
-        ilog_debug("tst_slot_return");
+        ilog_debug(this, " tst_slot_return");
         return 0;
     }
 
     void tst_slot_int0() {
-        ilog_debug("tst_slot_int0");
+        ilog_debug(this, " tst_slot_int0");
     }
 
     void tst_slot_int1(int arg1) {
-        ilog_debug("tst_slot_int1 arg1 ", arg1);
+        ilog_debug(this, " tst_slot_int1 arg1 ", arg1);
         slot_arg1 = arg1;
     }
 
     void tst_slot_int2(int arg1, int arg2) {
-        ilog_debug("tst_slot_int2 arg1 ", arg1, ", arg2 ", arg2);
+        ilog_debug(this, " tst_slot_int2 arg1 ", arg1, ", arg2 ", arg2);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
     }
 
     int tst_slot_int3(int arg1, int arg2, int arg3) {
-        ilog_debug("tst_slot_int3 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3);
+        ilog_debug(this, " tst_slot_int3 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
         slot_arg3 = arg3;
@@ -94,7 +104,7 @@ public:
     }
 
     void tst_slot_int4(int arg1, int arg2, int arg3, int arg4) {
-        ilog_debug("tst_slot_int4 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4);
+        ilog_debug(this, " tst_slot_int4 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
         slot_arg3 = arg3;
@@ -102,7 +112,7 @@ public:
     }
 
     void tst_slot_int5(int arg1, int arg2, int arg3, int arg4, int arg5) {
-        ilog_debug("tst_slot_int5 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
+        ilog_debug(this, " tst_slot_int5 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
                    "arg5 ", arg5);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
@@ -112,7 +122,7 @@ public:
     }
 
     void tst_slot_int6(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
-        ilog_debug("tst_slot_int6 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
+        ilog_debug(this, " tst_slot_int6 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
                    "arg5 ", arg5, " arg6 ", arg6);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
@@ -123,7 +133,7 @@ public:
     }
 
     void tst_slot_int7(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7) {
-        ilog_debug("tst_slot_int7 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
+        ilog_debug(this, " tst_slot_int7 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
                    "arg5 ", arg5, " arg6 ", arg6, " arg7 ", arg7);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
@@ -135,7 +145,7 @@ public:
     }
 
     void tst_slot_int8(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6, int arg7, int arg8) {
-        ilog_debug("tst_slot_int8 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
+        ilog_debug(this, " tst_slot_int8 arg1 ", arg1, ", arg2 ", arg2, ", arg3 ", arg3, ", arg4 ", arg4, ", "
                    "arg5 ", arg5, " arg6 ", arg6, " arg7 ", arg7, " arg8 ", arg8);
         slot_arg1 = arg1;
         slot_arg2 = arg2;
@@ -148,27 +158,27 @@ public:
     }
 
     void tst_slot_struct(int arg1, struct E, int arg3) {
-        ilog_debug("tst_slot_struct arg1 ", arg1, ", arg3", arg3);
+        ilog_debug(this, " tst_slot_struct arg1 ", arg1, ", arg3", arg3);
     }
 
     void tst_slot_ref(int arg1, struct E&, float arg3) {
-        ilog_debug("tst_slot_ref arg1 ", arg1, " arg3 ", arg3);
+        ilog_debug(this, " tst_slot_ref arg1 ", arg1, " arg3 ", arg3);
     }
 
     void tst_slot_point(int arg1, struct E* arg2, float arg3) {
-        ilog_debug("tst_slot_point arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
+        ilog_debug(this, " tst_slot_point arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
     }
 
     void tst_slot_error(int arg1, struct F* arg2, float arg3) {
-        ilog_debug("tst_slot_error arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
+        ilog_debug(this, "tst_slot_error arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
     }
 
     void tst_slot_type_change(char arg1, struct E* arg2, int arg3) {
-        ilog_debug("tst_slot_type_change arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
+        ilog_debug(this, " tst_slot_type_change arg1 ", arg1, "  arg2 ", arg2, " arg3 ", arg3);
     }
 
     void tst_slot_refAdd(int& value) {
-        ilog_debug("tst_slot_refAdd value ", value);
+        ilog_debug(this, " tst_slot_refAdd value ", value);
         ++value;
     }
 
@@ -284,12 +294,12 @@ public:
     TestObjectDeleteSlot(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 
     void slotDeleteObj(iObject* obj) {
-        ilog_debug("slotDeleteObj ", obj->objectName());
+        ilog_debug(this, "slotDeleteObj ", obj->objectName());
         delete obj;
     }
 
     void slotNothing(iObject* obj) {
-        ilog_debug("slotNothing ", obj->objectName());
+        ilog_debug(this, "slotNothing ", obj->objectName());
     }
 };
 
