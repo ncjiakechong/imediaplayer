@@ -1748,7 +1748,32 @@ void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *elemen
     //but it's added dynamically to playbin2
     gchar *elementName = gst_element_get_name(element);
 
-    if (g_str_has_prefix(elementName, "queue2")) {
+    if (g_str_has_prefix(elementName, "capsfilter")) {
+        do {
+            GstCaps *filter_caps = IX_NULLPTR;
+            g_object_get (G_OBJECT (element), "caps", &filter_caps, IX_NULLPTR);
+            if (!filter_caps)
+                break;
+
+            GstStructure *filter_structure = gst_caps_get_structure (filter_caps, 0);
+            if (!filter_structure || !g_strrstr (gst_structure_get_name (filter_structure), "video/x-h264"))
+                break;
+
+            GstCaps * policy_caps = gst_caps_new_simple("video/x-h264",
+                                                    "alignment", G_TYPE_STRING, "au",
+                                                    "stream-format", G_TYPE_STRING, "avc",
+                                                    "parsed", G_TYPE_BOOLEAN, TRUE, IX_NULLPTR);
+            if (!gst_caps_is_subset(policy_caps, filter_caps)) {
+                gst_caps_unref (policy_caps);
+                break;
+            }
+
+            /* Append the parser caps to prevent any not-negotiated errors */
+            policy_caps = gst_caps_merge(policy_caps, gst_caps_ref(filter_caps));
+            g_object_set (G_OBJECT (element), "caps", policy_caps, NULL);
+            gst_caps_unref (policy_caps);
+        } while (0);
+    } else if (g_str_has_prefix(elementName, "queue2")) {
         // Disable on-disk buffering.
         g_object_set(G_OBJECT(element), "temp-template", IX_NULLPTR, IX_NULLPTR);
     } else if (g_str_has_prefix(elementName, "uridecodebin") ||
@@ -1759,15 +1784,16 @@ void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *elemen
         if (g_str_has_prefix(elementName, "uridecodebin")) {
             // Add video/x-surface (VAAPI) to default raw formats
             g_object_set(G_OBJECT(element), "caps", gst_static_caps_get(&static_RawCaps), IX_NULLPTR);
-            // listen for uridecodebin autoplug-select to skip VAAPI usage when the current
-            // video sink doesn't support it
-            g_signal_connect(element, "autoplug-select", G_CALLBACK(handleAutoplugSelect), session);
         }
         #endif
         //listen for queue2 element added to uridecodebin/decodebin2 as well.
         //Don't touch other bins since they may have unrelated queues
         g_signal_connect(element, "element-added",
                          G_CALLBACK(handleElementAdded), session);
+
+        // listen for autoplug-select to skip VAAPI usage when the current
+        // video sink doesn't support it
+        g_signal_connect(element, "autoplug-select", G_CALLBACK(handleAutoplugSelect), session);
     }
 
     g_free(elementName);
