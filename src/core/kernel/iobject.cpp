@@ -830,6 +830,7 @@ iVariant iObject::property(const char *name) const
         return tProperty->_get(tProperty, this);
     } while ((mo = mo->superClass()));
 
+    ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] not found!");
     return iVariant();
 }
 
@@ -849,6 +850,32 @@ bool iObject::setProperty(const char *name, const iVariant& value)
         return ret;
     } while ((mo = mo->superClass()));
 
+    ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] not found!");
+    return false;
+}
+
+bool iObject::observePropertyImp(const char* name, _iConnection& conn)
+{
+    const iMetaObject* mo = metaObject();
+
+    do {
+        const _iProperty* tProperty = mo->property(iLatin1String(name));
+        if (IX_NULLPTR == tProperty)
+            continue;
+
+        conn.setSignal(this, tProperty->_signalRaw);
+        conn._argWraper = tProperty->_argWraper;
+        conn._argDeleter = tProperty->_argDeleter;
+        conn._isArgAdapter = true;
+
+        bool ret = connectImpl(conn);
+        if (!ret)
+            ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] no signal func!");
+
+        return ret;
+    } while ((mo = mo->superClass()));
+
+    ilog_warn(__FUNCTION__, ":obj[", objectName(), "] property[", name, "] not found!");
     return false;
 }
 

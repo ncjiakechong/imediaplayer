@@ -68,35 +68,17 @@ public:
     template<typename Func>
     bool observeProperty(const char *name, const typename FunctionPointer<Func>::Object* obj, Func slot) {
         typedef void (FunctionPointer<Func>::Object::*SignalFunc)(iVariant);
-        typedef void (FunctionPointer<Func>::Object::*FuncAdaptor)();
-
         IX_COMPILER_VERIFY(int(FunctionPointer<Func>::ArgumentCount) <= 1);
 
-        const iMetaObject* mo = metaObject();
-
-        do {
-            const _iProperty* tProperty = mo->property(iLatin1String(name));
-            if (IX_NULLPTR == tProperty)
-                continue;
-
-            FuncAdaptor tFuncAdptor = static_cast<FuncAdaptor>(tProperty->_signalRaw);
-            SignalFunc tFunc = reinterpret_cast<SignalFunc>(tFuncAdptor);
-            _iConnectionHelper<SignalFunc, Func> conn(this, tFunc, obj, slot, AutoConnection);
-            conn._argWraper = tProperty->_argWraper;
-            conn._argDeleter = tProperty->_argDeleter;
-            conn._isArgAdapter = true;
-            return connectImpl(conn);
-        } while ((mo = mo->superClass()));
-
-        return false;
+        _iConnectionHelper<SignalFunc, Func> conn(this, IX_NULLPTR, obj, slot, AutoConnection);
+        return observePropertyImp(name, conn);
     }
 
     //Connect a signal to a pointer to qobject member function
     template <typename Func1, typename Func2>
     static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal,
                              const typename FunctionPointer<Func2>::Object *receiver, Func2 slot,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef FunctionPointer<Func1> SignalType;
         typedef FunctionPointer<Func2> SlotType;
 
@@ -114,16 +96,14 @@ public:
 
     //connect to a function pointer  (not a member)
     template <typename Func1, typename Func2>
-    static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, Func2 slot)
-    {
+    static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, Func2 slot) {
         return connect(sender, signal, sender, slot, DirectConnection);
     }
 
     //connect to a function pointer  (not a member)
     template <typename Func1, typename Func2>
     static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, const iObject *context, Func2 slot,
-                    ConnectionType type = AutoConnection)
-    {
+                    ConnectionType type = AutoConnection) {
         typedef FunctionPointer<Func1> SignalType;
         typedef FunctionPointer<Func2> SlotType;
 
@@ -141,8 +121,7 @@ public:
 
     template <typename Func1, typename Func2>
     static inline bool disconnect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal,
-                                  const typename FunctionPointer<Func2>::Object *receiver, Func2 slot)
-    {
+                                  const typename FunctionPointer<Func2>::Object *receiver, Func2 slot) {
         typedef FunctionPointer<Func1> SignalType;
         typedef FunctionPointer<Func2> SlotType;
 
@@ -160,8 +139,7 @@ public:
 
     // This is the overload for when one wish to disconnect a signal from any slot. (slot=IX_NULLPTR)
     template <typename Func1, typename Func2>
-    static inline bool disconnect(const typename FunctionPointer<typename FunctionHelper<Func1>::Function>::Object *sender, Func1 signal, const iObject *receiver, Func2 slot)
-    {
+    static inline bool disconnect(const typename FunctionPointer<typename FunctionHelper<Func1>::Function>::Object *sender, Func1 signal, const iObject *receiver, Func2 slot) {
         typedef FunctionPointer<typename FunctionHelper<Func1>::Function> SignalType;
         typedef FunctionPointer<typename FunctionHelper<Func2>::Function> SlotType;
 
@@ -187,16 +165,14 @@ public:
     ///
     /// You can pass up to eight arguments (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) to the member function.
     template<class Obj, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection)
-    {
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)();
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, IX_NULLPTR);
     }
 
     template<class Obj, class Arg1, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1), typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection)
-    {
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1), typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -209,8 +185,7 @@ public:
     static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2),
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -224,8 +199,7 @@ public:
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -240,8 +214,7 @@ public:
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
                              typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -258,8 +231,7 @@ public:
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
                              typename type_wrapper<Arg4>::CONSTREFTYPE a4,
                              typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -278,8 +250,7 @@ public:
                              typename type_wrapper<Arg4>::CONSTREFTYPE a4,
                              typename type_wrapper<Arg5>::CONSTREFTYPE a5,
                              typename type_wrapper<Arg6>::CONSTREFTYPE a6,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -299,8 +270,7 @@ public:
                              typename type_wrapper<Arg5>::CONSTREFTYPE a5,
                              typename type_wrapper<Arg6>::CONSTREFTYPE a6,
                              typename type_wrapper<Arg7>::CONSTREFTYPE a7,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -321,8 +291,7 @@ public:
                              typename type_wrapper<Arg6>::CONSTREFTYPE a6,
                              typename type_wrapper<Arg7>::CONSTREFTYPE a7,
                              typename type_wrapper<Arg8>::CONSTREFTYPE a8,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -332,16 +301,14 @@ public:
     }
 
     template<class Obj, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)() const, ConnectionType type = AutoConnection)
-    {
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)() const, ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)() const;
         _iConnectionHelper<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, IX_NULLPTR);
     }
 
     template<class Obj, class Arg1, class Ret>
-    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1) const, typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection)
-    {
+    static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1) const, typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -354,8 +321,7 @@ public:
     static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1, Arg2) const,
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -369,8 +335,7 @@ public:
                              typename type_wrapper<Arg1>::CONSTREFTYPE a1,
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -385,8 +350,7 @@ public:
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
                              typename type_wrapper<Arg4>::CONSTREFTYPE a4,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -403,8 +367,7 @@ public:
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
                              typename type_wrapper<Arg4>::CONSTREFTYPE a4,
                              typename type_wrapper<Arg5>::CONSTREFTYPE a5,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -423,8 +386,7 @@ public:
                              typename type_wrapper<Arg4>::CONSTREFTYPE a4,
                              typename type_wrapper<Arg5>::CONSTREFTYPE a5,
                              typename type_wrapper<Arg6>::CONSTREFTYPE a6,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -444,8 +406,7 @@ public:
                              typename type_wrapper<Arg5>::CONSTREFTYPE a5,
                              typename type_wrapper<Arg6>::CONSTREFTYPE a6,
                              typename type_wrapper<Arg7>::CONSTREFTYPE a7,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -466,8 +427,7 @@ public:
                              typename type_wrapper<Arg6>::CONSTREFTYPE a6,
                              typename type_wrapper<Arg7>::CONSTREFTYPE a7,
                              typename type_wrapper<Arg8>::CONSTREFTYPE a8,
-                             ConnectionType type = AutoConnection)
-    {
+                             ConnectionType type = AutoConnection) {
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
@@ -486,22 +446,21 @@ protected:
     virtual bool event(iEvent *e);
 
     template <typename ReturnType>
-    if_requires_ret<ReturnType, true> emitHelper(_iMemberFunction signal, void* args)
-    {
+    if_requires_ret<ReturnType, true> emitHelper(_iMemberFunction signal, void* args) {
         ReturnType ret = TYPEWRAPPER_DEFAULTVALUE(ReturnType);
         emitImpl(signal, args, &ret);
         return ret;
     }
 
     template <typename ReturnType>
-    if_requires_ret<ReturnType, false> emitHelper(_iMemberFunction signal, void* args)
-    {
+    if_requires_ret<ReturnType, false> emitHelper(_iMemberFunction signal, void* args) {
         IX_COMPILER_VERIFY((is_same<ReturnType, void>::value));
         return emitImpl(signal, args, IX_NULLPTR);
     }
 
 private:
-    struct _iConnectionList {
+    struct _iConnectionList
+    {
         _iConnectionList() : first(IX_NULLPTR), last(IX_NULLPTR) {}
         _iConnection *first;
         _iConnection *last;
@@ -517,13 +476,12 @@ private:
         int inUse; //number of functions that are currently accessing this object or its connections
         sender_map allsignals;
 
-        _iObjectConnectionList()
-            : orphaned(false), dirty(false), inUse(0)
-        {}
+        _iObjectConnectionList() : orphaned(false), dirty(false), inUse(0) {}
     };
 
     typedef std::list<iObject *> iObjectList;
 
+    bool observePropertyImp(const char* name, _iConnection &conn);
     void emitImpl(_iMemberFunction signal, void* args, void* ret);
     static bool connectImpl(const _iConnection& conn);
     static bool disconnectImpl(const _iConnection& conn);
@@ -569,16 +527,14 @@ private:
 };
 
 template <class T>
-inline T iobject_cast(iObject *object)
-{
+inline T iobject_cast(iObject *object) {
     typedef typename class_wrapper<T>::CLASSTYPE ObjType;
     const ObjType* target = IX_NULLPTR;
     return static_cast<T>(target->ObjType::metaObject()->cast(object));
 }
 
 template <class T>
-inline T iobject_cast(const iObject *object)
-{
+inline T iobject_cast(const iObject *object) {
     typedef typename class_wrapper<T>::CLASSTYPE ObjType;
     const ObjType* target = IX_NULLPTR;
     return static_cast<T>(target->ObjType::metaObject()->cast(object));
