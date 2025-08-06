@@ -53,7 +53,7 @@ struct iStringAlgorithms
         if (begin != data)
             memmove(data, begin, (end - begin) * sizeof(Char));
         str.resize(end - begin);
-        return std::move(str);
+        return str;
     }
 
     static inline StringType trimmed_helper_inplace(const NakedStringType &, const Char *, const Char *)
@@ -92,8 +92,7 @@ struct iStringAlgorithms
         const Char *src = str.cbegin();
         const Char *end = str.cend();
         NakedStringType result = isConst || !str.isDetached() ?
-                                     StringType(str.size(), iShell::Uninitialized) :
-                                     std::move(str);
+                                     StringType(str.size(), iShell::Uninitialized) : str;
 
         Char *dst = const_cast<Char *>(result.cbegin());
         Char *ptr = dst;

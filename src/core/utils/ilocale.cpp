@@ -2074,7 +2074,7 @@ iString iLocaleData::doubleToString(const iChar _zero, const iChar plus, const i
         num_str.prepend(iLatin1Char(' '));
 
     if (flags & iLocaleData::CapitalEorX)
-        num_str = std::move(num_str).toUpper();
+        num_str = num_str.toUpper();
 
     return num_str;
 }
@@ -2156,7 +2156,7 @@ iString iLocaleData::longLongToString(const iChar zero, const iChar group,
     }
 
     if (flags & CapitalEorX)
-        num_str = std::move(num_str).toUpper();
+        num_str = num_str.toUpper();
 
     if (base == 16 && (flags & ShowBase))
         num_str.prepend(iLatin1String(flags & UppercaseBase ? "0X" : "0x"));
@@ -2238,7 +2238,7 @@ iString iLocaleData::unsLongLongToString(const iChar zero, const iChar group,
     }
 
     if (flags & CapitalEorX)
-        num_str = std::move(num_str).toUpper();
+        num_str = num_str.toUpper();
 
     if (base == 16 && flags & ShowBase)
         num_str.prepend(iLatin1String(flags & UppercaseBase ? "0X" : "0x"));

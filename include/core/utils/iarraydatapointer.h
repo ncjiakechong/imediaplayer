@@ -150,21 +150,23 @@ public:
             return iArrayDataPointer(d, static_cast<T*>(d->ptr_));
 
         // when growing, special rules apply to memory layout
-
+        T* dataPtr = static_cast<T*>(d->ptr_);
         if (from.needsDetach()) {
             // When detaching: the free space reservation is biased towards
-            // append as in Qt5 std::list. If we're growing backwards, put the data
+            // append. If we're growing backwards, put the data
             // in the middle instead of at the end - assuming that prepend is
             // uncommon and even initial prepend will eventually be followed by
             // at least some appends.
             if (options & Data::GrowsBackwards)
-                d->ptr_ += (d->alloc - newSize) / 2;
+                dataPtr += (d->alloc - newSize) / 2;
         } else {
             // When not detaching: fake ::realloc() policy - preserve existing
             // free space at beginning.
-            d->ptr_ += from.freeSpaceAtBegin();
+            dataPtr += from.freeSpaceAtBegin();
         }
-        return iArrayDataPointer(d, static_cast<T*>(d->ptr_));
+
+        d->ptr_ = dataPtr;
+        return iArrayDataPointer(d, dataPtr);
     }
 
     void reallocate(xsizetype alloc, typename Data::ArrayOptions options)

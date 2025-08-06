@@ -125,32 +125,31 @@ public:
     iStringView()
         : m_size(0), m_data(IX_NULLPTR) {}
     iStringView(std::nullptr_t)
-        : iStringView() {}
+        : m_size(0), m_data(IX_NULLPTR) {}
 
     template <typename Char, if_compatible_char<Char> = true>
     iStringView(const Char *str, xsizetype len)
-        : m_size(len),
-          m_data(castHelper(str)) {IX_ASSERT(len >= 0); IX_ASSERT(str || !len);}
+        : m_size(len), m_data(castHelper(str)) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
     template <typename Char, if_compatible_char<Char> = true>
     iStringView(const Char *f, const Char *l)
-        : iStringView(f, l - f) {}
+        : m_size(l - f), m_data(castHelper(f)) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
     template <typename Array, if_compatible_array<Array> = true>
     iStringView(const Array &str)
-        : iStringView(str, lengthHelperArray(str)) {}
+        : m_size(lengthHelperArray(str)), m_data(castHelper(str)) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
     template <typename Pointer, if_compatible_pointer<Pointer> = true>
     iStringView(const Pointer &str)
-        : iStringView(str, str ? lengthHelperPointer(str) : 0) {}
+        : m_size(str ? lengthHelperPointer(str) : 0), m_data(castHelper(str)) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
     template <typename String, if_compatible_istring_like<String> = true>
     iStringView(const String &str)
-        : iStringView(str.isNull() ? IX_NULLPTR : str.data(), xsizetype(str.size())) {}
+        : m_size(xsizetype(str.size())), m_data(str.isNull() ? IX_NULLPTR : castHelper(str.data())) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
     template <typename StdBasicString, if_compatible_string<StdBasicString> = true>
     iStringView(const StdBasicString &str)
-        : iStringView(str.data(), xsizetype(str.size())) {}
+        : m_size(xsizetype(str.size())), m_data(castHelper(str.data())) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
     inline iString toString() const;
 

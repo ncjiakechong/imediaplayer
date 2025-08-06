@@ -22,7 +22,7 @@ class iLatin1String;
 
 class iRegularExpressionMatch;
 class iRegularExpressionMatchIterator;
-struct iRegularExpressionPrivate;
+class iRegularExpressionPrivate;
 class iRegularExpression;
 
 class IX_CORE_EXPORT iRegularExpression
@@ -119,9 +119,9 @@ public:
     inline bool operator!=(const iRegularExpression &re) const { return !operator==(re); }
 
 private:
-    friend struct iRegularExpressionPrivate;
+    friend class iRegularExpressionPrivate;
     friend class iRegularExpressionMatch;
-    friend struct iRegularExpressionMatchPrivate;
+    friend class iRegularExpressionMatchPrivate;
     friend class iRegularExpressionMatchIterator;
     friend IX_CORE_EXPORT size_t qHash(const iRegularExpression &key, size_t seed);
 
@@ -131,7 +131,7 @@ private:
 
 IX_DECLARE_SHARED(iRegularExpression)
 
-struct iRegularExpressionMatchPrivate;
+class iRegularExpressionMatchPrivate;
 
 class IX_CORE_EXPORT iRegularExpressionMatch
 {
@@ -173,7 +173,7 @@ public:
 
 private:
     friend class iRegularExpression;
-    friend struct iRegularExpressionMatchPrivate;
+    friend class iRegularExpressionMatchPrivate;
     friend class iRegularExpressionMatchIterator;
 
     iRegularExpressionMatch(iRegularExpressionMatchPrivate &dd);
@@ -182,7 +182,7 @@ private:
 
 IX_DECLARE_SHARED(iRegularExpressionMatch)
 
-struct iRegularExpressionMatchIteratorPrivate;
+class iRegularExpressionMatchIteratorPrivate;
 
 class IX_CORE_EXPORT iRegularExpressionMatchIterator
 {

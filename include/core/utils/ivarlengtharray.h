@@ -97,9 +97,9 @@ public:
             realloc(s, s<<1);
             const int idx = s++;
             if (iTypeInfo<T>::isComplex) {
-                new (ptr + idx) T(std::move(copy));
+                new (ptr + idx) T(copy);
             } else {
-                ptr[idx] = std::move(copy);
+                ptr[idx] = copy;
             }
         } else {
             const int idx = s++;
@@ -111,29 +111,13 @@ public:
         }
     }
 
-    void append(T &&t) {
-        if (s == a)
-            realloc(s, s << 1);
-        const int idx = s++;
-        if (iTypeInfo<T>::isComplex)
-            new (ptr + idx) T(std::move(t));
-        else
-            ptr[idx] = std::move(t);
-    }
-
     void append(const T *buf, int size);
     inline iVarLengthArray<T, Prealloc> &operator<<(const T &t)
     { append(t); return *this; }
-    inline iVarLengthArray<T, Prealloc> &operator<<(T &&t)
-    { append(std::move(t)); return *this; }
     inline iVarLengthArray<T, Prealloc> &operator+=(const T &t)
     { append(t); return *this; }
-    inline iVarLengthArray<T, Prealloc> &operator+=(T &&t)
-    { append(std::move(t)); return *this; }
 
-    void prepend(T &&t);
     void prepend(const T &t);
-    void insert(int i, T &&t);
     void insert(int i, const T &t);
     void insert(int i, int n, const T &t);
     void replace(int i, const T &t);
@@ -181,7 +165,6 @@ public:
     // STL compatibility:
     inline bool empty() const { return isEmpty(); }
     inline void push_back(const T &t) { append(t); }
-    void push_back(T &&t) { append(std::move(t)); }
     inline void pop_back() { removeLast(); }
     inline T &front() { return first(); }
     inline const T &front() const { return first(); }
@@ -331,7 +314,7 @@ void iVarLengthArray<T, Prealloc>::realloc(int asize, int aalloc)
         if (!iTypeInfoQuery<T>::isRelocatable) {
             // move all the old elements
             while (s < copySize) {
-                new (ptr+s) T(std::move(*(oldPtr+s)));
+                new (ptr+s) T(*(oldPtr+s));
                 (oldPtr+s)->~T();
                 s++;
             }
@@ -374,10 +357,6 @@ T iVarLengthArray<T, Prealloc>::value(int i, const T &defaultValue) const
 }
 
 template <class T, int Prealloc>
-inline void iVarLengthArray<T, Prealloc>::insert(int i, T &&t)
-{ IX_ASSERT_X(i >= 0 && i <= s, "iVarLengthArray::insert index out of range");
-  insert(cbegin() + i, std::move(t)); }
-template <class T, int Prealloc>
 inline void iVarLengthArray<T, Prealloc>::insert(int i, const T &t)
 { IX_ASSERT_X(i >= 0 && i <= s, "iVarLengthArray::insert index out of range");
   insert(begin() + i, 1, t); }
@@ -394,9 +373,6 @@ inline void iVarLengthArray<T, Prealloc>::remove(int i)
 { IX_ASSERT_X(i >= 0 && i < s, "iVarLengthArray::remove index out of range");
   erase(begin() + i, begin() + i + 1); }
 template <class T, int Prealloc>
-inline void iVarLengthArray<T, Prealloc>::prepend(T &&t)
-{ insert(cbegin(), std::move(t)); }
-template <class T, int Prealloc>
 inline void iVarLengthArray<T, Prealloc>::prepend(const T &t)
 { insert(begin(), 1, t); }
 
@@ -408,34 +384,6 @@ inline void iVarLengthArray<T, Prealloc>::replace(int i, const T &t)
     data()[i] = copy;
 }
 
-template <class T, int Prealloc>
-typename iVarLengthArray<T, Prealloc>::iterator iVarLengthArray<T, Prealloc>::insert(const_iterator before, T &&t)
-{
-    IX_ASSERT_X(isValidIterator(before), "iVarLengthArray::insert The specified const_iterator argument 'before' is invalid");
-
-    int offset = int(before - ptr);
-    reserve(s + 1);
-    if (!iTypeInfo<T>::isRelocatable) {
-        T *b = ptr + offset;
-        T *i = ptr + s;
-        T *j = i + 1;
-        // The new end-element needs to be constructed, the rest must be move assigned
-        if (i != b) {
-            new (--j) T(std::move(*--i));
-            while (i != b)
-                *--j = std::move(*--i);
-            *b = std::move(t);
-        } else {
-            new (b) T(std::move(t));
-        }
-    } else {
-        T *b = ptr + offset;
-        memmove(static_cast<void *>(b + 1), static_cast<const void *>(b), (s - offset) * sizeof(T));
-        new (b) T(std::move(t));
-    }
-    s += 1;
-    return ptr + offset;
-}
 
 template <class T, int Prealloc>
 typename iVarLengthArray<T, Prealloc>::iterator iVarLengthArray<T, Prealloc>::insert(const_iterator before, size_type n, const T &t)

@@ -29,7 +29,7 @@ void iRingChunk::detach()
     const int chunkSize = size();
     iByteArray x(chunkSize, iShell::Uninitialized);
     ::memcpy(x.data(), chunk.constData() + headOffset, chunkSize);
-    chunk = std::move(x);
+    chunk = x;
     headOffset = 0;
     tailOffset = chunkSize;
 }

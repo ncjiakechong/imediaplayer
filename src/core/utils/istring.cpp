@@ -3153,7 +3153,7 @@ iString &iString::replace(const iRegularExpression &re, const iString &after)
     xsizetype newLength = 0; // length of the new string, with all the replacements
     xsizetype lastEnd = 0;
     std::list<iStringView> chunks;
-    const iStringView copyView{ copy }, afterView{ after };
+    const iStringView copyView(copy), afterView(after);
     while (iterator.hasNext()) {
         iRegularExpressionMatch match = iterator.next();
         xsizetype len;
@@ -3332,7 +3332,7 @@ xsizetype iString::indexOf(const iRegularExpression &re, xsizetype from, iRegula
     if (match.hasMatch()) {
         const xsizetype ret = match.capturedStart();
         if (rmatch)
-            *rmatch = std::move(match);
+            *rmatch = match;
         return ret;
     }
 
@@ -3370,7 +3370,7 @@ xsizetype iString::lastIndexOf(const iRegularExpression &re, xsizetype from, iRe
         if (start < endpos) {
             lastIndex = start;
             if (rmatch)
-                *rmatch = std::move(match);
+                *rmatch = match;
         } else {
             break;
         }
@@ -3404,7 +3404,7 @@ bool iString::contains(const iRegularExpression &re, iRegularExpressionMatch *rm
     iRegularExpressionMatch m = re.match(*this);
     bool hasMatch = m.hasMatch();
     if (hasMatch && rmatch)
-        *rmatch = std::move(m);
+        *rmatch = m;
     return hasMatch;
 }
 
@@ -3563,7 +3563,7 @@ iString iString::section(const iString &sep, xsizetype start, xsizetype end, Sec
 class ix_section_chunk {
 public:
     ix_section_chunk() {}
-    ix_section_chunk(xsizetype l, iStringView s) : length(l), string(std::move(s)) {}
+    ix_section_chunk(xsizetype l, iStringView s) : length(l), string(s) {}
     xsizetype length;
     iStringView string;
 };
@@ -5347,7 +5347,7 @@ static iString convertCase(T &str, iUnicodeTables::Case which)
             return detachAndConvertCase(str, it, which);
         }
     }
-    return std::move(str);
+    return str;
 }
 } // namespace iUnicodeTables
 

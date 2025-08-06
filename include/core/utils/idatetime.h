@@ -170,7 +170,6 @@ public:
     explicit iDateTime(const iDate &);
     iDateTime(const iDate &date, const iTime &time, iShell::TimeSpec spec  = iShell::LocalTime, int offsetSeconds = 0);
     iDateTime(const iDateTime &other);
-    iDateTime(iDateTime &&other);
     ~iDateTime();
 
     iDateTime &operator=(const iDateTime &other);

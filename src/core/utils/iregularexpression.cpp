@@ -679,8 +679,9 @@ static int convertToPcreOptions4Match(iRegularExpression::MatchOptions matchOpti
     return options;
 }
 
-struct iRegularExpressionPrivate : iSharedData
+class iRegularExpressionPrivate : public iSharedData
 {
+public:
     iRegularExpressionPrivate();
     ~iRegularExpressionPrivate();
     iRegularExpressionPrivate(const iRegularExpressionPrivate &other);
@@ -722,8 +723,9 @@ struct iRegularExpressionPrivate : iSharedData
     bool isDirty;
 };
 
-struct iRegularExpressionMatchPrivate : iSharedData
+class iRegularExpressionMatchPrivate : public iSharedData
 {
+public:
     iRegularExpressionMatchPrivate(const iRegularExpression &re,
                                    const iString &subjectStorage,
                                    iStringView subject,
@@ -747,15 +749,16 @@ struct iRegularExpressionMatchPrivate : iSharedData
     // for each captured substring
     std::list<xsizetype> capturedOffsets;
 
-    int capturedCount = 0;
+    int capturedCount;
 
-    bool hasMatch = false;
-    bool hasPartialMatch = false;
-    bool isValid = false;
+    bool hasMatch;
+    bool hasPartialMatch;
+    bool isValid;
 };
 
-struct iRegularExpressionMatchIteratorPrivate : iSharedData
+class iRegularExpressionMatchIteratorPrivate : public iSharedData
 {
+public:
     iRegularExpressionMatchIteratorPrivate(const iRegularExpression &re,
                                            iRegularExpression::MatchType matchType,
                                            iRegularExpression::MatchOptions matchOptions,
@@ -780,10 +783,7 @@ iRegularExpression::iRegularExpression(iRegularExpressionPrivate &dd)
     \internal
 */
 iRegularExpressionPrivate::iRegularExpressionPrivate()
-    : iSharedData(),
-      patternOptions(),
-      pattern(),
-      mutex(),
+    : patternOptions(iRegularExpression::NoPatternOption),
       compiledPattern(IX_NULLPTR),
       errorCode(0),
       errorOffset(-1),
@@ -814,7 +814,6 @@ iRegularExpressionPrivate::iRegularExpressionPrivate(const iRegularExpressionPri
     : iSharedData(other),
       patternOptions(other.patternOptions),
       pattern(other.pattern),
-      mutex(),
       compiledPattern(IX_NULLPTR),
       errorCode(0),
       errorOffset(-1),
@@ -936,7 +935,7 @@ IX_GLOBAL_STATIC(iThreadStorage<iPcreJitStackPointer *>, jitStacks)
 /*!
     \internal
 */
-static pcre2_jit_stack_16 *itPcreCallback(void *)
+static pcre2_jit_stack_16 *ixPcreCallback(void *)
 {
     if (jitStacks()->hasLocalData())
         return jitStacks()->localData()->stack;
@@ -949,7 +948,7 @@ static pcre2_jit_stack_16 *itPcreCallback(void *)
 */
 static bool isJitEnabled()
 {
-    return true;
+    return false;
 }
 
 /*!
@@ -964,10 +963,7 @@ static bool isJitEnabled()
 void iRegularExpressionPrivate::optimizePattern()
 {
     IX_ASSERT(compiledPattern);
-
-    static const bool enableJit = isJitEnabled();
-
-    if (!enableJit)
+    if (!isJitEnabled())
         return;
 
     pcre2_jit_compile_16(compiledPattern, PCRE2_JIT_COMPLETE | PCRE2_JIT_PARTIAL_SOFT | PCRE2_JIT_PARTIAL_HARD);
@@ -1105,13 +1101,13 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
         std::list<xsizetype>::const_iterator it0 = previous->capturedOffsets.cbegin();
         std::list<xsizetype>::const_iterator it1 = previous->capturedOffsets.cbegin();
         std::advance(it1, 1);
-        if ((*it0 == *it1)) {
+        if (*it0 == *it1) {
             previousMatchWasEmpty = true;
         }
     }
 
     pcre2_match_context_16 *matchContext = pcre2_match_context_create_16(IX_NULLPTR);
-    pcre2_jit_stack_assign_16(matchContext, &itPcreCallback, IX_NULLPTR);
+    pcre2_jit_stack_assign_16(matchContext, &ixPcreCallback, IX_NULLPTR);
     pcre2_match_data_16 *matchData = pcre2_match_data_create_from_pattern_16(compiledPattern, IX_NULLPTR);
 
     const xuint16 * const subjectUtf16 = priv->subject.utf16();
@@ -1149,7 +1145,7 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
         }
     }
 
-    ilog_debug("Matching", pattern, "against", /*subject,*/ priv->matchType , priv->matchOptions , previousMatchWasEmpty, "result" , result);
+    // ilog_debug("Matching: ", pattern, " against: ", priv->subject, " ", priv->matchType , " ", priv->matchOptions, " ", previousMatchWasEmpty, " result: " , result);
 
     // result == 0 means not enough space in captureOffsets; should never happen
     IX_ASSERT(result != 0);
@@ -1220,7 +1216,11 @@ iRegularExpressionMatchPrivate::iRegularExpressionMatchPrivate(const iRegularExp
       subjectStorage(subjectStorage),
       subject(subject),
       matchType(matchType),
-      matchOptions(matchOptions)
+      matchOptions(matchOptions),
+      capturedCount(0),
+      hasMatch(false),
+      hasPartialMatch(false),
+      isValid(false)
 {
 }
 
