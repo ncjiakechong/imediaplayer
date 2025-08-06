@@ -11,9 +11,10 @@
 
 #include "core/global/imacro.h"
 
-#include <sys/types.h>
-#include <time.h>
+#include <ctime>
+#include <cerrno>
 #include <cstdlib>
+#include <sys/types.h>
 
 #include "core/kernel/ipoll.h"
 #include "core/io/ilog.h"

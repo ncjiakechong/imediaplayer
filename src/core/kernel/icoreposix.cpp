@@ -8,7 +8,8 @@
 /// @version 1.0
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
-#include <time.h>
+
+#include <ctime>
 #include <cstdlib>
 #include <unistd.h>
 #include <fcntl.h>
