@@ -1246,8 +1246,8 @@ public:
 struct IX_CORE_EXPORT _iProperty
 {
     typedef iVariant (*get_t)(const _iProperty*, const iObject*);
-    typedef void (*set_t)(const _iProperty*, iObject*, const iVariant&);
-    typedef void (*signal_t)(const _iProperty*, iObject*, const iVariant&);
+    typedef bool (*set_t)(const _iProperty*, iObject*, const iVariant&);
+    typedef bool (*signal_t)(const _iProperty*, iObject*, const iVariant&);
 
     enum READ {E_READ};
     enum WRITE {E_WRITE};
@@ -1294,20 +1294,21 @@ struct _iPropertyHelper : public _iProperty
         return (_classThis->*(_typedThis->_getFunc))();
     }
 
-    static void setFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
+    static bool setFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
         typedef typename FunctionPointer<SetFunc>::Object Obj;
 
         Obj* _classThis = static_cast<Obj*>(obj);
         const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
         if (IX_NULLPTR == _typedThis->_setFunc)
-            return;
+            return false;
 
         IX_CHECK_PTR(_classThis);
         (_classThis->*(_typedThis->_setFunc))(value.value< typename iTypeGetter<0, typename FunctionPointer<SetFunc>::Arguments::Type>::HeadType >());
+        return true;
     }
 
-    static void signalFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
+    static bool signalFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
         typedef typename FunctionPointer<SignalFunc>::Object Obj;
         IX_COMPILER_VERIFY((1 == FunctionPointer<SignalFunc>::ArgumentCount));
 
@@ -1315,10 +1316,11 @@ struct _iPropertyHelper : public _iProperty
         const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
         if (IX_NULLPTR == _typedThis->_signalFunc)
-            return;
+            return false;
 
         IX_CHECK_PTR(_classThis);
         (_classThis->*(_typedThis->_signalFunc))(value.value< typename iTypeGetter<0, typename FunctionPointer<SignalFunc>::Arguments::Type>::HeadType >());
+        return true;
     }
 
     static void* argumentWraper(void* args) {
@@ -1339,16 +1341,22 @@ struct _iPropertyHelper : public _iProperty
 
     template<typename NewGetFunc>
     _iPropertyHelper<NewGetFunc, SetFunc, SignalFunc> parseProperty(READ, NewGetFunc get) const {
+        typedef FunctionPointer<NewGetFunc> GetType;
+        IX_COMPILER_VERIFY(0 == int(GetType::ArgumentCount));
         return _iPropertyHelper<NewGetFunc, SetFunc, SignalFunc>(get, _setFunc, _signalFunc);
     }
 
     template<typename NewSetFunc>
     _iPropertyHelper<GetFunc, NewSetFunc, SignalFunc> parseProperty(WRITE, NewSetFunc set) const {
+        typedef FunctionPointer<NewSetFunc> SetType;
+        IX_COMPILER_VERIFY(1 == int(SetType::ArgumentCount));
         return _iPropertyHelper<GetFunc, NewSetFunc, SignalFunc>(_getFunc, set, _signalFunc);
     }
 
     template<typename NewSignalFunc>
     _iPropertyHelper<GetFunc, SetFunc, NewSignalFunc> parseProperty(NOTIFY, NewSignalFunc signal) const {
+        typedef FunctionPointer<NewSignalFunc> SignalType;
+        IX_COMPILER_VERIFY(1 == int(SignalType::ArgumentCount));
         return _iPropertyHelper<GetFunc, SetFunc, NewSignalFunc>(_getFunc, _setFunc, signal);
     }
 
@@ -1391,15 +1399,15 @@ public:
     iObject *cast(iObject *obj) const;
     const iObject *cast(const iObject *obj) const;
 
-    void setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc>& ppt);
-    const _iProperty* property(const iString& name) const;
+    void setProperty(const std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> &ppt);
+    const _iProperty* property(const iLatin1String& name) const;
     bool hasProperty() const { return (m_propertyCandidate || m_propertyInited); }
 
 private:
     bool m_propertyCandidate : 1; // hack for init property
     bool m_propertyInited : 1; // hack for init property
     const iMetaObject* m_superdata;
-    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> m_property;
+    std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> m_property;
 };
 
 #define IX_OBJECT(TYPE) \
@@ -1413,7 +1421,7 @@ public: \
     { \
         static iMetaObject staticMetaObject = iMetaObject(IX_BaseType::metaObject()); \
         if (!staticMetaObject.hasProperty()) { \
-            std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> ppt; \
+            std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> ppt; \
             staticMetaObject.setProperty(ppt); \
             IX_ThisType::initProperty(&staticMetaObject); \
             staticMetaObject.setProperty(ppt); \
@@ -1432,12 +1440,12 @@ private:
         if (_mobj != mobj) \
             return; \
         \
-        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc> pptImp;
+        std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> pptImp;
 
-#define IPROPERTY_ITEM(...) IPROPERTY_ITEM2(__VA_ARGS__)
+#define IPROPERTY_ITEM(NAME, ...) IPROPERTY_ITEM2(NAME, __VA_ARGS__)
 #define IPROPERTY_ITEM2(NAME, ...) \
-        pptImp.insert(std::pair< iString, iSharedPtr<_iProperty> >( \
-                    iString(NAME), iSharedPtr<_iProperty>(newProperty(__VA_ARGS__))));
+        pptImp.insert(std::pair< iLatin1String, iSharedPtr<_iProperty> >( \
+                    iLatin1String(NAME), iSharedPtr<_iProperty>(newProperty(__VA_ARGS__))));
 
 #define IPROPERTY_END \
         mobj->setProperty(pptImp); \

@@ -146,7 +146,7 @@ void iMediaObject::_x_notify()
         const iMetaObject* mo = metaObject();
 
         do {
-            const _iProperty* tProperty = mo->property(*it);
+            const _iProperty* tProperty = mo->property(iLatin1String(it->toUtf8().data()));
             if (IX_NULLPTR == tProperty)
                 continue;
 
@@ -168,7 +168,7 @@ void iMediaObject::addPropertyWatch(iByteArray const &name)
     const iMetaObject* mo = metaObject();
 
     do {
-        const _iProperty* tProperty = mo->property(iString(name));
+        const _iProperty* tProperty = mo->property(iLatin1String(name.data()));
         if (IX_NULLPTR == tProperty)
             continue;
 
