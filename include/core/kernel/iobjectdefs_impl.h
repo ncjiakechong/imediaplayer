@@ -24,6 +24,335 @@
 
 namespace iShell {
 
+/*
+   Logic that check if the arguments of the slot matches the argument of the signal.
+*/
+
+//template <typename List1, typename List2> struct CheckCompatibleArguments { enum { value = false }; };
+//template <> struct CheckCompatibleArguments<iTypeListType<>, iTypeListType<>> { enum { value = true }; };
+//template <typename List1> struct CheckCompatibleArguments<List1, iTypeListType<>> { enum { value = true }; };
+
+template <int N, class List1, class List2>
+struct CheckCompatibleArguments { enum { value = false }; };
+
+template <int N, class Head1, class Tail1, class Head2, class Tail2>
+struct CheckCompatibleArguments<N, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2>>
+{
+    typedef typename iTypeGetter<N-1, iTypeList<Head1, Tail1>>::HeadType ArgType1;
+    typedef typename iTypeGetter<N-1, iTypeList<Head2, Tail2>>::HeadType ArgType2;
+
+    enum { value = is_convertible<ArgType1, ArgType2>::value
+                && CheckCompatibleArguments<N - 1, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2>>::value };
+};
+
+template <class Head1, class Tail1, class Head2, class Tail2>
+struct CheckCompatibleArguments<0, iTypeList<Head1, Tail1>, iTypeList<Head2, Tail2>>
+{
+    typedef typename iTypeList<Head1, Tail1>::HeadType ArgType1;
+    typedef typename iTypeList<Head2, Tail2>::HeadType ArgType2;
+    enum { value = is_convertible<ArgType1, ArgType2>::value };
+};
+
+template<typename Func> struct FunctionPointer { enum {ArgumentCount = -1, IsPointerToMemberFunction = false}; };
+
+template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) ()>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) ();
+    enum {ArgumentCount = 0, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1);
+    enum {ArgumentCount = 1, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2);
+    enum {ArgumentCount = 2, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3);
+    enum {ArgumentCount = 3, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4);
+    enum {ArgumentCount = 4, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
+    enum {ArgumentCount = 5, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
+    enum {ArgumentCount = 6, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
+    enum {ArgumentCount = 7, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
+    enum {ArgumentCount = 8, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
+    enum {ArgumentCount = 9, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10)>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
+    enum {ArgumentCount = 10, IsPointerToMemberFunction = true};
+};
+
+template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) () const;
+    enum {ArgumentCount = 1, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1) const;
+    enum {ArgumentCount = 1, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2) const;
+    enum {ArgumentCount = 2, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3) const;
+    enum {ArgumentCount = 3, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4) const;
+    enum {ArgumentCount = 4, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5) const;
+    enum {ArgumentCount = 5, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const;
+    enum {ArgumentCount = 6, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const;
+    enum {ArgumentCount = 7, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const;
+    enum {ArgumentCount = 8, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const;
+    enum {ArgumentCount = 9, IsPointerToMemberFunction = true};
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const>
+{
+    typedef Obj Object;
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const;
+    enum {ArgumentCount = 10, IsPointerToMemberFunction = true};
+};
+
+template<typename Ret> struct FunctionPointer<Ret (*) ()>
+{
+    typedef typename iTypeListType<>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) ();
+    enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
+{
+    typedef typename iTypeListType<Arg1>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1);
+    enum {ArgumentCount = 1, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (*) (Arg1, Arg2)>
+{
+    typedef typename iTypeListType<Arg1, Arg2>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2);
+    enum {ArgumentCount = 2, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3)>
+{
+    typedef typename iTypeListType<Arg1, Arg2, Arg3>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3);
+    enum {ArgumentCount = 3, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4)>
+{
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4);
+    enum {ArgumentCount = 4, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
+{
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
+    enum {ArgumentCount = 5, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
+{
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
+    enum {ArgumentCount = 6, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
+{
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
+    enum {ArgumentCount = 7, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
+{
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
+    enum {ArgumentCount = 8, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9)>
+{
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
+    enum {ArgumentCount = 9, IsPointerToMemberFunction = false};
+};
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10)>
+{
+    typedef typename iTypeListType<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10>::HeadType Arguments;
+    typedef Ret ReturnType;
+    typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
+    enum {ArgumentCount = 10, IsPointerToMemberFunction = false};
+};
+
 class iObject;
 class _iSignalBase;
 
@@ -120,10 +449,10 @@ public:
     /**
      * disconnect
      */
-    template<class Obj, class Func>
-    void disconnect(Obj* obj, Func func)
+    template<typename Func>
+    void disconnect(typename FunctionPointer<Func>::Object* obj, Func func)
     {
-        typedef void (Obj::*FuncAdaptor)();
+        typedef void (FunctionPointer<Func>::Object::*FuncAdaptor)();
         FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
         _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
 
