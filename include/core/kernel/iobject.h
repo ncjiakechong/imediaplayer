@@ -78,6 +78,50 @@ public:
 
     void disconnectAll();
 
+    //Connect a signal to a pointer to qobject member function
+    template <typename Func1, typename Func2>
+    static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal,
+                             const typename FunctionPointer<Func2>::Object *receiver, Func2 slot,
+                             ConnectionType type = AutoConnection)
+    {
+        typedef FunctionPointer<Func1> SignalType;
+        typedef FunctionPointer<Func2> SlotType;
+
+        //compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
+
+        _iObjConnection<Func1, Func2> conn(sender, signal, receiver, slot, type);
+        return connectImpl(conn);
+    }
+
+    //connect to a function pointer  (not a member)
+    template <typename Func1, typename Func2>
+    static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, Func2 slot)
+    {
+        return connect(sender, signal, sender, slot, DirectConnection);
+    }
+
+    //connect to a function pointer  (not a member)
+    template <typename Func1, typename Func2>
+    static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, const iObject *context, Func2 slot,
+                    ConnectionType type = AutoConnection)
+    {
+        typedef FunctionPointer<Func1> SignalType;
+        typedef FunctionPointer<Func2> SlotType;
+
+        //compilation error if the arguments does not match.
+        // The slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
+        // Signal and slot arguments are not compatible.
+        IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
+
+        _iRegulerConnection<Func1, Func2> conn(sender, signal, context, slot, type);
+        return connectImpl(conn);
+    }
+
     /// Invokes the member on the object obj. Returns true if the member could be invoked. Returns false if there is no such member or the parameters did not match.
     /// The invocation can be either synchronous or asynchronous, depending on type:
     ///   If type is DirectConnection, the member will be invoked immediately.
@@ -88,29 +132,19 @@ public:
     template<class Obj, class Ret>
     static bool invokeMethod(Obj* obj, Ret (Obj::*func)(), ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)();
-        typedef typename FunctionPointer<Function>::Arguments Arguments;
-
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
     template<class Obj, class Arg1, class Ret>
     static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1), typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
         Arguments tArgs(a1);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -120,15 +154,11 @@ public:
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2> tArgs(a1, a2);
+        Arguments tArgs(a1, a2);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -139,15 +169,11 @@ public:
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3> tArgs(a1, a2, a3);
+        Arguments tArgs(a1, a2, a3);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -159,15 +185,11 @@ public:
                              typename type_wrapper<Arg4>::CONSTREFTYPE a4,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4> tArgs(a1, a2, a3, a4);
+        Arguments tArgs(a1, a2, a3, a4);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -181,15 +203,11 @@ public:
                              typename type_wrapper<Arg5>::CONSTREFTYPE a5,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> tArgs(a1, a2, a3, a4, a5);
+        Arguments tArgs(a1, a2, a3, a4, a5);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -205,15 +223,11 @@ public:
                              typename type_wrapper<Arg6>::CONSTREFTYPE a6,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4,Arg5, Arg6> tArgs(a1, a2, a3, a4, a5, a6);
+        Arguments tArgs(a1, a2, a3, a4, a5, a6);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -230,15 +244,11 @@ public:
                              typename type_wrapper<Arg7>::CONSTREFTYPE a7,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> tArgs(a1, a2, a3, a4, a5, a6, a7);
+        Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -256,44 +266,30 @@ public:
                              typename type_wrapper<Arg8>::CONSTREFTYPE a8,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
+        Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
     template<class Obj, class Ret>
     static bool invokeMethod(Obj* obj, Ret (Obj::*func)() const, ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)() const;
-        typedef typename FunctionPointer<Function>::Arguments Arguments;
-
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, IX_NULLPTR, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
     template<class Obj, class Arg1, class Ret>
     static bool invokeMethod(Obj* obj, Ret (Obj::*func)(Arg1) const, typename type_wrapper<Arg1>::CONSTREFTYPE a1, ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
         Arguments tArgs(a1);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -303,15 +299,11 @@ public:
                              typename type_wrapper<Arg2>::CONSTREFTYPE a2,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2> tArgs(a1, a2);
+        Arguments tArgs(a1, a2);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -322,15 +314,11 @@ public:
                              typename type_wrapper<Arg3>::CONSTREFTYPE a3,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3> tArgs(a1, a2, a3);
+        Arguments tArgs(a1, a2, a3);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -342,15 +330,11 @@ public:
                              typename type_wrapper<Arg4>::CONSTREFTYPE a4,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4> tArgs(a1, a2, a3, a4);
+        Arguments tArgs(a1, a2, a3, a4);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -364,15 +348,11 @@ public:
                              typename type_wrapper<Arg5>::CONSTREFTYPE a5,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> tArgs(a1, a2, a3, a4, a5);
+        Arguments tArgs(a1, a2, a3, a4, a5);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -388,15 +368,11 @@ public:
                              typename type_wrapper<Arg6>::CONSTREFTYPE a6,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4,Arg5, Arg6> tArgs(a1, a2, a3, a4, a5, a6);
+        Arguments tArgs(a1, a2, a3, a4, a5, a6);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -413,15 +389,11 @@ public:
                              typename type_wrapper<Arg7>::CONSTREFTYPE a7,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> tArgs(a1, a2, a3, a4, a5, a6, a7);
+        Arguments tArgs(a1, a2, a3, a4, a5, a6, a7);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -439,15 +411,11 @@ public:
                              typename type_wrapper<Arg8>::CONSTREFTYPE a8,
                              ConnectionType type = AutoConnection)
     {
-        typedef void (Obj::*FuncAdaptor)();
         typedef Ret (Obj::*Function)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const;
         typedef typename FunctionPointer<Function>::Arguments Arguments;
 
-        FuncAdaptor tFuncAdptor = reinterpret_cast<FuncAdaptor>(func);
-        _iConnection::Function tFunc = static_cast<_iConnection::Function>(tFuncAdptor);
-        _iObjConnection<Function, Arguments, Ret> conn(obj, tFunc, type);
-
-        iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
+        Arguments tArgs(a1, a2, a3, a4, a5, a6, a7, a8);
+        _iObjConnection<Function, Function> conn(obj, func, obj, func, type);
         return invokeMethodImpl(conn, &tArgs, &FunctionPointer<Function>::cloneArgs, &FunctionPointer<Function>::freeArgs);
     }
 
@@ -464,6 +432,8 @@ protected:
 private:
     typedef std::unordered_map<_iSignalBase*, int> sender_map;
     typedef std::list<iObject *> iObjectList;
+
+    static bool connectImpl(const _iConnection& conn);
 
     int refSignal(_iSignalBase* sender);
     int derefSignal(_iSignalBase* sender);

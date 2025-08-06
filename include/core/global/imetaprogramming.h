@@ -195,10 +195,29 @@ struct is_convertible
     enum { value = sizeof(test(dummy())) == sizeof(int) };
 };
 
-template<typename A> struct is_convertible<A, A&> { enum { value = false }; };
-template<typename A> struct is_convertible<A, const A&> { enum { value = true }; };
-template<typename A> struct is_convertible<const A&, A> { enum { value = true }; };
-template<typename A> struct is_convertible<A&, A&> { enum { value = true }; };
+template<typename T1, typename T2>
+struct is_convertible<T1, const T2&>
+{
+    static int test(const typename type_wrapper<T2>::TYPE&);
+    static char test(...);
+    static const typename type_wrapper<T1>::TYPE &dummy();
+
+    enum { value = sizeof(test(dummy())) == sizeof(int) };
+};
+
+template<typename T1, typename T2>
+struct is_convertible<const T1&, T2>
+{
+    static int test(const typename type_wrapper<T2>::TYPE&);
+    static char test(...);
+    static const typename type_wrapper<T1>::TYPE &dummy();
+
+    enum { value = sizeof(test(dummy())) == sizeof(int) };
+};
+
+template<typename T1, typename T2> struct is_convertible<T1, T2&> { enum { value = false }; };
+template<typename T1, typename T2> struct is_convertible<T1&, T2> { enum { value = false }; };
+template<typename T> struct is_convertible<T&, T&> { enum { value = true }; };
 
 #if defined(_MSC_VER)
 #define TYPEWRAPPER_DEFAULTVALUE(T) type_wrapper<T>::TYPE()
