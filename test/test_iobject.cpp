@@ -72,6 +72,8 @@ public:
 
     iSignal<iVariant> testPropertyChanged;
 
+    void signal_struct(int arg1, struct E arg2, int arg3) iSIGNAL(signal_struct, arg1, arg2, arg3)
+
     void destory() {
         delete this;
     }
@@ -449,16 +451,41 @@ int test_object(void)
     tst_sig.tst_sig_point.connect(&tst_obj, &TestObject::tst_slot_point);
 
 
-    iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &TestObject::tst_slot_static);
-    iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_static);
-    iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_constref);
-    IX_ASSERT((!iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_struct)));
+    iObject::connect(&tst_obj, &TestObject::signal_struct, &TestObject::tst_slot_static);
+    iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
+    iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
+    IX_ASSERT((!iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::signal_struct)));
 
-    // iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &tst_obj); // build error
-    iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_static);
-    iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_constref);
-    iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, IX_NULLPTR, IX_NULLPTR);
-    iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
+    tst_obj.signal_struct(11, E(), 13);
+
+    // iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &tst_obj); // build error
+    IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
+    IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR));
+
+    iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
+    iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
+//    #ifdef IX_HAVE_CXX11
+//    iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, [](int) {ilog_debug("call lambda slot");});
+//    #endif
+
+    tst_obj.signal_struct(21, E(), 23);
+
+    IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR));
+
+    iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
+    iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
+
+    tst_obj.signal_struct(31, E(), 33);
+
+    IX_ASSERT(iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, IX_NULLPTR, IX_NULLPTR));
 
     // tst_sig.tst_sig_struct.connect(&tst_obj, &TestObject::tst_slot_type_change); // build error
     // tst_sig.tst_sig_ref.connect(&tst_obj, &TestObject::tst_slot_type_change); // build error
