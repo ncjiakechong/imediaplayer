@@ -27,7 +27,6 @@ typedef unsigned long ulong;
 
    Make sure to update iMetaType when changing these typedefs
 */
-
 typedef int8_t xint8;           /* 8 bit signed */
 typedef uint8_t xuint8;         /* 8 bit unsigned */
 typedef int16_t xint16;         /* 16 bit signed */

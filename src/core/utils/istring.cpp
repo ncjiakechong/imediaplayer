@@ -87,11 +87,11 @@ const xuint16 iString::_empty = 0;
 
 // internal
 xsizetype iFindStringBoyerMoore(iStringView haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs);
-static inline xsizetype qFindChar(iStringView str, iChar ch, xsizetype from, iShell::CaseSensitivity cs);
+static inline xsizetype xFindChar(iStringView str, iChar ch, xsizetype from, iShell::CaseSensitivity cs);
 template <typename Haystack>
-static inline xsizetype qLastIndexOf(Haystack haystack, iChar needle, xsizetype from, iShell::CaseSensitivity cs);
+static inline xsizetype xLastIndexOf(Haystack haystack, iChar needle, xsizetype from, iShell::CaseSensitivity cs);
 template <>
-inline xsizetype qLastIndexOf(iString haystack, iChar needle,
+inline xsizetype xLastIndexOf(iString haystack, iChar needle,
                               xsizetype from, iShell::CaseSensitivity cs) = delete; // unwanted, would detach
 
 static inline bool ix_starts_with(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs);
@@ -3018,7 +3018,7 @@ xsizetype iString::indexOf(iLatin1String str, xsizetype from, iShell::CaseSensit
 */
 xsizetype iString::indexOf(iChar ch, xsizetype from, iShell::CaseSensitivity cs) const
 {
-    return qFindChar(iStringView(unicode(), length()), ch, from, cs);
+    return xFindChar(iStringView(unicode(), length()), ch, from, cs);
 }
 
 /*!
@@ -3074,7 +3074,7 @@ xsizetype iString::lastIndexOf(iLatin1String str, xsizetype from, iShell::CaseSe
 */
 xsizetype iString::lastIndexOf(iChar ch, xsizetype from, iShell::CaseSensitivity cs) const
 {
-    return qLastIndexOf(iStringView(*this), ch, from, cs);
+    return xLastIndexOf(iStringView(*this), ch, from, cs);
 }
 
 struct iStringCapture
@@ -8703,7 +8703,7 @@ xuint16 valueTypeToUtf16<char>(char t)
     position \a from. Returns -1 if \a ch could not be found.
 */
 
-static inline xsizetype qFindChar(iStringView str, iChar ch, xsizetype from, iShell::CaseSensitivity cs)
+static inline xsizetype xFindChar(iStringView str, iChar ch, xsizetype from, iShell::CaseSensitivity cs)
 {
     if (from < 0)
         from = std::max(from + str.size(), xsizetype(0));
@@ -8741,7 +8741,7 @@ xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringVie
         return -1;
 
     if (sl == 1)
-        return qFindChar(haystack0, needle0[0], from, cs);
+        return xFindChar(haystack0, needle0[0], from, cs);
 
     /*
         We use the Boyer-Moore algorithm in cases where the overhead
@@ -8803,7 +8803,7 @@ xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringVie
 }
 
 template <typename Haystack>
-static inline xsizetype qLastIndexOf(Haystack haystack, iChar needle,
+static inline xsizetype xLastIndexOf(Haystack haystack, iChar needle,
                                      xsizetype from, iShell::CaseSensitivity cs)
 {
     if (from < 0)
@@ -8829,12 +8829,12 @@ static inline xsizetype qLastIndexOf(Haystack haystack, iChar needle,
 }
 
 template<typename Haystack, typename Needle>
-static xsizetype qLastIndexOf(Haystack haystack0, xsizetype from,
+static xsizetype xLastIndexOf(Haystack haystack0, xsizetype from,
                               Needle needle0, iShell::CaseSensitivity cs)
 {
     const xsizetype sl = needle0.size();
     if (sl == 1)
-        return qLastIndexOf(haystack0, needle0.front(), from, cs);
+        return xLastIndexOf(haystack0, needle0.front(), from, cs);
 
     const xsizetype l = haystack0.size();
     if (from < 0)
@@ -8928,22 +8928,22 @@ xsizetype iPrivate::findString(iLatin1String haystack, xsizetype from, iLatin1St
 
 xsizetype iPrivate::lastIndexOf(iStringView haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return qLastIndexOf(haystack, from, needle, cs);
+    return xLastIndexOf(haystack, from, needle, cs);
 }
 
 xsizetype iPrivate::lastIndexOf(iStringView haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return qLastIndexOf(haystack, from, needle, cs);
+    return xLastIndexOf(haystack, from, needle, cs);
 }
 
 xsizetype iPrivate::lastIndexOf(iLatin1String haystack, xsizetype from, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return qLastIndexOf(haystack, from, needle, cs);
+    return xLastIndexOf(haystack, from, needle, cs);
 }
 
 xsizetype iPrivate::lastIndexOf(iLatin1String haystack, xsizetype from, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return qLastIndexOf(haystack, from, needle, cs);
+    return xLastIndexOf(haystack, from, needle, cs);
 }
 
 /*!
