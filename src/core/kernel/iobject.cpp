@@ -401,9 +401,9 @@ void iObject::moveToThread_helper()
     }
 }
 
-int iObject::startTimer(int interval, xintptr userdata, TimerType timerType)
+int iObject::startTimer(int msec, xintptr userdata, TimerType timerType)
 {
-    if (interval < 0) {
+    if (msec < 0) {
         ilog_warn("Timers cannot have negative intervals");
         return 0;
     }
@@ -416,7 +416,7 @@ int iObject::startTimer(int interval, xintptr userdata, TimerType timerType)
         return 0;
     }
 
-    int timerId = m_threadData->dispatcher.load()->registerTimer(interval, timerType, this, userdata);
+    int timerId = m_threadData->dispatcher.load()->registerTimer(msec, timerType, this, userdata);
     m_runningTimers.insert(timerId);
     return timerId;
 }

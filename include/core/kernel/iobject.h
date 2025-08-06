@@ -75,7 +75,7 @@ public:
     iThread* thread() const;
     bool moveToThread(iThread *targetThread);
 
-    int startTimer(int interval, xintptr userdata = 0, TimerType timerType = CoarseTimer);
+    int startTimer(int msec, xintptr userdata = 0, TimerType timerType = CoarseTimer);
     void killTimer(int id);
 
     iVariant property(const char *name) const;
