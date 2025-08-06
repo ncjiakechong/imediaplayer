@@ -1593,11 +1593,10 @@ private:
 
 
 #define IPROPERTY_ITEM(NAME, GETFUNC, SETFUNC, SIGNAL) \
-        pptImp.insert(std::pair<iString, iSharedPtr<_iProperty> >( \
+        pptImp.insert(std::pair< iString, iSharedPtr<_iProperty> >( \
                     iString(NAME), \
-                    iSharedPtr<_iProperty>(newProperty(&class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::GETFUNC, \
-                                    &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SETFUNC, \
-                                    &class_wrapper<IX_TYPEOF(this)>::CLASSTYPE::SIGNAL))));
+                    iSharedPtr<_iProperty>(newProperty(&IX_ThisType::GETFUNC, \
+                                    &IX_ThisType::SETFUNC, &IX_ThisType::SIGNAL))));
 
 #define IPROPERTY_END \
         const_cast<iMetaObject*>(mobj)->setProperty(pptImp); \

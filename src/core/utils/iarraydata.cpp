@@ -42,10 +42,9 @@ static inline size_t calculateBlockSize(size_t &capacity, size_t objectSize, siz
         auto r = iCalculateGrowingBlockSize(capacity, objectSize, headerSize);
         capacity = r.elementCount;
         return r.size;
-    } else {
-        return iCalculateBlockSize(capacity, objectSize, headerSize);
     }
-    return 0;
+
+    return iCalculateBlockSize(capacity, objectSize, headerSize);
 }
 
 static iArrayData *reallocateData(iArrayData *header, size_t allocSize, uint options)
@@ -124,7 +123,8 @@ void iArrayData::deallocate(iArrayData *data, size_t,
     if (data == &ix_array_unsharable_empty)
         return;
 
-    IX_ASSERT_X(data == 0 || !data->ref.isStatic(), "iArrayData::deallocate Static data cannot be deleted");
+    IX_ASSERT_X(data == IX_NULLPTR || !data->ref.isStatic(), "iArrayData::deallocate Static data cannot be deleted");
+    data->ref.~iRefCount();
     ::free(data);
 }
 
