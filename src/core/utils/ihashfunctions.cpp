@@ -9,7 +9,7 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <hash_set>
+#include <unordered_set>
 
 #include <core/utils/ichar.h>
 #include <core/utils/istring.h>

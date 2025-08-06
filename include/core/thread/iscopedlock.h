@@ -11,7 +11,7 @@
 #ifndef ISCOPEDLOCK_H
 #define ISCOPEDLOCK_H
 
-#include <stdint.h>
+#include <cstdint>
 #include <core/global/iglobal.h>
 
 namespace iShell {

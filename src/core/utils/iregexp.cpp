@@ -11,7 +11,7 @@
 
 #include <map>
 #include <unordered_map>
-#include <limits.h>
+#include <climits>
 #include <memory>
 
 #include <core/utils/icache.h>

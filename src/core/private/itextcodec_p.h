@@ -22,7 +22,7 @@
 // We mean it.
 //
 
-#include <string.h>
+#include <cstring>
 #include <core/global/iglobal.h>
 #include <core/global/imacro.h>
 

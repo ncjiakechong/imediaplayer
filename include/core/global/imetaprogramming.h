@@ -11,7 +11,7 @@
 #ifndef IMETAPROGRAMMING_H
 #define IMETAPROGRAMMING_H
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace iShell {
 

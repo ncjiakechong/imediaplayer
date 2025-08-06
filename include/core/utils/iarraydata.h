@@ -11,7 +11,7 @@
 #ifndef IARRAYDATA_H
 #define IARRAYDATA_H
 
-#include <string.h>
+#include <cstring>
 
 #include <core/global/iglobal.h>
 #include <core/global/imetaprogramming.h>

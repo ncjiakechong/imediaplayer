@@ -11,8 +11,8 @@
 #ifndef IGLOBAL_H
 #define IGLOBAL_H
 
-#include <math.h>
-#include <stdint.h>
+#include <cmath>
+#include <cstdint>
 #include <algorithm>
 
 typedef unsigned char uchar;

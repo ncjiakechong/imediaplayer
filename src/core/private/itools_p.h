@@ -11,7 +11,7 @@
 #ifndef ITOOLS_P_H
 #define ITOOLS_P_H
 
-#include <limits.h>
+#include <climits>
 
 #include <core/global/iglobal.h>
 #include <core/utils/istring.h>

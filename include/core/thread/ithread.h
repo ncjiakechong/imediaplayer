@@ -11,7 +11,7 @@
 #ifndef ITHREAD_H
 #define ITHREAD_H
 
-#include <limits.h>
+#include <climits>
 
 #include <core/kernel/iobject.h>
 #include <core/thread/icondition.h>

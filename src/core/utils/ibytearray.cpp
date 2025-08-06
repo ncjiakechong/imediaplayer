@@ -10,9 +10,9 @@
 /////////////////////////////////////////////////////////////////
 
 #include <ctype.h>
-#include <limits.h>
-#include <string.h>
-#include <stdlib.h>
+#include <climits>
+#include <cstring>
+#include <cstdlib>
 
 #include "core/utils/ibytearray.h"
 #include "private/ibytearraymatcher.h"
@@ -186,7 +186,7 @@ iCalculateGrowingBlockSize(size_t elementCount, size_t elementSize, size_t heade
 }
 
 /*****************************************************************************
-  Safe and portable C string functions; extensions to standard string.h
+  Safe and portable C string functions; extensions to standard cstring
  *****************************************************************************/
 
 /*! \relates iByteArray

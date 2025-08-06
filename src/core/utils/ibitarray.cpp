@@ -9,7 +9,7 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <string.h>
+#include <cstring>
 
 #include <core/global/iendian.h>
 #include <core/utils/ibitarray.h>
