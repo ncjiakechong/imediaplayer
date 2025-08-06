@@ -25,7 +25,7 @@ iEventLoop::iEventLoop(iObject* parent)
     : iObject(parent)
 {
     if (!iCoreApplication::instance() && iCoreApplication::threadRequiresCoreApplication()) {
-        ilog_warn("iEventLoop: Cannot be used without iApplication");
+        ilog_warn(__FUNCTION__, ": Cannot be used without iApplication");
     }
 }
 
@@ -51,7 +51,7 @@ int iEventLoop::exec()
             return -1;
 
         if (!threadData->eventLoop.testAndSet(IX_NULLPTR, this)) {
-            ilog_warn("iEventLoop::exec: The event loop is already running");
+            ilog_warn(__FUNCTION__, ": The event loop is already running");
             return -1;
         }
     }
@@ -64,7 +64,7 @@ int iEventLoop::exec()
     threadData->deref();
 
     if (!threadData->eventLoop.testAndSet(this, IX_NULLPTR)) {
-        ilog_error("iEventLoop::exec: exit inner error");
+        ilog_error(__FUNCTION__, ": exit inner error");
         return -1;
     }
 

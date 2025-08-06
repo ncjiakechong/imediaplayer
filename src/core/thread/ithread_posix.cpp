@@ -73,7 +73,7 @@ void iThreadImpl::setPriority()
     if (pthread_getschedparam((pthread_t)m_thread->m_data->threadHd.value(), &sched_policy, &param) != 0) {
         // failed to get the scheduling policy, don't bother setting
         // the priority
-        ilog_warn("iThread::setPriority: Cannot get scheduler parameters");
+        ilog_warn(__FUNCTION__, ": Cannot get scheduler parameters");
         return;
     }
 
@@ -81,7 +81,7 @@ void iThreadImpl::setPriority()
     if (!calculateUnixPriority(priority, &sched_policy, &prio)) {
         // failed to get the scheduling parameters, don't
         // bother setting the priority
-        ilog_warn("iThread::setPriority: Cannot determine scheduler priority range");
+        ilog_warn(__FUNCTION__, ": Cannot determine scheduler priority range");
         return;
     }
 
@@ -171,7 +171,7 @@ bool iThreadImpl::start()
             if (pthread_attr_getschedpolicy(&attr, &sched_policy) != 0) {
                 // failed to get the scheduling policy, don't bother
                 // setting the priority
-                ilog_warn("iThread::start: Cannot determine default scheduler policy");
+                ilog_warn(__FUNCTION__, ": Cannot determine default scheduler policy");
                 break;
             }
 
@@ -179,7 +179,7 @@ bool iThreadImpl::start()
             if (!calculateUnixPriority(priority, &sched_policy, &prio)) {
                 // failed to get the scheduling parameters, don't
                 // bother setting the priority
-                ilog_warn("iThread::start: Cannot determine scheduler priority range");
+                ilog_warn(__FUNCTION__, ": Cannot determine scheduler priority range");
                 break;
             }
 
@@ -200,7 +200,7 @@ bool iThreadImpl::start()
     if (m_thread->m_stackSize > 0) {
         int code = pthread_attr_setstacksize(&attr, m_thread->m_stackSize);
         if (code) {
-            ilog_warn("iThread::start: Thread stack size error: ", code);
+            ilog_warn(__FUNCTION__, ": Thread stack size error: ", code);
             pthread_attr_destroy(&attr);
             return false;
         }

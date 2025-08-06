@@ -5988,7 +5988,7 @@ xint64 iString::toLongLong(bool *ok, int base) const
 xlonglong iString::toIntegral_helper(const iChar *data, int len, bool *ok, int base)
 {
     if (base != 0 && (base < 2 || base > 36)) {
-        ilog_warn("iString::toULongLong: Invalid base ", base);
+        ilog_warn(__FUNCTION__, ": Invalid base ", base);
         base = 10;
     }
 
@@ -6028,7 +6028,7 @@ xuint64 iString::toULongLong(bool *ok, int base) const
 xulonglong iString::toIntegral_helper(const iChar *data, uint len, bool *ok, int base)
 {
     if (base != 0 && (base < 2 || base > 36)) {
-        ilog_warn("iString::toULongLong: Invalid base ", base);
+        ilog_warn(__FUNCTION__, ": Invalid base ", base);
         base = 10;
     }
 
@@ -6402,7 +6402,7 @@ iString iString::number(uint n, int base)
 iString iString::number(xlonglong n, int base)
 {
     if (base < 2 || base > 36) {
-        ilog_warn("iString::setNum: Invalid base ", base);
+        ilog_warn(__FUNCTION__, ": Invalid base ", base);
         base = 10;
     }
 
@@ -6415,7 +6415,7 @@ iString iString::number(xlonglong n, int base)
 iString iString::number(xulonglong n, int base)
 {
     if (base < 2 || base > 36) {
-        ilog_warn("iString::setNum: Invalid base ", base);
+        ilog_warn(__FUNCTION__, ": Invalid base ", base);
         base = 10;
     }
 
@@ -6454,7 +6454,7 @@ iString iString::number(double n, char f, int prec)
             form = iLocaleData::DFSignificantDigits;
             break;
         default:
-            ilog_warn("iString::setNum: Invalid format char ", f);
+            ilog_warn(__FUNCTION__, ": Invalid format char ", f);
             break;
     }
 
@@ -7016,7 +7016,7 @@ iString iString::arg(iStringView a, int fieldWidth, iChar fillChar) const
     ArgEscapeData d = findArgEscapes(*this);
 
     if (d.occurrences == 0) {
-        ilog_warn("iString::arg: Argument missing: ", this,
+        ilog_warn(__FUNCTION__, ": Argument missing: ", this,
                   ", ", a.toString());
         return *this;
     }
@@ -7251,7 +7251,7 @@ iString iString::arg(xlonglong a, int fieldWidth, int base, iChar fillChar) cons
     ArgEscapeData d = findArgEscapes(*this);
 
     if (d.occurrences == 0) {
-        ilog_warn( "iString::arg: Argument missing:", *this, ", ", a);
+        ilog_warn(__FUNCTION__, ": Argument missing:", *this, ", ", a);
         return *this;
     }
 
@@ -7295,7 +7295,7 @@ iString iString::arg(xulonglong a, int fieldWidth, int base, iChar fillChar) con
     ArgEscapeData d = findArgEscapes(*this);
 
     if (d.occurrences == 0) {
-        ilog_warn("iString::arg: Argument missing:", *this, ", ", a);
+        ilog_warn(__FUNCTION__, ": Argument missing:", *this, ", ", a);
         return *this;
     }
 
@@ -7407,7 +7407,7 @@ iString iString::arg(double a, int fieldWidth, char fmt, int prec, iChar fillCha
     ArgEscapeData d = findArgEscapes(*this);
 
     if (d.occurrences == 0) {
-        ilog_warn("iString::arg: Argument missing: ", toLocal8Bit().data(), ", ", a);
+        ilog_warn(__FUNCTION__, ": Argument missing: ", toLocal8Bit().data(), ", ", a);
         return *this;
     }
 
@@ -7430,7 +7430,7 @@ iString iString::arg(double a, int fieldWidth, char fmt, int prec, iChar fillCha
         form = iLocaleData::DFSignificantDigits;
         break;
     default:
-        ilog_warn("iString::arg: Invalid format char ", fmt);
+        ilog_warn(__FUNCTION__, ": Invalid format char ", fmt);
         break;
     }
 
@@ -7613,7 +7613,7 @@ iString iString::multiArg(int numArgs, const iString **args) const
     if (argIndexToPlaceholderMap.size() > numArgs) // 3a
         argIndexToPlaceholderMap.resize(numArgs);
     else if (argIndexToPlaceholderMap.size() < numArgs) // 3b
-        ilog_warn("iString::arg: ", numArgs - argIndexToPlaceholderMap.size(),
+        ilog_warn(__FUNCTION__, ": ", numArgs - argIndexToPlaceholderMap.size(),
                   " argument(s) missing in ", toLocal8Bit().data());
 
     // 5

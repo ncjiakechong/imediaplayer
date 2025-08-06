@@ -89,10 +89,10 @@ iEventDispatcher::~iEventDispatcher()
 int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *object)
 {
     if (interval < 0 || !object) {
-        ilog_warn("iEventDispatcher::registerTimer: invalid arguments");
+        ilog_warn(__FUNCTION__, ": invalid arguments");
         return -1;
     } else if ((thread() != object->thread()) || (thread() != iThread::currentThread())) {
-        ilog_warn("iEventDispatcher::registerTimer: timers cannot be started from another thread");
+        ilog_warn(__FUNCTION__, ": timers cannot be started from another thread");
         return -1;
     }
 
