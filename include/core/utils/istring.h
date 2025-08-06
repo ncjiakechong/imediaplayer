@@ -249,10 +249,10 @@ public:
                 const iString &a4, const iString &a5, const iString &a6,
                 const iString &a7, const iString &a8, const iString &a9) const;
 
-    iString &vsprintf(const char *format, va_list ap) IX_ATTRIBUTE_FORMAT_PRINTF(2, 0);
-    iString &sprintf(const char *format, ...) IX_ATTRIBUTE_FORMAT_PRINTF(2, 3);
-    static iString vasprintf(const char *format, va_list ap) IX_ATTRIBUTE_FORMAT_PRINTF(1, 0);
-    static iString asprintf(const char *format, ...) IX_ATTRIBUTE_FORMAT_PRINTF(1, 2);
+    iString &vsprintf(const char *format, va_list ap) IX_GCC_PRINTF_ATTR(2, 0);
+    iString &sprintf(const char *format, ...) IX_GCC_PRINTF_ATTR(2, 3);
+    static iString vasprintf(const char *format, va_list ap) IX_GCC_PRINTF_ATTR(1, 0);
+    static iString asprintf(const char *format, ...) IX_GCC_PRINTF_ATTR(1, 2);
 
     int indexOf(iChar c, int from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     int indexOf(const iString &s, int from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;

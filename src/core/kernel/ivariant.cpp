@@ -12,27 +12,38 @@
 #include "core/io/ilog.h"
 #include "core/kernel/ivariant.h"
 #include "core/utils/istring.h"
+#include "core/global/iglobalstatic.h"
 #include "private/ibasicatomicbitfield.h"
 
 #define ILOG_TAG "ix:core"
 
 namespace iShell {
 
-iVariant::convert_map_t iVariant::s_convertFuncs;
+typedef iBasicAtomicBitField< std::numeric_limits<xint16>::max() > iTypeIdRegistry;
+typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc, iKeyEqualFunc> iMetaTypeConverterRegistry;
+
+IX_GLOBAL_STATIC(iTypeIdRegistry, typeIdRegistry)
+IX_GLOBAL_STATIC(iMetaTypeConverterRegistry, typesConversionRegistry)
+
+iAbstractConverterFunction::~iAbstractConverterFunction()
+{
+    iVariant::unregisterConverterFunction(fromTypeId, toTypeId);
+}
 
 int iVariant::iRegisterMetaType(int hint)
 {
-    static iBasicAtomicBitField< std::numeric_limits<uint>::max() > s_totalTypeId;
-    if ((hint > 0) && s_totalTypeId.allocateSpecific(hint))
+    if ((hint > 0)
+        && (hint < iTypeIdRegistry::NumBits)
+        && typeIdRegistry()->allocateSpecific(hint))
         return hint;
 
-    return s_totalTypeId.allocateNext();
+    return typeIdRegistry()->allocateNext();
 }
 
 bool iVariant::registerConverterFunction(const iAbstractConverterFunction *f, int from, int to)
 {
-    std::pair<convert_map_t::iterator,bool> ret;
-    ret = s_convertFuncs.insert(
+    std::pair<iMetaTypeConverterRegistry::iterator,bool> ret;
+    ret = typesConversionRegistry()->insert(
                 std::pair<std::pair<int, int>, const iAbstractConverterFunction*>
                           (std::pair<int, int>(from, to), f));
 
@@ -44,7 +55,10 @@ bool iVariant::registerConverterFunction(const iAbstractConverterFunction *f, in
 
 void iVariant::unregisterConverterFunction(int from, int to)
 {
-    s_convertFuncs.erase(std::pair<int, int>(from, to));
+    if (typesConversionRegistry.isDestroyed())
+        return;
+
+    typesConversionRegistry()->erase(std::pair<int, int>(from, to));
 }
 
 iVariant::iVariant()
@@ -274,9 +288,9 @@ bool iVariant::convert(int t, void *result) const
 
     } while (0);
 
-    convert_map_t::const_iterator it;
-    it = s_convertFuncs.find(std::pair<int, int>(m_typeId, t));
-    if (it == s_convertFuncs.end() || !it->second)
+    iMetaTypeConverterRegistry::const_iterator it;
+    it = typesConversionRegistry()->find(std::pair<int, int>(m_typeId, t));
+    if (it == typesConversionRegistry()->end() || !it->second)
         return false;
 
     if (IX_NULLPTR == result)

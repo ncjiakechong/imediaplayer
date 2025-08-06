@@ -18,6 +18,7 @@
 
 #include <core/global/iglobal.h>
 #include <core/global/imacro.h>
+#include <core/utils/istring.h>
 
 namespace iShell {
 
@@ -25,8 +26,6 @@ namespace iShell {
 /* A simple logging subsystem */
 
 // #define ILOG_TAG "iShell"
-
-class iString;
 
 typedef enum ilog_level {
     ILOG_ERROR  = 0,    /* Error messages */
@@ -125,17 +124,23 @@ class iLogger{
     // specialization for const wchar_t*
     void append(const wchar_t* value);
 
-    // specialization for const char*
-    inline void append(char* value) { append((const char*)value); }
+    // specialization for const char16_t*
+    void append(const char16_t* value);
 
-    // for string
-    inline void append(const std::string& value) { append(value.c_str()); }
+    // specialization for const char32_t*
+    void append(const char32_t* value);
 
-    // specialization for const char*
-    inline void append(wchar_t* value) { append((const wchar_t*)value); }
+    // specialization for const std::string
+    void append(const std::string& value);
 
-    // for wstring
-    inline void append(const std::wstring& value)  { append(value.c_str()); }
+    // specialization for const std::wstring
+    void append(const std::wstring& value);
+
+    // specialization for const std::u16string
+    void append(const std::u16string &s);
+
+    // specialization for const std::u32string
+    void append(const std::u32string &s);
 
     // for iString
     void append(const iString& value);
@@ -167,9 +172,8 @@ class iLogger{
 
  private:
     const char* m_tags;
-    int   m_index;
     ilog_level_t m_level;
-    char m_buff[1024];
+    iString m_buff;
 };
 
 #ifdef IX_HAVE_CXX11
