@@ -39,7 +39,8 @@ struct IX_CORE_EXPORT iLogTarget
 {
     void* user_data;
     bool (*filter)(void* user_data, const char* tag, ilog_level_t level);
-    void (*callback)(void* user_data, const char* tag, ilog_level_t level, const char *msg);
+    void (*meta_callback)(void* user_data, const char* tag, ilog_level_t level, const iString& msg);
+    void (*data_callback)(void* user_data, const char* tag, ilog_level_t level, const uchar* msg, int size);
 };
 
 struct iHexUInt8 {
@@ -157,14 +158,17 @@ IX_CORE_EXPORT iLogger& operator<<(iLogger&, double);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iChar&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const char*);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const wchar_t*);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, const char16_t*);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, const char32_t*);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::string&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::wstring&);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::u16string&);
-IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::u32string&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iString&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const void*);
+
+#ifdef IX_HAVE_CXX11
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const char16_t*);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const char32_t*);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::u16string&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::u32string&);
+#endif
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,
@@ -393,6 +397,8 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1) {
     logger.end();
 }
 
+void iLogData(const char* tag, ilog_level_t level, const uchar* data, int size);
+
 /* ISO varargs available */
 #define ilog_verbose(...) iLogMeta(ILOG_TAG, ILOG_VERBOSE, __VA_ARGS__)
 #define ilog_debug(...)   iLogMeta(ILOG_TAG, ILOG_DEBUG, __VA_ARGS__)
@@ -400,6 +406,13 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1) {
 #define ilog_notice(...)  iLogMeta(ILOG_TAG, ILOG_NOTICE, __VA_ARGS__)
 #define ilog_warn(...)    iLogMeta(ILOG_TAG, ILOG_WARN, __VA_ARGS__)
 #define ilog_error(...)   iLogMeta(ILOG_TAG, ILOG_ERROR, __VA_ARGS__)
+
+#define ilog_data_verbose(...) iLogData(ILOG_TAG, ILOG_VERBOSE, __VA_ARGS__)
+#define ilog_data_debug(...)   iLogData(ILOG_TAG, ILOG_DEBUG, __VA_ARGS__)
+#define ilog_data_info(...)    iLogData(ILOG_TAG, ILOG_INFO, __VA_ARGS__)
+#define ilog_data_notice(...)  iLogData(ILOG_TAG, ILOG_NOTICE, __VA_ARGS__)
+#define ilog_data_warn(...)    iLogData(ILOG_TAG, ILOG_WARN, __VA_ARGS__)
+#define ilog_data_error(...)   iLogData(ILOG_TAG, ILOG_ERROR, __VA_ARGS__)
 
 } // namespace iShell
 
