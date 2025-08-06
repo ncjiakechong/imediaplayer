@@ -75,7 +75,7 @@ public:
                     HandleType handleType, const iVariant &handle);
 #endif
 
-    ~iGstVideoBuffer();
+    ~iGstVideoBuffer() override;
 
     GstBuffer *buffer() const { return m_buffer; }
     MapMode mapMode() const override;

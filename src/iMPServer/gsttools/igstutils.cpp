@@ -565,7 +565,7 @@ static const VideoFormat ix_videoFormatLookup[] =
     { iVideoFrame::Format_NV12   , GST_VIDEO_FORMAT_NV12 },
     { iVideoFrame::Format_NV21   , GST_VIDEO_FORMAT_NV21 },
     { iVideoFrame::Format_AYUV444, GST_VIDEO_FORMAT_AYUV },
-#if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
+    #if Q_BYTE_ORDER == Q_LITTLE_ENDIAN
     { iVideoFrame::Format_RGB32 ,  GST_VIDEO_FORMAT_BGRx },
     { iVideoFrame::Format_BGR32 ,  GST_VIDEO_FORMAT_RGBx },
     { iVideoFrame::Format_ARGB32,  GST_VIDEO_FORMAT_BGRA },

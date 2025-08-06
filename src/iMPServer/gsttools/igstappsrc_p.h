@@ -55,10 +55,7 @@
 #include <gst/app/gstappsrc.h>
 
 #include <core/kernel/iobject.h>
-
-#if GST_VERSION_MAJOR < 1
-#include <gst/app/gstappbuffer.h>
-#endif
+#include <core/io/iiodevice.h>
 
 namespace iShell {
 
@@ -92,7 +89,7 @@ private:
     bool doSeek(xint64);
     void onDataReady();
 
-    void streamDestroyed();
+    void streamDestroyed(iObject* obj);
 private:
     static gboolean on_seek_data(GstAppSrc *element, guint64 arg0, gpointer userdata);
     static void on_enough_data(GstAppSrc *element, gpointer userdata);

@@ -1,50 +1,29 @@
-/****************************************************************************
-**
-** Copyright (C) 2016 The Qt Company Ltd.
-** Contact: https://www.qt.io/licensing/
-**
-** This file is part of the Qt Toolkit.
-**
-** $QT_BEGIN_LICENSE:LGPL$
-** Commercial License Usage
-** Licensees holding valid commercial Qt licenses may use this file in
-** accordance with the commercial license agreement provided with the
-** Software or, alternatively, in accordance with the terms contained in
-** a written agreement between you and The Qt Company. For licensing terms
-** and conditions see https://www.qt.io/terms-conditions. For further
-** information use the contact form at https://www.qt.io/contact-us.
-**
-** GNU Lesser General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU Lesser
-** General Public License version 3 as published by the Free Software
-** Foundation and appearing in the file LICENSE.LGPL3 included in the
-** packaging of this file. Please review the following information to
-** ensure the GNU Lesser General Public License version 3 requirements
-** will be met: https://www.gnu.org/licenses/lgpl-3.0.html.
-**
-** GNU General Public License Usage
-** Alternatively, this file may be used under the terms of the GNU
-** General Public License version 2.0 or (at your option) the GNU General
-** Public license version 3 or any later version approved by the KDE Free
-** Qt Foundation. The licenses are as published by the Free Software
-** Foundation and appearing in the file LICENSE.GPL2 and LICENSE.GPL3
-** included in the packaging of this file. Please review the following
-** information to ensure the GNU General Public License requirements will
-** be met: https://www.gnu.org/licenses/gpl-2.0.html and
-** https://www.gnu.org/licenses/gpl-3.0.html.
-**
-** $QT_END_LICENSE$
-**
-****************************************************************************/
+/////////////////////////////////////////////////////////////////
+/// Copyright 2018-2020
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    igstutils.h
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/////////////////////////////////////////////////////////////////
 
-#include <QDebug>
-
+#include "core/io/ilog.h"
 #include "igstappsrc_p.h"
+
+#if GST_VERSION_MAJOR < 1
+#include <gst/app/gstappbuffer.h>
+#endif
+
+#define ILOG_TAG "ix:media"
+
+namespace iShell {
 
 iGstAppSrc::iGstAppSrc(iObject *parent)
     :iObject(parent)
-    ,m_stream(0)
-    ,m_appSrc(0)
+    ,m_stream(IX_NULLPTR)
+    ,m_appSrc(IX_NULLPTR)
     ,m_sequential(false)
     ,m_maxBytes(0)
     ,m_dataRequestSize(~0)
@@ -89,11 +68,11 @@ bool iGstAppSrc::setup(GstElement* appsrc)
     return true;
 }
 
-void iGstAppSrc::setStream(QIODevice *stream)
+void iGstAppSrc::setStream(iIODevice *stream)
 {
     if (m_stream) {
-        disconnect(m_stream, SIGNAL(readyRead()), this, SLOT(onDataReady()));
-        disconnect(m_stream, SIGNAL(destroyed()), this, SLOT(streamDestroyed()));
+        m_stream->readyRead.disconnect(this);
+        m_stream->destroyed.disconnect(this);
         m_stream = 0;
     }
 
@@ -111,13 +90,13 @@ void iGstAppSrc::setStream(QIODevice *stream)
 
     if (stream) {
         m_stream = stream;
-        connect(m_stream, SIGNAL(destroyed()), SLOT(streamDestroyed()));
-        connect(m_stream, SIGNAL(readyRead()), this, SLOT(onDataReady()));
+        m_stream->destroyed.connect(this, &iGstAppSrc::streamDestroyed);
+        m_stream->readyRead.connect(this, &iGstAppSrc::onDataReady);
         m_sequential = m_stream->isSequential();
     }
 }
 
-QIODevice *iGstAppSrc::stream() const
+iIODevice *iGstAppSrc::stream() const
 {
     return m_stream;
 }
@@ -135,12 +114,12 @@ void iGstAppSrc::onDataReady()
     }
 }
 
-void iGstAppSrc::streamDestroyed()
+void iGstAppSrc::streamDestroyed(iObject *obj)
 {
-    if (sender() == m_stream) {
+     if (obj == m_stream) {
         m_stream = 0;
         sendEOS();
-    }
+     }
 }
 
 void iGstAppSrc::pushDataToAppSrc()
@@ -158,42 +137,42 @@ void iGstAppSrc::pushDataToAppSrc()
         if (size) {
             GstBuffer* buffer = gst_buffer_new_and_alloc(size);
 
-#if GST_CHECK_VERSION(1,0,0)
+            #if GST_CHECK_VERSION(1,0,0)
             GstMapInfo mapInfo;
             gst_buffer_map(buffer, &mapInfo, GST_MAP_WRITE);
             void* bufferData = mapInfo.data;
-#else
+            #else
             void* bufferData = GST_BUFFER_DATA(buffer);
-#endif
+            #endif
 
             buffer->offset = m_stream->pos();
             xint64 bytesRead = m_stream->read((char*)bufferData, size);
             buffer->offset_end =  buffer->offset + bytesRead - 1;
 
-#if GST_CHECK_VERSION(1,0,0)
+            #if GST_CHECK_VERSION(1,0,0)
             gst_buffer_unmap(buffer, &mapInfo);
-#endif
+            #endif
 
             if (bytesRead > 0) {
                 m_dataRequested = false;
                 m_enoughData = false;
                 GstFlowReturn ret = gst_app_src_push_buffer (GST_APP_SRC (element()), buffer);
                 if (ret == GST_FLOW_ERROR) {
-                    qWarning()<<"appsrc: push buffer error";
-#if GST_CHECK_VERSION(1,0,0)
+                    ilog_warn("appsrc: push buffer error");
+                #if GST_CHECK_VERSION(1,0,0)
                 } else if (ret == GST_FLOW_FLUSHING) {
-                    qWarning()<<"appsrc: push buffer wrong state";
+                    ilog_warn("appsrc: push buffer wrong state");
                 }
-#else
+                #else
                 } else if (ret == GST_FLOW_WRONG_STATE) {
-                    qWarning()<<"appsrc: push buffer wrong state";
+                    ilog_warn("appsrc: push buffer wrong state");
                 }
-#endif
-#if GST_VERSION_MAJOR < 1
+                #endif
+                #if GST_VERSION_MAJOR < 1
                 else if (ret == GST_FLOW_RESEND) {
-                    qWarning()<<"appsrc: push buffer resend";
+                    ilog_warn("appsrc: push buffer resend");
                 }
-#endif
+                #endif
             }
         } else {
             sendEOS();
@@ -213,11 +192,11 @@ bool iGstAppSrc::doSeek(xint64 value)
 
 gboolean iGstAppSrc::on_seek_data(GstAppSrc *element, guint64 arg0, gpointer userdata)
 {
-    IX_GCC_UNUSED(element);
     iGstAppSrc *self = reinterpret_cast<iGstAppSrc*>(userdata);
     if (self && self->isStreamValid()) {
-        if (!self->stream()->isSequential())
-            QMetaObject::invokeMethod(self, "doSeek", Qt::AutoConnection, Q_ARG(xint64, arg0));
+        if (!self->stream()->isSequential()) {
+            invokeMethod(self, &iGstAppSrc::doSeek, arg0, AutoConnection);
+        }
     }
     else
         return false;
@@ -227,7 +206,6 @@ gboolean iGstAppSrc::on_seek_data(GstAppSrc *element, guint64 arg0, gpointer use
 
 void iGstAppSrc::on_enough_data(GstAppSrc *element, gpointer userdata)
 {
-    IX_GCC_UNUSED(element);
     iGstAppSrc *self = reinterpret_cast<iGstAppSrc*>(userdata);
     if (self)
         self->enoughData() = true;
@@ -235,19 +213,17 @@ void iGstAppSrc::on_enough_data(GstAppSrc *element, gpointer userdata)
 
 void iGstAppSrc::on_need_data(GstAppSrc *element, guint arg0, gpointer userdata)
 {
-    IX_GCC_UNUSED(element);
     iGstAppSrc *self = reinterpret_cast<iGstAppSrc*>(userdata);
     if (self) {
         self->dataRequested() = true;
         self->enoughData() = false;
         self->dataRequestSize()= arg0;
-        QMetaObject::invokeMethod(self, "pushDataToAppSrc", Qt::AutoConnection);
+        invokeMethod(self, &iGstAppSrc::pushDataToAppSrc, AutoConnection);
     }
 }
 
-void iGstAppSrc::destroy_notify(gpointer data)
+void iGstAppSrc::destroy_notify(gpointer)
 {
-    IX_GCC_UNUSED(data);
 }
 
 void iGstAppSrc::sendEOS()
@@ -259,3 +235,5 @@ void iGstAppSrc::sendEOS()
     if (isStreamValid() && !stream()->isSequential())
         stream()->reset();
 }
+
+} // namespace iShell

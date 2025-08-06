@@ -22,7 +22,6 @@ LIBS += \
 
 HEADERS += \
     gsttools/igstappsrc_p.h \
-    gsttools/igstbufferpoolinterface_p.h \
     gsttools/igstcodecsinfo_p.h \
     gsttools/igstreamerbufferprobe_p.h \
     gsttools/igstreamerbushelper_p.h \
@@ -30,7 +29,6 @@ HEADERS += \
     gsttools/igstreamervideorendererinterface_p.h \
     gsttools/igstutils_p.h \
     gsttools/igstvideobuffer_p.h \
-    gsttools/istvideoconnector_p.h \
 #    gsttools/qgstreameraudioprobecontrol_p.h \
 #    gsttools/qgstreamermirtexturerenderer_p.h \
 #    gsttools/qgstreamerplayercontrol_p.h \
@@ -41,14 +39,11 @@ HEADERS += \
 #    gsttools/qgstreamervideowidget_p.h \
 #    gsttools/qgstreamervideowindow_p.h \
 #    gsttools/qgstvideorendererplugin_p.h \
-#    gsttools/qgstvideorenderersink_p.h \
-#    gsttools/qvideosurfacegstsink_p.h
+#    gsttools/qgstvideorenderersink_p.h
 
 SOURCES += \
     gsttools/igstutils.cpp \
-#    gsttools/gstvideoconnector.c \
-#    gsttools/qgstappsrc.cpp \
-#    gsttools/qgstbufferpoolinterface.cpp \
+    gsttools/qgstappsrc.cpp \
 #    gsttools/qgstcodecsinfo.cpp \
 #    gsttools/qgstreameraudioprobecontrol.cpp \
 #    gsttools/qgstreamerbufferprobe.cpp \
@@ -65,8 +60,7 @@ SOURCES += \
 #    gsttools/qgstreamervideowindow.cpp \
 #    gsttools/qgstvideobuffer.cpp \
 #    gsttools/qgstvideorendererplugin.cpp \
-#    gsttools/qgstvideorenderersink.cpp \
-#    gsttools/qvideosurfacegstsink.cpp
+#    gsttools/qgstvideorenderersink.cpp
 
 
 
