@@ -16,13 +16,11 @@
 
 #include <core/utils/ichar.h>
 #include <core/utils/ibytearray.h>
-#include <core/utils/istringliteral.h>
 #include <core/utils/istringalgorithms.h>
 
 namespace iShell {
 
 class iString;
-class iStringRef;
 
 namespace iPrivate {
 template <typename Char>
@@ -71,7 +69,7 @@ struct IsCompatibleStdBasicString
 class iStringView
 {
 public:
-    typedef char16_t storage_type;
+    typedef ushort storage_type;
     typedef const iChar value_type;
     typedef std::ptrdiff_t difference_type;
     typedef xsizetype size_type;
@@ -99,7 +97,7 @@ private:
     using if_compatible_string = typename enable_if<iPrivate::IsCompatibleStdBasicString<T>::value, bool>::type;
 
     template <typename T>
-    using if_compatible_istring_like = typename enable_if<is_same<T, iString>::value || is_same<T, iStringRef>::value, bool>::type;
+    using if_compatible_istring_like = typename enable_if<is_same<T, iString>::value, bool>::type;
 
     template <typename Char, size_t N>
     static xsizetype lengthHelperArray(const Char (&)[N])
@@ -170,7 +168,7 @@ public:
     iByteArray toLatin1() const { return iPrivate::convertToLatin1(*this); }
     iByteArray toUtf8() const { return iPrivate::convertToUtf8(*this); }
     iByteArray toLocal8Bit() const { return iPrivate::convertToLocal8Bit(*this); }
-    inline std::vector<uint> toUcs4() const;
+    inline std::list<uint> toUcs4() const;
 
     iChar at(xsizetype n) const { return (*this)[n]; }
 
@@ -184,6 +182,15 @@ public:
     { IX_ASSERT(n >= 0); IX_ASSERT(n <= size()); return iStringView(m_data + m_size - n, n); }
     iStringView chopped(xsizetype n) const
     { IX_ASSERT(n >= 0); IX_ASSERT(n <= size()); return iStringView(m_data, m_size - n); }
+
+    iStringView first(xsizetype n) const
+    { IX_ASSERT(n >= 0); IX_ASSERT(n <= size()); return iStringView(m_data, n); }
+    iStringView last(xsizetype n) const
+    { IX_ASSERT(n >= 0); IX_ASSERT(n <= size()); return iStringView(m_data + size() - n, n); }
+    iStringView sliced(xsizetype pos) const
+    { IX_ASSERT(pos >= 0); IX_ASSERT(pos <= size()); return iStringView(m_data + pos, size() - pos); }
+    iStringView sliced(xsizetype pos, xsizetype n) const
+    { IX_ASSERT(pos >= 0); IX_ASSERT(n >= 0); IX_ASSERT(size_t(pos) + size_t(n) <= size_t(size())); return iStringView(m_data + pos, n); }
 
     void truncate(xsizetype n)
     { IX_ASSERT(n >= 0); IX_ASSERT(n <= size()); m_size = n; }
@@ -210,6 +217,35 @@ public:
     { return !empty() && back() == c; }
     bool endsWith(iChar c, iShell::CaseSensitivity cs) const
     { return iPrivate::endsWith(*this, iStringView(&c, 1), cs); }
+
+    xsizetype indexOf(iChar c, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    { return iPrivate::findString(*this, from, iStringView(&c, 1), cs); }
+    xsizetype indexOf(iStringView s, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    { return iPrivate::findString(*this, from, s, cs); }
+    inline xsizetype indexOf(iLatin1String s, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept;
+
+    bool contains(iChar c, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    { return indexOf(iStringView(&c, 1), 0, cs) != xsizetype(-1); }
+    bool contains(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    { return indexOf(s, 0, cs) != xsizetype(-1); }
+    inline bool contains(iLatin1String s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept;
+
+    xsizetype count(iChar c, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    { return iPrivate::count(*this, c, cs); }
+    xsizetype count(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    { return iPrivate::count(*this, s, cs); }
+
+    xsizetype lastIndexOf(iChar c, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    { return iPrivate::lastIndexOf(*this, from, iStringView(&c, 1), cs); }
+    xsizetype lastIndexOf(iStringView s, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    { return iPrivate::lastIndexOf(*this, from, s, cs); }
+    inline xsizetype lastIndexOf(iLatin1String s, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept;
+
+    std::list<iStringView> split(iStringView sep,
+                             iShell::SplitBehavior behavior = iShell::KeepEmptyParts,
+                             iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
+    std::list<iStringView> split(iChar sep, iShell::SplitBehavior behavior = iShell::KeepEmptyParts,
+                             iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
     bool isRightToLeft() const
     { return iPrivate::isRightToLeft(*this); }
@@ -245,9 +281,7 @@ private:
 };
 IX_DECLARE_TYPEINFO(iStringView, IX_PRIMITIVE_TYPE);
 
-template <typename iStringLike, typename enable_if<
-    is_same<iStringLike, iString>::value || is_same<iStringLike, iStringRef>::value,
-    bool>::type = true>
+template <typename iStringLike, typename enable_if<is_same<iStringLike, iString>::value, bool>::type = true>
 inline iStringView iToStringViewIgnoringNull(const iStringLike &s)
 { return iStringView(s.data(), s.size()); }
 

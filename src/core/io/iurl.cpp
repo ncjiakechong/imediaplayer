@@ -836,7 +836,7 @@ recodeFromUser(const iString &input, const ushort *actions, int from, int to)
 
 // appendXXXX functions: copy from the internal form to the external, user form.
 // the internal value is stored in its PrettyDecoded form, so that case is easy.
-static inline void appendToUser(iString &appendTo, const iStringRef &value, iUrl::FormattingOptions options,
+static inline void appendToUser(iString &appendTo, const iStringView &value, iUrl::FormattingOptions options,
                                 const ushort *actions)
 {
     if (options == iUrl::PrettyDecoded) {
@@ -847,13 +847,6 @@ static inline void appendToUser(iString &appendTo, const iStringRef &value, iUrl
     if (!ix_urlRecode(appendTo, value.data(), value.end(), options, actions))
         appendTo += value;
 }
-
-static inline void appendToUser(iString &appendTo, const iString &value, iUrl::FormattingOptions options,
-                                const ushort *actions)
-{
-    appendToUser(appendTo, iStringRef(&value), options, actions);
-}
-
 
 inline void iUrlPrivate::appendAuthority(iString &appendTo, iUrl::FormattingOptions options, Section appendingTo) const
 {
@@ -1130,20 +1123,20 @@ inline void iUrlPrivate::appendPath(iString &appendTo, iUrl::FormattingOptions o
         thePath = ix_normalizePathSegments(path, isLocalFile() ? DefaultNormalization : RemotePath);
     }
 
-    iStringRef thePathRef(&thePath);
+    iStringView thePathView(thePath);
     if (options & iUrl::RemoveFilename) {
         const int slash = path.lastIndexOf(iLatin1Char('/'));
         if (slash == -1)
             return;
-        thePathRef = path.leftRef(slash + 1);
+        thePathView = path.left(slash + 1);
     }
     // check if we need to remove trailing slashes
     if (options & iUrl::StripTrailingSlash) {
-        while (thePathRef.length() > 1 && thePathRef.endsWith(iLatin1Char('/')))
-            thePathRef.chop(1);
+        while (thePathView.length() > 1 && thePathView.endsWith(iLatin1Char('/')))
+            thePathView.chop(1);
     }
 
-    appendToUser(appendTo, thePathRef, options,
+    appendToUser(appendTo, thePathView, options,
                  appendingTo == FullUrl || options & iUrl::EncodeDelimiters ? pathInUrl : pathInIsolation);
 }
 
@@ -1732,7 +1725,7 @@ inline iString iUrlPrivate::mergePaths(const iString &relativePath) const
     if (!path.contains(iLatin1Char('/')))
         newPath = relativePath;
     else
-        newPath = path.leftRef(path.lastIndexOf(iLatin1Char('/')) + 1) + relativePath;
+        newPath = iStringView(path).left(path.lastIndexOf(iLatin1Char('/')) + 1).toString() + relativePath;
 
     return newPath;
 }
@@ -2893,7 +2886,7 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 */
 
 /*!
-    \fn void iUrl::setQueryItems(const std::list<QPair<iString, iString> > &query)
+    \fn void iUrl::setQueryItems(const std::list<std::pair<iString, iString> > &query)
     \deprecated
 
     Sets the query string of the URL to an encoded version of \a
@@ -2912,7 +2905,7 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 */
 
 /*!
-    \fn void iUrl::setEncodedQueryItems(const std::list<QPair<iByteArray, iByteArray> > &query)
+    \fn void iUrl::setEncodedQueryItems(const std::list<std::pair<iByteArray, iByteArray> > &query)
     \deprecated
     \since 4.4
 
@@ -2964,7 +2957,7 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 */
 
 /*!
-    \fn std::list<QPair<iString, iString> > iUrl::queryItems() const
+    \fn std::list<std::pair<iString, iString> > iUrl::queryItems() const
     \deprecated
 
     Returns the query string of the URL, as a map of keys and values.
@@ -2979,7 +2972,7 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
 */
 
 /*!
-    \fn std::list<QPair<iByteArray, iByteArray> > iUrl::encodedQueryItems() const
+    \fn std::list<std::pair<iByteArray, iByteArray> > iUrl::encodedQueryItems() const
     \deprecated
     \since 4.4
 

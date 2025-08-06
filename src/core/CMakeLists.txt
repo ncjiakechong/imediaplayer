@@ -33,6 +33,7 @@ set (ComSource
 	thread/isemaphore.cpp
 	thread/ithread.cpp
 	thread/iwakeup.cpp
+	thread/ithreadstorage.cpp
 	utils/iarraydata.cpp
 	utils/ibitarray.cpp
 	utils/ibytearray.cpp
@@ -44,7 +45,7 @@ set (ComSource
 	utils/ilocale_tools_p.cpp
 	utils/ilocale.cpp
 	utils/irect.cpp
-	utils/iregexp.cpp
+	utils/iregularexpression.cpp
 	utils/iringbuffer.cpp
 	utils/isharedptr.cpp
 	utils/isize.cpp

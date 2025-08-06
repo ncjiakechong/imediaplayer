@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////
+ /////////////////////////////////////////////////////////////////
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
@@ -15,26 +15,26 @@
 
 namespace iShell {
 
-static inline void bm_init_skiptable(const uchar *cc, int len, uchar *skiptable)
+static inline void bm_init_skiptable(const uchar *cc, xsizetype len, uchar *skiptable)
 {
-    int l = std::min(len, 255);
+    int l = int(std::min(len, xsizetype(255)));
     memset(skiptable, l, 256*sizeof(uchar));
     cc += len - l;
     while (l--)
-        skiptable[*cc++] = static_cast<uchar>(l);
+        skiptable[*cc++] = l;
 }
 
-static inline int bm_find(const uchar *cc, int l, int index, const uchar *puc, uint pl,
-                          const uchar *skiptable)
+static inline xsizetype bm_find(const uchar *cc, xsizetype l, xsizetype index, const uchar *puc,
+                                xsizetype pl, const uchar *skiptable)
 {
     if (pl == 0)
         return index > l ? -1 : index;
-    const uint pl_minus_one = pl - 1;
+    const xsizetype pl_minus_one = pl - 1;
 
     const uchar *current = cc + index + pl_minus_one;
     const uchar *end = cc + l;
     while (current < end) {
-        uint skip = skiptable[*current];
+        xsizetype skip = skiptable[*current];
         if (!skip) {
             // possible match
             while (skip < pl) {
@@ -43,7 +43,7 @@ static inline int bm_find(const uchar *cc, int l, int index, const uchar *puc, u
                 skip++;
             }
             if (skip > pl_minus_one) // we have a match
-                return static_cast<int>((current - cc) - skip + 1);
+                return (current - cc) - skip + 1;
 
             // in case we don't have a match we are a bit inefficient as we only skip by one
             // when we have the non matching char in the string.
@@ -98,7 +98,7 @@ iByteArrayMatcher::iByteArrayMatcher()
   has the given \a length. \a pattern must remain in scope, but
   the destructor does not delete \a pattern.
  */
-iByteArrayMatcher::iByteArrayMatcher(const char *pattern, int length)
+iByteArrayMatcher::iByteArrayMatcher(const char *pattern, xsizetype length)
 {
     p.p = reinterpret_cast<const uchar *>(pattern);
     p.l = length;
@@ -163,7 +163,7 @@ void iByteArrayMatcher::setPattern(const iByteArray &pattern)
     setPattern(). Returns the position where the pattern() matched in
     \a ba, or -1 if no match was found.
 */
-int iByteArrayMatcher::indexIn(const iByteArray &ba, int from) const
+xsizetype iByteArrayMatcher::indexIn(const iByteArray &ba, xsizetype from) const
 {
     if (from < 0)
         from = 0;
@@ -178,7 +178,7 @@ int iByteArrayMatcher::indexIn(const iByteArray &ba, int from) const
     most recent call to setPattern(). Returns the position where the
     pattern() matched in \a str, or -1 if no match was found.
 */
-int iByteArrayMatcher::indexIn(const char *str, int len, int from) const
+xsizetype iByteArrayMatcher::indexIn(const char *str, xsizetype len, xsizetype from) const
 {
     if (from < 0)
         from = 0;
@@ -196,12 +196,12 @@ int iByteArrayMatcher::indexIn(const char *str, int len, int from) const
 */
 
 
-static int findChar(const char *str, int len, char ch, int from)
+static int findChar(const char *str, xsizetype len, char ch, xsizetype from)
 {
     const uchar *s = (const uchar *)str;
     uchar c = (uchar)ch;
     if (from < 0)
-        from = std::max(from + len, 0);
+        from = std::max(from + len, xsizetype(0));
     if (from < len) {
         const uchar *n = s + from - 1;
         const uchar *e = s + len;
@@ -215,8 +215,8 @@ static int findChar(const char *str, int len, char ch, int from)
 /*!
     \internal
  */
-static int iFindByteArrayBoyerMoore(
-    const char *haystack, int haystackLen, int haystackOffset,
+static xsizetype iFindByteArrayBoyerMoore(
+    const char *haystack, int haystackLen, xsizetype haystackOffset,
     const char *needle, int needleLen)
 {
     uchar skiptable[256];
@@ -228,22 +228,22 @@ static int iFindByteArrayBoyerMoore(
 }
 
 #define REHASH(a) \
-    if (sl_minus_1 < sizeof(uint) * CHAR_BIT) \
-        hashHaystack -= uint(a) << sl_minus_1; \
+    if (sl_minus_1 < sizeof(std::size_t) * CHAR_BIT) \
+        hashHaystack -= std::size_t(a) << sl_minus_1; \
     hashHaystack <<= 1
 
 /*!
     \internal
  */
-int iFindByteArray(
-    const char *haystack0, int haystackLen, int from,
-    const char *needle, int needleLen)
+xsizetype iFindByteArray(
+    const char *haystack0, xsizetype haystackLen, xsizetype from,
+    const char *needle, xsizetype needleLen)
 {
-    const int l = haystackLen;
-    const int sl = needleLen;
+    const xsizetype l = haystackLen;
+    const xsizetype sl = needleLen;
     if (from < 0)
         from += l;
-    if (uint(sl + from) > (uint)l)
+    if (std::size_t(sl + from) > std::size_t(l))
         return -1;
     if (!sl)
         return from;
@@ -269,9 +269,9 @@ int iFindByteArray(
     */
     const char *haystack = haystack0 + from;
     const char *end = haystack0 + (l - sl);
-    const uint sl_minus_1 = sl - 1;
-    uint hashNeedle = 0, hashHaystack = 0;
-    int idx;
+    const xsizetype sl_minus_1 = std::size_t(sl - 1);
+    std::size_t hashNeedle = 0, hashHaystack = 0;
+    xsizetype idx;
     for (idx = 0; idx < sl; ++idx) {
         hashNeedle = ((hashNeedle<<1) + needle[idx]);
         hashHaystack = ((hashHaystack<<1) + haystack[idx]);

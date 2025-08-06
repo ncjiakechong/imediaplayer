@@ -13,7 +13,7 @@
 #include <gst/video/video.h>
 
 #include "core/utils/isize.h"
-#include "core/utils/iregexp.h"
+#include "core/utils/iregularexpression.h"
 #include "core/utils/idatetime.h"
 #include "core/global/iglobalstatic.h"
 #include "core/global/iprocessordetection.h"
@@ -686,7 +686,7 @@ std::unordered_set<iString, iKeyHashFunc> iGstUtils::supportedMimeTypes(bool (*i
                             if (value) {
                                 gchar *str = gst_value_serialize(value);
                                 iString versions = iLatin1String(str);
-                                const std::list<iString> elements = versions.split(iRegExp(iLatin1String("\\D+")), iString::SkipEmptyParts);
+                                const std::list<iString> elements = versions.split(iRegularExpression(iLatin1String("\\D+")), iShell::SkipEmptyParts);
                                 for (const iString &e : elements)
                                     supportedMimeTypes.insert(nameLowcase + e);
                                 g_free(str);
@@ -1200,10 +1200,11 @@ iString iGstUtils::fileExtensionForMimeType(const iString &mimeType)
     if (!extension.isEmpty() || format.isEmpty())
         return extension;
 
-    iRegExp rx(iStringLiteral("[-/]([\\w]+)$"));
-    rx.exactMatch(format);
-    if (rx.captureCount() > 0)
-        extension = rx.capturedTexts().front();
+    iRegularExpression rx(iStringLiteral("[-/]([\\w]+)$"));
+    iRegularExpressionMatch match = rx.match(format);
+
+    if (match.hasMatch())
+        extension = match.captured(1);
 
     return extension;
 }

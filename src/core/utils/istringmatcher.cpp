@@ -15,43 +15,50 @@
 
 namespace iShell {
 
-static void bm_init_skiptable(const ushort *uc, int len, uchar *skiptable, iShell::CaseSensitivity cs)
+static void bm_init_skiptable(iStringView needle, uchar *skiptable, iShell::CaseSensitivity cs)
 {
-    int l = std::min(len, 255);
-    memset(skiptable, l, 256*sizeof(uchar));
+    const iStringView::storage_type *uc = needle.utf16();
+    const xsizetype len = needle.size();
+    xsizetype l = std::min(len, xsizetype(255));
+    memset(skiptable, l, 256 * sizeof(uchar));
     uc += len - l;
     if (cs == iShell::CaseSensitive) {
         while (l--) {
             skiptable[*uc & 0xff] = l;
-            uc++;
+            ++uc;
         }
     } else {
-        const ushort *start = uc;
+        const iStringView::storage_type *start = uc;
         while (l--) {
             skiptable[foldCase(uc, start) & 0xff] = l;
-            uc++;
+            ++uc;
         }
     }
 }
 
-static inline int bm_find(const ushort *uc, uint l, int index, const ushort *puc, uint pl,
+static inline xsizetype bm_find(iStringView haystack, xsizetype index, iStringView needle,
                           const uchar *skiptable, iShell::CaseSensitivity cs)
 {
-    if (pl == 0)
-        return index > (int)l ? -1 : index;
-    const uint pl_minus_one = pl - 1;
+    const iStringView::storage_type *uc = haystack.utf16();
+    const xsizetype l = haystack.size();
+    const iStringView::storage_type *puc = needle.utf16();
+    const xsizetype pl = needle.size();
 
-    const ushort *current = uc + index + pl_minus_one;
-    const ushort *end = uc + l;
+    if (pl == 0)
+        return index > l ? -1 : index;
+    const xsizetype pl_minus_one = pl - 1;
+
+    const iStringView::storage_type *current = uc + index + pl_minus_one;
+    const iStringView::storage_type *end = uc + l;
     if (cs == iShell::CaseSensitive) {
         while (current < end) {
-            uint skip = skiptable[*current & 0xff];
+            xsizetype skip = skiptable[*current & 0xff];
             if (!skip) {
                 // possible match
                 while (skip < pl) {
                     if (*(current - skip) != puc[pl_minus_one-skip])
                         break;
-                    skip++;
+                    ++skip;
                 }
                 if (skip > pl_minus_one) // we have a match
                     return (current - uc) - pl_minus_one;
@@ -69,13 +76,13 @@ static inline int bm_find(const ushort *uc, uint l, int index, const ushort *puc
         }
     } else {
         while (current < end) {
-            uint skip = skiptable[foldCase(current, uc) & 0xff];
+            xsizetype skip = skiptable[foldCase(current, uc) & 0xff];
             if (!skip) {
                 // possible match
                 while (skip < pl) {
                     if (foldCase(current - skip, uc) != foldCase(puc + pl_minus_one - skip, puc))
                         break;
-                    skip++;
+                    ++skip;
                 }
                 if (skip > pl_minus_one) // we have a match
                     return (current - uc) - pl_minus_one;
@@ -92,6 +99,11 @@ static inline int bm_find(const ushort *uc, uint l, int index, const ushort *puc
         }
     }
     return -1; // not found
+}
+
+void iStringMatcher::updateSkipTable()
+{
+    bm_init_skiptable(ix_sv, ix_skiptable, ix_cs);
 }
 
 /*!
@@ -123,7 +135,7 @@ static inline int bm_find(const ushort *uc, uint l, int index, const ushort *puc
 iStringMatcher::iStringMatcher()
     : d_ptr(0), ix_cs(iShell::CaseSensitive)
 {
-    memset(ix_data, 0, sizeof(ix_data));
+    memset(ix_skiptable, 0, sizeof(ix_skiptable));
 }
 
 /*!
@@ -133,11 +145,11 @@ iStringMatcher::iStringMatcher()
     Call indexIn() to perform a search.
 */
 iStringMatcher::iStringMatcher(const iString &pattern, iShell::CaseSensitivity cs)
-    : d_ptr(0), ix_pattern(pattern), ix_cs(cs)
+    : d_ptr(nullptr), ix_pattern(pattern), ix_cs(cs)
 {
-    p.uc = pattern.unicode();
-    p.len = pattern.size();
-    bm_init_skiptable((const ushort *)p.uc, p.len, p.ix_skiptable, cs);
+    ix_sv = ix_pattern;
+    memset(ix_skiptable, 0, sizeof(ix_skiptable));
+    updateSkipTable();
 }
 
 /*!
@@ -147,19 +159,18 @@ iStringMatcher::iStringMatcher(const iString &pattern, iShell::CaseSensitivity c
     Constructs a string matcher that will search for the pattern referred to
     by \a uc with the given \a length and case sensitivity specified by \a cs.
 */
-iStringMatcher::iStringMatcher(const iChar *uc, int len, iShell::CaseSensitivity cs)
-    : d_ptr(0), ix_cs(cs)
+iStringMatcher::iStringMatcher(iStringView str, iShell::CaseSensitivity cs)
+    : d_ptr(nullptr), ix_cs(cs), ix_sv(str)
 {
-    p.uc = uc;
-    p.len = len;
-    bm_init_skiptable((const ushort *)p.uc, len, p.ix_skiptable, cs);
+    memset(ix_skiptable, 0, sizeof(ix_skiptable));
+    updateSkipTable();
 }
 
 /*!
     Copies the \a other string matcher to this string matcher.
 */
 iStringMatcher::iStringMatcher(const iStringMatcher &other)
-    : d_ptr(0)
+    : d_ptr(nullptr)
 {
     operator=(other);
 }
@@ -179,7 +190,8 @@ iStringMatcher &iStringMatcher::operator=(const iStringMatcher &other)
     if (this != &other) {
         ix_pattern = other.ix_pattern;
         ix_cs = other.ix_cs;
-        memcpy(ix_data, other.ix_data, sizeof(ix_data));
+        ix_sv = other.ix_sv;
+        memcpy(ix_skiptable, other.ix_skiptable, sizeof(ix_skiptable));
     }
     return *this;
 }
@@ -193,9 +205,8 @@ iStringMatcher &iStringMatcher::operator=(const iStringMatcher &other)
 void iStringMatcher::setPattern(const iString &pattern)
 {
     ix_pattern = pattern;
-    p.uc = pattern.unicode();
-    p.len = pattern.size();
-    bm_init_skiptable((const ushort *)pattern.unicode(), pattern.size(), p.ix_skiptable, ix_cs);
+    ix_sv = ix_pattern;
+    updateSkipTable();
 }
 
 /*!
@@ -211,7 +222,7 @@ iString iStringMatcher::pattern() const
 {
     if (!ix_pattern.isEmpty())
         return ix_pattern;
-    return iString(p.uc, p.len);
+    return ix_sv.toString();
 }
 
 /*!
@@ -224,8 +235,8 @@ void iStringMatcher::setCaseSensitivity(iShell::CaseSensitivity cs)
 {
     if (cs == ix_cs)
         return;
-    bm_init_skiptable((const ushort *)p.uc, p.len, p.ix_skiptable, cs);
     ix_cs = cs;
+    updateSkipTable();
 }
 
 /*!
@@ -237,17 +248,9 @@ void iStringMatcher::setCaseSensitivity(iShell::CaseSensitivity cs)
 
     \sa setPattern(), setCaseSensitivity()
 */
-int iStringMatcher::indexIn(const iString &str, int from) const
-{
-    if (from < 0)
-        from = 0;
-    return bm_find((const ushort *)str.unicode(), str.size(), from,
-                   (const ushort *)p.uc, p.len,
-                   p.ix_skiptable, ix_cs);
-}
 
-/*!
-
+/*! \fn xsizetype iStringMatcher::indexIn(const iChar *str, xsizetype length, xsizetype from) const
+    \since 4.5
 
     Searches the string starting at \a str (of length \a length) from
     character position \a from (default 0, i.e. from the first
@@ -258,13 +261,23 @@ int iStringMatcher::indexIn(const iString &str, int from) const
 
     \sa setPattern(), setCaseSensitivity()
 */
-int iStringMatcher::indexIn(const iChar *str, int length, int from) const
+
+/*!
+    \since 5.14
+
+    Searches the string \a str from character position \a from
+    (default 0, i.e. from the first character), for the string
+    pattern() that was set in the constructor or in the most recent
+    call to setPattern(). Returns the position where the pattern()
+    matched in \a str, or -1 if no match was found.
+
+    \sa setPattern(), setCaseSensitivity()
+*/
+xsizetype iStringMatcher::indexIn(iStringView str, xsizetype from) const
 {
     if (from < 0)
         from = 0;
-    return bm_find((const ushort *)str, length, from,
-                   (const ushort *)p.uc, p.len,
-                   p.ix_skiptable, ix_cs);
+    return bm_find(str, from, ix_sv, ix_skiptable, ix_cs);
 }
 
 /*!
@@ -279,16 +292,15 @@ int iStringMatcher::indexIn(const iChar *str, int length, int from) const
     \internal
 */
 
-int iFindStringBoyerMoore(
-    const iChar *haystack, int haystackLen, int haystackOffset,
-    const iChar *needle, int needleLen, iShell::CaseSensitivity cs)
+xsizetype iFindStringBoyerMoore(
+    iStringView haystack, xsizetype haystackOffset,
+    iStringView needle, iShell::CaseSensitivity cs)
 {
     uchar skiptable[256];
-    bm_init_skiptable((const ushort *)needle, needleLen, skiptable, cs);
+    bm_init_skiptable(needle, skiptable, cs);
     if (haystackOffset < 0)
         haystackOffset = 0;
-    return bm_find((const ushort *)haystack, haystackLen, haystackOffset,
-                   (const ushort *)needle, needleLen, skiptable, cs);
+    return bm_find(haystack, haystackOffset, needle, skiptable, cs);
 }
 
 } // namespace iShell

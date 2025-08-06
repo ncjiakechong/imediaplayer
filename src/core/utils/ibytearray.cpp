@@ -27,69 +27,6 @@
 
 namespace iShell {
 
-// Latin 1 case system, used by iByteArray::to{Upper,Lower}() and istr(n)icmp():
-/*
-#!/usr/bin/perl -l
-use feature "unicode_strings";
-for (0..255) {
-    $up = uc(chr($_));
-    $up = chr($_) if ord($up) > 0x100 || length $up > 1;
-    printf "0x%02x,", ord($up);
-    print "" if ($_ & 0xf) == 0xf;
-}
-*/
-static const uchar latin1_uppercased[256] = {
-    0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
-    0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f,
-    0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2a,0x2b,0x2c,0x2d,0x2e,0x2f,
-    0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x3a,0x3b,0x3c,0x3d,0x3e,0x3f,
-    0x40,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f,
-    0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,0x59,0x5a,0x5b,0x5c,0x5d,0x5e,0x5f,
-    0x60,0x41,0x42,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4e,0x4f,
-    0x50,0x51,0x52,0x53,0x54,0x55,0x56,0x57,0x58,0x59,0x5a,0x7b,0x7c,0x7d,0x7e,0x7f,
-    0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0x8c,0x8d,0x8e,0x8f,
-    0x90,0x91,0x92,0x93,0x94,0x95,0x96,0x97,0x98,0x99,0x9a,0x9b,0x9c,0x9d,0x9e,0x9f,
-    0xa0,0xa1,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,0xa8,0xa9,0xaa,0xab,0xac,0xad,0xae,0xaf,
-    0xb0,0xb1,0xb2,0xb3,0xb4,0xb5,0xb6,0xb7,0xb8,0xb9,0xba,0xbb,0xbc,0xbd,0xbe,0xbf,
-    0xc0,0xc1,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xcb,0xcc,0xcd,0xce,0xcf,
-    0xd0,0xd1,0xd2,0xd3,0xd4,0xd5,0xd6,0xd7,0xd8,0xd9,0xda,0xdb,0xdc,0xdd,0xde,0xdf,
-    0xc0,0xc1,0xc2,0xc3,0xc4,0xc5,0xc6,0xc7,0xc8,0xc9,0xca,0xcb,0xcc,0xcd,0xce,0xcf,
-    0xd0,0xd1,0xd2,0xd3,0xd4,0xd5,0xd6,0xf7,0xd8,0xd9,0xda,0xdb,0xdc,0xdd,0xde,0xff
-};
-
-/*
-#!/usr/bin/perl -l
-use feature "unicode_strings";
-for (0..255) {
-    $up = lc(chr($_));
-    $up = chr($_) if ord($up) > 0x100 || length $up > 1;
-    printf "0x%02x,", ord($up);
-    print "" if ($_ & 0xf) == 0xf;
-}
-*/
-static const uchar latin1_lowercased[256] = {
-    0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f,
-    0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1a,0x1b,0x1c,0x1d,0x1e,0x1f,
-    0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2a,0x2b,0x2c,0x2d,0x2e,0x2f,
-    0x30,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x3a,0x3b,0x3c,0x3d,0x3e,0x3f,
-    0x40,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6a,0x6b,0x6c,0x6d,0x6e,0x6f,
-    0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7a,0x5b,0x5c,0x5d,0x5e,0x5f,
-    0x60,0x61,0x62,0x63,0x64,0x65,0x66,0x67,0x68,0x69,0x6a,0x6b,0x6c,0x6d,0x6e,0x6f,
-    0x70,0x71,0x72,0x73,0x74,0x75,0x76,0x77,0x78,0x79,0x7a,0x7b,0x7c,0x7d,0x7e,0x7f,
-    0x80,0x81,0x82,0x83,0x84,0x85,0x86,0x87,0x88,0x89,0x8a,0x8b,0x8c,0x8d,0x8e,0x8f,
-    0x90,0x91,0x92,0x93,0x94,0x95,0x96,0x97,0x98,0x99,0x9a,0x9b,0x9c,0x9d,0x9e,0x9f,
-    0xa0,0xa1,0xa2,0xa3,0xa4,0xa5,0xa6,0xa7,0xa8,0xa9,0xaa,0xab,0xac,0xad,0xae,0xaf,
-    0xb0,0xb1,0xb2,0xb3,0xb4,0xb5,0xb6,0xb7,0xb8,0xb9,0xba,0xbb,0xbc,0xbd,0xbe,0xbf,
-    0xe0,0xe1,0xe2,0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xeb,0xec,0xed,0xee,0xef,
-    0xf0,0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xd7,0xf8,0xf9,0xfa,0xfb,0xfc,0xfd,0xfe,0xdf,
-    0xe0,0xe1,0xe2,0xe3,0xe4,0xe5,0xe6,0xe7,0xe8,0xe9,0xea,0xeb,0xec,0xed,0xee,0xef,
-    0xf0,0xf1,0xf2,0xf3,0xf4,0xf5,0xf6,0xf7,0xf8,0xf9,0xfa,0xfb,0xfc,0xfd,0xfe,0xff
-};
-
-int iFindByteArray(
-    const char *haystack0, int haystackLen, int from,
-    const char *needle0, int needleLen);
-
 /*
  * This pair of functions is declared in itools_p.h and is used by the iShell
  * containers to allocate memory and grow the memory block during append
@@ -107,82 +44,28 @@ int iFindByteArray(
  * memory block the size of your entire VM space).
  */
 
-/*!
-    Returns the memory block size for a container containing \a elementCount
-    elements, each of \a elementSize bytes, plus a header of \a headerSize
-    bytes. That is, this function returns \c
-      {elementCount * elementSize + headerSize}
-
-    but unlike the simple calculation, it checks for overflows during the
-    multiplication and the addition.
-
-    Both \a elementCount and \a headerSize can be zero, but \a elementSize
-    cannot.
-
-    This function returns SIZE_MAX (~0) on overflow or if the memory block size
-    would not fit an int.
-*/
-size_t iCalculateBlockSize(size_t elementCount, size_t elementSize, size_t headerSize)
+template <typename T, typename Cmp = std::less<const T *>>
+static bool points_into_range(const T *p, const T *b, const T *e, Cmp less = {})
 {
-    unsigned count = unsigned(elementCount);
-    unsigned size = unsigned(elementSize);
-    unsigned header = unsigned(headerSize);
-    IX_ASSERT(elementSize);
-    IX_ASSERT(size == elementSize);
-    IX_ASSERT(header == headerSize);
-
-    if (count != elementCount)
-        return std::numeric_limits<size_t>::max();
-
-    unsigned bytes;
-    if (mul_overflow(size, count, &bytes) ||
-            add_overflow(bytes, header, &bytes))
-        return std::numeric_limits<size_t>::max();
-    if (int(bytes) < 0)     // catches bytes >= 2GB
-        return std::numeric_limits<size_t>::max();
-
-    return bytes;
+    return !less(p, b) && less(p, e);
 }
 
-/*!
-    Returns the memory block size and the number of elements that will fit in
-    that block for a container containing \a elementCount elements, each of \a
-    elementSize bytes, plus a header of \a headerSize bytes. This function
-    assumes the container will grow and pre-allocates a growth factor.
+const char iByteArray::_empty = '\0';
 
-    Both \a elementCount and \a headerSize can be zero, but \a elementSize
-    cannot.
-
-    This function returns SIZE_MAX (~0) on overflow or if the memory block size
-    would not fit an int.
-
-    \note The memory block may contain up to \a elementSize - 1 bytes more than
-    needed.
-*/
-CalculateGrowingBlockSizeResult
-iCalculateGrowingBlockSize(size_t elementCount, size_t elementSize, size_t headerSize)
+// ASCII case system, used by iByteArray::to{Upper,Lower}() and qstr(n)icmp():
+static inline uchar asciiUpper(uchar c)
 {
-    CalculateGrowingBlockSizeResult result = {
-        std::numeric_limits<size_t>::max(),std::numeric_limits<size_t>::max()
-    };
-
-    unsigned bytes = unsigned(iCalculateBlockSize(elementCount, elementSize, headerSize));
-    if (int(bytes) < 0)     // catches std::numeric_limits<size_t>::max()
-        return result;
-
-    unsigned morebytes = iNextPowerOfTwo(bytes);
-    if (int(morebytes) < 0) {
-        // catches morebytes == 2GB
-        // grow by half the difference between bytes and morebytes
-        bytes += (morebytes - bytes) / 2;
-    } else {
-        bytes = morebytes;
-    }
-
-    result.elementCount = (bytes - unsigned(headerSize)) / unsigned(elementSize);
-    result.size = bytes;
-    return result;
+    return c >= 'a' && c <= 'z' ? c & ~0x20 : c;
 }
+
+static inline uchar asciiLower(uchar c)
+{
+    return c >= 'A' && c <= 'Z' ? c | 0x20 : c;
+}
+
+xsizetype iFindByteArray(
+    const char *haystack0, xsizetype haystackLen, xsizetype from,
+    const char *needle, xsizetype needleLen);
 
 /*****************************************************************************
   Safe and portable C string functions; extensions to standard cstring
@@ -361,9 +244,8 @@ int istricmp(const char *str1, const char *str2)
     auto innerCompare = [=, &offset](xptrdiff max, bool unlimited) {
         max += offset;
         do {
-            uchar c = latin1_lowercased[s1[offset]];
-            int res = c - latin1_lowercased[s2[offset]];
-            if (res)
+            uchar c = s1[offset];
+            if (int res = asciiLower(c) - asciiLower(s2[offset]))
                 return res;
             if (!c)
                 return 0;
@@ -396,16 +278,15 @@ int istricmp(const char *str1, const char *str2)
         iByteArray::compare()
 */
 
-int istrnicmp(const char *str1, const char *str2, uint len)
+int istrnicmp(const char *str1, const char *str2, size_t len)
 {
     const uchar *s1 = reinterpret_cast<const uchar *>(str1);
     const uchar *s2 = reinterpret_cast<const uchar *>(str2);
-    int res;
-    uchar c;
     if (!s1 || !s2)
         return s1 ? 1 : (s2 ? -1 : 0);
-    for (; len--; s1++, s2++) {
-        if ((res = (c = latin1_lowercased[*s1]) - latin1_lowercased[*s2]))
+    for (; len--; ++s1, ++s2) {
+        const uchar c = *s1;
+        if (int res = asciiLower(c) - asciiLower(*s2))
             return res;
         if (!c)                                // strings are equal
             break;
@@ -425,31 +306,34 @@ int istrnicmp(const char *str1, xsizetype len1, const char *str2, xsizetype len2
     IX_ASSERT(len2 >= -1);
     const uchar *s1 = reinterpret_cast<const uchar *>(str1);
     const uchar *s2 = reinterpret_cast<const uchar *>(str2);
+    if (!s1 || !len1) {
+        if (len2 == 0)
+            return 0;
+        if (len2 == -1)
+            return (!s2 || !*s2) ? 0 : -1;
+        IX_ASSERT(s2);
+        return -1;
+    }
     if (!s2)
         return len1 == 0 ? 0 : 1;
 
-    int res;
-    uchar c;
     if (len2 == -1) {
         // null-terminated str2
         xsizetype i;
         for (i = 0; i < len1; ++i) {
-            c = latin1_lowercased[s2[i]];
+            const uchar c = s2[i];
             if (!c)
                 return 1;
 
-            res = latin1_lowercased[s1[i]] - c;
-            if (res)
+            if (int res = asciiLower(s1[i]) - asciiLower(c))
                 return res;
         }
-        c = latin1_lowercased[s2[i]];
-        return c ? -1 : 0;
+        return s2[i] ? -1 : 0;
     } else {
         // not null-terminated
-        for (xsizetype i = 0; i < std::min(len1, len2); ++i) {
-            c = latin1_lowercased[s2[i]];
-            res = latin1_lowercased[s1[i]] - c;
-            if (res)
+        const xsizetype len = std::min(len1, len2);
+        for (xsizetype i = 0; i < len; ++i) {
+            if (int res = asciiLower(s1[i]) - asciiLower(s2[i]))
                 return res;
         }
         if (len1 == len2)
@@ -521,7 +405,7 @@ static const xuint16 crc_tbl[16] = {
     \note This function is a 16-bit cache conserving (16 entry table)
     implementation of the CRC-16-CCITT algorithm.
 */
-xuint16 iChecksum(const char *data, uint len)
+xuint16 iChecksum(const char *data, xsizetype len)
 {
     return iChecksum(data, len, iShell::ChecksumIso3309);
 }
@@ -537,7 +421,7 @@ xuint16 iChecksum(const char *data, uint len)
     \note This function is a 16-bit cache conserving (16 entry table)
     implementation of the CRC-16-CCITT algorithm.
 */
-xuint16 iChecksum(const char *data, uint len, iShell::ChecksumType standard)
+xuint16 iChecksum(const char *data, xsizetype len, iShell::ChecksumType standard)
 {
     xuint16 crc = 0x0000;
     switch (standard) {
@@ -951,9 +835,6 @@ xuint16 iChecksum(const char *data, uint len, iShell::ChecksumType standard)
 */
 iByteArray &iByteArray::operator=(const iByteArray & other)
 {
-    other.d->ref.ref();
-    if (!d->ref.deref())
-        Data::deallocate(d);
     d = other.d;
     return *this;
 }
@@ -967,25 +848,19 @@ iByteArray &iByteArray::operator=(const iByteArray & other)
 
 iByteArray &iByteArray::operator=(const char *str)
 {
-    Data *x;
     if (!str) {
-        x = Data::sharedNull();
+        d.clear();
     } else if (!*str) {
-        x = Data::allocate(0);
+        d = DataPointer::fromRawData(&_empty, 0);
     } else {
-        const int len = int(strlen(str));
-        const uint fullLen = len + 1;
-        if (d->ref.isShared() || fullLen > d->alloc
-                || (len < d->size && fullLen < uint(d->alloc >> 1)))
-            reallocData(fullLen, d->detachFlags());
-        x = d;
-        memcpy(x->data(), str, fullLen); // include null terminator
-        x->size = len;
+        const xsizetype len = xsizetype(strlen(str));
+        const auto capacityAtEnd = d.allocatedCapacity() - d.freeSpaceAtBegin();
+        if (d.needsDetach() || size_t(len) > capacityAtEnd
+                || (len < size() && size_t(len) < (capacityAtEnd >> 1)))
+            reallocData(len, d.detachFlags());
+        memcpy(d.data(), str, len + 1); // include null terminator
+        d.size = len;
     }
-    x->ref.ref();
-    if (!d->ref.deref())
-         Data::deallocate(d);
-    d = x;
     return *this;
 }
 
@@ -1199,12 +1074,6 @@ iByteArray &iByteArray::operator=(const char *str)
     Example:
     \snippet code/src_corelib_tools_iByteArray.cpp 9
 
-    The return value is of type iByteRef, a helper class for
-    iByteArray. When you get an object of type iByteRef, you can use
-    it as if it were a char &. If you assign to it, the assignment
-    will apply to the character in the iByteArray from which you got
-    the reference.
-
     \sa at()
 */
 
@@ -1213,16 +1082,6 @@ iByteArray &iByteArray::operator=(const char *str)
     \overload
 
     Same as at(\a i).
-*/
-
-/*! \fn iByteRef iByteArray::operator[](uint i)
-
-    \overload
-*/
-
-/*! \fn char iByteArray::operator[](uint i) const
-
-    \overload
 */
 
 /*!
@@ -1320,9 +1179,9 @@ iByteArray &iByteArray::operator=(const char *str)
 
     \sa chop(), resize(), left()
 */
-void iByteArray::truncate(int pos)
+void iByteArray::truncate(xsizetype pos)
 {
-    if (pos < d->size)
+    if (pos < size())
         resize(pos);
 }
 
@@ -1339,10 +1198,10 @@ void iByteArray::truncate(int pos)
     \sa truncate(), resize(), left()
 */
 
-void iByteArray::chop(int n)
+void iByteArray::chop(xsizetype n)
 {
     if (n > 0)
-        resize(d->size - n);
+        resize(size() - n);
 }
 
 
@@ -1370,21 +1229,7 @@ void iByteArray::chop(int n)
     \sa append(), prepend()
 */
 
-/*! \fn iByteArray &iByteArray::operator+=(const iString &str)
-
-    \overload
-
-    Appends the string \a str onto the end of this byte array and
-    returns a reference to this byte array. The Unicode data is
-    converted into 8-bit characters using iString::toUtf8().
-
-    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
-    compile your applications. You then need to call iString::toUtf8() (or
-    iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
-    convert the data to \c{const char *}.
-*/
-
-/*! \fn iByteArray &iByteArray::operator+=(const char *str)
+/*! \fn QByteArray &QByteArray::operator+=(const char *str)
 
     \overload
 
@@ -1443,21 +1288,19 @@ void iByteArray::chop(int n)
     \sa fromRawData()
 */
 
-iByteArray::iByteArray(const char *data, int size)
+iByteArray::iByteArray(const char *data, xsizetype size)
 {
     if (!data) {
-        d = Data::sharedNull();
+        d = DataPointer();
     } else {
         if (size < 0)
-            size = int(strlen(data));
+            size = istrlen(data);
         if (!size) {
-            d = Data::allocate(0);
+            d = DataPointer::fromRawData(&_empty, 0);
         } else {
-            d = Data::allocate(uint(size) + 1u);
-            IX_CHECK_PTR(d);
-            d->size = size;
-            memcpy(d->data(), data, size);
-            d->data()[size] = '\0';
+            d = DataPointer(Data::allocate(size), size);
+            memcpy(d.data(), data, size);
+            d.data()[size] = '\0';
         }
     }
 }
@@ -1469,16 +1312,14 @@ iByteArray::iByteArray(const char *data, int size)
     \sa fill()
 */
 
-iByteArray::iByteArray(int size, char ch)
+iByteArray::iByteArray(xsizetype size, char ch)
 {
     if (size <= 0) {
-        d = Data::allocate(0);
+        d = DataPointer::fromRawData(&_empty, 0);
     } else {
-        d = Data::allocate(uint(size) + 1u);
-        IX_CHECK_PTR(d);
-        d->size = size;
-        memset(d->data(), ch, size);
-        d->data()[size] = '\0';
+        d = DataPointer(Data::allocate(size), size);
+        memset(d.data(), ch, size);
+        d.data()[size] = '\0';
     }
 }
 
@@ -1488,12 +1329,14 @@ iByteArray::iByteArray(int size, char ch)
     Constructs a byte array of size \a size with uninitialized contents.
 */
 
-iByteArray::iByteArray(int size, iShell::Initialization)
+iByteArray::iByteArray(xsizetype size, iShell::Initialization)
 {
-    d = Data::allocate(uint(size) + 1u);
-    IX_CHECK_PTR(d);
-    d->size = size;
-    d->data()[size] = '\0';
+    if (size <= 0) {
+        d = DataPointer::fromRawData(&_empty, 0);
+    } else {
+        d = DataPointer(Data::allocate(size), size);
+        d.data()[size] = '\0';
+    }
 }
 
 /*!
@@ -1508,45 +1351,17 @@ iByteArray::iByteArray(int size, iShell::Initialization)
 
     \sa size(), truncate()
 */
-void iByteArray::resize(int size)
+void iByteArray::resize(xsizetype size)
 {
     if (size < 0)
         size = 0;
 
-    if (IS_RAW_DATA(d) && !d->ref.isShared() && size < d->size) {
-        d->size = size;
-        return;
-    }
-
-    if (size == 0 && !d->capacityReserved) {
-        Data *x = Data::allocate(0);
-        if (!d->ref.deref())
-            Data::deallocate(d);
-        d = x;
-    } else if (d->size == 0 && d->ref.isStatic()) {
-        //
-        // Optimize the idiom:
-        //    iByteArray a;
-        //    a.resize(sz);
-        //    ...
-        // which is used in place of the iShell 3 idiom:
-        //    iByteArray a(sz);
-        //
-        Data *x = Data::allocate(uint(size) + 1u);
-        IX_CHECK_PTR(x);
-        x->size = size;
-        x->data()[size] = '\0';
-        d = x;
-    } else {
-        if (d->ref.isShared() || uint(size) + 1u > d->alloc
-                || (!d->capacityReserved && size < d->size
-                    && uint(size) + 1u < uint(d->alloc >> 1)))
-            reallocData(uint(size) + 1u, d->detachFlags() | Data::Grow);
-        if (d->alloc) {
-            d->size = size;
-            d->data()[size] = '\0';
-        }
-    }
+    const auto capacityAtEnd = capacity() - d.freeSpaceAtBegin();
+    if (d.needsDetach() || size > capacityAtEnd)
+        reallocData(size, d.detachFlags() | Data::GrowsForward);
+    d.size = size;
+    if (d.allocatedCapacity())
+        d.data()[size] = 0;
 }
 
 /*!
@@ -1560,36 +1375,56 @@ void iByteArray::resize(int size)
     \sa resize()
 */
 
-iByteArray &iByteArray::fill(char ch, int size)
+iByteArray &iByteArray::fill(char ch, xsizetype size)
 {
-    resize(size < 0 ? d->size : size);
-    if (d->size)
-        memset(d->data(), ch, d->size);
+    resize(size < 0 ? this->size() : size);
+    if (this->size())
+        memset(d.data(), ch, this->size());
     return *this;
 }
 
-void iByteArray::reallocData(uint alloc, Data::AllocationOptions options)
+void iByteArray::reallocData(xsizetype alloc, Data::ArrayOptions options)
 {
-    if (d->ref.isShared() || IS_RAW_DATA(d)) {
-        Data *x = Data::allocate(alloc, options);
-        IX_CHECK_PTR(x);
+    if (!alloc) {
+        d = DataPointer::fromRawData(&_empty, 0);
+        return;
+    }
 
-        x->size = std::min(int(alloc) - 1, d->size);
-        ::memcpy(x->data(), d->data(), x->size);
-        x->data()[x->size] = '\0';
-        if (!d->ref.deref())
-            Data::deallocate(d);
-        d = x;
+    // there's a case of slow reallocate path where we need to memmove the data
+    // before a call to ::realloc(), meaning that there's an extra "heavy"
+    // operation. just prefer ::malloc() branch in this case
+    const bool slowReallocatePath = d.freeSpaceAtBegin() > 0;
+
+    if (d.needsDetach() || slowReallocatePath) {
+        DataPointer dd(Data::allocate(alloc, options), std::min(alloc, d.size));
+        if (dd.size > 0)
+            ::memcpy(dd.data(), d.data(), dd.size);
+        dd.data()[dd.size] = 0;
+        d = dd;
     } else {
-        Data *x = Data::reallocateUnaligned(d, alloc, options);
-        IX_CHECK_PTR(x);
-        d = x;
+        d.reallocate(alloc, options);
     }
 }
 
-void iByteArray::expand(int i)
+void iByteArray::reallocGrowData(xsizetype alloc, Data::ArrayOptions options)
 {
-    resize(std::max(i + 1, d->size));
+    if (!alloc)  // expected to always allocate
+        alloc = 1;
+
+    if (d.needsDetach()) {
+        const auto newSize = std::min(alloc, d.size);
+        DataPointer dd(DataPointer::allocateGrow(d, alloc, newSize, options));
+        dd->copyAppend(d.data(), d.data() + newSize);
+        dd.data()[dd.size] = 0;
+        d = dd;
+    } else {
+        d.reallocate(alloc, options);
+    }
+}
+
+void iByteArray::expand(xsizetype i)
+{
+    resize(std::max(i + 1, size()));
 }
 
 /*!
@@ -1604,7 +1439,7 @@ void iByteArray::expand(int i)
 iByteArray iByteArray::nulTerminated() const
 {
     // is this fromRawData?
-    if (!IS_RAW_DATA(d))
+    if (d.isMutable())
         return *this;           // no, then we're sure we're zero terminated
 
     iByteArray copy(*this);
@@ -1633,28 +1468,11 @@ iByteArray iByteArray::nulTerminated() const
     \sa append(), insert()
 */
 
-iByteArray &iByteArray::prepend(const iByteArray &ba)
-{
-    if (d->size == 0 && d->ref.isStatic() && !IS_RAW_DATA(ba.d)) {
-        *this = ba;
-    } else if (ba.d->size != 0) {
-        iByteArray tmp = *this;
-        *this = ba;
-        append(tmp);
-    }
-    return *this;
-}
-
 /*!
     \overload
 
     Prepends the string \a str to this byte array.
 */
-
-iByteArray &iByteArray::prepend(const char *str)
-{
-    return prepend(str, istrlen(str));
-}
 
 /*!
     \overload
@@ -1662,19 +1480,6 @@ iByteArray &iByteArray::prepend(const char *str)
 
     Prepends \a len bytes of the string \a str to this byte array.
 */
-
-iByteArray &iByteArray::prepend(const char *str, int len)
-{
-    if (str) {
-        if (d->ref.isShared() || uint(d->size + len) + 1u > d->alloc)
-            reallocData(uint(d->size + len) + 1u, d->detachFlags() | Data::Grow);
-        memmove(d->data()+len, d->data(), d->size);
-        memcpy(d->data(), str, len);
-        d->size += len;
-        d->data()[d->size] = '\0';
-    }
-    return *this;
-}
 
 /*! \fn iByteArray &iByteArray::prepend(int count, char ch)
 
@@ -1689,18 +1494,6 @@ iByteArray &iByteArray::prepend(const char *str, int len)
 
     Prepends the character \a ch to this byte array.
 */
-
-iByteArray &iByteArray::prepend(char ch)
-{
-    if (d->ref.isShared() || uint(d->size) + 2u > d->alloc)
-        reallocData(uint(d->size) + 2u, d->detachFlags() | Data::Grow);
-    memmove(d->data()+1, d->data(), d->size);
-    d->data()[0] = ch;
-    ++d->size;
-    d->data()[d->size] = '\0';
-    return *this;
-}
-
 /*!
     Appends the byte array \a ba onto the end of this byte array.
 
@@ -1725,22 +1518,8 @@ iByteArray &iByteArray::prepend(char ch)
     \sa operator+=(), prepend(), insert()
 */
 
-iByteArray &iByteArray::append(const iByteArray &ba)
-{
-    if (d->size == 0 && d->ref.isStatic() && !IS_RAW_DATA(ba.d)) {
-        *this = ba;
-    } else if (ba.d->size != 0) {
-        if (d->ref.isShared() || uint(d->size + ba.d->size) + 1u > d->alloc)
-            reallocData(uint(d->size + ba.d->size) + 1u, d->detachFlags() | Data::Grow);
-        memcpy(d->data() + d->size, ba.d->data(), ba.d->size);
-        d->size += ba.d->size;
-        d->data()[d->size] = '\0';
-    }
-    return *this;
-}
-
-/*! \fn iByteArray &iByteArray::append(const iString &str)
-
+/*!
+    \fn iByteArray &iByteArray::append(iByteArrayView data)
     \overload
 
     Appends the string \a str to this byte array. The Unicode data is
@@ -1757,19 +1536,6 @@ iByteArray &iByteArray::append(const iByteArray &ba)
 
     Appends the string \a str to this byte array.
 */
-
-iByteArray& iByteArray::append(const char *str)
-{
-    if (str) {
-        const int len = int(strlen(str));
-        if (d->ref.isShared() || uint(d->size + len) + 1u > d->alloc)
-            reallocData(uint(d->size + len) + 1u, d->detachFlags() | Data::Grow);
-        memcpy(d->data() + d->size, str, len + 1); // include null terminator
-        d->size += len;
-    }
-    return *this;
-}
-
 /*!
     \overload append()
 
@@ -1781,21 +1547,6 @@ iByteArray& iByteArray::append(const char *str)
     null, nothing is appended to the byte array. Ensure that \a len is
     \e not longer than \a str.
 */
-
-iByteArray &iByteArray::append(const char *str, int len)
-{
-    if (len < 0)
-        len = istrlen(str);
-    if (str && len) {
-        if (d->ref.isShared() || uint(d->size + len) + 1u > d->alloc)
-            reallocData(uint(d->size + len) + 1u, d->detachFlags() | Data::Grow);
-        memcpy(d->data() + d->size, str, len); // include null terminator
-        d->size += len;
-        d->data()[d->size] = '\0';
-    }
-    return *this;
-}
-
 /*! \fn iByteArray &iByteArray::append(int count, char ch)
 
     \overload
@@ -1813,39 +1564,6 @@ iByteArray &iByteArray::append(const char *str, int len)
     Appends the character \a ch to this byte array.
 */
 
-iByteArray& iByteArray::append(char ch)
-{
-    if (d->ref.isShared() || uint(d->size) + 2u > d->alloc)
-        reallocData(uint(d->size) + 2u, d->detachFlags() | Data::Grow);
-    d->data()[d->size++] = ch;
-    d->data()[d->size] = '\0';
-    return *this;
-}
-
-/*!
-  \internal
-  Inserts \a len bytes from the array \a arr at position \a pos and returns a
-  reference the modified byte array.
-*/
-static inline iByteArray &iByteArray_insert(iByteArray *ba,
-                                            int pos, const char *arr, int len)
-{
-    IX_ASSERT(pos >= 0);
-
-    if (pos < 0 || len <= 0 || arr == 0)
-        return *ba;
-
-    int oldsize = ba->size();
-    ba->resize(std::max(pos, oldsize) + len);
-    char *dst = ba->data();
-    if (pos > oldsize)
-        ::memset(dst + oldsize, 0x20, pos - oldsize);
-    else
-        ::memmove(dst + pos + len, dst + pos, oldsize - pos);
-    memcpy(dst + pos, arr, len);
-    return *ba;
-}
-
 /*!
     Inserts the byte array \a ba at index position \a i and returns a
     reference to this byte array.
@@ -1856,10 +1574,9 @@ static inline iByteArray &iByteArray_insert(iByteArray *ba,
     \sa append(), prepend(), replace(), remove()
 */
 
-iByteArray &iByteArray::insert(int i, const iByteArray &ba)
+iByteArray &iByteArray::insert(xsizetype i, const iByteArray &ba)
 {
-    iByteArray copy(ba);
-    return iByteArray_insert(this, i, copy.d->data(), copy.d->size);
+    return insert(i, ba.d.data(), ba.d.size);
 }
 
 /*!
@@ -1889,9 +1606,9 @@ iByteArray &iByteArray::insert(int i, const iByteArray &ba)
     resize().
 */
 
-iByteArray &iByteArray::insert(int i, const char *str)
+iByteArray &iByteArray::insert(xsizetype i, const char *str)
 {
-    return iByteArray_insert(this, i, str, istrlen(str));
+    return insert(i, str, istrlen(str));
 }
 
 /*!
@@ -1905,9 +1622,27 @@ iByteArray &iByteArray::insert(int i, const char *str)
     resize().
 */
 
-iByteArray &iByteArray::insert(int i, const char *str, int len)
+iByteArray &iByteArray::insert(xsizetype i, const char *str, xsizetype len)
 {
-    return iByteArray_insert(this, i, str, len);
+    if (i < 0 || str == nullptr || len <= 0)
+        return *this;
+
+    if (points_into_range<char>(str, d.data(), d.data() + d.size)) {
+        iVarLengthArray<char> a(len);
+        memcpy(a.data(), str, len);
+        return insert(i, a.data(), len);
+    }
+
+    xsizetype oldsize = d.size;
+    resize(std::max(i, oldsize) + len);
+    char *dst = d.data();
+    if (i > oldsize)
+        ::memset(dst + oldsize, 0x20, i - oldsize);
+    else
+        ::memmove(dst + i + len, dst + i, oldsize - i);
+    memcpy(dst + i, str, len);
+	d.data()[d.size] = '\0';
+    return *this;
 }
 
 /*!
@@ -1918,9 +1653,9 @@ iByteArray &iByteArray::insert(int i, const char *str, int len)
     resize().
 */
 
-iByteArray &iByteArray::insert(int i, char ch)
+iByteArray &iByteArray::insert(xsizetype i, char ch)
 {
-    return iByteArray_insert(this, i, &ch, 1);
+    return insert(i, &ch, 1);
 }
 
 /*! \fn iByteArray &iByteArray::insert(int i, int count, char ch)
@@ -1934,19 +1669,28 @@ iByteArray &iByteArray::insert(int i, char ch)
     If \a i is greater than size(), the array is first extended using resize().
 */
 
-iByteArray &iByteArray::insert(int i, int count, char ch)
+iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
 {
     if (i < 0 || count <= 0)
         return *this;
 
-    int oldsize = size();
-    resize(std::max(i, oldsize) + count);
-    char *dst = d->data();
-    if (i > oldsize)
-        ::memset(dst + oldsize, 0x20, i - oldsize);
-    else if (i < oldsize)
-        ::memmove(dst + i + count, dst + i, oldsize - i);
-    ::memset(dst + i, ch, count);
+    const auto oldSize = size();
+    const auto newSize = std::max(i, oldSize) + count;
+    const bool shouldGrow = d.shouldGrowBeforeInsert(d.begin() + std::min(i, oldSize), count);
+
+    // ### optimize me
+    if (d.needsDetach() || newSize > capacity() || shouldGrow) {
+        auto flags = d.detachFlags() | Data::GrowsForward;
+        if (oldSize != 0 && i <= oldSize / 4)  // using std::list's policy
+            flags |= Data::GrowsBackwards;
+        reallocGrowData(newSize, flags);
+    }
+
+    if (i > oldSize)  // set spaces in the uninitialized gap
+        d.copyAppend(i - oldSize, 0x20);
+
+    d.insert(d.begin() + i, count, ch);
+    d.data()[d.size] = '\0';
     return *this;
 }
 
@@ -1964,16 +1708,16 @@ iByteArray &iByteArray::insert(int i, int count, char ch)
     \sa insert(), replace()
 */
 
-iByteArray &iByteArray::remove(int pos, int len)
+iByteArray &iByteArray::remove(xsizetype pos, xsizetype len)
 {
-    if (len <= 0  || uint(pos) >= uint(d->size))
+    if (len <= 0  || pos < 0 || size_t(pos) >= size_t(size()))
         return *this;
     detach();
-    if (len >= d->size - pos) {
+    if (len >= d.size - pos) {
         resize(pos);
     } else {
-        memmove(d->data() + pos, d->data() + pos + len, d->size - pos - len);
-        resize(d->size - len);
+        memmove(d.data() + pos, d.data() + pos + len, d.size - pos - len);
+        resize(d.size - len);
     }
     return *this;
 }
@@ -1988,17 +1732,21 @@ iByteArray &iByteArray::remove(int pos, int len)
     \sa insert(), remove()
 */
 
-iByteArray &iByteArray::replace(int pos, int len, const iByteArray &after)
+iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const iByteArray &after)
 {
-    if (len == after.d->size && (pos + len <= d->size)) {
+    if (points_into_range<char>(after.data(), d.data(), d.data() + d.size)) {
+        iVarLengthArray<char> copy(after.size());
+        memcpy(copy.data(), after.data(), after.size());
+        return replace(pos, len, copy.data(),copy.size());
+    }
+    if (len == after.size() && (pos + len <= size())) {
         detach();
-        memmove(d->data() + pos, after.d->data(), len*sizeof(char));
+        memmove(d.data() + pos, after.data(), len*sizeof(char));
         return *this;
     } else {
-        iByteArray copy(after);
         // ### optimize me
         remove(pos, len);
-        return insert(pos, copy);
+        return insert(pos, after);
     }
 }
 
@@ -2011,7 +1759,7 @@ iByteArray &iByteArray::replace(int pos, int len, const iByteArray &after)
 
     Notice: this can change the length of the byte array.
 */
-iByteArray &iByteArray::replace(int pos, int len, const char *after)
+iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const char *after)
 {
     return replace(pos,len,after,istrlen(after));
 }
@@ -2025,15 +1773,15 @@ iByteArray &iByteArray::replace(int pos, int len, const char *after)
 
 
 */
-iByteArray &iByteArray::replace(int pos, int len, const char *after, int alen)
+iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const char *after, xsizetype alen)
 {
-    if (len == alen && (pos + len <= d->size)) {
+    if (len == alen && (pos + len <= d.size)) {
         detach();
-        memcpy(d->data() + pos, after, len*sizeof(char));
+        memcpy(d.data() + pos, after, len*sizeof(char));
         return *this;
     } else {
         remove(pos, len);
-        return iByteArray_insert(this, pos, after, alen);
+        return insert(pos, after, alen);
     }
 }
 
@@ -2088,7 +1836,7 @@ iByteArray &iByteArray::replace(const char *c, const iByteArray &after)
     may contain zero characters and do not need to be '\\0'-terminated.
 */
 
-iByteArray &iByteArray::replace(const char *before, int bsize, const char *after, int asize)
+iByteArray &iByteArray::replace(const char *before, int bsize, const char *after, xsizetype asize)
 {
     if (isNull() || (before == after && bsize == asize))
         return *this;
@@ -2096,38 +1844,38 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
     // protect against before or after being part of this
     const char *a = after;
     const char *b = before;
-    if (after >= d->data() && after < d->data() + d->size) {
+    if (points_into_range<char>(after, d.data(), d.data() + d.size)) {
         char *copy = (char *)malloc(asize);
         IX_CHECK_PTR(copy);
         memcpy(copy, after, asize);
         a = copy;
     }
-    if (before >= d->data() && before < d->data() + d->size) {
+    if (points_into_range<char>(before, d.data(), d.data() + d.size)) {
         char *copy = (char *)malloc(bsize);
         IX_CHECK_PTR(copy);
         memcpy(copy, before, bsize);
         b = copy;
     }
 
-    iByteArrayMatcher matcher(before, bsize);
-    int index = 0;
-    int len = d->size;
-    char *d = data();
+    iByteArrayMatcher matcher(b, bsize);
+    xsizetype index = 0;
+    xsizetype len = size();
+    char *d = data(); // detaches
 
     if (bsize == asize) {
         if (bsize) {
             while ((index = matcher.indexIn(*this, index)) != -1) {
-                memcpy(d + index, after, asize);
+                memcpy(d + index, a, asize);
                 index += bsize;
             }
         }
     } else if (asize < bsize) {
-        uint to = 0;
-        uint movestart = 0;
-        uint num = 0;
+        size_t to = 0;
+        size_t movestart = 0;
+        size_t num = 0;
         while ((index = matcher.indexIn(*this, index)) != -1) {
             if (num) {
-                int msize = index - movestart;
+                xsizetype msize = index - movestart;
                 if (msize > 0) {
                     memmove(d + to, d + movestart, msize);
                     to += msize;
@@ -2136,7 +1884,7 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
                 to = index;
             }
             if (asize) {
-                memcpy(d + to, after, asize);
+                memcpy(d + to, a, asize);
                 to += asize;
             }
             index += bsize;
@@ -2144,17 +1892,17 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
             num++;
         }
         if (num) {
-            int msize = len - movestart;
+            xsizetype msize = len - movestart;
             if (msize > 0)
                 memmove(d + to, d + movestart, msize);
             resize(len - num*(bsize-asize));
         }
     } else {
         // the most complex case. We don't want to lose performance by doing repeated
-        // copies and reallocs of the string.
+        // copies and reallocs of the data.
         while (index != -1) {
-            uint indices[4096];
-            uint pos = 0;
+            size_t indices[4096];
+            size_t pos = 0;
             while(pos < 4095) {
                 index = matcher.indexIn(*this, index);
                 if (index == -1)
@@ -2169,26 +1917,26 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
                 break;
 
             // we have a table of replacement positions, use them for fast replacing
-            int adjust = pos*(asize-bsize);
+            xsizetype adjust = pos*(asize-bsize);
             // index has to be adjusted in case we get back into the loop above.
             if (index != -1)
                 index += adjust;
-            int newlen = len + adjust;
-            int moveend = len;
+            xsizetype newlen = len + adjust;
+            xsizetype moveend = len;
             if (newlen > len) {
                 resize(newlen);
                 len = newlen;
             }
-            d = this->d->data();
+            d = this->d.data(); // data(), without the detach() check
 
             while(pos) {
                 pos--;
-                int movestart = indices[pos] + bsize;
-                int insertstart = indices[pos] + pos*(asize-bsize);
-                int moveto = insertstart + asize;
+                xsizetype movestart = indices[pos] + bsize;
+                xsizetype insertstart = indices[pos] + pos*(asize-bsize);
+                xsizetype moveto = insertstart + asize;
                 memmove(d + moveto, d + movestart, (moveend - movestart));
                 if (asize)
-                    memcpy(d + insertstart, after, asize);
+                    memcpy(d + insertstart, a, asize);
                 moveend = movestart - bsize;
             }
         }
@@ -2198,7 +1946,6 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
         ::free(const_cast<char *>(a));
     if (b != before)
         ::free(const_cast<char *>(b));
-
 
     return *this;
 }
@@ -2286,9 +2033,9 @@ iByteArray &iByteArray::replace(char before, const iByteArray &after)
 
 iByteArray &iByteArray::replace(char before, char after)
 {
-    if (d->size) {
+    if (!isEmpty()) {
         char *i = data();
-        char *e = i + d->size;
+        char *e = i + size();
         for (; i != e; ++i)
             if (*i == before)
                 * i = after;
@@ -2306,8 +2053,8 @@ iByteArray &iByteArray::replace(char before, char after)
 std::list<iByteArray> iByteArray::split(char sep) const
 {
     std::list<iByteArray> list;
-    int start = 0;
-    int end;
+    xsizetype start = 0;
+    xsizetype end;
     while ((end = indexOf(sep, start)) != -1) {
         list.push_back(mid(start, end - start));
         start = end + 1;
@@ -2327,9 +2074,9 @@ std::list<iByteArray> iByteArray::split(char sep) const
 
     \snippet code/src_corelib_tools_iByteArray.cpp 49
 */
-iByteArray iByteArray::repeated(int times) const
+iByteArray iByteArray::repeated(xsizetype times) const
 {
-    if (d->size == 0)
+    if (isEmpty())
         return *this;
 
     if (times <= 1) {
@@ -2338,32 +2085,32 @@ iByteArray iByteArray::repeated(int times) const
         return iByteArray();
     }
 
-    const int resultSize = times * d->size;
+    const xsizetype resultSize = times * size();
 
     iByteArray result;
     result.reserve(resultSize);
-    if (result.d->alloc != uint(resultSize) + 1u)
+    if (result.capacity() != resultSize)
         return iByteArray(); // not enough memory
 
-    memcpy(result.d->data(), d->data(), d->size);
+    memcpy(result.d.data(), data(), size());
 
-    int sizeSoFar = d->size;
-    char *end = result.d->data() + sizeSoFar;
+    xsizetype sizeSoFar = size();
+    char *end = result.d.data() + sizeSoFar;
 
-    const int halfResultSize = resultSize >> 1;
+    const xsizetype halfResultSize = resultSize >> 1;
     while (sizeSoFar <= halfResultSize) {
-        memcpy(end, result.d->data(), sizeSoFar);
+        memcpy(end, result.d.data(), sizeSoFar);
         end += sizeSoFar;
         sizeSoFar <<= 1;
     }
-    memcpy(end, result.d->data(), resultSize - sizeSoFar);
-    result.d->data()[resultSize] = '\0';
-    result.d->size = resultSize;
+    memcpy(end, result.d.data(), resultSize - sizeSoFar);
+    result.d.data()[resultSize] = '\0';
+    result.d.size = resultSize;
     return result;
 }
 
 #define REHASH(a) \
-    if (ol_minus_1 < sizeof(uint) * CHAR_BIT) \
+    if (ol_minus_1 < sizeof(std::size_t) * CHAR_BIT) \
         hashHaystack -= (a) << ol_minus_1; \
     hashHaystack <<= 1
 
@@ -2378,19 +2125,19 @@ iByteArray iByteArray::repeated(int times) const
     \sa lastIndexOf(), contains(), count()
 */
 
-int iByteArray::indexOf(const iByteArray &ba, int from) const
+xsizetype iByteArray::indexOf(const iByteArray &ba, xsizetype from) const
 {
-    const int ol = ba.d->size;
+    const xsizetype ol = ba.d.size;
     if (ol == 0)
         return from;
     if (ol == 1)
-        return indexOf(*ba.d->data(), from);
+        return indexOf(*ba.d.data(), from);
 
-    const int l = d->size;
-    if (from > d->size || ol + from > l)
+    const xsizetype l = d.size;
+    if (from > d.size || ol + from > l)
         return -1;
 
-    return iFindByteArray(d->data(), d->size, from, ba.d->data(), ol);
+    return iFindByteArray(d.data(), d.size, from, ba.d.data(), ol);
 }
 
 /*! \fn int iByteArray::indexOf(const iString &str, int from) const
@@ -2418,19 +2165,19 @@ int iByteArray::indexOf(const iByteArray &ba, int from) const
     \a str in the byte array, searching forward from index position \a
     from. Returns -1 if \a str could not be found.
 */
-int iByteArray::indexOf(const char *c, int from) const
+xsizetype iByteArray::indexOf(const char *c, xsizetype from) const
 {
-    const int ol = istrlen(c);
+    const xsizetype ol = istrlen(c);
     if (ol == 1)
         return indexOf(*c, from);
 
-    const int l = d->size;
-    if (from > d->size || ol + from > l)
+    const xsizetype l = d.size;
+    if (from > d.size || ol + from > l)
         return -1;
     if (ol == 0)
         return from;
 
-    return iFindByteArray(d->data(), d->size, from, c, ol);
+    return iFindByteArray(d.data(), d.size, from, c, ol);
 }
 
 /*!
@@ -2446,24 +2193,24 @@ int iByteArray::indexOf(const char *c, int from) const
     \sa lastIndexOf(), contains()
 */
 
-int iByteArray::indexOf(char ch, int from) const
+xsizetype iByteArray::indexOf(char ch, xsizetype from) const
 {
     if (from < 0)
-        from = std::max(from + d->size, 0);
-    if (from < d->size) {
-        const char *n = d->data() + from - 1;
-        const char *e = d->data() + d->size;
+        from = std::max(from + d.size, (xsizetype)0);
+    if (from < d.size) {
+        const char *n = d.data() + from - 1;
+        const char *e = d.data() + d.size;
         while (++n != e)
         if (*n == ch)
-            return  n - d->data();
+            return  n - d.data();
     }
     return -1;
 }
 
-
-static int lastIndexOfHelper(const char *haystack, int l, const char *needle, int ol, int from)
+static xsizetype lastIndexOfHelper(const char *haystack, xsizetype l, const char *needle,
+                                   xsizetype ol, xsizetype from)
 {
-    int delta = l - ol;
+    xsizetype delta = l - ol;
     if (from < 0)
         from = delta;
     if (from < 0 || from > l)
@@ -2473,11 +2220,11 @@ static int lastIndexOfHelper(const char *haystack, int l, const char *needle, in
 
     const char *end = haystack;
     haystack += from;
-    const uint ol_minus_1 = ol - 1;
+    const xsizetype ol_minus_1 = ol - 1;
     const char *n = needle + ol_minus_1;
     const char *h = haystack + ol_minus_1;
-    uint hashNeedle = 0, hashHaystack = 0;
-    int idx;
+    std::size_t hashNeedle = 0, hashHaystack = 0;
+    xsizetype idx;
     for (idx = 0; idx < ol; ++idx) {
         hashNeedle = ((hashNeedle<<1) + *(n-idx));
         hashHaystack = ((hashHaystack<<1) + *(h-idx));
@@ -2508,13 +2255,13 @@ static int lastIndexOfHelper(const char *haystack, int l, const char *needle, in
     \sa indexOf(), contains(), count()
 */
 
-int iByteArray::lastIndexOf(const iByteArray &ba, int from) const
+xsizetype iByteArray::lastIndexOf(const iByteArray &ba, xsizetype from) const
 {
-    const int ol = ba.d->size;
+    const xsizetype ol = ba.d.size;
     if (ol == 1)
-        return lastIndexOf(*ba.d->data(), from);
+        return lastIndexOf(*ba.d.data(), from);
 
-    return lastIndexOfHelper(d->data(), d->size, ba.d->data(), ol, from);
+    return lastIndexOfHelper(d.data(), d.size, ba.d.data(), ol, from);
 }
 
 /*! \fn int iByteArray::lastIndexOf(const iString &str, int from) const
@@ -2543,13 +2290,13 @@ int iByteArray::lastIndexOf(const iByteArray &ba, int from) const
     from. If \a from is -1 (the default), the search starts at the
     last (size() - 1) byte. Returns -1 if \a str could not be found.
 */
-int iByteArray::lastIndexOf(const char *str, int from) const
+xsizetype iByteArray::lastIndexOf(const char *str, xsizetype from) const
 {
-    const int ol = istrlen(str);
+    const xsizetype ol = istrlen(str);
     if (ol == 1)
         return lastIndexOf(*str, from);
 
-    return lastIndexOfHelper(d->data(), d->size, str, ol, from);
+    return lastIndexOfHelper(d.data(), d.size, str, ol, from);
 }
 
 /*!
@@ -2566,15 +2313,15 @@ int iByteArray::lastIndexOf(const char *str, int from) const
     \sa indexOf(), contains()
 */
 
-int iByteArray::lastIndexOf(char ch, int from) const
+xsizetype iByteArray::lastIndexOf(char ch, xsizetype from) const
 {
     if (from < 0)
-        from += d->size;
-    else if (from > d->size)
-        from = d->size-1;
+        from += d.size;
+    else if (from > d.size)
+        from = d.size-1;
     if (from >= 0) {
-        const char *b = d->data();
-        const char *n = d->data() + from + 1;
+        const char *b = d.data();
+        const char *n = d.data() + from + 1;
         while (n-- != b)
             if (*n == ch)
                 return  n - b;
@@ -2589,11 +2336,11 @@ int iByteArray::lastIndexOf(char ch, int from) const
     \sa contains(), indexOf()
 */
 
-int iByteArray::count(const iByteArray &ba) const
+xsizetype iByteArray::count(const iByteArray &ba) const
 {
-    int num = 0;
-    int i = -1;
-    if (d->size > 500 && ba.d->size > 5) {
+    xsizetype num = 0;
+    xsizetype i = -1;
+    if (d.size > 500 && ba.d.size > 5) {
         iByteArrayMatcher matcher(ba);
         while ((i = matcher.indexIn(*this, i + 1)) != -1)
             ++num;
@@ -2611,7 +2358,7 @@ int iByteArray::count(const iByteArray &ba) const
     string \a str in the byte array.
 */
 
-int iByteArray::count(const char *str) const
+xsizetype iByteArray::count(const char *str) const
 {
     return count(fromRawData(str, istrlen(str)));
 }
@@ -2625,11 +2372,11 @@ int iByteArray::count(const char *str) const
     \sa contains(), indexOf()
 */
 
-int iByteArray::count(char ch) const
+xsizetype iByteArray::count(char ch) const
 {
-    int num = 0;
-    const char *i = d->data() + d->size;
-    const char *b = d->data();
+    xsizetype num = 0;
+    const char *i = d.data() + d.size;
+    const char *b = d.data();
     while (i != b)
         if (*--i == ch)
             ++num;
@@ -2679,11 +2426,11 @@ int iByteArray::count(char ch) const
 */
 bool iByteArray::startsWith(const iByteArray &ba) const
 {
-    if (d == ba.d || ba.d->size == 0)
+    if (d == ba.d || ba.d.size == 0)
         return true;
-    if (d->size < ba.d->size)
+    if (d.size < ba.d.size)
         return false;
-    return memcmp(d->data(), ba.d->data(), ba.d->size) == 0;
+    return memcmp(d.data(), ba.d.data(), ba.d.size) == 0;
 }
 
 /*! \overload
@@ -2695,10 +2442,10 @@ bool iByteArray::startsWith(const char *str) const
 {
     if (!str || !*str)
         return true;
-    const int len = int(strlen(str));
-    if (d->size < len)
+    size_t len = strlen(str);
+    if (d.size < len)
         return false;
-    return istrncmp(d->data(), str, len) == 0;
+    return istrncmp(d.data(), str, len) == 0;
 }
 
 /*! \overload
@@ -2708,9 +2455,9 @@ bool iByteArray::startsWith(const char *str) const
 */
 bool iByteArray::startsWith(char ch) const
 {
-    if (d->size == 0)
+    if (d.size == 0)
         return false;
-    return d->data()[0] == ch;
+    return d.data()[0] == ch;
 }
 
 /*!
@@ -2724,11 +2471,11 @@ bool iByteArray::startsWith(char ch) const
 */
 bool iByteArray::endsWith(const iByteArray &ba) const
 {
-    if (d == ba.d || ba.d->size == 0)
+    if (d == ba.d || ba.d.size == 0)
         return true;
-    if (d->size < ba.d->size)
+    if (d.size < ba.d.size)
         return false;
-    return memcmp(d->data() + d->size - ba.d->size, ba.d->data(), ba.d->size) == 0;
+    return memcmp(d.data() + d.size - ba.d.size, ba.d.data(), ba.d.size) == 0;
 }
 
 /*! \overload
@@ -2740,23 +2487,18 @@ bool iByteArray::endsWith(const char *str) const
 {
     if (!str || !*str)
         return true;
-    const int len = int(strlen(str));
-    if (d->size < len)
+    const size_t len = strlen(str);
+    if (d.size < len)
         return false;
-    return istrncmp(d->data() + d->size - len, str, len) == 0;
+    return istrncmp(d.data() + d.size - len, str, len) == 0;
 }
 
 /*
-    Returns true if \a c is an uppercase Latin1 letter.
-    \note The multiplication sign 0xD7 and the sz ligature 0xDF are not
-    treated as uppercase Latin1.
+    Returns true if \a c is an uppercase ASCII letter.
  */
-static inline bool isUpperCaseLatin1(char c)
+static inline bool isUpperCaseAscii(char c)
 {
-    if (c >= 'A' && c <= 'Z')
-        return true;
-
-    return (uchar(c) >= 0xC0 && uchar(c) <= 0xDE && uchar(c) != 0xD7);
+    return c >= 'A' && c <= 'Z';
 }
 
 /*!
@@ -2774,8 +2516,8 @@ bool iByteArray::isUpper() const
 
     const char *d = data();
 
-    for (int i = 0, max = size(); i < max; ++i) {
-        if (!isUpperCaseLatin1(d[i]))
+    for (xsizetype i = 0, max = size(); i < max; ++i) {
+        if (!isUpperCaseAscii(d[i]))
             return false;
     }
 
@@ -2783,22 +2525,17 @@ bool iByteArray::isUpper() const
 }
 
 /*
-    Returns true if \a c is an lowercase Latin1 letter.
-    \note The division sign 0xF7 is not treated as lowercase Latin1,
-    but the small y dieresis 0xFF is.
+    Returns true if \a c is an lowercase ASCII letter.
  */
-static inline bool isLowerCaseLatin1(char c)
+static inline bool isLowerCaseAscii(char c)
 {
-    if (c >= 'a' && c <= 'z')
-        return true;
-
-    return (uchar(c) >= 0xD0 && uchar(c) != 0xF7);
+    return c >= 'a' && c <= 'z';
 }
 
 /*!
-    Returns \c true if this byte array contains only lowercase letters,
-    otherwise returns \c false. The byte array is interpreted as a Latin-1
-    encoded string.
+    Returns \c true if this byte array contains only lowercase ASCII letters,
+    otherwise returns \c false.
+    \since 5.12
 
 
     \sa isUpper(), toLower()
@@ -2810,8 +2547,8 @@ bool iByteArray::isLower() const
 
     const char *d = data();
 
-    for (int i = 0, max = size(); i < max; ++i) {
-        if (!isLowerCaseLatin1(d[i]))
+    for (xsizetype i = 0, max = size(); i < max; ++i) {
+        if (!isLowerCaseAscii(d[i]))
             return false;
     }
 
@@ -2825,9 +2562,9 @@ bool iByteArray::isLower() const
 */
 bool iByteArray::endsWith(char ch) const
 {
-    if (d->size == 0)
+    if (d.size == 0)
         return false;
-    return d->data()[d->size - 1] == ch;
+    return d.data()[d.size - 1] == ch;
 }
 
 /*!
@@ -2843,13 +2580,13 @@ bool iByteArray::endsWith(char ch) const
     \sa startsWith(), right(), mid(), chopped(), chop(), truncate()
 */
 
-iByteArray iByteArray::left(int len)  const
+iByteArray iByteArray::left(xsizetype len)  const
 {
-    if (len >= d->size)
+    if (len >= size())
         return *this;
     if (len < 0)
         len = 0;
-    return iByteArray(d->data(), len);
+    return iByteArray(data(), len);
 }
 
 /*!
@@ -2865,13 +2602,13 @@ iByteArray iByteArray::left(int len)  const
     \sa endsWith(), left(), mid(), chopped(), chop(), truncate()
 */
 
-iByteArray iByteArray::right(int len) const
+iByteArray iByteArray::right(xsizetype len) const
 {
-    if (len >= d->size)
+    if (len >= size())
         return *this;
     if (len < 0)
         len = 0;
-    return iByteArray(d->data() + d->size - len, len);
+    return iByteArray(end() - len, len);
 }
 
 /*!
@@ -2888,21 +2625,22 @@ iByteArray iByteArray::right(int len) const
     \sa left(), right(), chopped(), chop(), truncate()
 */
 
-iByteArray iByteArray::mid(int pos, int len) const
+iByteArray iByteArray::mid(xsizetype pos, xsizetype len) const
 {
+    xsizetype p = pos;
+    xsizetype l = len;
     using namespace iPrivate;
-    switch (iContainerImplHelper::mid(size(), &pos, &len)) {
+    switch (iContainerImplHelper::mid(size(), &p, &l)) {
     case iContainerImplHelper::Null:
         return iByteArray();
     case iContainerImplHelper::Empty:
     {
-        iByteArrayDataPtr empty = { Data::allocate(0) };
-        return iByteArray(empty);
+        return iByteArray(DataPointer::fromRawData(&_empty, 0));
     }
     case iContainerImplHelper::Full:
         return *this;
     case iContainerImplHelper::Subset:
-        return iByteArray(d->data() + pos, len);
+        return iByteArray(d.data() + p, l);
     }
 
     return iByteArray();
@@ -2936,7 +2674,7 @@ iByteArray iByteArray::mid(int pos, int len) const
 // toLower and toUpper when the only difference is the table being used
 // (even with constant propagation, there's no gain in performance).
 template <typename T>
-static iByteArray toCase_template(T &input, const uchar * table)
+static iByteArray toCase_template(T &input, uchar (*lookup)(uchar))
 {
     // find the first bad character in input
     const char *orig_begin = input.constBegin();
@@ -2944,7 +2682,7 @@ static iByteArray toCase_template(T &input, const uchar * table)
     const char *e = input.constEnd();
     for ( ; firstBad != e ; ++firstBad) {
         uchar ch = uchar(*firstBad);
-        uchar converted = table[ch];
+        uchar converted = lookup(ch);
         if (ch != converted)
             break;
     }
@@ -2957,20 +2695,19 @@ static iByteArray toCase_template(T &input, const uchar * table)
     char *b = s.begin();            // will detach if necessary
     char *p = b + (firstBad - orig_begin);
     e = b + s.size();
-    for ( ; p != e; ++p) {
-        *p = char(uchar(table[uchar(*p)]));
-    }
+    for ( ; p != e; ++p)
+        *p = char(lookup(uchar(*p)));
     return s;
 }
 
 iByteArray iByteArray::toLower_helper(const iByteArray &a)
 {
-    return toCase_template(a, latin1_lowercased);
+    return toCase_template(a, asciiLower);
 }
 
 iByteArray iByteArray::toLower_helper(iByteArray &a)
 {
-    return toCase_template(a, latin1_lowercased);
+    return toCase_template(a, asciiLower);
 }
 
 /*!
@@ -2987,12 +2724,12 @@ iByteArray iByteArray::toLower_helper(iByteArray &a)
 
 iByteArray iByteArray::toUpper_helper(const iByteArray &a)
 {
-    return toCase_template(a, latin1_uppercased);
+    return toCase_template(a, asciiUpper);
 }
 
 iByteArray iByteArray::toUpper_helper(iByteArray &a)
 {
-    return toCase_template(a, latin1_uppercased);
+    return toCase_template(a, asciiUpper);
 }
 
 /*! \fn void iByteArray::clear()
@@ -3004,9 +2741,7 @@ iByteArray iByteArray::toUpper_helper(iByteArray &a)
 
 void iByteArray::clear()
 {
-    if (!d->ref.deref())
-        Data::deallocate(d);
-    d = Data::sharedNull();
+    d.clear();
 }
 
 /*! \fn bool iByteArray::operator==(const iString &str) const
@@ -3048,9 +2783,6 @@ void iByteArray::clear()
     Returns \c true if this byte array is lexically less than string \a
     str; otherwise returns \c false.
 
-    The Unicode data is converted into 8-bit characters using
-    iString::toUtf8().
-
     The comparison is case sensitive.
 
     You can disable this operator by defining \c
@@ -3064,9 +2796,6 @@ void iByteArray::clear()
 
     Returns \c true if this byte array is lexically greater than string
     \a str; otherwise returns \c false.
-
-    The Unicode data is converted into 8-bit characters using
-    iString::toUtf8().
 
     The comparison is case sensitive.
 
@@ -3082,9 +2811,6 @@ void iByteArray::clear()
     Returns \c true if this byte array is lexically less than or equal
     to string \a str; otherwise returns \c false.
 
-    The Unicode data is converted into 8-bit characters using
-    iString::toUtf8().
-
     The comparison is case sensitive.
 
     You can disable this operator by defining \c
@@ -3098,9 +2824,6 @@ void iByteArray::clear()
 
     Returns \c true if this byte array is greater than or equal to string
     \a str; otherwise returns \c false.
-
-    The Unicode data is converted into 8-bit characters using
-    iString::toUtf8().
 
     The comparison is case sensitive.
 
@@ -3427,16 +3150,16 @@ iByteArray iByteArray::trimmed_helper(iByteArray &a)
     \sa rightJustified()
 */
 
-iByteArray iByteArray::leftJustified(int width, char fill, bool truncate) const
+iByteArray iByteArray::leftJustified(xsizetype width, char fill, bool truncate) const
 {
     iByteArray result;
-    int len = d->size;
-    int padlen = width - len;
+    xsizetype len = size();
+    xsizetype padlen = width - len;
     if (padlen > 0) {
         result.resize(len+padlen);
         if (len)
-            memcpy(result.d->data(), d->data(), len);
-        memset(result.d->data()+len, fill, padlen);
+            memcpy(result.d.data(), data(), len);
+        memset(result.d.data()+len, fill, padlen);
     } else {
         if (truncate)
             result = left(width);
@@ -3464,16 +3187,16 @@ iByteArray iByteArray::leftJustified(int width, char fill, bool truncate) const
     \sa leftJustified()
 */
 
-iByteArray iByteArray::rightJustified(int width, char fill, bool truncate) const
+iByteArray iByteArray::rightJustified(xsizetype width, char fill, bool truncate) const
 {
     iByteArray result;
-    int len = d->size;
-    int padlen = width - len;
+    xsizetype len = size();
+    xsizetype padlen = width - len;
     if (padlen > 0) {
         result.resize(len+padlen);
         if (len)
-            memcpy(result.d->data()+padlen, data(), len);
-        memset(result.d->data(), fill, padlen);
+            memcpy(result.d.data()+padlen, data(), len);
+        memset(result.d.data(), fill, padlen);
     } else {
         if (truncate)
             result = left(width);
@@ -3483,7 +3206,10 @@ iByteArray iByteArray::rightJustified(int width, char fill, bool truncate) const
     return result;
 }
 
-bool iByteArray::isNull() const { return d == iArrayData::sharedNull(); }
+bool iByteArray::isNull() const
+{
+    return d.isNull();
+}
 
 static xint64 toIntegral_helper(const char *data, bool *ok, int base, xint64)
 {
@@ -3503,6 +3229,11 @@ T toIntegral_helper(const char *data, bool *ok, int base)
     if (base != 0 && (base < 2 || base > 36)) {
         ilog_warn("Invalid base ", base);
         base = 10;
+    }
+    if (!data) {
+        if (ok)
+            *ok = false;
+        return 0;
     }
 
     // we select the right overload by the last, unused parameter
@@ -3749,10 +3480,9 @@ ushort iByteArray::toUShort(bool *ok, int base) const
 
 double iByteArray::toDouble(bool *ok) const
 {
-    iByteArray nulled = nulTerminated();
     bool nonNullOk = false;
     int processed = 0;
-    double d = ix_asciiToDouble(nulled.constData(), nulled.length(),
+    double d = ix_asciiToDouble(constData(), size(),
                                 nonNullOk, processed, WhitespacesAllowed);
     if (ok)
         *ok = nonNullOk;
@@ -3808,21 +3538,21 @@ iByteArray iByteArray::toBase64(Base64Options options) const
                                       "ghijklmn" "opqrstuv" "wxyz0123" "456789-_";
     const char *const alphabet = options & Base64UrlEncoding ? alphabet_base64url : alphabet_base64;
     const char padchar = '=';
-    int padlen = 0;
+    xsizetype padlen = 0;
 
-    iByteArray tmp((d->size + 2) / 3 * 4, iShell::Uninitialized);
+    iByteArray tmp((size() + 2) / 3 * 4, iShell::Uninitialized);
 
-    int i = 0;
+    xsizetype i = 0;
     char *out = tmp.data();
-    while (i < d->size) {
+    while (i < size()) {
         // encode 3 bytes at a time
         int chunk = 0;
-        chunk |= int(uchar(d->data()[i++])) << 16;
-        if (i == d->size) {
+        chunk |= int(uchar(data()[i++])) << 16;
+        if (i == size()) {
             padlen = 2;
         } else {
-            chunk |= int(uchar(d->data()[i++])) << 8;
-            if (i == d->size)
+            chunk |= int(uchar(data()[i++])) << 8;
+            if (i == size())
                 padlen = 1;
             else
                 chunk |= int(uchar(data()[i++]));
@@ -3982,7 +3712,7 @@ iByteArray &iByteArray::setNum(double n, char f, int prec)
     iLocaleData::DoubleForm form = iLocaleData::DFDecimal;
     uint flags = iLocaleData::ZeroPadExponent;
 
-    char lower = latin1_lowercased[uchar(f)];
+    char lower = asciiLower(uchar(f));
     if (f != lower)
         flags |= iLocaleData::CapitalEorX;
     f = lower;
@@ -4002,7 +3732,7 @@ iByteArray &iByteArray::setNum(double n, char f, int prec)
             break;
     }
 
-    *this = iLocaleData::c()->doubleToString(n, prec, form, -1, flags).toLatin1();
+    *this = iLocaleData::c()->doubleToString(n, prec, form, -1, flags).toUtf8();
     return *this;
 }
 
@@ -4144,21 +3874,6 @@ iByteArray iByteArray::number(double n, char f, int prec)
     \sa setRawData(), data(), constData()
 */
 
-iByteArray iByteArray::fromRawData(const char *data, int size)
-{
-    Data *x;
-    if (!data) {
-        x = Data::sharedNull();
-    } else if (!size) {
-        x = Data::allocate(0);
-    } else {
-        x = Data::fromRawData(data, size);
-        IX_CHECK_PTR(x);
-    }
-    iByteArrayDataPtr dataPtr = { x };
-    return iByteArray(dataPtr);
-}
-
 /*!
 
 
@@ -4173,80 +3888,153 @@ iByteArray iByteArray::fromRawData(const char *data, int size)
 
     \sa fromRawData(), data(), constData()
 */
-iByteArray &iByteArray::setRawData(const char *data, uint size)
+iByteArray &iByteArray::setRawData(const char *data, xsizetype size)
 {
-    if (d->ref.isShared() || d->alloc) {
+    if (!data || !size)
+        clear();
+    else
         *this = fromRawData(data, size);
-    } else {
-        if (data) {
-            d->size = size;
-            d->offset = data - reinterpret_cast<char *>(d);
-        } else {
-            d->offset = sizeof(iByteArrayData);
-            d->size = 0;
-        }
-    }
     return *this;
 }
 
-/*!
+namespace {
+struct fromBase64_helper_result {
+    xsizetype decodedLength;
+    iByteArray::Base64DecodingStatus status;
+};
 
-    \overload
-
-    Returns a decoded copy of the Base64 array \a base64, using the alphabet
-    defined by \a options. Input is not checked for validity; invalid
-    characters in the input are skipped, enabling the decoding process to
-    continue with subsequent characters.
-
-    For example:
-
-    \snippet code/src_corelib_tools_iByteArray.cpp 44bis
-
-    The algorithm used to decode Base64-encoded data is defined in \l{RFC 4648}.
-
-    \sa toBase64()
-*/
-iByteArray iByteArray::fromBase64(const iByteArray &base64, Base64Options options)
+static fromBase64_helper_result fromBase64_helper(const char *input, xsizetype inputSize,
+                                           char *output /* may alias input */,
+                                           iByteArray::Base64Options options)
 {
+    fromBase64_helper_result result{ 0, iByteArray::Base64DecodingStatus::Ok };
+
     unsigned int buf = 0;
     int nbits = 0;
-    iByteArray tmp((base64.size() * 3) / 4, iShell::Uninitialized);
 
-    int offset = 0;
-    for (int i = 0; i < base64.size(); ++i) {
-        int ch = base64.at(i);
+    xsizetype offset = 0;
+    for (xsizetype i = 0; i < inputSize; ++i) {
+        int ch = input[i];
         int d;
 
-        if (ch >= 'A' && ch <= 'Z')
+        if (ch >= 'A' && ch <= 'Z') {
             d = ch - 'A';
-        else if (ch >= 'a' && ch <= 'z')
+        } else if (ch >= 'a' && ch <= 'z') {
             d = ch - 'a' + 26;
-        else if (ch >= '0' && ch <= '9')
+        } else if (ch >= '0' && ch <= '9') {
             d = ch - '0' + 52;
-        else if (ch == '+' && (options & Base64UrlEncoding) == 0)
+        } else if (ch == '+' && (options & iByteArray::Base64UrlEncoding) == 0) {
             d = 62;
-        else if (ch == '-' && (options & Base64UrlEncoding) != 0)
+        } else if (ch == '-' && (options & iByteArray::Base64UrlEncoding) != 0) {
             d = 62;
-        else if (ch == '/' && (options & Base64UrlEncoding) == 0)
+        } else if (ch == '/' && (options & iByteArray::Base64UrlEncoding) == 0) {
             d = 63;
-        else if (ch == '_' && (options & Base64UrlEncoding) != 0)
+        } else if (ch == '_' && (options & iByteArray::Base64UrlEncoding) != 0) {
             d = 63;
-        else
-            d = -1;
+        } else {
+            if (options & iByteArray::AbortOnBase64DecodingErrors) {
+                if (ch == '=') {
+                    // can have 1 or 2 '=' signs, in both cases padding base64Size to
+                    // a multiple of 4. Any other case is illegal.
+                    if ((inputSize % 4) != 0) {
+                        result.status = iByteArray::Base64DecodingStatus::IllegalInputLength;
+                        return result;
+                    } else if ((i == inputSize - 1) ||
+                        (i == inputSize - 2 && input[++i] == '=')) {
+                        d = -1; // ... and exit the loop, normally
+                    } else {
+                        result.status = iByteArray::Base64DecodingStatus::IllegalPadding;
+                        return result;
+                    }
+                } else {
+                    result.status = iByteArray::Base64DecodingStatus::IllegalCharacter;
+                    return result;
+                }
+            } else {
+                d = -1;
+            }
+        }
 
         if (d != -1) {
             buf = (buf << 6) | d;
             nbits += 6;
             if (nbits >= 8) {
                 nbits -= 8;
-                tmp[offset++] = buf >> nbits;
+                IX_ASSERT(offset < i);
+                output[offset++] = buf >> nbits;
                 buf &= (1 << nbits) - 1;
             }
         }
     }
 
-    tmp.truncate(offset);
-    return tmp;
+    result.decodedLength = offset;
+    return result;
+}
+} // anonymous namespace
+
+class FromBase64Result
+{
+public:
+    iByteArray decoded;
+    iByteArray::Base64DecodingStatus decodingStatus;
+
+    void swap(FromBase64Result &other)
+    {
+        std::swap(decoded, other.decoded);
+        std::swap(decodingStatus, other.decodingStatus);
+    }
+
+    operator bool() const { return decodingStatus == iByteArray::Base64DecodingStatus::Ok; }
+
+    iByteArray &operator*() { return decoded; }
+    const iByteArray &operator*() const { return decoded; }
+};
+
+static FromBase64Result fromBase64Encoding(const iByteArray &base64, iByteArray::Base64Options options)
+{
+    const auto base64Size = base64.size();
+    iByteArray result((base64Size * 3) / 4, iShell::Uninitialized);
+    const auto base64result = fromBase64_helper(base64.data(),
+                                                base64Size,
+                                                const_cast<char *>(result.constData()),
+                                                options);
+    result.truncate(int(base64result.decodedLength));
+
+    FromBase64Result ret;
+    ret.decoded = result;
+    ret.decodingStatus = base64result.status;
+    return ret;
+}
+
+/*!
+    \since 5.2
+
+    Returns a decoded copy of the Base64 array \a base64, using the options
+    defined by \a options. If \a options contains \c{IgnoreBase64DecodingErrors}
+    (the default), the input is not checked for validity; invalid
+    characters in the input are skipped, enabling the decoding process to
+    continue with subsequent characters. If \a options contains
+    \c{AbortOnBase64DecodingErrors}, then decoding will stop at the first
+    invalid character.
+
+    For example:
+
+    \snippet code/src_corelib_text_qbytearray.cpp 44
+
+    The algorithm used to decode Base64-encoded data is defined in \l{RFC 4648}.
+
+    Returns the decoded data, or, if the \c{AbortOnBase64DecodingErrors}
+    option was passed and the input data was invalid, an empty byte array.
+
+    \note The fromBase64Encoding() function is recommended in new code.
+
+    \sa toBase64(), fromBase64Encoding()
+*/
+iByteArray iByteArray::fromBase64(const iByteArray &base64, Base64Options options)
+{
+    if (auto result = fromBase64Encoding(base64, options))
+        return std::move(result.decoded);
+    return iByteArray();
 }
 
 /*!
@@ -4266,7 +4054,7 @@ iByteArray iByteArray::fromHex(const iByteArray &hexEncoded)
     uchar *result = (uchar *)res.data() + res.size();
 
     bool odd_digit = true;
-    for (int i = hexEncoded.size() - 1; i >= 0; --i) {
+    for (xsizetype i = hexEncoded.size() - 1; i >= 0; --i) {
         uchar ch = uchar(hexEncoded.at(i));
         int tmp = iMiscUtils::fromHex(ch);
         if (tmp == -1)
@@ -4300,14 +4088,14 @@ iByteArray iByteArray::fromHex(const iByteArray &hexEncoded)
 */
 iByteArray iByteArray::toHex(char separator) const
 {
-    if (!d->size)
+    if (isEmpty())
         return iByteArray();
 
-    const int length = separator ? (d->size * 3 - 1) : (d->size * 2);
+    const xsizetype length = separator ? (size() * 3 - 1) : (size() * 2);
     iByteArray hex(length, iShell::Uninitialized);
     char *hexData = hex.data();
-    const uchar *data = (const uchar *)d->data();
-    for (int i = 0, o = 0; i < d->size; ++i) {
+    const uchar *data = (const uchar *)this->data();
+    for (xsizetype i = 0, o = 0; i < size(); ++i) {
         hexData[o++] = iMiscUtils::toHexLower(data[i] >> 4);
         hexData[o++] = iMiscUtils::toHexLower(data[i] & 0xf);
 
@@ -4325,9 +4113,9 @@ static void ix_fromPercentEncoding(iByteArray *ba, char percent)
     char *data = ba->data();
     const char *inputPtr = data;
 
-    int i = 0;
-    int len = ba->count();
-    int outlen = 0;
+    xsizetype i = 0;
+    xsizetype len = ba->count();
+    xsizetype outlen = 0;
     int a, b;
     char c;
     while (i < len) {
@@ -4429,12 +4217,12 @@ static void ix_toPercentEncoding(iByteArray *ba, const char *dontEncode, const c
         return;
 
     iByteArray input = *ba;
-    int len = input.count();
+    xsizetype len = input.count();
     const char *inputData = input.constData();
-    char *output = 0;
-    int length = 0;
+    char *output = nullptr;
+    xsizetype length = 0;
 
-    for (int i = 0; i < len; ++i) {
+    for (xsizetype i = 0; i < len; ++i) {
         unsigned char c = *inputData++;
         if (((c >= 0x61 && c <= 0x7A) // ALPHA
              || (c >= 0x41 && c <= 0x5A) // ALPHA

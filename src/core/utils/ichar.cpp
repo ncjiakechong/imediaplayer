@@ -1197,7 +1197,7 @@ enum {
 
 // buffer has to have a length of 3. It's needed for Hangul decomposition
 static const unsigned short * decompositionHelper
-    (uint ucs4, int *length, int *tag, unsigned short *buffer)
+    (uint ucs4, xsizetype *length, int *tag, unsigned short *buffer)
 {
     if (ucs4 >= Hangul_SBase && ucs4 < Hangul_SBase + Hangul_SCount) {
         // compute Hangul syllable decomposition as per UAX #15
@@ -1214,7 +1214,7 @@ static const unsigned short * decompositionHelper
     if (index == 0xffff) {
         *length = 0;
         *tag = iChar::NoDecomposition;
-        return 0;
+        return nullptr;
     }
 
     const unsigned short *decomposition = uc_decomposition_map+index;
@@ -1240,7 +1240,7 @@ iString iChar::decomposition() const
 iString iChar::decomposition(uint ucs4)
 {
     unsigned short buffer[3];
-    int length;
+    xsizetype length;
     int tag;
     const unsigned short *d = decompositionHelper(ucs4, &length, &tag, buffer);
     return iString(reinterpret_cast<const iChar *>(d), length);
@@ -1588,9 +1588,9 @@ uint iChar::toCaseFolded(uint ucs4)
 // ---------------------------------------------------------------------------
 
 
-void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, int from)
+void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, xsizetype from)
 {
-    int length;
+    xsizetype length;
     int tag;
     unsigned short buffer[3];
 
@@ -1615,7 +1615,7 @@ void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version
         if (!d || (canonical && tag != iChar::Canonical))
             continue;
 
-        int pos = uc - utf16;
+        xsizetype pos = uc - utf16;
         s.replace(pos, iChar::requiresSurrogates(ucs4) ? 2 : 1, reinterpret_cast<const iChar *>(d), length);
         // since the replace invalidates the pointers and we do decomposition recursive
         utf16 = reinterpret_cast<unsigned short *>(s.data());
@@ -1688,7 +1688,7 @@ static uint inline ligatureHelper(uint u1, uint u2)
     return 0;
 }
 
-void composeHelper(iString *str, iChar::UnicodeVersion version, int from)
+void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
 {
     iString &s = *str;
 
@@ -1696,13 +1696,13 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, int from)
         return;
 
     uint stcode = 0; // starter code point
-    int starter = -1; // starter position
-    int next = -1; // to prevent i == next
+    xsizetype starter = -1; // starter position
+    xsizetype next = -1; // to prevent i == next
     int lastCombining = 255; // to prevent combining > lastCombining
 
-    int pos = from;
+    xsizetype pos = from;
     while (pos < s.length()) {
-        int i = pos;
+        xsizetype i = pos;
         uint uc = s.at(pos).unicode();
         if (iChar(uc).isHighSurrogate() && pos < s.length()-1) {
             ushort low = s.at(pos+1).unicode();
@@ -1729,14 +1729,10 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, int from)
                 stcode = ligature;
                 iChar *d = s.data();
                 // ligatureHelper() never changes planes
-                if (iChar::requiresSurrogates(ligature)) {
-                    d[starter] = iChar::highSurrogate(ligature);
-                    d[starter + 1] = iChar::lowSurrogate(ligature);
-                    s.remove(i, 2);
-                } else {
-                    d[starter] = ligature;
-                    s.remove(i, 1);
-                }
+                xsizetype j = 0;
+                for (iChar ch : iChar::fromUcs4(ligature))
+                    d[starter + j++] = ch;
+                s.remove(i, j);
                 continue;
             }
         }
@@ -1752,17 +1748,17 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, int from)
 }
 
 
-void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, int from)
+void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
 {
     iString &s = *str;
-    const int l = s.length()-1;
+    const xsizetype l = s.length()-1;
 
     uint u1, u2;
     ushort c1, c2;
 
-    int pos = from;
+    xsizetype pos = from;
     while (pos < l) {
-        int p2 = pos+1;
+        xsizetype p2 = pos+1;
         u1 = s.at(pos).unicode();
         if (iChar(u1).isHighSurrogate()) {
             ushort low = s.at(p2).unicode();
@@ -1804,20 +1800,12 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, int from)
 
         if (c1 > c2) {
             iChar *uc = s.data();
-            int p = pos;
+            xsizetype p = pos;
             // exchange characters
-            if (!iChar::requiresSurrogates(u2)) {
-                uc[p++] = u2;
-            } else {
-                uc[p++] = iChar::highSurrogate(u2);
-                uc[p++] = iChar::lowSurrogate(u2);
-            }
-            if (!iChar::requiresSurrogates(u1)) {
-                uc[p++] = u1;
-            } else {
-                uc[p++] = iChar::highSurrogate(u1);
-                uc[p++] = iChar::lowSurrogate(u1);
-            }
+            for (iChar ch : iChar::fromUcs4(u2))
+                uc[p++] = ch;
+            for (iChar ch : iChar::fromUcs4(u1))
+                uc[p++] = ch;
             if (pos > 0)
                 --pos;
             if (pos > 0 && s.at(pos).isLowSurrogate())
@@ -1842,7 +1830,7 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, int from)
 
 // returns true if the text is in a desired Normalization Form already; false otherwise.
 // sets lastStable to the position of the last stable code point
-bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, int from, int *lastStable)
+bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, xsizetype from, xsizetype *lastStable)
 {
     IX_COMPILER_VERIFY(iString::NormalizationForm_D == 0);
     IX_COMPILER_VERIFY(iString::NormalizationForm_C == 1);
@@ -1852,15 +1840,15 @@ bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode
     enum { NFQC_YES = 0, NFQC_NO = 1, NFQC_MAYBE = 3 };
 
     const ushort *string = reinterpret_cast<const ushort *>(str->constData());
-    int length = str->length();
+    xsizetype length = str->length();
 
     // this avoids one out of bounds check in the loop
     while (length > from && iChar::isHighSurrogate(string[length - 1]))
         --length;
 
     uchar lastCombining = 0;
-    for (int i = from; i < length; ++i) {
-        int pos = i;
+    for (xsizetype i = from; i < length; ++i) {
+        xsizetype pos = i;
         uint uc = string[i];
         if (uc < 0x80) {
             // ASCII characters are stable code points

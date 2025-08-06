@@ -360,7 +360,6 @@ public:
         Unicode_9_0,
         Unicode_10_0
     };
-    // ****** WHEN ADDING FUNCTIONS, CONSIDER ADDING TO iCharRef TOO
 
     inline Category category() const { return iChar::category(ucs); }
     inline Direction direction() const { return iChar::direction(ucs); }

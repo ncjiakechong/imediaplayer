@@ -55,6 +55,9 @@ template <>    struct iIntegerForSize<1> { typedef xuint8  Unsigned; typedef xin
 template <>    struct iIntegerForSize<2> { typedef xuint16 Unsigned; typedef xint16 Signed; };
 template <>    struct iIntegerForSize<4> { typedef xuint32 Unsigned; typedef xint32 Signed; };
 template <>    struct iIntegerForSize<8> { typedef xuint64 Unsigned; typedef xint64 Signed; };
+#if defined(__SIZEOF_INT128__)
+template <>    struct iIntegerForSize<16> { __extension__ typedef unsigned __int128 Unsigned; __extension__ typedef __int128 Signed; };
+#endif
 template <class T> struct iIntegerForSizeof: iIntegerForSize<sizeof(T)> { };
 
 typedef iIntegerForSizeof<void*>::Unsigned xuintptr;

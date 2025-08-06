@@ -70,7 +70,7 @@ public:
     static iBitArray fromBits(const char *data, xsizetype len);
 
 public:
-    typedef iByteArray::DataPtr DataPtr;
+    typedef iByteArray::DataPointer DataPtr;
     inline DataPtr &data_ptr() { return d.data_ptr(); }
 };
 

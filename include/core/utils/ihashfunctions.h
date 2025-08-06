@@ -21,7 +21,6 @@ namespace iShell {
 class iChar;
 class iByteArray;
 class iString;
-class iStringRef;
 class iStringView;
 class iBitArray;
 class iLatin1String;
@@ -31,7 +30,6 @@ struct IX_CORE_EXPORT iKeyHashFunc
     size_t operator()(const iChar& key) const;
     size_t operator()(const iByteArray& key) const;
     size_t operator()(const iString& key) const;
-    size_t operator()(const iStringRef& key) const;
     size_t operator()(const iStringView& key) const;
     size_t operator()(const iLatin1String& key) const;
     size_t operator()(const std::pair<int, int>& key) const;
