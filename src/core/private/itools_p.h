@@ -12,7 +12,9 @@
 #define ITOOLS_P_H
 
 #include <limits.h>
+
 #include <core/global/iglobal.h>
+#include <core/utils/istring.h>
 
 namespace iShell {
 
@@ -59,6 +61,16 @@ struct CalculateGrowingBlockSizeResult {
 // implemented in ibytearray.cpp
 size_t iCalculateBlockSize(size_t elementCount, size_t elementSize, size_t headerSize = 0);
 CalculateGrowingBlockSizeResult iCalculateGrowingBlockSize(size_t elementCount, size_t elementSize, size_t headerSize = 0) ;
+
+uint foldCase(const ushort *ch, const ushort *start);
+uint foldCase(uint ch, uint &last);
+ushort foldCase(ushort ch);
+iChar foldCase(iChar ch);
+
+void composeHelper(iString *str, iChar::UnicodeVersion version, int from);
+void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, int from);
+void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, int from);
+bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, int from, int *lastStable);
 
 } // namespace iShell
 

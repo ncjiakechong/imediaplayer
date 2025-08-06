@@ -1549,17 +1549,6 @@ inline iString operator+(const iStringRef &s1, iChar s2)
 inline iString operator+(iChar s1, const iStringRef &s2)
 { iString t; t.reserve(1 + s2.size()); t += s1; t += s2; return t; }
 
-namespace iPrivate {
-// used by qPrintable() and qUtf8Printable() macros
-inline const iString &asString(const iString &s)    { return s; }
-inline iString &&asString(iString &&s)              { return std::move(s); }
-
-void composeHelper(iString *str, iChar::UnicodeVersion version, int from);
-void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, int from);
-void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, int from);
-bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, int from, int *lastStable);
-}
-
 } // namespace iShell
 
 #endif // ISTRING_H

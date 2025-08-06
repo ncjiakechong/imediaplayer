@@ -11,6 +11,7 @@
 
 #include "core/utils/ichar.h"
 #include "private/istringmatcher.h"
+#include "private/itools_p.h"
 
 namespace iShell {
 
@@ -27,7 +28,7 @@ static void bm_init_skiptable(const ushort *uc, int len, uchar *skiptable, iShel
     } else {
         const ushort *start = uc;
         while (l--) {
-            skiptable[iPrivate::foldCase(uc, start) & 0xff] = l;
+            skiptable[foldCase(uc, start) & 0xff] = l;
             uc++;
         }
     }
@@ -68,11 +69,11 @@ static inline int bm_find(const ushort *uc, uint l, int index, const ushort *puc
         }
     } else {
         while (current < end) {
-            uint skip = skiptable[iPrivate::foldCase(current, uc) & 0xff];
+            uint skip = skiptable[foldCase(current, uc) & 0xff];
             if (!skip) {
                 // possible match
                 while (skip < pl) {
-                    if (iPrivate::foldCase(current - skip, uc) != iPrivate::foldCase(puc + pl_minus_one - skip, puc))
+                    if (foldCase(current - skip, uc) != foldCase(puc + pl_minus_one - skip, puc))
                         break;
                     skip++;
                 }
@@ -80,7 +81,7 @@ static inline int bm_find(const ushort *uc, uint l, int index, const ushort *puc
                     return (current - uc) - pl_minus_one;
                 // in case we don't have a match we are a bit inefficient as we only skip by one
                 // when we have the non matching char in the string.
-                if (skiptable[iPrivate::foldCase(current - skip, uc) & 0xff] == pl)
+                if (skiptable[foldCase(current - skip, uc) & 0xff] == pl)
                     skip = pl - skip;
                 else
                     skip = 1;

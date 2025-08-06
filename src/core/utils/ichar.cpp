@@ -15,6 +15,7 @@
 #include "core/utils/istring.h"
 #include "private/iunicodetables_p.h"
 #include "private/iunicodetables_data.h"
+#include "private/itools_p.h"
 
 
 namespace iShell {
@@ -1438,7 +1439,7 @@ uint iChar::toTitleCase(uint ucs4)
     return convertCase_helper<iUnicodeTables::TitlecaseTraits>(ucs4);
 }
 
-uint iPrivate::foldCase(const ushort *ch, const ushort *start)
+uint foldCase(const ushort *ch, const ushort *start)
 {
     uint ucs4 = *ch;
     if (iChar::isLowSurrogate(ucs4) && ch > start && iChar::isHighSurrogate(*(ch - 1)))
@@ -1446,7 +1447,7 @@ uint iPrivate::foldCase(const ushort *ch, const ushort *start)
     return convertCase_helper<iUnicodeTables::CasefoldTraits>(ucs4);
 }
 
-uint iPrivate::foldCase(uint ch, uint &last)
+uint foldCase(uint ch, uint &last)
 {
     uint ucs4 = ch;
     if (iChar::isLowSurrogate(ucs4) && iChar::isHighSurrogate(last))
@@ -1455,14 +1456,14 @@ uint iPrivate::foldCase(uint ch, uint &last)
     return convertCase_helper<iUnicodeTables::CasefoldTraits>(ucs4);
 }
 
-ushort iPrivate::foldCase(ushort ch)
+ushort foldCase(ushort ch)
 {
     return convertCase_helper<iUnicodeTables::CasefoldTraits>(ch);
 }
 
-iChar iPrivate::foldCase(iChar ch)
+iChar foldCase(iChar ch)
 {
-    return iChar(iPrivate::foldCase(ch.unicode()));
+    return iChar(foldCase(ch.unicode()));
 }
 
 /*!
@@ -1613,7 +1614,7 @@ uint iChar::toCaseFolded(uint ucs4)
 // ---------------------------------------------------------------------------
 
 
-void iPrivate::decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, int from)
+void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, int from)
 {
     int length;
     int tag;
@@ -1713,7 +1714,7 @@ static uint inline ligatureHelper(uint u1, uint u2)
     return 0;
 }
 
-void iPrivate::composeHelper(iString *str, iChar::UnicodeVersion version, int from)
+void composeHelper(iString *str, iChar::UnicodeVersion version, int from)
 {
     iString &s = *str;
 
@@ -1777,7 +1778,7 @@ void iPrivate::composeHelper(iString *str, iChar::UnicodeVersion version, int fr
 }
 
 
-void iPrivate::canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, int from)
+void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, int from)
 {
     iString &s = *str;
     const int l = s.length()-1;
@@ -1867,7 +1868,7 @@ void iPrivate::canonicalOrderHelper(iString *str, iChar::UnicodeVersion version,
 
 // returns true if the text is in a desired Normalization Form already; false otherwise.
 // sets lastStable to the position of the last stable code point
-bool iPrivate::normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, int from, int *lastStable)
+bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode, int from, int *lastStable)
 {
     IX_COMPILER_VERIFY(iString::NormalizationForm_D == 0);
     IX_COMPILER_VERIFY(iString::NormalizationForm_C == 1);
