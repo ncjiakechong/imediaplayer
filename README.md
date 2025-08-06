@@ -11,8 +11,10 @@ A. Signal/Slot mechanism:
   - Supports signal transmission.
 
         □----------------Example----------------□
-        // define class and a signal as usual
-        class TestSignals {
+        // define test class and signal as usual
+        class TestSignals : public iObject {
+            IX_OBJECT(TestSignals)
+        public:
             void tst_sig_int1(int arg1) ISIGNAL(tst_sig_int1, arg1);
         };
 
