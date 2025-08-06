@@ -203,7 +203,7 @@ iObject::~iObject()
             node->_prev = &node;
             bool needToUnlock = iOrderedMutexLocker::relock(signalSlotMutex, m);
             //the node has maybe been removed while the mutex was unlocked in relock?
-            if (!node || node->_sender != sender) {
+            if ((IX_NULLPTR == node) || node->_sender != sender) {
                 // We hold the wrong mutex
                 IX_ASSERT(needToUnlock);
                 m->unlock();
@@ -294,7 +294,7 @@ void iObject::moveToThread(iThread *targetThread)
     // prepare to move
     moveToThread_helper();
 
-    if (!targetData)
+    if (IX_NULLPTR == targetData)
         targetData = new iThreadData(0);
 
     iOrderedMutexLocker locker(&currentData->eventMutex, &targetData->eventMutex);
@@ -318,7 +318,7 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
     std::list<iPostEvent>::iterator it = currentData->postEventList.begin();
     while (it != currentData->postEventList.end()) {
         const iPostEvent& pe = *it;
-        if (!pe.event) {
+        if (IX_NULLPTR == pe.event) {
             ++it;
             continue;
         }
@@ -735,7 +735,7 @@ void iObject::emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelp
     iThreadData* currentThreadData = iThreadData::current();
 
     _iConnection* conn = list.first;
-    if (!conn)
+    if (IX_NULLPTR == conn)
         return;
 
     // We need to check against last here to ensure that signals added
@@ -809,7 +809,7 @@ iVariant iObject::property(const char *name) const
     do {
         std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
         const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
-        if (!propertys)
+        if (IX_NULLPTR == propertys)
             continue;
 
         it = propertys->find(iString(name));
@@ -828,7 +828,7 @@ bool iObject::setProperty(const char *name, const iVariant& value)
     do {
         std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
         const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
-        if (!propertys)
+        if (IX_NULLPTR == propertys)
             continue;
 
         it = propertys->find(iString(name));
@@ -920,7 +920,7 @@ void iObject::reregisterTimers(void* args)
 
 bool iObject::invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& arg)
 {
-    if (!c._receiver)
+    if (IX_NULLPTR == c._receiver)
         return false;
 
     iThreadData* currentThreadData = iThreadData::current();

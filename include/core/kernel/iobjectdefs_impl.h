@@ -1453,7 +1453,7 @@ struct _iPropertyHelper : public _iProperty
         const Obj* _classThis = static_cast<const Obj*>(obj);
         const _iPropertyHelper* _typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
-        if (!_typedThis->m_getFunc)
+        if (IX_NULLPTR == _typedThis->m_getFunc)
             return iVariant();
 
         IX_CHECK_PTR(_classThis);
@@ -1464,7 +1464,7 @@ struct _iPropertyHelper : public _iProperty
         Obj* _classThis = static_cast<Obj*>(obj);
         const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
         IX_CHECK_PTR(_typedThis);
-        if (!_typedThis->m_setFunc)
+        if (IX_NULLPTR == _typedThis->m_setFunc)
             return;
 
         IX_CHECK_PTR(_classThis);
