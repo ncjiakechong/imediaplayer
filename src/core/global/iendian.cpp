@@ -25,7 +25,7 @@ namespace iShell {
 /*!
     \fn template <typename T> T iFromUnaligned(const void *ptr)
     \internal
-    \since 5.5
+
 
     Loads a \c{T} from address \a ptr, which may be misaligned.
 
@@ -36,7 +36,7 @@ namespace iShell {
 /*!
     \fn template <typename T> void iToUnaligned(const T t, void *ptr)
     \internal
-    \since 4.5
+
 
     Stores \a t to address \a ptr, which may be misaligned.
 
@@ -47,7 +47,7 @@ namespace iShell {
 
 /*!
     \fn template <typename T> T iFromBigEndian(const void *src)
-    \since 4.3
+
     \relates <QtEndian>
 
     Reads a big-endian number from memory location \a src and returns the number in the
@@ -56,10 +56,10 @@ namespace iShell {
     will swap the byte order; otherwise it will just read from \a src.
 
     \note Template type \c{T} can either be a xuint16, xint16, xuint32, xint32,
-    xuint64, or xint64. Other types of integers, e.g., qlong, are not
+    xuint64, or xint64. Other types of integers, e.g., xlong, are not
     applicable.
 
-    \note Since Qt 5.7, the type of the \a src parameter is a void pointer.
+    \note Since the type of the \a src parameter is a void pointer.
 
     There are no data alignment constraints for \a src.
 
@@ -69,7 +69,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iFromBigEndian(T src)
-    \since 4.3
+
     \relates <QtEndian>
     \overload
 
@@ -81,7 +81,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iFromBigEndian(const void *src, xsizetype count, void *dest)
-    \since 5.12
+
     \relates <QtEndian>
 
     Reads \a count big-endian numbers from memory location \a src and stores
@@ -91,7 +91,7 @@ namespace iShell {
     dest.
 
     \note Template type \c{T} can either be a xuint16, xint16, xuint32, xint32,
-    xuint64, or xint64. Other types of integers, e.g., qlong, are not
+    xuint64, or xint64. Other types of integers, e.g., xlong, are not
     applicable.
 
     There are no data alignment constraints for \a src. However, \a dest is
@@ -107,7 +107,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iFromLittleEndian(const void *src)
-    \since 4.3
+
     \relates <QtEndian>
 
     Reads a little-endian number from memory location \a src and returns the number in
@@ -116,10 +116,10 @@ namespace iShell {
     will swap the byte order; otherwise it will just read from \a src.
 
     \note Template type \c{T} can either be a xuint16, xint16, xuint32, xint32,
-    xuint64, or xint64. Other types of integers, e.g., qlong, are not
+    xuint64, or xint64. Other types of integers, e.g., xlong, are not
     applicable.
 
-    \note Since Qt 5.7, the type of the \a src parameter is a void pointer.
+    \note the type of the \a src parameter is a void pointer.
 
     There are no data alignment constraints for \a src.
 
@@ -129,7 +129,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iFromLittleEndian(T src)
-    \since 4.3
+
     \relates <QtEndian>
     \overload
 
@@ -141,7 +141,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iFromLittleEndian(const void *src, xsizetype count, void *dest)
-    \since 5.12
+
     \relates <QtEndian>
 
     Reads \a count little-endian numbers from memory location \a src and stores
@@ -151,7 +151,7 @@ namespace iShell {
     dest.
 
     \note Template type \c{T} can either be a xuint16, xint16, xuint32, xint32,
-    xuint64, or xint64. Other types of integers, e.g., qlong, are not
+    xuint64, or xint64. Other types of integers, e.g., xlong, are not
     applicable.
 
     There are no data alignment constraints for \a src. However, \a dest is
@@ -167,19 +167,19 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> void iToBigEndian(T src, void *dest)
-    \since 4.3
+
     \relates <QtEndian>
 
     Writes the number \a src with template type \c{T} to the memory location at \a dest
     in big-endian byte order.
 
     \note Template type \c{T} can either be a xuint16, xint16, xuint32, xint32,
-    xuint64, or xint64. Other types of integers, e.g., qlong, are not
+    xuint64, or xint64. Other types of integers, e.g., xlong, are not
     applicable.
 
     There are no data alignment constraints for \a dest.
 
-    \note Since Qt 5.7, the type of the \a dest parameter is a void pointer.
+    \note the type of the \a dest parameter is a void pointer.
 
     \sa iFromBigEndian()
     \sa iFromLittleEndian()
@@ -187,7 +187,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iToBigEndian(T src)
-    \since 4.3
+
     \relates <QtEndian>
     \overload
 
@@ -199,7 +199,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iToBigEndian(const void *src, xsizetype count, void *dest)
-    \since 5.12
+
     \relates <QtEndian>
 
     Reads \a count numbers from memory location \a src in the host byte order
@@ -209,7 +209,7 @@ namespace iShell {
     \a src to \a dest.
 
     \note Template type \c{T} can either be a xuint16, xint16, xuint32, xint32,
-    xuint64, or xint64. Other types of integers, e.g., qlong, are not
+    xuint64, or xint64. Other types of integers, e.g., xlong, are not
     applicable.
 
     There are no data alignment constraints for \a dest. However, \a src is
@@ -225,19 +225,19 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> void iToLittleEndian(T src, void *dest)
-    \since 4.3
+
     \relates <QtEndian>
 
     Writes the number \a src with template type \c{T} to the memory location at \a dest
     in little-endian byte order.
 
     \note Template type \c{T} can either be a xuint16, xint16, xuint32, xint32,
-    xuint64, or xint64. Other types of integers, e.g., qlong, are not
+    xuint64, or xint64. Other types of integers, e.g., xlong, are not
     applicable.
 
     There are no data alignment constraints for \a dest.
 
-    \note Since Qt 5.7, the type of the \a dest parameter is a void pointer.
+    \note the type of the \a dest parameter is a void pointer.
 
     \sa iFromBigEndian()
     \sa iFromLittleEndian()
@@ -245,7 +245,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iToLittleEndian(T src)
-    \since 4.3
+
     \relates <QtEndian>
     \overload
 
@@ -257,7 +257,7 @@ namespace iShell {
 */
 /*!
     \fn template <typename T> T iToLittleEndian(const void *src, xsizetype count, void *dest)
-    \since 5.12
+
     \relates <QtEndian>
 
     Reads \a count numbers from memory location \a src in the host byte order
@@ -267,7 +267,7 @@ namespace iShell {
     from \a src to \a dest.
 
     \note Template type \c{T} can either be a xuint16, xint16, xuint32, xint32,
-    xuint64, or xint64. Other types of integers, e.g., qlong, are not
+    xuint64, or xint64. Other types of integers, e.g., xlong, are not
     applicable.
 
     There are no data alignment constraints for \a dest. However, \a src is
@@ -284,9 +284,8 @@ namespace iShell {
 
 /*!
     \class iLEInteger
-    \inmodule QtCore
     \brief The iLEInteger class provides platform-independent little-endian integers.
-    \since 5.10
+
 
     The template parameter \c T must be a C++ integer type:
     \list
@@ -295,7 +294,7 @@ namespace iShell {
        \li 32-bit: int, unsigned int, xint32, xuint32, char32_t
        \li 64-bit: long long, unsigned long long, xint64, xuint64
        \li platform-specific size: long, unsigned long
-       \li pointer size: qintptr, xuintptr, xptrdiff
+       \li pointer size: xintptr, xuintptr, xptrdiff
     \endlist
 
     \note Using this class may be slower than using native integers, so only use it when
@@ -443,9 +442,8 @@ namespace iShell {
 
 /*!
     \class iBEInteger
-    \inmodule QtCore
     \brief The iBEInteger class provides platform-independent big-endian integers.
-    \since 5.10
+
 
     The template parameter \c T must be a C++ integer type:
     \list
@@ -454,7 +452,7 @@ namespace iShell {
        \li 32-bit: int, unsigned int, xint32, xuint32, char32_t (C++11)
        \li 64-bit: long long, unsigned long long, xint64, xuint64
        \li platform-specific size: long, unsigned long
-       \li pointer size: qintptr, xuintptr, xptrdiff
+       \li pointer size: xintptr, xuintptr, xptrdiff
     \endlist
 
     \note Using this class may be slower than using native integers, so only use it when
@@ -601,133 +599,133 @@ namespace iShell {
 */
 
 /*!
-    \typedef quint16_le
+    \typedef xuint16_le
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iLEInteger<xuint16>. This type is guaranteed to be stored in memory as
-    a 16-bit little-endian unsigned integer on all platforms supported by Qt.
+    a 16-bit little-endian unsigned integer on all platforms supported by iShell.
 
     \sa xuint16
 */
 
 /*!
-    \typedef quint32_le
+    \typedef xuint32_le
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iLEInteger<xuint32>. This type is guaranteed to be stored in memory as
-    a 32-bit little-endian unsigned integer on all platforms supported by Qt.
+    a 32-bit little-endian unsigned integer on all platforms supported by iShell.
 
     \sa xuint32
 */
 
 /*!
-    \typedef quint64_le
+    \typedef xuint64_le
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iLEInteger<xuint64>. This type is guaranteed to be stored in memory as
-    a 64-bit little-endian unsigned integer on all platforms supported by Qt.
+    a 64-bit little-endian unsigned integer on all platforms supported by iShell.
 
     \sa xuint64
 */
 
 /*!
-    \typedef quint16_be
+    \typedef xuint16_be
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iBEInteger<xuint16>. This type is guaranteed to be stored in memory as
-    a 16-bit big-endian unsigned integer on all platforms supported by Qt.
+    a 16-bit big-endian unsigned integer on all platforms supported by iShell.
 
     \sa xuint16
 */
 
 /*!
-    \typedef quint32_be
+    \typedef xuint32_be
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iBEInteger<xuint32>. This type is guaranteed to be stored in memory as
-    a 32-bit big-endian unsigned integer on all platforms supported by Qt.
+    a 32-bit big-endian unsigned integer on all platforms supported by iShell.
 
     \sa xuint32
 */
 
 /*!
-    \typedef quint64_be
+    \typedef xuint64_be
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iBEInteger<xuint64>. This type is guaranteed to be stored in memory as
-    a 64-bit big-endian unsigned integer on all platforms supported by Qt.
+    a 64-bit big-endian unsigned integer on all platforms supported by iShell.
 
     \sa xuint64
 */
 
 /*!
-    \typedef qint16_le
+    \typedef xint16_le
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iLEInteger<xint16>. This type is guaranteed to be stored in memory as
-    a 16-bit little-endian signed integer on all platforms supported by Qt.
+    a 16-bit little-endian signed integer on all platforms supported by iShell.
 
     \sa xint16
 */
 
 /*!
-    \typedef qint32_le
+    \typedef xint32_le
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iLEInteger<xint32>. This type is guaranteed to be stored in memory as
-    a 32-bit little-endian signed integer on all platforms supported by Qt.
+    a 32-bit little-endian signed integer on all platforms supported by iShell.
 
     \sa xint32
 */
 
 /*!
-    \typedef qint64_le
+    \typedef xint64_le
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iLEInteger<xint64>. This type is guaranteed to be stored in memory as
-    a 64-bit little-endian signed integer on all platforms supported by Qt.
+    a 64-bit little-endian signed integer on all platforms supported by iShell.
 
     \sa xint64
 */
 
 /*!
-    \typedef qint16_be
+    \typedef xint16_be
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iBEInteger<xint16>. This type is guaranteed to be stored in memory as
-    a 16-bit big-endian signed integer on all platforms supported by Qt.
+    a 16-bit big-endian signed integer on all platforms supported by iShell.
 
     \sa xint16
 */
 
 /*!
-    \typedef qint32_be
+    \typedef xint32_be
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iBEInteger<xint32>. This type is guaranteed to be stored in memory as
-    a 32-bit big-endian signed integer on all platforms supported by Qt.
+    a 32-bit big-endian signed integer on all platforms supported by iShell.
 
     \sa xint32
 */
 
 /*!
-    \typedef qint64_be
+    \typedef xint64_be
     \relates <QtEndian>
-    \since 5.10
+
 
     Typedef for iBEInteger<xint64>. This type is guaranteed to be stored in memory as
-    a 64-bit big-endian signed integer on all platforms supported by Qt.
+    a 64-bit big-endian signed integer on all platforms supported by iShell.
 
     \sa xint64
 */

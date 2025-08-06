@@ -24,7 +24,7 @@ class iStringView;
 class iBitArray;
 class iLatin1String;
 
-struct iHashFunc
+struct iKeyHashFunc
 {
     size_t operator()(const iChar& key) const;
     size_t operator()(const iByteArray& key) const;
@@ -33,7 +33,10 @@ struct iHashFunc
     size_t operator()(const iStringView& key) const;
     size_t operator()(const iLatin1String& key) const;
     size_t operator()(const std::pair<int, int>& key) const;
+};
 
+struct iKeyEqualFunc
+{
     bool operator()(const iChar& key1, const iChar& key2) const;
     bool operator()(const iByteArray& key1, const iByteArray& key2) const;
     bool operator()(const iString& key1, const iString& key2) const;

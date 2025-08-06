@@ -104,7 +104,7 @@ inline xreal iPow(xreal x, xreal y)
     return pow(x, y);
 }
 
-inline xreal qFastSin(xreal x)
+inline xreal iFastSin(xreal x)
 {
     int si = int(x * (0.5 * IX_SINE_TABLE_SIZE / M_PI)); // Would be more accurate with iRound, but slower.
     xreal d = x - si * (2.0 * M_PI / IX_SINE_TABLE_SIZE);
@@ -114,7 +114,7 @@ inline xreal qFastSin(xreal x)
     return ix_sine_table[si] + (ix_sine_table[ci] - 0.5 * ix_sine_table[si] * d) * d;
 }
 
-inline xreal qFastCos(xreal x)
+inline xreal iFastCos(xreal x)
 {
     int ci = int(x * (0.5 * IX_SINE_TABLE_SIZE / M_PI)); // Would be more accurate with iRound, but slower.
     xreal d = x - ci * (2.0 * M_PI / IX_SINE_TABLE_SIZE);

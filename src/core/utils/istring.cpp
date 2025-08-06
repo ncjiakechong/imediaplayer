@@ -48,13 +48,13 @@
 namespace iShell {
 
 /*
- * Note on the use of SIMD in qstring.cpp:
+ * Note on the use of SIMD in istring.cpp:
  *
  * Several operations with strings are improved with the use of SIMD code,
  * since they are repetitive. For MIPS, we have hand-written assembly code
- * outside of qstring.cpp targeting MIPS DSP and MIPS DSPr2. For ARM and for
+ * outside of istring.cpp targeting MIPS DSP and MIPS DSPr2. For ARM and for
  * x86, we can only use intrinsics and therefore everything is contained in
- * qstring.cpp. We need to use intrinsics only for those platforms due to the
+ * istring.cpp. We need to use intrinsics only for those platforms due to the
  * different compilers and toolchains used, which have different syntax for
  * assembly sources.
  *
@@ -133,7 +133,7 @@ const ushort *iPrivate::xustrchr(iStringView str, ushort c) noexcept
 
 // Note: ptr on output may be off by one and point to a preceding US-ASCII
 // character. Usually harmless.
-bool qt_is_ascii(const char *&ptr, const char *end)
+bool ix_is_ascii(const char *&ptr, const char *end)
 {
     while (ptr + 4 <= end) {
         xuint32 data = iFromUnaligned<xuint32>(ptr);
@@ -164,7 +164,7 @@ bool iPrivate::isAscii(iLatin1String s)
     const char *ptr = s.begin();
     const char *end = s.end();
 
-    return qt_is_ascii(ptr, end);
+    return ix_is_ascii(ptr, end);
 }
 
 static bool isAscii(const iChar *&ptr, const iChar *end)
@@ -205,7 +205,7 @@ void ix_from_latin1(ushort *dst, const char *str, size_t size)
 }
 
 template <bool Checked>
-static void qt_to_latin1_internal(uchar *dst, const ushort *src, xsizetype length)
+static void ix_to_latin1_internal(uchar *dst, const ushort *src, xsizetype length)
 {
     while (length--) {
         if (Checked)
@@ -216,14 +216,14 @@ static void qt_to_latin1_internal(uchar *dst, const ushort *src, xsizetype lengt
     }
 }
 
-static void qt_to_latin1(uchar *dst, const ushort *src, xsizetype length)
+static void ix_to_latin1(uchar *dst, const ushort *src, xsizetype length)
 {
-    qt_to_latin1_internal<true>(dst, src, length);
+    ix_to_latin1_internal<true>(dst, src, length);
 }
 
-void qt_to_latin1_unchecked(uchar *dst, const ushort *src, xsizetype length)
+void ix_to_latin1_unchecked(uchar *dst, const ushort *src, xsizetype length)
 {
-    qt_to_latin1_internal<false>(dst, src, length);
+    ix_to_latin1_internal<false>(dst, src, length);
 }
 
 // Unicode case-insensitive comparison
@@ -402,7 +402,7 @@ static int ix_compare_strings(iLatin1String lhs, iLatin1String rhs, iShell::Case
 /*!
     \relates iStringView
     \internal
-    \since 5.10
+
 
     Returns an integer that compares to 0 as \a lhs compares to \a rhs.
 
@@ -421,7 +421,7 @@ int iPrivate::compareStrings(iStringView lhs, iStringView rhs, iShell::CaseSensi
 /*!
     \relates iStringView
     \internal
-    \since 5.10
+
     \overload
 
     Returns an integer that compares to 0 as \a lhs compares to \a rhs.
@@ -441,7 +441,7 @@ int iPrivate::compareStrings(iStringView lhs, iLatin1String rhs, iShell::CaseSen
 /*!
     \relates iStringView
     \internal
-    \since 5.10
+
     \overload
 
     Returns an integer that compares to 0 as \a lhs compares to \a rhs.
@@ -461,7 +461,7 @@ int iPrivate::compareStrings(iLatin1String lhs, iStringView rhs, iShell::CaseSen
 /*!
     \relates iStringView
     \internal
-    \since 5.10
+
     \overload
 
     Returns an integer that compares to 0 as \a lhs compares to \a rhs.
@@ -516,17 +516,17 @@ static int findChar(const iChar *str, int len, iChar ch, int from,
         hashHaystack -= uint(a) << sl_minus_1; \
     hashHaystack <<= 1
 
-inline bool qIsUpper(char ch)
+inline bool iIsUpper(char ch)
 {
     return ch >= 'A' && ch <= 'Z';
 }
 
-inline bool qIsDigit(char ch)
+inline bool iIsDigit(char ch)
 {
     return ch >= '0' && ch <= '9';
 }
 
-inline char qToLower(char ch)
+inline char iToLower(char ch)
 {
     if (ch >= 'A' && ch <= 'Z')
         return ch - 'A' + 'a';
@@ -535,43 +535,43 @@ inline char qToLower(char ch)
 }
 
 /*!
-  \macro QT_RESTRICTED_CAST_FROM_ASCII
+  \macro IX_RESTRICTED_CAST_FROM_ASCII
   \relates iString
 
   Defining this macro disables most automatic conversions from source
   literals and 8-bit data to unicode iStrings, but allows the use of
   the \c{iChar(char)} and \c{iString(const char (&ch)[N]} constructors,
   and the \c{iString::operator=(const char (&ch)[N])} assignment operator
-  giving most of the type-safety benefits of \c QT_NO_CAST_FROM_ASCII
+  giving most of the type-safety benefits of \c IX_NO_CAST_FROM_ASCII
   but does not require user code to wrap character and string literals
   with iLatin1Char, iLatin1String or similar.
 
   Using this macro together with source strings outside the 7-bit range,
   non-literals, or literals with embedded NUL characters is undefined.
 
-  \sa QT_NO_CAST_FROM_ASCII, QT_NO_CAST_TO_ASCII
+  \sa IX_NO_CAST_FROM_ASCII, IX_NO_CAST_TO_ASCII
 */
 
 /*!
-  \macro QT_NO_CAST_FROM_ASCII
+  \macro IX_NO_CAST_FROM_ASCII
   \relates iString
 
   Disables automatic conversions from 8-bit strings (char *) to unicode iStrings
 
-  \sa QT_NO_CAST_TO_ASCII, QT_RESTRICTED_CAST_FROM_ASCII, QT_NO_CAST_FROM_BYTEARRAY
+  \sa IX_NO_CAST_TO_ASCII, IX_RESTRICTED_CAST_FROM_ASCII, IX_NO_CAST_FROM_BYTEARRAY
 */
 
 /*!
-  \macro QT_NO_CAST_TO_ASCII
+  \macro IX_NO_CAST_TO_ASCII
   \relates iString
 
   disables automatic conversion from iString to 8-bit strings (char *)
 
-  \sa QT_NO_CAST_FROM_ASCII, QT_RESTRICTED_CAST_FROM_ASCII, QT_NO_CAST_FROM_BYTEARRAY
+  \sa IX_NO_CAST_FROM_ASCII, IX_RESTRICTED_CAST_FROM_ASCII, IX_NO_CAST_FROM_BYTEARRAY
 */
 
 /*!
-  \macro QT_ASCII_CAST_WARNINGS
+  \macro IX_ASCII_CAST_WARNINGS
   \internal
   \relates iString
 
@@ -581,12 +581,11 @@ inline char qToLower(char ch)
   Note: This only works for compilers that support warnings for
   deprecated API.
 
-  \sa QT_NO_CAST_TO_ASCII, QT_NO_CAST_FROM_ASCII, QT_RESTRICTED_CAST_FROM_ASCII
+  \sa IX_NO_CAST_TO_ASCII, IX_NO_CAST_FROM_ASCII, IX_RESTRICTED_CAST_FROM_ASCII
 */
 
 /*!
     \class iCharRef
-    \inmodule QtCore
     \reentrant
     \brief The iCharRef class is a helper class for iString.
 
@@ -608,7 +607,6 @@ inline char qToLower(char ch)
 
 /*!
     \class iString
-    \inmodule QtCore
     \reentrant
 
     \brief The iString class provides a Unicode character string.
@@ -632,10 +630,10 @@ inline char qToLower(char ch)
     copying of data. This also helps reduce the inherent overhead of
     storing 16-bit characters instead of 8-bit characters.
 
-    In addition to iString, Qt also provides the iByteArray class to
+    In addition to iString, iShell also provides the iByteArray class to
     store raw bytes and traditional 8-bit '\\0'-terminated strings.
     For most purposes, iString is the class you want to use. It is
-    used throughout the Qt API, and the Unicode support ensures that
+    used throughout the iShell API, and the Unicode support ensures that
     your applications will be easy to translate if you want to expand
     your application's market at some point. The two main cases where
     iByteArray is appropriate are when you need to store raw binary
@@ -650,7 +648,7 @@ inline char qToLower(char ch)
     *} to its constructor. For example, the following code creates a
     iString of size 5 containing the data "Hello":
 
-    \snippet qstring/main.cpp 0
+    \snippet istring/main.cpp 0
 
     iString converts the \c{const char *} data into Unicode using the
     fromUtf8() function.
@@ -662,7 +660,7 @@ inline char qToLower(char ch)
 
     You can also provide string data as an array of \l{iChar}s:
 
-    \snippet qstring/main.cpp 1
+    \snippet istring/main.cpp 1
 
     iString makes a deep copy of the iChar data, so you can modify it
     later without experiencing side effects. (If for performance
@@ -677,12 +675,12 @@ inline char qToLower(char ch)
     character that can be used on the left side of an assignment. For
     example:
 
-    \snippet qstring/main.cpp 2
+    \snippet istring/main.cpp 2
 
     For read-only access, an alternative syntax is to use the at()
     function:
 
-    \snippet qstring/main.cpp 3
+    \snippet istring/main.cpp 3
 
     The at() function can be faster than \l operator[](), because it
     never causes a \l{deep copy} to occur. Alternatively, use the
@@ -701,12 +699,12 @@ inline char qToLower(char ch)
     usage. For example, if you want to compare a iString with a string
     literal, you can write code like this and it will work as expected:
 
-    \snippet qstring/main.cpp 4
+    \snippet istring/main.cpp 4
 
     You can also pass string literals to functions that take iStrings
     as arguments, invoking the iString(const char *)
     constructor. Similarly, you can pass a iString to a function that
-    takes a \c{const char *} argument using the \l qPrintable() macro
+    takes a \c{const char *} argument using the \l iPrintable() macro
     which returns the given iString as a \c{const char *}. This is
     equivalent to calling <iString>.toLocal8Bit().constData().
 
@@ -716,7 +714,7 @@ inline char qToLower(char ch)
     character data: append(), prepend(), insert(), replace(), and
     remove(). For example:
 
-    \snippet qstring/main.cpp 5
+    \snippet istring/main.cpp 5
 
     If you are building a iString gradually and know in advance
     approximately how many characters the iString will contain, you
@@ -745,7 +743,7 @@ inline char qToLower(char ch)
     they return -1.  For example, here is a typical loop that finds all
     occurrences of a particular substring:
 
-    \snippet qstring/main.cpp 6
+    \snippet istring/main.cpp 6
 
     iString provides many functions for converting numbers into
     strings and strings into numbers. See the arg() functions, the
@@ -813,12 +811,12 @@ inline char qToLower(char ch)
     conversions by defining the following two preprocessor symbols:
 
     \list
-    \li \c QT_NO_CAST_FROM_ASCII disables automatic conversions from
+    \li \c IX_NO_CAST_FROM_ASCII disables automatic conversions from
        C string literals and pointers to Unicode.
-    \li \c QT_RESTRICTED_CAST_FROM_ASCII allows automatic conversions
+    \li \c IX_RESTRICTED_CAST_FROM_ASCII allows automatic conversions
        from C characters and character arrays, but disables automatic
        conversions from character pointers to Unicode.
-    \li \c QT_NO_CAST_TO_ASCII disables automatic conversion from iString
+    \li \c IX_NO_CAST_TO_ASCII disables automatic conversion from iString
        to C strings.
     \endlist
 
@@ -849,7 +847,7 @@ inline char qToLower(char ch)
     \l{implicitly shared}, iStrings may be treated like \c{int}s or
     other basic types. For example:
 
-    \snippet qstring/main.cpp 7
+    \snippet istring/main.cpp 7
 
     The \c result variable, is a normal variable allocated on the
     stack. When \c return is called, and because we're returning by
@@ -868,7 +866,7 @@ inline char qToLower(char ch)
     string with size 0. A null string is always empty, but an empty
     string isn't necessarily null:
 
-    \snippet qstring/main.cpp 8
+    \snippet istring/main.cpp 8
 
     All functions except isNull() treat null strings the same as empty
     strings. For example, toUtf8().constData() returns a pointer to a
@@ -915,11 +913,10 @@ inline char qToLower(char ch)
     complex string from multiple substrings. You will often write code
     like this:
 
-    \snippet qstring/stringbuilder.cpp 0
+    \snippet istring/stringbuilder.cpp 0
 
     There is nothing wrong with either of these string constructions,
-    but there are a few hidden inefficiencies. Beginning with Qt 4.6,
-    you can eliminate them.
+    but there are a few hidden inefficiencies.
 
     First, multiple uses of the \c{'+'} operator usually means
     multiple memory allocations. When concatenating \e{n} substrings,
@@ -953,13 +950,13 @@ inline char qToLower(char ch)
     \c{iStringBuilder} wherever you want to use it, and use the
     \c{'%'} operator instead of \c{'+'} when concatenating strings:
 
-    \snippet qstring/stringbuilder.cpp 5
+    \snippet istring/stringbuilder.cpp 5
 
     A more global approach which is the most convenient but
     not entirely source compatible, is to this define in your
     .pro file:
 
-    \snippet qstring/stringbuilder.cpp 3
+    \snippet istring/stringbuilder.cpp 3
 
     and the \c{'+'} will automatically be performed as the
     \c{iStringBuilder} \c{'%'} everywhere.
@@ -981,12 +978,12 @@ inline char qToLower(char ch)
 
 /*! \typedef iString::ConstIterator
 
-    Qt-style synonym for iString::const_iterator.
+    iShell-style synonym for iString::const_iterator.
 */
 
 /*! \typedef iString::Iterator
 
-    Qt-style synonym for iString::iterator.
+    iShell-style synonym for iString::iterator.
 */
 
 /*! \typedef iString::const_iterator
@@ -1005,7 +1002,7 @@ inline char qToLower(char ch)
 */
 
 /*! \typedef iString::const_reverse_iterator
-    \since 5.6
+
 
     This typedef provides an STL-style const reverse iterator for iString.
 
@@ -1013,7 +1010,7 @@ inline char qToLower(char ch)
 */
 
 /*! \typedef iString::reverse_iterator
-    \since 5.6
+
 
     This typedef provides an STL-style non-const reverse iterator for iString.
 
@@ -1077,7 +1074,7 @@ inline char qToLower(char ch)
 */
 
 /*! \fn iString::const_iterator iString::cbegin() const
-    \since 5.0
+
 
     Returns a const \l{STL-style iterators}{STL-style iterator} pointing to the first character
     in the string.
@@ -1107,7 +1104,7 @@ inline char qToLower(char ch)
 */
 
 /*! \fn iString::const_iterator iString::cend() const
-    \since 5.0
+
 
     Returns a const \l{STL-style iterators}{STL-style iterator} pointing to the imaginary
     character after the last character in the list.
@@ -1124,7 +1121,7 @@ inline char qToLower(char ch)
 */
 
 /*! \fn iString::reverse_iterator iString::rbegin()
-    \since 5.6
+
 
     Returns a \l{STL-style iterators}{STL-style} reverse iterator pointing to the first
     character in the string, in reverse order.
@@ -1133,12 +1130,12 @@ inline char qToLower(char ch)
 */
 
 /*! \fn iString::const_reverse_iterator iString::rbegin() const
-    \since 5.6
+
     \overload
 */
 
 /*! \fn iString::const_reverse_iterator iString::crbegin() const
-    \since 5.6
+
 
     Returns a const \l{STL-style iterators}{STL-style} reverse iterator pointing to the first
     character in the string, in reverse order.
@@ -1147,7 +1144,7 @@ inline char qToLower(char ch)
 */
 
 /*! \fn iString::reverse_iterator iString::rend()
-    \since 5.6
+
 
     Returns a \l{STL-style iterators}{STL-style} reverse iterator pointing to one past
     the last character in the string, in reverse order.
@@ -1156,12 +1153,12 @@ inline char qToLower(char ch)
 */
 
 /*! \fn iString::const_reverse_iterator iString::rend() const
-    \since 5.6
+
     \overload
 */
 
 /*! \fn iString::const_reverse_iterator iString::crend() const
-    \since 5.6
+
 
     Returns a const \l{STL-style iterators}{STL-style} reverse iterator pointing to one
     past the last character in the string, in reverse order.
@@ -1183,7 +1180,7 @@ inline char qToLower(char ch)
     Move-constructs a iString instance, making it point at the same
     object that \a other was pointing to.
 
-    \since 5.2
+
 */
 
 /*! \fn iString::iString(const char *str)
@@ -1193,17 +1190,17 @@ inline char qToLower(char ch)
     fromUtf8() function.
 
     You can disable this constructor by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \note Defining \c QT_RESTRICTED_CAST_FROM_ASCII also disables
+    \note Defining \c IX_RESTRICTED_CAST_FROM_ASCII also disables
     this constructor, but enables a \c{iString(const char (&ch)[N])}
     constructor instead. Using non-literal input, or input with
     embedded NUL characters, or non-7-bit characters is undefined
     in this case.
 
-    \sa fromLatin1(), fromLocal8Bit(), fromUtf8(), QT_NO_CAST_FROM_ASCII, QT_RESTRICTED_CAST_FROM_ASCII
+    \sa fromLatin1(), fromLocal8Bit(), fromUtf8(), IX_NO_CAST_FROM_ASCII, IX_RESTRICTED_CAST_FROM_ASCII
 */
 
 /*! \fn iString iString::fromStdString(const std::string &str)
@@ -1225,7 +1222,7 @@ inline char qToLower(char ch)
 */
 
 /*! \fn iString iString::fromWCharArray(const wchar_t *string, int size)
-    \since 4.2
+
 
     Returns a copy of the \a string, where the encoding of \a string depends on
     the size of wchar. If wchar is 4 bytes, the \a string is interpreted as UCS-4,
@@ -1261,7 +1258,7 @@ int iString::toUcs4_helper(const ushort *uc, int length, uint *out)
 }
 
 /*! \fn int iString::toWCharArray(wchar_t *array) const
-  \since 4.2
+
 
   Fills the \a array with the data contained in this iString object.
   The array is encoded in UTF-16 on platforms where
@@ -1392,11 +1389,11 @@ iString::iString(iChar ch)
     array.
 
     You can disable this constructor by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa fromLatin1(), fromLocal8Bit(), fromUtf8(), QT_NO_CAST_FROM_ASCII
+    \sa fromLatin1(), fromLocal8Bit(), fromUtf8(), IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn iString::iString(const Null &)
@@ -1419,7 +1416,7 @@ iString::iString(iChar ch)
 
 
 /*! \fn void iString::swap(iString &other)
-    \since 4.8
+
 
     Swaps string \a other with this string. This operation is very fast and
     never fails.
@@ -1452,7 +1449,7 @@ iString::iString(iChar ch)
 
     Example:
 
-    \snippet qstring/main.cpp 45
+    \snippet istring/main.cpp 45
 
     If you want to append a certain number of identical characters to
     the string, use the \l {iString::}{resize(int, iChar)} overload.
@@ -1463,7 +1460,7 @@ iString::iString(iChar ch)
 
     If \a size is negative, it is equivalent to passing zero.
 
-    \snippet qstring/main.cpp 47
+    \snippet istring/main.cpp 47
 
     \sa truncate(), reserve()
 */
@@ -1488,12 +1485,12 @@ void iString::resize(int size)
 
 /*!
     \overload
-    \since 5.7
+
 
     Unlike \l {iString::}{resize(int)}, this overload
     initializes the new characters to \a fillChar:
 
-    \snippet qstring/main.cpp 46
+    \snippet istring/main.cpp 46
 */
 
 void iString::resize(int size, iChar fillChar)
@@ -1538,7 +1535,7 @@ void iString::resize(int size, iChar fillChar)
     we're fairly sure that size is large enough to make a call to
     reserve() worthwhile:
 
-    \snippet qstring/main.cpp 44
+    \snippet istring/main.cpp 44
 
     \sa squeeze(), capacity()
 */
@@ -1604,7 +1601,7 @@ iString &iString::operator=(const iString &other)
 
     Move-assigns \a other to this iString instance.
 
-    \since 5.2
+
 */
 
 /*! \fn iString &iString::operator=(iLatin1String str)
@@ -1634,11 +1631,11 @@ iString &iString::operator=(iLatin1String other)
     first NUL character found, or the end of the \a ba byte array.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn iString &iString::operator=(const char *str)
@@ -1648,12 +1645,12 @@ iString &iString::operator=(iLatin1String other)
     Assigns \a str to this string. The const char pointer is converted
     to Unicode using the fromUtf8() function.
 
-    You can disable this operator by defining \c QT_NO_CAST_FROM_ASCII
-    or \c QT_RESTRICTED_CAST_FROM_ASCII when you compile your applications.
+    You can disable this operator by defining \c IX_NO_CAST_FROM_ASCII
+    or \c IX_RESTRICTED_CAST_FROM_ASCII when you compile your applications.
     This can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII, QT_RESTRICTED_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII, IX_RESTRICTED_CAST_FROM_ASCII
 */
 
 /*! \fn iString &iString::operator=(char ch)
@@ -1665,11 +1662,11 @@ iString &iString::operator=(iLatin1String other)
     functions that operate on UTF-8 data.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -1699,7 +1696,7 @@ iString &iString::operator=(iChar ch)
 
     Example:
 
-    \snippet qstring/main.cpp 26
+    \snippet istring/main.cpp 26
 
     If the given \a position is greater than size(), the array is
     first extended using resize().
@@ -1710,7 +1707,7 @@ iString &iString::operator=(iChar ch)
 
 /*!
     \fn iString& iString::insert(int position, const iStringRef &str)
-    \since 5.5
+
     \overload insert()
 
     Inserts the string reference \a str at the given index \a position and
@@ -1723,7 +1720,7 @@ iString &iString::operator=(iChar ch)
 
 /*!
     \fn iString& iString::insert(int position, const char *str)
-    \since 5.5
+
     \overload insert()
 
     Inserts the C string \a str at the given index \a position and
@@ -1732,16 +1729,16 @@ iString &iString::operator=(iChar ch)
     If the given \a position is greater than size(), the array is
     first extended using resize().
 
-    This function is not available when \c QT_NO_CAST_FROM_ASCII is
+    This function is not available when \c IX_NO_CAST_FROM_ASCII is
     defined.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 
 /*!
     \fn iString& iString::insert(int position, const iByteArray &str)
-    \since 5.5
+
     \overload insert()
 
     Inserts the byte array \a str at the given index \a position and
@@ -1750,10 +1747,10 @@ iString &iString::operator=(iChar ch)
     If the given \a position is greater than size(), the array is
     first extended using resize().
 
-    This function is not available when \c QT_NO_CAST_FROM_ASCII is
+    This function is not available when \c IX_NO_CAST_FROM_ASCII is
     defined.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 
@@ -1840,11 +1837,11 @@ iString& iString::insert(int i, iChar ch)
 
     Example:
 
-    \snippet qstring/main.cpp 9
+    \snippet istring/main.cpp 9
 
     This is the same as using the insert() function:
 
-    \snippet qstring/main.cpp 10
+    \snippet istring/main.cpp 10
 
     The append() function is typically very fast (\l{constant time}),
     because iString preallocates extra space at the end of the string
@@ -1871,7 +1868,7 @@ iString &iString::append(const iString &str)
 
 /*!
   \overload append()
-  \since 5.0
+
 
   Appends \a len characters from the iChar array \a str to this string.
 */
@@ -1914,12 +1911,12 @@ iString &iString::append(iLatin1String str)
     Appends the byte array \a ba to this string. The given byte array
     is converted to Unicode using the fromUtf8() function.
 
-    You can disable this function by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this function by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn iString &iString::append(const char *str)
@@ -1929,12 +1926,12 @@ iString &iString::append(iLatin1String str)
     Appends the string \a str to this string. The given const char
     pointer is converted to Unicode using the fromUtf8() function.
 
-    You can disable this function by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this function by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -1958,7 +1955,7 @@ iString &iString::append(iChar ch)
 
     Example:
 
-    \snippet qstring/main.cpp 36
+    \snippet istring/main.cpp 36
 
     \sa append(), insert()
 */
@@ -1971,7 +1968,7 @@ iString &iString::append(iChar ch)
 */
 
 /*! \fn iString &iString::prepend(const iChar *str, int len)
-    \since 5.5
+
     \overload prepend()
 
     Prepends \a len characters from the iChar array \a str to this string and
@@ -1979,7 +1976,7 @@ iString &iString::append(iChar ch)
 */
 
 /*! \fn iString &iString::prepend(const iStringRef &str)
-    \since 5.5
+
     \overload prepend()
 
     Prepends the string reference \a str to the beginning of this string and
@@ -1994,11 +1991,11 @@ iString &iString::append(iChar ch)
     converted to Unicode using the fromUtf8() function.
 
     You can disable this function by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn iString &iString::prepend(const char *str)
@@ -2009,11 +2006,11 @@ iString &iString::append(iChar ch)
     is converted to Unicode using the fromUtf8() function.
 
     You can disable this function by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn iString &iString::prepend(iChar ch)
@@ -2033,7 +2030,7 @@ iString &iString::append(iChar ch)
   position + \a n is beyond the end of the string, the string is
   truncated at the specified \a position.
 
-  \snippet qstring/main.cpp 37
+  \snippet istring/main.cpp 37
 
   \sa insert(), replace()
 */
@@ -2087,7 +2084,7 @@ iString &iString::remove(const iString &str, iShell::CaseSensitivity cs)
 }
 
 /*!
-  \since 5.11
+
   \overload
 
   Removes every occurrence of the given \a str string in this
@@ -2115,7 +2112,7 @@ iString &iString::remove(iLatin1String str, iShell::CaseSensitivity cs)
 
   Example:
 
-  \snippet qstring/main.cpp 38
+  \snippet istring/main.cpp 38
 
   This is the same as \c replace(ch, "", cs).
 
@@ -2147,19 +2144,19 @@ iString &iString::remove(iChar ch, iShell::CaseSensitivity cs)
   Removes every occurrence of the regular expression \a rx in the
   string, and returns a reference to the string. For example:
 
-  \snippet qstring/main.cpp 39
+  \snippet istring/main.cpp 39
 
   \sa indexOf(), lastIndexOf(), replace()
 */
 
 /*!
   \fn iString &iString::remove(const iRegularExpression &re)
-  \since 5.0
+
 
   Removes every occurrence of the regular expression \a re in the
   string, and returns a reference to the string. For example:
 
-  \snippet qstring/main.cpp 96
+  \snippet istring/main.cpp 96
 
   \sa indexOf(), lastIndexOf(), replace()
 */
@@ -2176,7 +2173,7 @@ iString &iString::remove(iChar ch, iShell::CaseSensitivity cs)
 
   Example:
 
-  \snippet qstring/main.cpp 40
+  \snippet istring/main.cpp 40
 
   \sa insert(), remove()
 */
@@ -2226,13 +2223,13 @@ iString &iString::replace(int pos, int len, iChar after)
 
   Example:
 
-  \snippet qstring/main.cpp 41
+  \snippet istring/main.cpp 41
 
   \note The replacement text is not rescanned after it is inserted.
 
   Example:
 
-  \snippet qstring/main.cpp 86
+  \snippet istring/main.cpp 86
 */
 iString &iString::replace(const iString &before, const iString &after, iShell::CaseSensitivity cs)
 {
@@ -2318,7 +2315,7 @@ void iString::replace_helper(uint *indices, int nIndices, int blen, const iChar 
 }
 
 /*!
-  \since 4.5
+
   \overload replace()
 
   Replaces each occurrence in this string of the first \a blen
@@ -2478,7 +2475,7 @@ iString& iString::replace(iChar before, iChar after, iShell::CaseSensitivity cs)
 }
 
 /*!
-  \since 4.5
+
   \overload replace()
 
   Replaces every occurrence of the string \a before with the string \a
@@ -2501,7 +2498,7 @@ iString &iString::replace(iLatin1String before, iLatin1String after, iShell::Cas
 }
 
 /*!
-  \since 4.5
+
   \overload replace()
 
   Replaces every occurrence of the string \a before with the string \a
@@ -2521,7 +2518,7 @@ iString &iString::replace(iLatin1String before, const iString &after, iShell::Ca
 }
 
 /*!
-  \since 4.5
+
   \overload replace()
 
   Replaces every occurrence of the string \a before with the string \a
@@ -2541,7 +2538,7 @@ iString &iString::replace(const iString &before, iLatin1String after, iShell::Ca
 }
 
 /*!
-  \since 4.5
+
   \overload replace()
 
   Replaces every occurrence of the character \a c with the string \a
@@ -2601,14 +2598,14 @@ bool iString::operator==(iLatin1String other) const
     first NUL character found, or the end of the byte array.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
     Returns \c true if this string is lexically equal to the parameter
     string \a other. Otherwise returns \c false.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool iString::operator==(const char *other) const
@@ -2619,11 +2616,11 @@ bool iString::operator==(iLatin1String other) const
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -2661,11 +2658,11 @@ bool iString::operator<(iLatin1String other) const
     in the byte array, they will be included in the transformation.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool iString::operator<(const char *other) const
@@ -2679,11 +2676,11 @@ bool iString::operator<(iLatin1String other) const
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool operator<=(const iString &s1, const iString &s2)
@@ -2716,11 +2713,11 @@ bool iString::operator<(iLatin1String other) const
     in the byte array, they will be included in the transformation.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool iString::operator<=(const char *other) const
@@ -2731,11 +2728,11 @@ bool iString::operator<(iLatin1String other) const
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool operator>(const iString &s1, const iString &s2)
@@ -2770,11 +2767,11 @@ bool iString::operator>(iLatin1String other) const
     in the byte array, they will be included in the transformation.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool iString::operator>(const char *other) const
@@ -2784,12 +2781,12 @@ bool iString::operator>(iLatin1String other) const
     The \a other const char pointer is converted to a iString using
     the fromUtf8() function.
 
-    You can disable this operator by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this operator by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool operator>=(const iString &s1, const iString &s2)
@@ -2820,12 +2817,12 @@ bool iString::operator>(iLatin1String other) const
     fromUtf8() function. If any NUL characters ('\\0') are embedded in
     the byte array, they will be included in the transformation.
 
-    You can disable this operator by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this operator by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool iString::operator>=(const char *other) const
@@ -2835,12 +2832,12 @@ bool iString::operator>(iLatin1String other) const
     The \a other const char pointer is converted to a iString using
     the fromUtf8() function.
 
-    You can disable this operator by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this operator by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool operator!=(const iString &s1, const iString &s2)
@@ -2871,12 +2868,12 @@ bool iString::operator>(iLatin1String other) const
     fromUtf8() function. If any NUL characters ('\\0') are embedded
     in the byte array, they will be included in the transformation.
 
-    You can disable this operator by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this operator by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool iString::operator!=(const char *other) const
@@ -2887,11 +2884,11 @@ bool iString::operator>(iLatin1String other) const
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -2904,7 +2901,7 @@ bool iString::operator>(iLatin1String other) const
 
   Example:
 
-  \snippet qstring/main.cpp 24
+  \snippet istring/main.cpp 24
 
   If \a from is -1, the search starts at the last character; if it is
   -2, at the next to last character and so on.
@@ -2917,7 +2914,7 @@ int iString::indexOf(const iString &str, int from, iShell::CaseSensitivity cs) c
 }
 
 /*!
-  \since 4.5
+
   Returns the index position of the first occurrence of the string \a
   str in this string, searching forward from index position \a
   from. Returns -1 if \a str is not found.
@@ -2927,7 +2924,7 @@ int iString::indexOf(const iString &str, int from, iShell::CaseSensitivity cs) c
 
   Example:
 
-  \snippet qstring/main.cpp 24
+  \snippet istring/main.cpp 24
 
   If \a from is -1, the search starts at the last character; if it is
   -2, at the next to last character and so on.
@@ -2972,7 +2969,7 @@ int iFindString(
         We use some hashing for efficiency's sake. Instead of
         comparing strings, we compare the hash value of str with that
         of a part of this iString. Only if that matches, we call
-        qt_string_compare().
+        ix_string_compare().
     */
     const ushort *needle = (const ushort *)needle0;
     const ushort *haystack = (const ushort *)haystack0 + from;
@@ -3031,7 +3028,7 @@ int iString::indexOf(iChar ch, int from, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 4.8
+
 
     \overload indexOf()
 
@@ -3126,7 +3123,7 @@ static inline int lastIndexOfHelper(
 
   Example:
 
-  \snippet qstring/main.cpp 29
+  \snippet istring/main.cpp 29
 
   \sa indexOf(), contains(), count()
 */
@@ -3136,7 +3133,7 @@ int iString::lastIndexOf(const iString &str, int from, iShell::CaseSensitivity c
 }
 
 /*!
-  \since 4.5
+
   \overload lastIndexOf()
 
   Returns the index position of the last occurrence of the string \a
@@ -3150,7 +3147,7 @@ int iString::lastIndexOf(const iString &str, int from, iShell::CaseSensitivity c
 
   Example:
 
-  \snippet qstring/main.cpp 29
+  \snippet istring/main.cpp 29
 
   \sa indexOf(), contains(), count()
 */
@@ -3171,7 +3168,7 @@ int iString::lastIndexOf(iChar ch, int from, iShell::CaseSensitivity cs) const
 }
 
 /*!
-  \since 4.8
+
   \overload lastIndexOf()
 
   Returns the index position of the last occurrence of the string
@@ -3205,13 +3202,13 @@ IX_DECLARE_TYPEINFO(iStringCapture, IX_PRIMITIVE_TYPE);
   string with \a after. Returns a reference to the string. For
   example:
 
-  \snippet qstring/main.cpp 42
+  \snippet istring/main.cpp 42
 
   For regular expressions containing \l{capturing parentheses},
   occurrences of \b{\\1}, \b{\\2}, ..., in \a after are replaced
   with \a{rx}.cap(1), cap(2), ...
 
-  \snippet qstring/main.cpp 43
+  \snippet istring/main.cpp 43
 
   \sa indexOf(), lastIndexOf(), remove(), iRegExp::cap()
 */
@@ -3383,7 +3380,7 @@ int iString::count(iChar ch, iShell::CaseSensitivity cs) const
     }
 
 /*!
-    \since 4.8
+
     \overload count()
     Returns the number of (potentially overlapping) occurrences of the
     string reference \a str in this string.
@@ -3408,13 +3405,13 @@ int iString::count(const iStringRef &str, iShell::CaseSensitivity cs) const
     case sensitive; otherwise the search is case insensitive.
 
     Example:
-    \snippet qstring/main.cpp 17
+    \snippet istring/main.cpp 17
 
     \sa indexOf(), count()
 */
 
 /*! \fn bool iString::contains(iLatin1String str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \since 5.3
+
 
     \overload contains()
 
@@ -3431,7 +3428,7 @@ int iString::count(const iStringRef &str, iShell::CaseSensitivity cs) const
 */
 
 /*! \fn bool iString::contains(const iStringRef &str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \since 4.8
+
 
     Returns \c true if this string contains an occurrence of the string
     reference \a str; otherwise returns \c false.
@@ -3452,7 +3449,7 @@ int iString::count(const iStringRef &str, iShell::CaseSensitivity cs) const
 
 /*! \fn bool iString::contains(iRegExp &rx) const
     \overload contains()
-    \since 4.5
+
 
     Returns \c true if the regular expression \a rx matches somewhere in
     this string; otherwise returns \c false.
@@ -3470,7 +3467,7 @@ int iString::count(const iStringRef &str, iShell::CaseSensitivity cs) const
 
     Example:
 
-    \snippet qstring/main.cpp 25
+    \snippet istring/main.cpp 25
 */
 int iString::indexOf(const iRegExp& rx, int from) const
 {
@@ -3480,7 +3477,7 @@ int iString::indexOf(const iRegExp& rx, int from) const
 
 /*!
     \overload indexOf()
-    \since 4.5
+
 
     Returns the index position of the first match of the regular
     expression \a rx in the string, searching forward from index
@@ -3491,7 +3488,7 @@ int iString::indexOf(const iRegExp& rx, int from) const
 
     Example:
 
-    \snippet qstring/main.cpp 25
+    \snippet istring/main.cpp 25
 */
 int iString::indexOf(iRegExp& rx, int from) const
 {
@@ -3507,7 +3504,7 @@ int iString::indexOf(iRegExp& rx, int from) const
 
     Example:
 
-    \snippet qstring/main.cpp 30
+    \snippet istring/main.cpp 30
 */
 int iString::lastIndexOf(const iRegExp& rx, int from) const
 {
@@ -3517,7 +3514,7 @@ int iString::lastIndexOf(const iRegExp& rx, int from) const
 
 /*!
     \overload lastIndexOf()
-    \since 4.5
+
 
     Returns the index position of the last match of the regular
     expression \a rx in the string, searching backward from index
@@ -3528,7 +3525,7 @@ int iString::lastIndexOf(const iRegExp& rx, int from) const
 
     Example:
 
-    \snippet qstring/main.cpp 30
+    \snippet istring/main.cpp 30
 */
 int iString::lastIndexOf(iRegExp& rx, int from) const
 {
@@ -3544,7 +3541,7 @@ int iString::lastIndexOf(iRegExp& rx, int from) const
     This function counts overlapping matches, so in the example
     below, there are four instances of "ana" or "ama":
 
-    \snippet qstring/main.cpp 18
+    \snippet istring/main.cpp 18
 
 */
 int iString::count(const iRegExp& rx) const
@@ -3614,13 +3611,13 @@ int iString::count(const iRegExp& rx) const
     to skip empty fields and how to deal with leading and trailing
     separators; see \l{SectionFlags}.
 
-    \snippet qstring/main.cpp 52
+    \snippet istring/main.cpp 52
 
     If \a start or \a end is negative, we count fields from the right
     of the string, the right-most field being -1, the one from
     right-most field being -2, and so on.
 
-    \snippet qstring/main.cpp 53
+    \snippet istring/main.cpp 53
 
     \sa split()
 */
@@ -3628,8 +3625,8 @@ int iString::count(const iRegExp& rx) const
 /*!
     \overload section()
 
-    \snippet qstring/main.cpp 51
-    \snippet qstring/main.cpp 54
+    \snippet istring/main.cpp 51
+    \snippet istring/main.cpp 54
 
     \sa split()
 */
@@ -3758,7 +3755,7 @@ static iString extractSections(const std::vector<ix_section_chunk> &sections,
     This string is treated as a sequence of fields separated by the
     regular expression, \a reg.
 
-    \snippet qstring/main.cpp 55
+    \snippet istring/main.cpp 55
 
     \warning Using this iRegExp version is much more expensive than
     the overloaded string and character versions.
@@ -3794,7 +3791,7 @@ iString iString::section(const iRegExp &reg, int start, int end, SectionFlags fl
     The entire string is returned if \a n is greater than or equal
     to size(), or less than zero.
 
-    \snippet qstring/main.cpp 31
+    \snippet istring/main.cpp 31
 
     \sa right(), mid(), startsWith(), chopped(), chop(), truncate()
 */
@@ -3812,7 +3809,7 @@ iString iString::left(int n)  const
     The entire string is returned if \a n is greater than or equal
     to size(), or less than zero.
 
-    \snippet qstring/main.cpp 48
+    \snippet istring/main.cpp 48
 
     \sa left(), mid(), endsWith(), chopped(), chop(), truncate()
 */
@@ -3835,7 +3832,7 @@ iString iString::right(int n) const
 
     Example:
 
-    \snippet qstring/main.cpp 34
+    \snippet istring/main.cpp 34
 
     \sa left(), right(), chopped(), chop(), truncate()
 */
@@ -3862,7 +3859,7 @@ iString iString::mid(int position, int n) const
 
 /*!
     \fn iString iString::chopped(int len) const
-    \since 5.10
+
 
     Returns a substring that contains the size() - \a len leftmost characters
     of this string.
@@ -3879,7 +3876,7 @@ iString iString::mid(int position, int n) const
     If \a cs is iShell::CaseSensitive (default), the search is
     case sensitive; otherwise the search is case insensitive.
 
-    \snippet qstring/main.cpp 65
+    \snippet istring/main.cpp 65
 
     \sa endsWith()
 */
@@ -3909,7 +3906,7 @@ bool iString::startsWith(iChar c, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 4.8
+
     \overload
     Returns \c true if the string starts with the string reference \a s;
     otherwise returns \c false.
@@ -3926,7 +3923,7 @@ bool iString::startsWith(const iStringRef &s, iShell::CaseSensitivity cs) const
 
 /*!
     \fn bool iString::startsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \since 5.10
+
     \overload
 
     Returns \c true if the string starts with the string-view \a str;
@@ -3945,7 +3942,7 @@ bool iString::startsWith(const iStringRef &s, iShell::CaseSensitivity cs) const
     If \a cs is iShell::CaseSensitive (default), the search is case
     sensitive; otherwise the search is case insensitive.
 
-    \snippet qstring/main.cpp 20
+    \snippet istring/main.cpp 20
 
     \sa startsWith()
 */
@@ -3955,7 +3952,7 @@ bool iString::endsWith(const iString &s, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 4.8
+
     \overload endsWith()
     Returns \c true if the string ends with the string reference \a s;
     otherwise returns \c false.
@@ -3972,7 +3969,7 @@ bool iString::endsWith(const iStringRef &s, iShell::CaseSensitivity cs) const
 
 /*!
     \fn bool iString::endsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \since 5.10
+
     \overload endsWith()
     Returns \c true if the string ends with the string view \a str;
     otherwise returns \c false.
@@ -4005,7 +4002,7 @@ bool iString::endsWith(iChar c, iShell::CaseSensitivity cs) const
 /*!
     Returns \c true if the string only contains uppercase letters,
     otherwise returns \c false.
-    \since 5.12
+
 
     \sa iChar::isUpper(), isLower()
 */
@@ -4027,7 +4024,7 @@ bool iString::isUpper() const
 /*!
     Returns \c true if the string only contains lowercase letters,
     otherwise returns \c false.
-    \since 5.12
+
 
     \sa iChar::isLower(), isUpper()
  */
@@ -4046,15 +4043,15 @@ bool iString::isLower() const
     return true;
 }
 
-static iByteArray qt_convert_to_latin1(iStringView string);
+static iByteArray ix_convert_to_latin1(iStringView string);
 
 iByteArray iString::toLatin1_helper(const iString &string)
 {
-    return qt_convert_to_latin1(string);
+    return ix_convert_to_latin1(string);
 }
 
 /*!
-    \since 5.10
+
     \internal
     \relates iStringView
 
@@ -4067,10 +4064,10 @@ iByteArray iString::toLatin1_helper(const iString &string)
 */
 iByteArray iPrivate::convertToLatin1(iStringView string)
 {
-    return qt_convert_to_latin1(string);
+    return ix_convert_to_latin1(string);
 }
 
-static iByteArray qt_convert_to_latin1(iStringView string)
+static iByteArray ix_convert_to_latin1(iStringView string)
 {
     if (string.isNull())
         return iByteArray();
@@ -4079,7 +4076,7 @@ static iByteArray qt_convert_to_latin1(iStringView string)
 
     // since we own the only copy, we're going to const_cast the constData;
     // that avoids an unnecessary call to detach() and expansion code that will never get used
-    qt_to_latin1(reinterpret_cast<uchar *>(const_cast<char *>(ba.constData())),
+    ix_to_latin1(reinterpret_cast<uchar *>(const_cast<char *>(ba.constData())),
                  reinterpret_cast<const ushort *>(string.data()), string.length());
     return ba;
 }
@@ -4087,7 +4084,7 @@ static iByteArray qt_convert_to_latin1(iStringView string)
 iByteArray iString::toLatin1_helper_inplace(iString &s)
 {
     if (!s.isDetached())
-        return qt_convert_to_latin1(s);
+        return ix_convert_to_latin1(s);
 
     // We can return our own buffer to the caller.
     // Conversion to Latin-1 always shrinks the buffer by half.
@@ -4106,7 +4103,7 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
 
     // do the in-place conversion
     uchar *dst = reinterpret_cast<uchar *>(ba_d->data());
-    qt_to_latin1(dst, data, length);
+    ix_to_latin1(dst, data, length);
     dst[length] = '\0';
 
     iByteArrayDataPtr badptr = { ba_d };
@@ -4139,7 +4136,7 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
     \sa fromAscii(), toLatin1(), toUtf8(), toLocal8Bit(), iTextCodec
 */
 
-static iByteArray qt_convert_to_local_8bit(iStringView string);
+static iByteArray ix_convert_to_local_8bit(iStringView string);
 
 /*!
     \fn iByteArray iString::toLocal8Bit() const
@@ -4161,19 +4158,19 @@ static iByteArray qt_convert_to_local_8bit(iStringView string);
 
 iByteArray iString::toLocal8Bit_helper(const iChar *data, int size)
 {
-    return qt_convert_to_local_8bit(iStringView(data, size));
+    return ix_convert_to_local_8bit(iStringView(data, size));
 }
 
-static iByteArray qt_convert_to_local_8bit(iStringView string)
+static iByteArray ix_convert_to_local_8bit(iStringView string)
 {
     if (string.isNull())
         return iByteArray();
 
-    return qt_convert_to_latin1(string);
+    return ix_convert_to_latin1(string);
 }
 
 /*!
-    \since 5.10
+
     \internal
     \relates iStringView
 
@@ -4189,10 +4186,10 @@ static iByteArray qt_convert_to_local_8bit(iStringView string)
 */
 iByteArray iPrivate::convertToLocal8Bit(iStringView string)
 {
-    return qt_convert_to_local_8bit(string);
+    return ix_convert_to_local_8bit(string);
 }
 
-static iByteArray qt_convert_to_utf8(iStringView str);
+static iByteArray ix_convert_to_utf8(iStringView str);
 
 /*!
     \fn iByteArray iString::toUtf8() const
@@ -4207,10 +4204,10 @@ static iByteArray qt_convert_to_utf8(iStringView str);
 
 iByteArray iString::toUtf8_helper(const iString &str)
 {
-    return qt_convert_to_utf8(str);
+    return ix_convert_to_utf8(str);
 }
 
-static iByteArray qt_convert_to_utf8(iStringView str)
+static iByteArray ix_convert_to_utf8(iStringView str)
 {
     if (str.isNull())
         return iByteArray();
@@ -4219,7 +4216,7 @@ static iByteArray qt_convert_to_utf8(iStringView str)
 }
 
 /*!
-    \since 5.10
+
     \internal
     \relates iStringView
 
@@ -4232,13 +4229,13 @@ static iByteArray qt_convert_to_utf8(iStringView str)
 */
 iByteArray iPrivate::convertToUtf8(iStringView string)
 {
-    return qt_convert_to_utf8(string);
+    return ix_convert_to_utf8(string);
 }
 
-static std::vector<uint> qt_convert_to_ucs4(iStringView string);
+static std::vector<uint> ix_convert_to_ucs4(iStringView string);
 
 /*!
-    \since 4.2
+
 
     Returns a UCS-4/UTF-32 representation of the string as a std::vector<uint>.
 
@@ -4253,10 +4250,10 @@ static std::vector<uint> qt_convert_to_ucs4(iStringView string);
 */
 std::vector<uint> iString::toUcs4() const
 {
-    return qt_convert_to_ucs4(*this);
+    return ix_convert_to_ucs4(*this);
 }
 
-static std::vector<uint> qt_convert_to_ucs4(iStringView string)
+static std::vector<uint> ix_convert_to_ucs4(iStringView string)
 {
     std::vector<uint> v(string.length());
     std::vector<uint>::iterator vit = v.begin();
@@ -4271,7 +4268,7 @@ static std::vector<uint> qt_convert_to_ucs4(iStringView string)
 }
 
 /*!
-    \since 5.10
+
     \internal
     \relates iStringView
 
@@ -4289,7 +4286,7 @@ static std::vector<uint> qt_convert_to_ucs4(iStringView string)
 */
 std::vector<uint> iPrivate::convertToUcs4(iStringView string)
 {
-    return qt_convert_to_ucs4(string);
+    return ix_convert_to_ucs4(string);
 }
 
 iString::Data *iString::fromLatin1_helper(const char *str, int size)
@@ -4333,7 +4330,7 @@ iString::Data *iString::fromAscii_helper(const char *str, int size)
 /*!
     \fn iString iString::fromLatin1(const iByteArray &str)
     \overload
-    \since 5.0
+
 
     Returns a iString initialized with the Latin-1 string \a str.
 */
@@ -4353,7 +4350,7 @@ iString::Data *iString::fromAscii_helper(const char *str, int size)
 /*!
     \fn iString iString::fromLocal8Bit(const iByteArray &str)
     \overload
-    \since 5.0
+
 
     Returns a iString initialized with the 8-bit string \a str.
 */
@@ -4387,7 +4384,7 @@ iString iString::fromLocal8Bit_helper(const char *str, int size)
     \fn iString iString::fromAscii(const iByteArray &str)
     \deprecated
     \overload
-    \since 5.0
+
 
     Returns a iString initialized with the string \a str.
 */
@@ -4417,7 +4414,7 @@ iString iString::fromLocal8Bit_helper(const char *str, int size)
 /*!
     \fn iString iString::fromUtf8(const iByteArray &str)
     \overload
-    \since 5.0
+
 
     Returns a iString initialized with the UTF-8 string \a str.
 */
@@ -4460,7 +4457,7 @@ iString iString::fromUtf16(const ushort *unicode, int size)
 
 /*!
    \fn iString iString::fromUtf16(const char16_t *str, int size)
-   \since 5.3
+
 
     Returns a iString initialized with the first \a size characters
     of the Unicode string \a str (ISO-10646-UTF-16 encoded).
@@ -4480,7 +4477,7 @@ iString iString::fromUtf16(const ushort *unicode, int size)
 
 /*!
     \fn iString iString::fromUcs4(const char32_t *str, int size)
-    \since 5.3
+
 
     Returns a iString initialized with the first \a size characters
     of the Unicode string \a str (ISO-10646-UCS-4 encoded).
@@ -4491,7 +4488,7 @@ iString iString::fromUtf16(const ushort *unicode, int size)
 */
 
 /*!
-    \since 4.2
+
 
     Returns a iString initialized with the first \a size characters
     of the Unicode string \a unicode (ISO-10646-UCS-4 encoded).
@@ -4558,7 +4555,7 @@ iString& iString::setUnicode(const iChar *unicode, int size)
 
     Example:
 
-    \snippet qstring/main.cpp 57
+    \snippet istring/main.cpp 57
 
     \sa trimmed()
 */
@@ -4574,7 +4571,7 @@ iString iString::simplified_helper(iString &str)
 
 namespace {
     template <typename StringView>
-    StringView qt_trimmed(StringView s)
+    StringView ix_trimmed(StringView s)
     {
         auto begin = s.begin();
         auto end = s.end();
@@ -4588,7 +4585,7 @@ namespace {
     \fn iLatin1String iPrivate::trimmed(iLatin1String s)
     \internal
     \relates iStringView
-    \since 5.10
+
 
     Returns \a s with whitespace removed from the start and the end.
 
@@ -4600,12 +4597,12 @@ namespace {
 */
 iStringView iPrivate::trimmed(iStringView s)
 {
-    return qt_trimmed(s);
+    return ix_trimmed(s);
 }
 
 iLatin1String iPrivate::trimmed(iLatin1String s)
 {
-    return qt_trimmed(s);
+    return ix_trimmed(s);
 }
 
 /*!
@@ -4620,7 +4617,7 @@ iLatin1String iPrivate::trimmed(iLatin1String s)
 
     Example:
 
-    \snippet qstring/main.cpp 82
+    \snippet istring/main.cpp 82
 
     Unlike simplified(), trimmed() leaves internal whitespace alone.
 
@@ -4655,7 +4652,7 @@ iString iString::trimmed_helper(iString &str)
 
     Example:
 
-    \snippet qstring/main.cpp 85
+    \snippet istring/main.cpp 85
 
     The return value is of type iCharRef, a helper class for iString.
     When you get an object of type iCharRef, you can use it as if it
@@ -4686,7 +4683,7 @@ modifiable reference.
 
 /*!
     \fn iChar iString::front() const
-    \since 5.10
+
 
     Returns the first character in the string.
     Same as \c{at(0)}.
@@ -4701,7 +4698,7 @@ modifiable reference.
 
 /*!
     \fn iChar iString::back() const
-    \since 5.10
+
 
     Returns the last character in the string.
     Same as \c{at(size() - 1)}.
@@ -4716,7 +4713,7 @@ modifiable reference.
 
 /*!
     \fn iCharRef iString::front()
-    \since 5.10
+
 
     Returns a reference to the first character in the string.
     Same as \c{operator[](0)}.
@@ -4731,7 +4728,7 @@ modifiable reference.
 
 /*!
     \fn iCharRef iString::back()
-    \since 5.10
+
 
     Returns a reference to the last character in the string.
     Same as \c{operator[](size() - 1)}.
@@ -4754,7 +4751,7 @@ modifiable reference.
 
     Example:
 
-    \snippet qstring/main.cpp 83
+    \snippet istring/main.cpp 83
 
     If \a position is negative, it is equivalent to passing zero.
 
@@ -4775,7 +4772,7 @@ void iString::truncate(int pos)
     empty string; if \a n is negative, it is equivalent to passing zero.
 
     Example:
-    \snippet qstring/main.cpp 15
+    \snippet istring/main.cpp 15
 
     If you want to remove characters from the \e beginning of the
     string, use remove() instead.
@@ -4795,7 +4792,7 @@ void iString::chop(int n)
 
     Example:
 
-    \snippet qstring/main.cpp 21
+    \snippet istring/main.cpp 21
 
     \sa resize()
 */
@@ -4829,7 +4826,7 @@ iString& iString::fill(iChar ch, int size)
     The last character in the string is at position size() - 1.
 
     Example:
-    \snippet qstring/main.cpp 58
+    \snippet istring/main.cpp 58
 
     \sa isEmpty(), resize()
 */
@@ -4840,9 +4837,9 @@ iString& iString::fill(iChar ch, int size)
 
     Example:
 
-    \snippet qstring/main.cpp 28
+    \snippet istring/main.cpp 28
 
-    Qt makes a distinction between null strings and empty strings for
+    iShell makes a distinction between null strings and empty strings for
     historical reasons. For most applications, what matters is
     whether or not a string contains any data, and this can be
     determined using the isEmpty() function.
@@ -4857,7 +4854,7 @@ iString& iString::fill(iChar ch, int size)
 
     Example:
 
-    \snippet qstring/main.cpp 27
+    \snippet istring/main.cpp 27
 
     \sa size()
 */
@@ -4869,7 +4866,7 @@ iString& iString::fill(iChar ch, int size)
 
     Example:
 
-    \snippet qstring/main.cpp 84
+    \snippet istring/main.cpp 84
 
     This operation is typically very fast (\l{constant time}),
     because iString preallocates extra space at the end of the string
@@ -4896,11 +4893,11 @@ iString& iString::fill(iChar ch, int size)
     transformation.
 
     You can disable this function by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn iString &iString::operator+=(const char *str)
@@ -4910,12 +4907,12 @@ iString& iString::fill(iChar ch, int size)
     Appends the string \a str to this string. The const char pointer
     is converted to Unicode using the fromUtf8() function.
 
-    You can disable this function by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this function by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn iString &iString::operator+=(const iStringRef &str)
@@ -4933,12 +4930,12 @@ iString& iString::fill(iChar ch, int size)
     converted to Unicode using the fromLatin1() function, unlike other 8-bit
     functions that operate on UTF-8 data.
 
-    You can disable this function by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this function by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn iString &iString::operator+=(iChar ch)
@@ -5081,7 +5078,7 @@ iString& iString::fill(iChar ch, int size)
 
 /*!
     \fn int iString::compare(const iString &s1, const iString &s2, iShell::CaseSensitivity cs)
-    \since 4.2
+
 
     Compares \a s1 with \a s2 and returns an integer less than, equal
     to, or greater than zero if \a s1 is less than, equal to, or
@@ -5095,14 +5092,14 @@ iString& iString::fill(iChar ch, int size)
     a human would expect.  Consider sorting user-visible strings with
     localeAwareCompare().
 
-    \snippet qstring/main.cpp 16
+    \snippet istring/main.cpp 16
 
     \sa operator==(), operator<(), operator>()
 */
 
 /*!
     \fn int iString::compare(const iString &s1, iLatin1String s2, iShell::CaseSensitivity cs)
-    \since 4.2
+
     \overload compare()
 
     Performs a comparison of \a s1 and \a s2, using the case
@@ -5112,7 +5109,7 @@ iString& iString::fill(iChar ch, int size)
 /*!
     \fn int iString::compare(iLatin1String s1, const iString &s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
 
-    \since 4.2
+
     \overload compare()
 
     Performs a comparison of \a s1 and \a s2, using the case
@@ -5122,7 +5119,7 @@ iString& iString::fill(iChar ch, int size)
 /*!
     \fn int iString::compare(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
 
-    \since 5.12
+
     \overload compare()
 
     Performs a comparison of this with \a s, using the case
@@ -5131,7 +5128,7 @@ iString& iString::fill(iChar ch, int size)
 
 /*!
     \overload compare()
-    \since 4.2
+
 
     Lexically compares this string with the \a other string and
     returns an integer less than, equal to, or greater than zero if
@@ -5148,7 +5145,7 @@ int iString::compare(const iString &other, iShell::CaseSensitivity cs) const
 
 /*!
     \internal
-    \since 4.5
+
 */
 int iString::compare_helper(const iChar *data1, int length1, const iChar *data2, int length2,
                             iShell::CaseSensitivity cs)
@@ -5162,7 +5159,7 @@ int iString::compare_helper(const iChar *data1, int length1, const iChar *data2,
 
 /*!
     \overload compare()
-    \since 4.2
+
 
     Same as compare(*this, \a other, \a cs).
 */
@@ -5173,7 +5170,7 @@ int iString::compare(iLatin1String other, iShell::CaseSensitivity cs) const
 
 /*!
     \internal
-    \since 5.0
+
 */
 int iString::compare_helper(const iChar *data1, int length1, const char *data2, int length2,
                             iShell::CaseSensitivity cs)
@@ -5198,7 +5195,7 @@ int iString::compare_helper(const iChar *data1, int length1, const char *data2, 
 
 /*!
     \internal
-    \since 4.5
+
 */
 int iString::compare_helper(const iChar *data1, int length1, iLatin1String s2,
                             iShell::CaseSensitivity cs)
@@ -5227,7 +5224,7 @@ int iString::compare_helper(const iChar *data1, int length1, iLatin1String s2,
 
 /*!
     \fn int iString::localeAwareCompare(const iStringRef &other) const
-    \since 4.5
+
     \overload localeAwareCompare()
 
     Compares this string with the \a other string and returns an
@@ -5243,7 +5240,7 @@ int iString::compare_helper(const iChar *data1, int length1, iLatin1String s2,
 
 /*!
     \fn int iString::localeAwareCompare(const iString &s1, const iStringRef &s2)
-    \since 4.5
+
     \overload localeAwareCompare()
 
     Compares \a s1 with \a s2 and returns an integer less than, equal
@@ -5282,7 +5279,7 @@ int iString::localeAwareCompare(const iString &other) const
 
 /*!
     \internal
-    \since 4.5
+
 */
 int iString::localeAwareCompare_helper(const iChar *data1, int length1,
                                        const iChar *data2, int length2)
@@ -5343,13 +5340,13 @@ const ushort *iString::utf16() const
     If \a truncate is \c false and the size() of the string is more than
     \a width, then the returned string is a copy of the string.
 
-    \snippet qstring/main.cpp 32
+    \snippet istring/main.cpp 32
 
     If \a truncate is \c true and the size() of the string is more than
     \a width, then any characters in a copy of the string after
     position \a width are removed, and the copy is returned.
 
-    \snippet qstring/main.cpp 33
+    \snippet istring/main.cpp 33
 
     \sa rightJustified()
 */
@@ -5379,7 +5376,7 @@ iString iString::leftJustified(int width, iChar fill, bool truncate) const
     Returns a string of size() \a width that contains the \a fill
     character followed by the string. For example:
 
-    \snippet qstring/main.cpp 49
+    \snippet istring/main.cpp 49
 
     If \a truncate is \c false and the size() of the string is more than
     \a width, then the returned string is a copy of the string.
@@ -5388,7 +5385,7 @@ iString iString::leftJustified(int width, iChar fill, bool truncate) const
     \a width, then the resulting string is truncated at position \a
     width.
 
-    \snippet qstring/main.cpp 50
+    \snippet istring/main.cpp 50
 
     \sa leftJustified()
 */
@@ -5419,7 +5416,7 @@ iString iString::rightJustified(int width, iChar fill, bool truncate) const
 
     Returns a lowercase copy of the string.
 
-    \snippet qstring/main.cpp 75
+    \snippet istring/main.cpp 75
 
     The case conversion will always happen in the 'C' locale. For locale dependent
     case folding use iLocale::toLower()
@@ -5551,7 +5548,7 @@ iString iString::toCaseFolded_helper(iString &str)
 
     Returns an uppercase copy of the string.
 
-    \snippet qstring/main.cpp 81
+    \snippet istring/main.cpp 81
 
     The case conversion will always happen in the 'C' locale. For locale dependent
     case folding use iLocale::toUpper()
@@ -5572,7 +5569,7 @@ iString iString::toUpper_helper(iString &str)
 /*!
     \obsolete
 
-    Use asprintf(), arg() or QTextStream instead.
+    Use asprintf(), arg() instead.
 */
 iString &iString::sprintf(const char *cformat, ...)
 {
@@ -5583,9 +5580,8 @@ iString &iString::sprintf(const char *cformat, ...)
     return *this;
 }
 
-// ### Qt 6: Consider whether this function shouldn't be removed See task 202871.
 /*!
-    \since 5.5
+
 
     Safely builds a formatted string from the format string \a cformat
     and an arbitrary list of arguments.
@@ -5603,14 +5599,13 @@ iString &iString::sprintf(const char *cformat, ...)
     a \c{wchar_t*}, and might also produce compiler warnings on platforms
     where the size of \c {wchar_t} is not 16 bits.
 
-    \warning We do not recommend using iString::asprintf() in new Qt
-    code. Instead, consider using QTextStream or arg(), both of
+    \warning We do not recommend using iString::asprintf() in new iShell
+    code. Instead, consider using arg(), both of
     which support Unicode strings seamlessly and are type-safe.
-    Here is an example that uses QTextStream:
 
-    \snippet qstring/main.cpp 64
+    \snippet istring/main.cpp 64
 
-    For \l {QObject::tr()}{translations}, especially if the strings
+    For \l {iObject::tr()}{translations}, especially if the strings
     contains more than one escape sequence, you should consider using
     the arg() function instead. This allows the order of the
     replacements to be controlled by the translator.
@@ -5630,7 +5625,7 @@ iString iString::asprintf(const char *cformat, ...)
 /*!
     \obsolete
 
-    Use vasprintf(), arg() or QTextStream instead.
+    Use vasprintf(), arg() instead.
 */
 iString &iString::vsprintf(const char *cformat, va_list ap)
 {
@@ -5667,7 +5662,7 @@ static uint parse_flag_characters(const char * &c)
 
 static int parse_field_width(const char * &c)
 {
-    IX_ASSERT(qIsDigit(*c));
+    IX_ASSERT(iIsDigit(*c));
 
     // can't be negative - started with a digit
     // contains at least one digit
@@ -5675,7 +5670,7 @@ static int parse_field_width(const char * &c)
     bool ok;
     const xulonglong result = istrtoull(c, &endp, 10, &ok);
     c = endp;
-    while (qIsDigit(*c)) // preserve Qt 5.5 behavior of consuming all digits, no matter how many
+    while (iIsDigit(*c)) // preserve behavior of consuming all digits, no matter how many
         ++c;
     return ok && result < xulonglong(std::numeric_limits<int>::max()) ? int(result) : 0;
 }
@@ -5708,7 +5703,7 @@ static LengthMod parse_length_modifier(const char * &c)
 
 /*!
     \fn iString iString::vasprintf(const char *cformat, va_list ap)
-    \since 5.5
+
 
     Equivalent method to asprintf(), but takes a va_list \a ap
     instead a list of variable arguments. See the asprintf()
@@ -5723,7 +5718,6 @@ static LengthMod parse_length_modifier(const char * &c)
 iString iString::vasprintf(const char *cformat, va_list ap)
 {
     if (!cformat || !*cformat) {
-        // Qt 1.x compat
         return fromLatin1("");
     }
 
@@ -5764,7 +5758,7 @@ iString iString::vasprintf(const char *cformat, va_list ap)
 
         // Parse field width
         int width = -1; // -1 means unspecified
-        if (qIsDigit(*c)) {
+        if (iIsDigit(*c)) {
             width = parse_field_width(c);
         } else if (*c == '*') { // can't parse this in another function, not portably, at least
             width = va_arg(ap, int);
@@ -5782,7 +5776,7 @@ iString iString::vasprintf(const char *cformat, va_list ap)
         int precision = -1; // -1 means unspecified
         if (*c == '.') {
             ++c;
-            if (qIsDigit(*c)) {
+            if (iIsDigit(*c)) {
                 precision = parse_field_width(c);
             } else if (*c == '*') { // can't parse this in another function, not portably, at least
                 precision = va_arg(ap, int);
@@ -5840,11 +5834,11 @@ iString iString::vasprintf(const char *cformat, va_list ap)
                     default: u = 0; break;
                 }
 
-                if (qIsUpper(*c))
+                if (iIsUpper(*c))
                     flags |= iLocaleData::CapitalEorX;
 
                 int base = 10;
-                switch (qToLower(*c)) {
+                switch (iToLower(*c)) {
                     case 'o':
                         base = 8; break;
                     case 'u':
@@ -5871,11 +5865,11 @@ iString iString::vasprintf(const char *cformat, va_list ap)
                 else
                     d = va_arg(ap, double);
 
-                if (qIsUpper(*c))
+                if (iIsUpper(*c))
                     flags |= iLocaleData::CapitalEorX;
 
                 iLocaleData::DoubleForm form = iLocaleData::DFDecimal;
-                switch (qToLower(*c)) {
+                switch (iToLower(*c)) {
                     case 'e': form = iLocaleData::DFExponent; break;
                     case 'a':                             // not supported - decimal form used instead
                     case 'f': form = iLocaleData::DFDecimal; break;
@@ -5979,7 +5973,7 @@ iString iString::vasprintf(const char *cformat, va_list ap)
 
     Example:
 
-    \snippet qstring/main.cpp 74
+    \snippet istring/main.cpp 74
 
     This function ignores leading and trailing whitespace.
 
@@ -6019,7 +6013,7 @@ xlonglong iString::toIntegral_helper(const iChar *data, int len, bool *ok, int b
 
     Example:
 
-    \snippet qstring/main.cpp 79
+    \snippet istring/main.cpp 79
 
     This function ignores leading and trailing whitespace.
 
@@ -6061,7 +6055,7 @@ xulonglong iString::toIntegral_helper(const iChar *data, uint len, bool *ok, int
 
     Example:
 
-    \snippet qstring/main.cpp 73
+    \snippet istring/main.cpp 73
 
     This function ignores leading and trailing whitespace.
 
@@ -6092,7 +6086,7 @@ long iString::toLong(bool *ok, int base) const
 
     Example:
 
-    \snippet qstring/main.cpp 78
+    \snippet istring/main.cpp 78
 
     This function ignores leading and trailing whitespace.
 
@@ -6122,7 +6116,7 @@ ulong iString::toULong(bool *ok, int base) const
 
     Example:
 
-    \snippet qstring/main.cpp 72
+    \snippet istring/main.cpp 72
 
     This function ignores leading and trailing whitespace.
 
@@ -6151,7 +6145,7 @@ int iString::toInt(bool *ok, int base) const
 
     Example:
 
-    \snippet qstring/main.cpp 77
+    \snippet istring/main.cpp 77
 
     This function ignores leading and trailing whitespace.
 
@@ -6180,7 +6174,7 @@ uint iString::toUInt(bool *ok, int base) const
 
     Example:
 
-    \snippet qstring/main.cpp 76
+    \snippet istring/main.cpp 76
 
     This function ignores leading and trailing whitespace.
 
@@ -6209,7 +6203,7 @@ short iString::toShort(bool *ok, int base) const
 
     Example:
 
-    \snippet qstring/main.cpp 80
+    \snippet istring/main.cpp 80
 
     This function ignores leading and trailing whitespace.
 
@@ -6231,25 +6225,25 @@ ushort iString::toUShort(bool *ok, int base) const
     If \a ok is not \nullptr, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
-    \snippet qstring/main.cpp 66
+    \snippet istring/main.cpp 66
 
     \warning The iString content may only contain valid numerical characters
     which includes the plus/minus sign, the character e used in scientific
     notation, and the decimal point. Including the unit or additional characters
     leads to a conversion error.
 
-    \snippet qstring/main.cpp 67
+    \snippet istring/main.cpp 67
 
     The string conversion will always happen in the 'C' locale. For locale
     dependent conversion use iLocale::toDouble()
 
-    \snippet qstring/main.cpp 68
+    \snippet istring/main.cpp 68
 
     For historical reasons, this function does not handle
     thousands group separators. If you need to convert such numbers,
     use iLocale::toDouble().
 
-    \snippet qstring/main.cpp 69
+    \snippet istring/main.cpp 69
 
     This function ignores leading and trailing whitespace.
 
@@ -6284,7 +6278,7 @@ double iString::toDouble(bool *ok) const
 
     Example:
 
-    \snippet qstring/main.cpp 71
+    \snippet istring/main.cpp 71
 
     This function ignores leading and trailing whitespace.
 
@@ -6304,7 +6298,7 @@ float iString::toFloat(bool *ok) const
     The base is 10 by default and must be between 2 and 36. For bases
     other than 10, \a n is treated as an unsigned integer.
 
-    \snippet qstring/main.cpp 56
+    \snippet istring/main.cpp 56
 
    The formatting always uses iLocale::C, i.e., English/UnitedStates.
    To get a localized string representation of a number, use
@@ -6446,10 +6440,10 @@ iString iString::number(double n, char f, int prec)
     iLocaleData::DoubleForm form = iLocaleData::DFDecimal;
     uint flags = iLocaleData::ZeroPadExponent;
 
-    if (qIsUpper(f))
+    if (iIsUpper(f))
         flags |= iLocaleData::CapitalEorX;
 
-    switch (qToLower(f)) {
+    switch (iToLower(f)) {
         case 'f':
             form = iLocaleData::DFDecimal;
             break;
@@ -6503,17 +6497,17 @@ static ResultList splitString(const StringSource &source, const iChar *sep,
 
     Example:
 
-    \snippet qstring/main.cpp 62
+    \snippet istring/main.cpp 62
 
     If \a sep is empty, split() returns an empty string, followed
     by each of the string's characters, followed by another empty string:
 
-    \snippet qstring/main.cpp 62-empty
+    \snippet istring/main.cpp 62-empty
 
     To understand this behavior, recall that the empty string matches
     everywhere, so the above is qualitatively the same as:
 
-    \snippet qstring/main.cpp 62-slashes
+    \snippet istring/main.cpp 62-slashes
 
     \sa std::list<iString>::join(), section()
 */
@@ -6532,7 +6526,7 @@ std::list<iString> iString::split(const iString &sep, SplitBehavior behavior, iS
     \note All references are valid as long this string is alive. Destroying this
     string will cause all references to be dangling pointers.
 
-    \since 5.4
+
     \sa iStringRef split()
 */
 std::vector<iStringRef> iString::splitRef(const iString &sep, SplitBehavior behavior, iShell::CaseSensitivity cs) const
@@ -6549,7 +6543,7 @@ std::list<iString> iString::split(iChar sep, SplitBehavior behavior, iShell::Cas
 
 /*!
     \overload
-    \since 5.4
+
 */
 std::vector<iStringRef> iString::splitRef(iChar sep, SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
@@ -6566,7 +6560,7 @@ std::vector<iStringRef> iString::splitRef(iChar sep, SplitBehavior behavior, iSh
     \note All references are valid as long this string is alive. Destroying this
     string will cause all references to be dangling pointers.
 
-    \since 5.4
+
 */
 std::vector<iStringRef> iStringRef::split(const iString &sep, iString::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
@@ -6575,7 +6569,7 @@ std::vector<iStringRef> iStringRef::split(const iString &sep, iString::SplitBeha
 
 /*!
     \overload
-    \since 5.4
+
 */
 std::vector<iStringRef> iStringRef::split(iChar sep, iString::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 {
@@ -6615,18 +6609,18 @@ static ResultList splitString(const iString &source, MidMethod mid, const iRegEx
     Here is an example where we extract the words in a sentence
     using one or more whitespace characters as the separator:
 
-    \snippet qstring/main.cpp 59
+    \snippet istring/main.cpp 59
 
     Here is a similar example, but this time we use any sequence of
     non-word characters as the separator:
 
-    \snippet qstring/main.cpp 60
+    \snippet istring/main.cpp 60
 
     Here is a third example where we use a zero-length assertion,
     \b{\\b} (word boundary), to split the string into an
     alternating sequence of non-word and word tokens:
 
-    \snippet qstring/main.cpp 61
+    \snippet istring/main.cpp 61
 
     \sa std::list<iString>::join(), section()
 */
@@ -6637,7 +6631,7 @@ std::list<iString> iString::split(const iRegExp &rx, SplitBehavior behavior) con
 
 /*!
     \overload
-    \since 5.4
+
 
     Splits the string into substring references wherever the regular expression
     \a rx matches, and returns the list of those strings. If \a rx
@@ -6669,7 +6663,7 @@ std::vector<iStringRef> iString::splitRef(const iRegExp &rx, SplitBehavior behav
 */
 
 /*!
-    \since 4.5
+
 
     Returns a copy of this string repeated the specified number of \a times.
 
@@ -6714,7 +6708,7 @@ iString iString::repeated(int times) const
     return result;
 }
 
-void qt_string_normalize(iString *data, iString::NormalizationForm mode, iChar::UnicodeVersion version, int from)
+void ix_string_normalize(iString *data, iString::NormalizationForm mode, iChar::UnicodeVersion version, int from)
 {
     using namespace iUnicodeTables;
 
@@ -6781,7 +6775,7 @@ void qt_string_normalize(iString *data, iString::NormalizationForm mode, iChar::
 iString iString::normalized(iString::NormalizationForm mode, iChar::UnicodeVersion version) const
 {
     iString copy = *this;
-    qt_string_normalize(&copy, mode, version, 0);
+    ix_string_normalize(&copy, mode, version, 0);
     return copy;
 }
 
@@ -6964,7 +6958,7 @@ static iString replaceArgEscapes(iStringView s, const ArgEscapeData &d, int fiel
   This example shows how we might create a \c status string for
   reporting progress while processing a list of files:
 
-  \snippet qstring/main.cpp 11
+  \snippet istring/main.cpp 11
 
   First, \c arg(i) replaces \c %1. Then \c arg(total) replaces \c
   %2. Finally, \c arg(fileName) replaces \c %3.
@@ -6982,12 +6976,12 @@ static iString replaceArgEscapes(iStringView s, const ArgEscapeData &d, int fiel
 */
 iString iString::arg(const iString &a, int fieldWidth, iChar fillChar) const
 {
-    return arg(qToStringViewIgnoringNull(a), fieldWidth, fillChar);
+    return arg(iToStringViewIgnoringNull(a), fieldWidth, fillChar);
 }
 
 /*!
     \overload
-    \since 5.10
+
 
     Returns a copy of this string with the lowest-numbered place-marker
     replaced by string \a a, i.e., \c %1, \c %2, ..., \c %99.
@@ -7001,7 +6995,7 @@ iString iString::arg(const iString &a, int fieldWidth, iChar fillChar) const
     This example shows how we might create a \c status string for
     reporting progress while processing a list of files:
 
-    \snippet qstring/main.cpp 11-qstringview
+    \snippet istring/main.cpp 11-qstringview
 
     First, \c arg(i) replaces \c %1. Then \c arg(total) replaces \c
     %2. Finally, \c arg(fileName) replaces \c %3.
@@ -7031,7 +7025,7 @@ iString iString::arg(iStringView a, int fieldWidth, iChar fillChar) const
 
 /*!
     \overload
-    \since 5.10
+
 
     Returns a copy of this string with the lowest-numbered place-marker
     replaced by string \a a, i.e., \c %1, \c %2, ..., \c %99.
@@ -7068,13 +7062,13 @@ iString iString::arg(iLatin1String a, int fieldWidth, iChar fillChar) const
   strings \a a1 and \a a2 are replaced in one pass. This can make a
   difference if \a a1 contains e.g. \c{%1}:
 
-  \snippet qstring/main.cpp 13
+  \snippet istring/main.cpp 13
 
   A similar problem occurs when the numbered place markers are not
   white space separated:
 
-  \snippet qstring/main.cpp 12
-  \snippet qstring/main.cpp 97
+  \snippet istring/main.cpp 12
+  \snippet istring/main.cpp 97
 
   Let's look at the substitutions:
   \list
@@ -7086,8 +7080,8 @@ iString iString::arg(iLatin1String a, int fieldWidth, iChar fillChar) const
 
   In such cases, the following yields the expected results:
 
-  \snippet qstring/main.cpp 12
-  \snippet qstring/main.cpp 98
+  \snippet istring/main.cpp 12
+  \snippet istring/main.cpp 98
 */
 
 /*!
@@ -7174,8 +7168,8 @@ iString iString::arg(iLatin1String a, int fieldWidth, iChar fillChar) const
   locale was specified, the "C" locale is used. The 'L' flag is
   ignored if \a base is not 10.
 
-  \snippet qstring/main.cpp 12
-  \snippet qstring/main.cpp 14
+  \snippet istring/main.cpp 12
+  \snippet istring/main.cpp 14
 
   If \a fillChar is '0' (the number 0, ASCII 48), the locale's zero is
   used. For negative numbers, zero padding might appear before the
@@ -7211,8 +7205,8 @@ iString iString::arg(iLatin1String a, int fieldWidth, iChar fillChar) const
   using iLocale::setDefault(). The 'L' flag is ignored if \a base is
   not 10.
 
-  \snippet qstring/main.cpp 12
-  \snippet qstring/main.cpp 14
+  \snippet istring/main.cpp 12
+  \snippet istring/main.cpp 14
 
   If \a fillChar is '0' (the number 0, ASCII 48), the locale's zero is
   used. For negative numbers, zero padding might appear before the
@@ -7421,11 +7415,11 @@ iString iString::arg(double a, int fieldWidth, char fmt, int prec, iChar fillCha
     if (fillChar == iLatin1Char('0'))
         flags |= iLocaleData::ZeroPadded;
 
-    if (qIsUpper(fmt))
+    if (iIsUpper(fmt))
         flags |= iLocaleData::CapitalEorX;
 
     iLocaleData::DoubleForm form = iLocaleData::DFDecimal;
-    switch (qToLower(fmt)) {
+    switch (iToLower(fmt)) {
     case 'f':
         form = iLocaleData::DFDecimal;
         break;
@@ -7681,7 +7675,7 @@ bool iString::isRightToLeft() const
 
     Example:
 
-    \snippet qstring/main.cpp 19
+    \snippet istring/main.cpp 19
 
     Note that the pointer remains valid only as long as the string is
     not modified by other means. For read-only access, constData() is
@@ -7747,7 +7741,7 @@ bool iString::isRightToLeft() const
 */
 
 /*! \fn void iString::shrink_to_fit()
-    \since 5.10
+
 
     This function is provided for STL compatibility. It is
     equivalent to squeeze().
@@ -7782,8 +7776,8 @@ bool iString::isRightToLeft() const
     Here is an example of how we can use a iRegularExpression on raw data in
     memory without requiring to copy the data into a iString:
 
-    \snippet qstring/main.cpp 22
-    \snippet qstring/main.cpp 23
+    \snippet istring/main.cpp 22
+    \snippet istring/main.cpp 23
 
     \warning A string created with fromRawData() is \e not
     '\\0'-terminated, unless the raw data contains a '\\0' character
@@ -7809,7 +7803,7 @@ iString iString::fromRawData(const iChar *unicode, int size)
 }
 
 /*!
-    \since 4.7
+
 
     Resets the iString to use the first \a size Unicode characters
     in the array \a unicode. The data in \a unicode is \e not
@@ -7839,7 +7833,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 }
 
 /*! \fn iString iString::fromStdU16String(const std::u16string &str)
-    \since 5.5
+
 
     Returns a copy of the \a str string. The given string is assumed
     to be encoded in UTF-16.
@@ -7849,7 +7843,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn std::u16string iString::toStdU16String() const
-    \since 5.5
+
 
     Returns a std::u16string object with the data contained in this
     iString. The Unicode data is the same as returned by the utf16()
@@ -7859,7 +7853,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iString iString::fromStdU32String(const std::u32string &str)
-    \since 5.5
+
 
     Returns a copy of the \a str string. The given string is assumed
     to be encoded in UCS-4.
@@ -7869,7 +7863,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn std::u32string iString::toStdU32String() const
-    \since 5.5
+
 
     Returns a std::u32string object with the data contained in this
     iString. The Unicode data is the same as returned by the toUcs4()
@@ -7879,7 +7873,6 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \class iLatin1String
-    \inmodule QtCore
     \brief The iLatin1String class provides a thin wrapper around an US-ASCII/Latin-1 encoded string literal.
 
     \ingroup string-processing
@@ -7903,10 +7896,10 @@ iString &iString::setRawData(const iChar *unicode, int size)
     because it doesn't construct four temporary iString objects and
     make a deep copy of the character data.
 
-    Applications that define \c QT_NO_CAST_FROM_ASCII (as explained
+    Applications that define \c IX_NO_CAST_FROM_ASCII (as explained
     in the iString documentation) don't have access to iString's
     \c{const char *} API. To provide an efficient way of specifying
-    constant Latin-1 strings, Qt provides the iLatin1String, which is
+    constant Latin-1 strings, iShell provides the iLatin1String, which is
     just a very thin wrapper around a \c{const char *}. Using
     iLatin1String, the example code above becomes
 
@@ -7929,47 +7922,47 @@ iString &iString::setRawData(const iChar *unicode, int size)
     in the first place. In those cases, using iStringLiteral may be
     the better option.
 
-    \sa iString, iLatin1Char, {iStringLiteral()}{iStringLiteral}, QT_NO_CAST_FROM_ASCII
+    \sa iString, iLatin1Char, {iStringLiteral()}{iStringLiteral}, IX_NO_CAST_FROM_ASCII
 */
 
 /*!
     \typedef iLatin1String::value_type
-    \since 5.10
+
 
     Alias for \c{const char}. Provided for compatibility with the STL.
 */
 
 /*!
     \typedef iLatin1String::difference_type
-    \since 5.10
+
 
     Alias for \c{int}. Provided for compatibility with the STL.
 */
 
 /*!
     \typedef iLatin1String::size_type
-    \since 5.10
+
 
     Alias for \c{int}. Provided for compatibility with the STL.
 */
 
 /*!
     \typedef iLatin1String::reference
-    \since 5.10
+
 
     Alias for \c{value_type &}. Provided for compatibility with the STL.
 */
 
 /*!
     \typedef iLatin1String::const_reference
-    \since 5.11
+
 
     Alias for \c{reference}. Provided for compatibility with the STL.
 */
 
 /*!
     \typedef iLatin1String::iterator
-    \since 5.10
+
 
     This typedef provides an STL-style const iterator for iLatin1String.
 
@@ -7981,7 +7974,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \typedef iLatin1String::const_iterator
-    \since 5.10
+
 
     This typedef provides an STL-style const iterator for iLatin1String.
 
@@ -7990,7 +7983,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \typedef iLatin1String::reverse_iterator
-    \since 5.10
+
 
     This typedef provides an STL-style const reverse iterator for iLatin1String.
 
@@ -8002,7 +7995,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \typedef iLatin1String::const_reverse_iterator
-    \since 5.10
+
 
     This typedef provides an STL-style const reverse iterator for iLatin1String.
 
@@ -8010,7 +8003,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iLatin1String::iLatin1String()
-    \since 5.6
+
 
     Constructs a iLatin1String object that stores a nullptr.
 */
@@ -8039,7 +8032,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String::iLatin1String(const char *first, const char *last)
-    \since 5.10
+
 
     Constructs a iLatin1String object that stores \a first with length
     (\a last - \a first).
@@ -8082,7 +8075,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn bool iLatin1String::isNull() const
-    \since 5.10
+
 
     Returns whether the Latin-1 string stored in this object is null
     (\c{data() == nullptr}) or not.
@@ -8091,7 +8084,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn bool iLatin1String::isEmpty() const
-    \since 5.10
+
 
     Returns whether the Latin-1 string stored in this object is empty
     (\c{size() == 0}) or not.
@@ -8100,7 +8093,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iLatin1Char iLatin1String::at(int pos) const
-    \since 5.8
+
 
     Returns the character at position \a pos in this object.
 
@@ -8111,7 +8104,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iLatin1Char iLatin1String::operator[](int pos) const
-    \since 5.8
+
 
     Returns the character at position \a pos in this object.
 
@@ -8123,7 +8116,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1Char iLatin1String::front() const
-    \since 5.10
+
 
     Returns the first character in the string.
     Same as \c{at(0)}.
@@ -8138,7 +8131,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1Char iLatin1String::back() const
-    \since 5.10
+
 
     Returns the last character in the string.
     Same as \c{at(size() - 1)}.
@@ -8153,13 +8146,13 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn bool iLatin1String::startsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \since 5.10
+
     \fn bool iLatin1String::startsWith(iLatin1String l1, iShell::CaseSensitivity cs) const
-    \since 5.10
+
     \fn bool iLatin1String::startsWith(iChar ch) const
-    \since 5.10
+
     \fn bool iLatin1String::startsWith(iChar ch, iShell::CaseSensitivity cs) const
-    \since 5.10
+
 
     Returns \c true if this Latin-1 string starts with string-view \a str,
     Latin-1 string \a l1, or character \a ch, respectively;
@@ -8173,13 +8166,13 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn bool iLatin1String::endsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \since 5.10
+
     \fn bool iLatin1String::endsWith(iLatin1String l1, iShell::CaseSensitivity cs) const
-    \since 5.10
+
     \fn bool iLatin1String::endsWith(iChar ch) const
-    \since 5.10
+
     \fn bool iLatin1String::endsWith(iChar ch, iShell::CaseSensitivity cs) const
-    \since 5.10
+
 
     Returns \c true if this Latin-1 string ends with string-view \a str,
     Latin-1 string \a l1, or character \a ch, respectively;
@@ -8193,7 +8186,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String::const_iterator iLatin1String::begin() const
-    \since 5.10
+
 
     Returns a const \l{STL-style iterators}{STL-style iterator} pointing to the first character in
     the string.
@@ -8205,7 +8198,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String::const_iterator iLatin1String::cbegin() const
-    \since 5.10
+
 
     Same as begin().
 
@@ -8216,7 +8209,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String::const_iterator iLatin1String::end() const
-    \since 5.10
+
 
     Returns a const \l{STL-style iterators}{STL-style iterator} pointing to the imaginary
     character after the last character in the list.
@@ -8227,7 +8220,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iLatin1String::const_iterator iLatin1String::cend() const
-    \since 5.10
+
 
     Same as end().
 
@@ -8238,7 +8231,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String::const_reverse_iterator iLatin1String::rbegin() const
-    \since 5.10
+
 
     Returns a const \l{STL-style iterators}{STL-style} reverse iterator pointing to the first
     character in the string, in reverse order.
@@ -8250,7 +8243,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String::const_reverse_iterator iLatin1String::crbegin() const
-    \since 5.10
+
 
     Same as rbegin().
 
@@ -8261,7 +8254,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String::const_reverse_iterator iLatin1String::rend() const
-    \since 5.10
+
 
     Returns a \l{STL-style iterators}{STL-style} reverse iterator pointing to one past
     the last character in the string, in reverse order.
@@ -8273,7 +8266,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String::const_reverse_iterator iLatin1String::crend() const
-    \since 5.10
+
 
     Same as rend().
 
@@ -8283,7 +8276,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iLatin1String iLatin1String::mid(int start) const
-    \since 5.8
+
 
     Returns the substring starting at position \a start in this object,
     and extending to the end of the string.
@@ -8295,7 +8288,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iLatin1String iLatin1String::mid(int start, int length) const
-    \since 5.8
+
     \overload
 
     Returns the substring of length \a length starting at position
@@ -8309,7 +8302,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iLatin1String iLatin1String::left(int length) const
-    \since 5.8
+
 
     Returns the substring of length \a length starting at position
     0 in this object.
@@ -8321,7 +8314,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 */
 
 /*! \fn iLatin1String iLatin1String::right(int length) const
-    \since 5.8
+
 
     Returns the substring of length \a length starting at position
     size() - \a length in this object.
@@ -8334,7 +8327,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String iLatin1String::chopped(int length) const
-    \since 5.10
+
 
     Returns the substring of length size() - \a length starting at the
     beginning of this object.
@@ -8348,7 +8341,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn void iLatin1String::truncate(int length)
-    \since 5.10
+
 
     Truncates this string to length \a length.
 
@@ -8361,7 +8354,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn void iLatin1String::chop(int length)
-    \since 5.10
+
 
     Truncates this string by \a length characters.
 
@@ -8374,7 +8367,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn iLatin1String iLatin1String::trimmed() const
-    \since 5.10
+
 
     Strips leading and trailing whitespace and returns the result.
 
@@ -8396,34 +8389,34 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn bool iLatin1String::operator==(const char *other) const
-    \since 4.3
+
     \overload
 
     The \a other const char pointer is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
     \fn bool iLatin1String::operator==(const iByteArray &other) const
-    \since 5.0
+
     \overload
 
     The \a other byte array is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool iLatin1String::operator!=(const iString &other) const
@@ -8439,34 +8432,34 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn bool iLatin1String::operator!=(const char *other) const
-    \since 4.3
+
     \overload operator!=()
 
     The \a other const char pointer is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
     \fn bool iLatin1String::operator!=(const iByteArray &other) const
-    \since 5.0
+
     \overload operator!=()
 
     The \a other byte array is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -8483,34 +8476,34 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn bool iLatin1String::operator>(const char *other) const
-    \since 4.3
+
     \overload
 
     The \a other const char pointer is converted to a iString using
     the iString::fromUtf8() function.
 
-    You can disable this operator by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this operator by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
     \fn bool iLatin1String::operator>(const iByteArray &other) const
-    \since 5.0
+
     \overload
 
     The \a other const char pointer is converted to a iString using
     the iString::fromUtf8() function.
 
-    You can disable this operator by defining \c QT_NO_CAST_FROM_ASCII
+    You can disable this operator by defining \c IX_NO_CAST_FROM_ASCII
     when you compile your applications. This can be useful if you want
-    to ensure that all user-visible strings go through QObject::tr(),
+    to ensure that all user-visible strings go through iObject::tr(),
     for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -8527,34 +8520,34 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn bool iLatin1String::operator<(const char *other) const
-    \since 4.3
+
     \overload
 
     The \a other const char pointer is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
     \fn bool iLatin1String::operator<(const iByteArray &other) const
-    \since 5.0
+
     \overload
 
     The \a other const char pointer is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -8571,34 +8564,34 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn bool iLatin1String::operator>=(const char *other) const
-    \since 4.3
+
     \overload
 
     The \a other const char pointer is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
     \fn bool iLatin1String::operator>=(const iByteArray &other) const
-    \since 5.0
+
     \overload
 
     The \a other array is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn bool iLatin1String::operator<=(const iString &other) const
@@ -8614,34 +8607,34 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \fn bool iLatin1String::operator<=(const char *other) const
-    \since 4.3
+
     \overload
 
     The \a other const char pointer is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
     \fn bool iLatin1String::operator<=(const iByteArray &other) const
-    \since 5.0
+
     \overload
 
     The \a other array is converted to a iString using
     the iString::fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 
@@ -8685,8 +8678,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \class iStringRef
-    \inmodule QtCore
-    \since 4.3
+
     \brief The iStringRef class provides a thin wrapper around iString substrings.
     \reentrant
     \ingroup tools
@@ -8745,7 +8737,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \typedef iStringRef::const_iterator
-    \since 5.4
+
 
     This typedef provides an STL-style const iterator for iStringRef.
 
@@ -8754,7 +8746,7 @@ iString &iString::setRawData(const iChar *unicode, int size)
 
 /*!
     \typedef iStringRef::const_reverse_iterator
-    \since 5.7
+
 
     This typedef provides an STL-style const reverse iterator for iStringRef.
 
@@ -8889,7 +8881,7 @@ ownership of it, no memory is freed when instances are destroyed.
 
 /*!
     \fn iStringRef::const_iterator iStringRef::begin() const
-    \since 5.4
+
 
     Returns a const \l{STL-style iterators}{STL-style iterator} pointing to the first character in
     the string.
@@ -8899,7 +8891,7 @@ ownership of it, no memory is freed when instances are destroyed.
 
 /*!
     \fn iStringRef::const_iterator iStringRef::cbegin() const
-    \since 5.4
+
 
     Same as begin().
 
@@ -8908,7 +8900,7 @@ ownership of it, no memory is freed when instances are destroyed.
 
 /*!
     \fn iStringRef::const_iterator iStringRef::constBegin() const
-    \since 5.9
+
 
     Same as begin().
 
@@ -8917,7 +8909,7 @@ ownership of it, no memory is freed when instances are destroyed.
 
 /*!
     \fn iStringRef::const_iterator iStringRef::end() const
-    \since 5.4
+
 
     Returns a const \l{STL-style iterators}{STL-style iterator} pointing to the imaginary
     character after the last character in the list.
@@ -8926,7 +8918,7 @@ ownership of it, no memory is freed when instances are destroyed.
 */
 
 /*! \fn iStringRef::const_iterator iStringRef::cend() const
-    \since 5.4
+
 
     Same as end().
 
@@ -8934,7 +8926,7 @@ ownership of it, no memory is freed when instances are destroyed.
 */
 
 /*! \fn iStringRef::const_iterator iStringRef::constEnd() const
-    \since 5.9
+
 
     Same as end().
 
@@ -8943,7 +8935,7 @@ ownership of it, no memory is freed when instances are destroyed.
 
 /*!
     \fn iStringRef::const_reverse_iterator iStringRef::rbegin() const
-    \since 5.7
+
 
     Returns a const \l{STL-style iterators}{STL-style} reverse iterator pointing to the first
     character in the string, in reverse order.
@@ -8953,7 +8945,7 @@ ownership of it, no memory is freed when instances are destroyed.
 
 /*!
     \fn iStringRef::const_reverse_iterator iStringRef::crbegin() const
-    \since 5.7
+
 
     Same as rbegin().
 
@@ -8962,7 +8954,7 @@ ownership of it, no memory is freed when instances are destroyed.
 
 /*!
     \fn iStringRef::const_reverse_iterator iStringRef::rend() const
-    \since 5.7
+
 
     Returns a \l{STL-style iterators}{STL-style} reverse iterator pointing to one past
     the last character in the string, in reverse order.
@@ -8973,7 +8965,7 @@ ownership of it, no memory is freed when instances are destroyed.
 
 /*!
     \fn iStringRef::const_reverse_iterator iStringRef::crend() const
-    \since 5.7
+
 
     Same as rend().
 
@@ -9100,7 +9092,7 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
 
 /*!
     \fn iChar iStringRef::operator[](int position) const
-    \since 5.7
+
 
     Returns the character at the given index \a position in the
     string reference.
@@ -9113,7 +9105,7 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
 
 /*!
     \fn iChar iStringRef::front() const
-    \since 5.10
+
 
     Returns the first character in the string.
     Same as \c{at(0)}.
@@ -9128,7 +9120,7 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
 
 /*!
     \fn iChar iStringRef::back() const
-    \since 5.10
+
 
     Returns the last character in the string.
     Same as \c{at(size() - 1)}.
@@ -9173,14 +9165,14 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
     first NUL character found, or the end of the byte array.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
     Returns \c true if this string is lexically equal to the parameter
     string \a s. Otherwise returns \c false.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -9192,14 +9184,14 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
     Returns \c true if this string is not lexically equal to the parameter
     string \a s. Otherwise returns \c false.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -9211,14 +9203,14 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
     Returns \c true if this string is lexically smaller than the parameter
     string \a s. Otherwise returns \c false.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -9230,14 +9222,14 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
     Returns \c true if this string is lexically smaller than or equal to the parameter
     string \a s. Otherwise returns \c false.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -9250,14 +9242,14 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
     Returns \c true if this string is lexically greater than the parameter
     string \a s. Otherwise returns \c false.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 
 /*!
@@ -9269,14 +9261,14 @@ bool operator<(const iStringRef &s1,const iStringRef &s2)
     the fromUtf8() function.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. This
+    IX_NO_CAST_FROM_ASCII when you compile your applications. This
     can be useful if you want to ensure that all user-visible strings
-    go through QObject::tr(), for example.
+    go through iObject::tr(), for example.
 
     Returns \c true if this string is lexically greater than or equal to the
     parameter string \a s. Otherwise returns \c false.
 
-    \sa QT_NO_CAST_FROM_ASCII
+    \sa IX_NO_CAST_FROM_ASCII
 */
 /*!
     \typedef iString::Data
@@ -9309,7 +9301,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 
 /*!
     \fn int iStringRef::compare(const iStringRef &s1, const iString &s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
-    \since 4.5
+
 
     Compares the string \a s1 with the string \a s2 and returns an
     integer less than, equal to, or greater than zero if \a s1
@@ -9321,7 +9313,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 
 /*!
     \fn int iStringRef::compare(const iStringRef &s1, const iStringRef &s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
-    \since 4.5
+
     \overload
 
     Compares the string \a s1 with the string \a s2 and returns an
@@ -9334,7 +9326,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 
 /*!
     \fn int iStringRef::compare(const iStringRef &s1, iLatin1String s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
-    \since 4.5
+
     \overload
 
     Compares the string \a s1 with the string \a s2 and returns an
@@ -9348,7 +9340,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 /*!
     \overload
     \fn int iStringRef::compare(const iString &other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \since 4.5
+
 
     Compares this string with the \a other string and returns an
     integer less than, equal to, or greater than zero if this string
@@ -9363,7 +9355,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 /*!
     \overload
     \fn int iStringRef::compare(const iStringRef &other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \since 4.5
+
 
     Compares this string with the \a other string and returns an
     integer less than, equal to, or greater than zero if this string
@@ -9378,7 +9370,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 /*!
     \overload
     \fn int iStringRef::compare(iLatin1String other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \since 4.5
+
 
     Compares this string with the \a other string and returns an
     integer less than, equal to, or greater than zero if this string
@@ -9393,7 +9385,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 /*!
     \overload
     \fn int iStringRef::compare(const iByteArray &other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \since 5.8
+
 
     Compares this string with \a other and returns an
     integer less than, equal to, or greater than zero if this string
@@ -9408,7 +9400,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 
 /*!
     \fn int iStringRef::localeAwareCompare(const iStringRef &s1, const iString & s2)
-    \since 4.5
+
 
     Compares \a s1 with \a s2 and returns an integer less than, equal
     to, or greater than zero if \a s1 is less than, equal to, or
@@ -9426,7 +9418,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 
 /*!
     \fn int iStringRef::localeAwareCompare(const iStringRef &s1, const iStringRef & s2)
-    \since 4.5
+
     \overload
 
     Compares \a s1 with \a s2 and returns an integer less than, equal
@@ -9441,7 +9433,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 
 /*!
     \fn int iStringRef::localeAwareCompare(const iString &other) const
-    \since 4.5
+
     \overload
 
     Compares this string with the \a other string and returns an
@@ -9455,7 +9447,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 
 /*!
     \fn int iStringRef::localeAwareCompare(const iStringRef &other) const
-    \since 4.5
+
     \overload
 
     Compares this string with the \a other string and returns an
@@ -9469,7 +9461,7 @@ iStringRef iStringRef::appendTo(iString *string) const
 
 /*!
     \fn iString &iString::append(const iStringRef &reference)
-    \since 4.4
+
 
     Appends the given string \a reference to this string and returns the result.
  */
@@ -9487,7 +9479,7 @@ iString &iString::append(const iStringRef &str)
 
 /*!
     \fn iStringRef::left(int n) const
-    \since 5.2
+
 
     Returns a substring reference to the \a n leftmost characters
     of the string.
@@ -9505,7 +9497,7 @@ iStringRef iStringRef::left(int n) const
 }
 
 /*!
-    \since 4.4
+
 
     Returns a substring reference to the \a n leftmost characters
     of the string.
@@ -9513,7 +9505,7 @@ iStringRef iStringRef::left(int n) const
     If \a n is greater than or equal to size(), or less than zero,
     a reference to the entire string is returned.
 
-    \snippet qstring/main.cpp leftRef
+    \snippet istring/main.cpp leftRef
 
     \sa left(), rightRef(), midRef(), startsWith()
 */
@@ -9524,7 +9516,7 @@ iStringRef iString::leftRef(int n)  const
 
 /*!
     \fn iStringRef::right(int n) const
-    \since 5.2
+
 
     Returns a substring reference to the \a n rightmost characters
     of the string.
@@ -9542,7 +9534,7 @@ iStringRef iStringRef::right(int n) const
 }
 
 /*!
-    \since 4.4
+
 
     Returns a substring reference to the \a n rightmost characters
     of the string.
@@ -9550,7 +9542,7 @@ iStringRef iStringRef::right(int n) const
     If \a n is greater than or equal to size(), or less than zero,
     a reference to the entire string is returned.
 
-    \snippet qstring/main.cpp rightRef
+    \snippet istring/main.cpp rightRef
 
     \sa right(), leftRef(), midRef(), endsWith()
 */
@@ -9561,7 +9553,7 @@ iStringRef iString::rightRef(int n) const
 
 /*!
     \fn iStringRef iStringRef::mid(int position, int n = -1) const
-    \since 5.2
+
 
     Returns a substring reference to \a n characters of this string,
     starting at the specified \a position.
@@ -9595,7 +9587,7 @@ iStringRef iStringRef::mid(int pos, int n) const
 
 /*!
     \fn iStringRef iStringRef::chopped(int len) const
-    \since 5.10
+
 
     Returns a substring reference to the size() - \a len leftmost characters
     of this string.
@@ -9606,7 +9598,7 @@ iStringRef iStringRef::mid(int pos, int n) const
 */
 
 /*!
-    \since 4.4
+
 
     Returns a substring reference to \a n characters of this string,
     starting at the specified \a position.
@@ -9621,7 +9613,7 @@ iStringRef iStringRef::mid(int pos, int n) const
 
     Example:
 
-    \snippet qstring/main.cpp midRef
+    \snippet istring/main.cpp midRef
 
     \sa mid(), leftRef(), rightRef()
 */
@@ -9632,7 +9624,7 @@ iStringRef iString::midRef(int position, int n) const
 
 /*!
     \fn void iStringRef::truncate(int position)
-    \since 5.6
+
 
     Truncates the string at the given \a position index.
 
@@ -9646,7 +9638,7 @@ iStringRef iString::midRef(int position, int n) const
 
 /*!
     \fn void iStringRef::chop(int n)
-    \since 5.8
+
 
     Removes \a n characters from the end of the string.
 
@@ -9657,8 +9649,6 @@ iStringRef iString::midRef(int position, int n) const
 */
 
 /*!
-  \since 4.8
-
   Returns the index position of the first occurrence of the string \a
   str in this string reference, searching forward from index position
   \a from. Returns -1 if \a str is not found.
@@ -9677,7 +9667,6 @@ int iStringRef::indexOf(const iString &str, int from, iShell::CaseSensitivity cs
 }
 
 /*!
-    \since 4.8
     \overload indexOf()
 
     Returns the index position of the first occurrence of the
@@ -9692,8 +9681,6 @@ int iStringRef::indexOf(iChar ch, int from, iShell::CaseSensitivity cs) const
 }
 
 /*!
-  \since 4.8
-
   Returns the index position of the first occurrence of the string \a
   str in this string reference, searching forward from index position
   \a from. Returns -1 if \a str is not found.
@@ -9712,8 +9699,6 @@ int iStringRef::indexOf(iLatin1String str, int from, iShell::CaseSensitivity cs)
 }
 
 /*!
-    \since 4.8
-
     \overload indexOf()
 
     Returns the index position of the first occurrence of the string
@@ -9731,8 +9716,6 @@ int iStringRef::indexOf(const iStringRef &str, int from, iShell::CaseSensitivity
 }
 
 /*!
-  \since 4.8
-
   Returns the index position of the last occurrence of the string \a
   str in this string reference, searching backward from index position
   \a from. If \a from is -1 (default), the search starts at the last
@@ -9750,7 +9733,6 @@ int iStringRef::lastIndexOf(const iString &str, int from, iShell::CaseSensitivit
 }
 
 /*!
-  \since 4.8
   \overload lastIndexOf()
 
   Returns the index position of the last occurrence of the character
@@ -9785,7 +9767,6 @@ static int last_index_of_impl(const iStringRef &haystack, int from, const T &nee
 }
 
 /*!
-  \since 4.8
   \overload lastIndexOf()
 
   Returns the index position of the last occurrence of the string \a
@@ -9805,7 +9786,6 @@ int iStringRef::lastIndexOf(iLatin1String str, int from, iShell::CaseSensitivity
 }
 
 /*!
-  \since 4.8
   \overload lastIndexOf()
 
   Returns the index position of the last occurrence of the string
@@ -9825,7 +9805,7 @@ int iStringRef::lastIndexOf(const iStringRef &str, int from, iShell::CaseSensiti
 }
 
 /*!
-    \since 4.8
+
     Returns the number of (potentially overlapping) occurrences of
     the string \a str in this string reference.
 
@@ -9840,7 +9820,6 @@ int iStringRef::count(const iString &str, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 4.8
     \overload count()
 
     Returns the number of occurrences of the character \a ch in the
@@ -9857,7 +9836,6 @@ int iStringRef::count(iChar ch, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 4.8
     \overload count()
 
     Returns the number of (potentially overlapping) occurrences of the
@@ -9874,8 +9852,6 @@ int iStringRef::count(const iStringRef &str, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 5.9
-
     Returns \c true if the string is read right to left.
 
     \sa iString::isRightToLeft()
@@ -9886,7 +9862,6 @@ bool iStringRef::isRightToLeft() const
 }
 
 /*!
-    \since 5.11
     \internal
     \relates iStringView
 
@@ -9937,8 +9912,6 @@ bool iPrivate::isRightToLeft(iStringView string)
 }
 
 /*!
-    \since 4.8
-
     Returns \c true if the string reference starts with \a str; otherwise
     returns \c false.
 
@@ -9953,7 +9926,6 @@ bool iStringRef::startsWith(const iString &str, iShell::CaseSensitivity cs) cons
 }
 
 /*!
-    \since 4.8
     \overload startsWith()
     \sa iString::startsWith(), endsWith()
 */
@@ -9964,13 +9936,11 @@ bool iStringRef::startsWith(iLatin1String str, iShell::CaseSensitivity cs) const
 
 /*!
     \fn bool iStringRef::startsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \since 5.10
     \overload startsWith()
     \sa iString::startsWith(), endsWith()
 */
 
 /*!
-    \since 4.8
     \overload startsWith()
     \sa iString::startsWith(), endsWith()
 */
@@ -9980,7 +9950,6 @@ bool iStringRef::startsWith(const iStringRef &str, iShell::CaseSensitivity cs) c
 }
 
 /*!
-    \since 4.8
     \overload startsWith()
 
     Returns \c true if the string reference starts with \a ch; otherwise
@@ -9997,7 +9966,6 @@ bool iStringRef::startsWith(iChar ch, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 4.8
     Returns \c true if the string reference ends with \a str; otherwise
     returns \c false.
 
@@ -10012,7 +9980,6 @@ bool iStringRef::endsWith(const iString &str, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 4.8
     \overload endsWith()
 
     Returns \c true if the string reference ends with \a ch; otherwise
@@ -10029,7 +9996,6 @@ bool iStringRef::endsWith(iChar ch, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 4.8
     \overload endsWith()
     \sa iString::endsWith(), endsWith()
 */
@@ -10040,13 +10006,11 @@ bool iStringRef::endsWith(iLatin1String str, iShell::CaseSensitivity cs) const
 
 /*!
     \fn bool iStringRef::endsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \since 5.10
     \overload endsWith()
     \sa iString::endsWith(), startsWith()
 */
 
 /*!
-    \since 4.8
     \overload endsWith()
     \sa iString::endsWith(), endsWith()
 */
@@ -10058,7 +10022,6 @@ bool iStringRef::endsWith(const iStringRef &str, iShell::CaseSensitivity cs) con
 
 /*! \fn bool iStringRef::contains(const iString &str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
 
-    \since 4.8
     Returns \c true if this string reference contains an occurrence of
     the string \a str; otherwise returns \c false.
 
@@ -10071,7 +10034,6 @@ bool iStringRef::endsWith(const iStringRef &str, iShell::CaseSensitivity cs) con
 /*! \fn bool iStringRef::contains(iChar ch, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
 
     \overload contains()
-    \since 4.8
 
     Returns \c true if this string contains an occurrence of the
     character \a ch; otherwise returns \c false.
@@ -10083,7 +10045,6 @@ bool iStringRef::endsWith(const iStringRef &str, iShell::CaseSensitivity cs) con
 
 /*! \fn bool iStringRef::contains(const iStringRef &str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     \overload contains()
-    \since 4.8
 
     Returns \c true if this string reference contains an occurrence of
     the string reference \a str; otherwise returns \c false.
@@ -10095,7 +10056,6 @@ bool iStringRef::endsWith(const iStringRef &str, iShell::CaseSensitivity cs) con
 */
 
 /*! \fn bool iStringRef::contains(iLatin1String str, iShell::CaseSensitivity cs) const
-    \since 4.8
     \overload contains()
 
     Returns \c true if this string reference contains an occurrence of
@@ -10188,10 +10148,10 @@ static inline int ix_find_latin1_string(const iChar *haystack, int size,
 }
 
 template <typename Haystack, typename Needle>
-bool qt_starts_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity cs)
+bool ix_starts_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity cs)
 {
     if (haystack.isNull())
-        return needle.isNull(); // historical behavior, consider changing in ### Qt 6.
+        return needle.isNull(); // historical behavior
     const auto haystackLen = haystack.size();
     const auto needleLen = needle.size();
     if (haystackLen == 0)
@@ -10204,12 +10164,12 @@ bool qt_starts_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivi
 
 static inline bool ix_starts_with(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return qt_starts_with_impl(haystack, needle, cs);
+    return ix_starts_with_impl(haystack, needle, cs);
 }
 
 static inline bool ix_starts_with(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return qt_starts_with_impl(haystack, needle, cs);
+    return ix_starts_with_impl(haystack, needle, cs);
 }
 
 static inline bool ix_starts_with(iStringView haystack, iChar needle, iShell::CaseSensitivity cs)
@@ -10221,13 +10181,9 @@ static inline bool ix_starts_with(iStringView haystack, iChar needle, iShell::Ca
 
 /*!
     \fn bool iPrivate::startsWith(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::startsWith(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::startsWith(iLatin1String haystack, iStringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::startsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \internal
     \relates iStringView
 
@@ -10242,29 +10198,29 @@ static inline bool ix_starts_with(iStringView haystack, iChar needle, iShell::Ca
 
 bool iPrivate::startsWith(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return qt_starts_with_impl(haystack, needle, cs);
+    return ix_starts_with_impl(haystack, needle, cs);
 }
 
 bool iPrivate::startsWith(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return qt_starts_with_impl(haystack, needle, cs);
+    return ix_starts_with_impl(haystack, needle, cs);
 }
 
 bool iPrivate::startsWith(iLatin1String haystack, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return qt_starts_with_impl(haystack, needle, cs);
+    return ix_starts_with_impl(haystack, needle, cs);
 }
 
 bool iPrivate::startsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return qt_starts_with_impl(haystack, needle, cs);
+    return ix_starts_with_impl(haystack, needle, cs);
 }
 
 template <typename Haystack, typename Needle>
-bool qt_ends_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity cs)
+bool ix_ends_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity cs)
 {
     if (haystack.isNull())
-        return needle.isNull(); // historical behavior, consider changing in ### Qt 6.
+        return needle.isNull(); // historical behavior
     const auto haystackLen = haystack.size();
     const auto needleLen = needle.size();
     if (haystackLen == 0)
@@ -10277,12 +10233,12 @@ bool qt_ends_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity
 
 static inline bool ix_ends_with(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return qt_ends_with_impl(haystack, needle, cs);
+    return ix_ends_with_impl(haystack, needle, cs);
 }
 
 static inline bool ix_ends_with(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return qt_ends_with_impl(haystack, needle, cs);
+    return ix_ends_with_impl(haystack, needle, cs);
 }
 
 static inline bool ix_ends_with(iStringView haystack, iChar needle, iShell::CaseSensitivity cs)
@@ -10294,13 +10250,9 @@ static inline bool ix_ends_with(iStringView haystack, iChar needle, iShell::Case
 
 /*!
     \fn bool iPrivate::endsWith(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::endsWith(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::endsWith(iLatin1String haystack, iStringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::endsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \internal
     \relates iStringView
 
@@ -10315,26 +10267,25 @@ static inline bool ix_ends_with(iStringView haystack, iChar needle, iShell::Case
 
 bool iPrivate::endsWith(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return qt_ends_with_impl(haystack, needle, cs);
+    return ix_ends_with_impl(haystack, needle, cs);
 }
 
 bool iPrivate::endsWith(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return qt_ends_with_impl(haystack, needle, cs);
+    return ix_ends_with_impl(haystack, needle, cs);
 }
 
 bool iPrivate::endsWith(iLatin1String haystack, iStringView needle, iShell::CaseSensitivity cs)
 {
-    return qt_ends_with_impl(haystack, needle, cs);
+    return ix_ends_with_impl(haystack, needle, cs);
 }
 
 bool iPrivate::endsWith(iLatin1String haystack, iLatin1String needle, iShell::CaseSensitivity cs)
 {
-    return qt_ends_with_impl(haystack, needle, cs);
+    return ix_ends_with_impl(haystack, needle, cs);
 }
 
 /*!
-    \since 4.8
 
     Returns a Latin-1 representation of the string as a iByteArray.
 
@@ -10346,12 +10297,11 @@ bool iPrivate::endsWith(iLatin1String haystack, iLatin1String needle, iShell::Ca
 */
 iByteArray iStringRef::toLatin1() const
 {
-    return qt_convert_to_latin1(*this);
+    return ix_convert_to_latin1(*this);
 }
 
 /*!
     \fn iByteArray iStringRef::toAscii() const
-    \since 4.8
     \deprecated
 
     Returns an 8-bit representation of the string as a iByteArray.
@@ -10365,8 +10315,6 @@ iByteArray iStringRef::toLatin1() const
 */
 
 /*!
-    \since 4.8
-
     Returns the local 8-bit representation of the string as a
     iByteArray. The returned byte array is undefined if the string
     contains characters not supported by the local 8-bit encoding.
@@ -10383,12 +10331,10 @@ iByteArray iStringRef::toLatin1() const
 */
 iByteArray iStringRef::toLocal8Bit() const
 {
-    return qt_convert_to_local_8bit(*this);
+    return ix_convert_to_local_8bit(*this);
 }
 
 /*!
-    \since 4.8
-
     Returns a UTF-8 representation of the string as a iByteArray.
 
     UTF-8 is a Unicode codec and can represent all characters in a Unicode
@@ -10398,12 +10344,10 @@ iByteArray iStringRef::toLocal8Bit() const
 */
 iByteArray iStringRef::toUtf8() const
 {
-    return qt_convert_to_utf8(*this);
+    return ix_convert_to_utf8(*this);
 }
 
 /*!
-    \since 4.8
-
     Returns a UCS-4/UTF-32 representation of the string as a std::vector<uint>.
 
     UCS-4 is a Unicode codec and therefore it is lossless. All characters from
@@ -10417,7 +10361,7 @@ iByteArray iStringRef::toUtf8() const
 */
 std::vector<uint> iStringRef::toUcs4() const
 {
-    return qt_convert_to_ucs4(*this);
+    return ix_convert_to_ucs4(*this);
 }
 
 /*!
@@ -10429,8 +10373,6 @@ std::vector<uint> iStringRef::toUcs4() const
     '\\f', '\\r', and ' '.
 
     Unlike iString::simplified(), trimmed() leaves internal whitespace alone.
-
-    \since 5.1
 
     \sa iString::trimmed()
 */
@@ -10461,8 +10403,6 @@ iStringRef iStringRef::trimmed() const
     dependent conversion use iLocale::toLongLong()
 
     \sa iString::toLongLong()
-
-    \since 5.1
 */
 
 xint64 iStringRef::toLongLong(bool *ok, int base) const
@@ -10486,8 +10426,6 @@ xint64 iStringRef::toLongLong(bool *ok, int base) const
     dependent conversion use iLocale::toULongLong()
 
     \sa iString::toULongLong()
-
-    \since 5.1
 */
 
 xuint64 iStringRef::toULongLong(bool *ok, int base) const
@@ -10513,8 +10451,6 @@ xuint64 iStringRef::toULongLong(bool *ok, int base) const
     dependent conversion use iLocale::toLong()
 
     \sa iString::toLong()
-
-    \since 5.1
 */
 
 long iStringRef::toLong(bool *ok, int base) const
@@ -10540,8 +10476,6 @@ long iStringRef::toLong(bool *ok, int base) const
     dependent conversion use iLocale::toULongLong()
 
     \sa iString::toULong()
-
-    \since 5.1
 */
 
 ulong iStringRef::toULong(bool *ok, int base) const
@@ -10566,8 +10500,6 @@ ulong iStringRef::toULong(bool *ok, int base) const
     dependent conversion use iLocale::toInt()
 
     \sa iString::toInt()
-
-    \since 5.1
 */
 
 int iStringRef::toInt(bool *ok, int base) const
@@ -10591,8 +10523,6 @@ int iStringRef::toInt(bool *ok, int base) const
     dependent conversion use iLocale::toUInt()
 
     \sa iString::toUInt()
-
-    \since 5.1
 */
 
 uint iStringRef::toUInt(bool *ok, int base) const
@@ -10616,8 +10546,6 @@ uint iStringRef::toUInt(bool *ok, int base) const
     dependent conversion use iLocale::toShort()
 
     \sa iString::toShort()
-
-    \since 5.1
 */
 
 short iStringRef::toShort(bool *ok, int base) const
@@ -10641,8 +10569,6 @@ short iStringRef::toShort(bool *ok, int base) const
     dependent conversion use iLocale::toUShort()
 
     \sa iString::toUShort()
-
-    \since 5.1
 */
 
 ushort iStringRef::toUShort(bool *ok, int base) const
@@ -10668,8 +10594,6 @@ ushort iStringRef::toUShort(bool *ok, int base) const
     use iLocale::toDouble().
 
     \sa iString::toDouble()
-
-    \since 5.1
 */
 
 double iStringRef::toDouble(bool *ok) const
@@ -10690,8 +10614,6 @@ double iStringRef::toDouble(bool *ok) const
     dependent conversion use iLocale::toFloat()
 
     \sa iString::toFloat()
-
-    \since 5.1
 */
 
 float iStringRef::toFloat(bool *ok) const
@@ -10707,8 +10629,6 @@ float iStringRef::toFloat(bool *ok) const
 */
 
 /*!
-    \since 5.0
-
     Converts a plain text string to an HTML string with
     HTML metacharacters \c{<}, \c{>}, \c{&}, and \c{"} replaced by HTML
     entities.
@@ -10822,7 +10742,6 @@ iByteArray iString::toUtf8() const
     return toUtf8_helper(*this);
 }
 
-// ditto, for qbytearray.h (because we're lazy)
 iByteArray iByteArray::toLower() const
 {
     return toLower_helper(*this);

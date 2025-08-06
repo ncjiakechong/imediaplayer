@@ -32,15 +32,15 @@ public:
     int indexIn(const char *str, int len, int from = 0) const;
     inline iByteArray pattern() const
     {
-        if (q_pattern.isNull())
+        if (ix_pattern.isNull())
             return iByteArray(reinterpret_cast<const char*>(p.p), p.l);
-        return q_pattern;
+        return ix_pattern;
     }
 
 private:
-    iByteArray q_pattern;
+    iByteArray ix_pattern;
     struct Data {
-        uchar q_skiptable[256];
+        uchar ix_skiptable[256];
         const uchar *p;
         int l;
     };

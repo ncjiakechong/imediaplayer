@@ -295,7 +295,7 @@ private:
     {
         if (o) {
             // increase the strongref, but never up from zero
-            // or less (-1 is used by QWeakPointer on untracked QObject)
+            // or less (-1 is used by iWeakPointer on untracked iObject)
             int tmp = o->strongCount();
             while (tmp > 0) {
                 // try to increment from "tmp" to "tmp + 1"
@@ -382,7 +382,7 @@ public:
     inline iWeakPtr &operator=(const iWeakPtr<X> &o)
     {
         // conversion between X and T could require access to the virtual table
-        // so force the operation to go through QSharedPointer
+        // so force the operation to go through iSharedPointer
         *this = o.toStrongRef();
         return *this;
     }

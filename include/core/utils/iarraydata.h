@@ -144,7 +144,7 @@ struct iTypedArrayData
 
         inline const_iterator() : i(IX_NULLPTR) {}
         inline const_iterator(const T *n) : i(n) {}
-        inline const_iterator(const const_iterator &o): i(o.i) {} // #### Qt 6: remove, the default version is fine
+        inline const_iterator(const const_iterator &o): i(o.i) {} // #### remove, the default version is fine
         inline explicit const_iterator(const iterator &o): i(o.i) {}
         inline const T &operator*() const { return *i; }
         inline const T *operator->() const { return i; }
@@ -238,7 +238,7 @@ struct iTypedArrayData
 };
 
 template <class T, size_t N>
-struct QStaticArrayData
+struct iStaticArrayData
 {
     iArrayData header;
     T data[N];

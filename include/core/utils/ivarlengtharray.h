@@ -25,7 +25,7 @@ namespace iShell {
 
 template<class T, int Prealloc = 256> class iVarLengthArray;
 
-// Prealloc = 256 by default, specified in qcontainerfwd.h
+// Prealloc = 256 by default
 template<class T, int Prealloc>
 class iVarLengthArray
 {
@@ -198,8 +198,8 @@ private:
     T *ptr;     // data
     union {
         char array[Prealloc * sizeof(T)];
-        xint64 q_for_alignment_1;
-        double q_for_alignment_2;
+        xint64 ix_for_alignment_1;
+        double ix_for_alignment_2;
     };
 
     bool isValidIterator(const const_iterator &i) const
@@ -322,7 +322,6 @@ void iVarLengthArray<T, Prealloc>::realloc(int asize, int aalloc)
         if (aalloc > Prealloc) {
             T* newPtr = reinterpret_cast<T *>(malloc(aalloc * sizeof(T)));
             IX_CHECK_PTR(newPtr); // could throw
-            // by design: in case of QT_NO_EXCEPTIONS malloc must not fail or it crashes here
             ptr = newPtr;
             a = aalloc;
         } else {

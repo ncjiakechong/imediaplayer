@@ -19,9 +19,7 @@ namespace iShell {
 typedef iTypedArrayData<ushort> iStringData;
 
 // all our supported compilers support Unicode string literals,
-// even if their Q_COMPILER_UNICODE_STRING has been revoked due
-// to lacking stdlib support. But iStringLiteral only needs the
-// core language feature, so just use u"" here unconditionally:
+// But iStringLiteral only needs the core language feature, so just use u"" here unconditionally:
 
 typedef char16_t xunicodechar;
 

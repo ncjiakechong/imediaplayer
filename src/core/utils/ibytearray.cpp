@@ -28,7 +28,7 @@
 
 namespace iShell {
 
-// Latin 1 case system, used by iByteArray::to{Upper,Lower}() and qstr(n)icmp():
+// Latin 1 case system, used by iByteArray::to{Upper,Lower}() and istr(n)icmp():
 /*
 #!/usr/bin/perl -l
 use feature "unicode_strings";
@@ -92,12 +92,12 @@ int iFindByteArray(
     const char *needle0, int needleLen);
 
 /*
- * This pair of functions is declared in qtools_p.h and is used by the Qt
+ * This pair of functions is declared in itools_p.h and is used by the iShell
  * containers to allocate memory and grow the memory block during append
  * operations.
  *
  * They take size_t parameters and return size_t so they will change sizes
- * according to the pointer width. However, knowing Qt containers store the
+ * according to the pointer width. However, knowing iShell containers store the
  * container size and element indexes in ints, these functions never return a
  * size larger than INT_MAX. This is done by casting the element count and
  * memory block size to int in several comparisons: the check for negative is
@@ -522,9 +522,9 @@ static const xuint16 crc_tbl[16] = {
     \note This function is a 16-bit cache conserving (16 entry table)
     implementation of the CRC-16-CCITT algorithm.
 */
-xuint16 qChecksum(const char *data, uint len)
+xuint16 iChecksum(const char *data, uint len)
 {
-    return qChecksum(data, len, iShell::ChecksumIso3309);
+    return iChecksum(data, len, iShell::ChecksumIso3309);
 }
 
 /*!
@@ -538,7 +538,7 @@ xuint16 qChecksum(const char *data, uint len)
     \note This function is a 16-bit cache conserving (16 entry table)
     implementation of the CRC-16-CCITT algorithm.
 */
-xuint16 qChecksum(const char *data, uint len, iShell::ChecksumType standard)
+xuint16 iChecksum(const char *data, uint len, iShell::ChecksumType standard)
 {
     xuint16 crc = 0x0000;
     switch (standard) {
@@ -569,7 +569,6 @@ xuint16 qChecksum(const char *data, uint len, iShell::ChecksumType standard)
 
 /*!
     \class iByteArray
-    \inmodule QtCore
     \brief The iByteArray class provides an array of bytes.
 
     \ingroup tools
@@ -585,14 +584,14 @@ xuint16 qChecksum(const char *data, uint len, iShell::ChecksumType standard)
     terminator, and uses \l{implicit sharing} (copy-on-write) to
     reduce memory usage and avoid needless copying of data.
 
-    In addition to iByteArray, Qt also provides the iString class to
+    In addition to iByteArray, iShell also provides the iString class to
     store string data. For most purposes, iString is the class you
     want to use. It stores 16-bit Unicode characters, making it easy
     to store non-ASCII/non-Latin-1 characters in your application.
-    Furthermore, iString is used throughout in the Qt API. The two
+    Furthermore, iString is used throughout in the iShell API. The two
     main cases where iByteArray is appropriate are when you need to
     store raw binary data, and when memory conservation is critical
-    (e.g., with Qt for Embedded Linux).
+    (e.g., with iShell for Embedded Linux).
 
     One way to initialize a iByteArray is simply to pass a \c{const
     char *} to its constructor. For example, the following code
@@ -1088,7 +1087,7 @@ iByteArray &iByteArray::operator=(const char *str)
     that accepts a \c{const char *}.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_BYTEARRAY when you compile your applications.
+    IX_NO_CAST_FROM_BYTEARRAY when you compile your applications.
 
     Note: A iByteArray can store any byte values including '\\0's,
     but most functions that take \c{char *} arguments assume that the
@@ -1098,13 +1097,13 @@ iByteArray &iByteArray::operator=(const char *str)
 */
 
 /*!
-  \macro QT_NO_CAST_FROM_BYTEARRAY
+  \macro IX_NO_CAST_FROM_BYTEARRAY
   \relates iByteArray
 
   Disables automatic conversions from iByteArray to
   const char * or const void *.
 
-  \sa QT_NO_CAST_TO_ASCII, QT_NO_CAST_FROM_ASCII
+  \sa IX_NO_CAST_TO_ASCII, IX_NO_CAST_FROM_ASCII
 */
 
 /*! \fn char *iByteArray::data()
@@ -1380,7 +1379,7 @@ void iByteArray::chop(int n)
     returns a reference to this byte array. The Unicode data is
     converted into 8-bit characters using iString::toUtf8().
 
-    You can disable this function by defining \c QT_NO_CAST_TO_ASCII when you
+    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
     compile your applications. You then need to call iString::toUtf8() (or
     iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
     convert the data to \c{const char *}.
@@ -1414,7 +1413,7 @@ void iByteArray::chop(int n)
     Example:
     \snippet code/src_corelib_tools_iByteArray.cpp 13
 
-    Qt makes a distinction between null byte arrays and empty byte
+    iShell makes a distinction between null byte arrays and empty byte
     arrays for historical reasons. For most applications, what
     matters is whether or not a byte array contains any data,
     and this can be determined using isEmpty().
@@ -1531,7 +1530,7 @@ void iByteArray::resize(int size)
         //    iByteArray a;
         //    a.resize(sz);
         //    ...
-        // which is used in place of the Qt 3 idiom:
+        // which is used in place of the iShell 3 idiom:
         //    iByteArray a(sz);
         //
         Data *x = Data::allocate(uint(size) + 1u);
@@ -1748,7 +1747,7 @@ iByteArray &iByteArray::append(const iByteArray &ba)
     Appends the string \a str to this byte array. The Unicode data is
     converted into 8-bit characters using iString::toUtf8().
 
-    You can disable this function by defining \c QT_NO_CAST_TO_ASCII when you
+    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
     compile your applications. You then need to call iString::toUtf8() (or
     iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
     convert the data to \c{const char *}.
@@ -1876,7 +1875,7 @@ iByteArray &iByteArray::insert(int i, const iByteArray &ba)
     If \a i is greater than size(), the array is first extended using
     resize().
 
-    You can disable this function by defining \c QT_NO_CAST_TO_ASCII when you
+    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
     compile your applications. You then need to call iString::toUtf8() (or
     iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
     convert the data to \c{const char *}.
@@ -2222,7 +2221,7 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
     array \a after. The Unicode data is converted into 8-bit
     characters using iString::toUtf8().
 
-    You can disable this function by defining \c QT_NO_CAST_TO_ASCII when you
+    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
     compile your applications. You then need to call iString::toUtf8() (or
     iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
     convert the data to \c{const char *}.
@@ -2265,7 +2264,7 @@ iByteArray &iByteArray::replace(char before, const iByteArray &after)
     string \a after. The Unicode data is converted into 8-bit
     characters using iString::toUtf8().
 
-    You can disable this function by defining \c QT_NO_CAST_TO_ASCII when you
+    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
     compile your applications. You then need to call iString::toUtf8() (or
     iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
     convert the data to \c{const char *}.
@@ -2406,7 +2405,7 @@ int iByteArray::indexOf(const iByteArray &ba, int from) const
     The Unicode data is converted into 8-bit characters using
     iString::toUtf8().
 
-    You can disable this function by defining \c QT_NO_CAST_TO_ASCII when you
+    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
     compile your applications. You then need to call iString::toUtf8() (or
     iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
     convert the data to \c{const char *}.
@@ -2531,7 +2530,7 @@ int iByteArray::lastIndexOf(const iByteArray &ba, int from) const
     The Unicode data is converted into 8-bit characters using
     iString::toUtf8().
 
-    You can disable this function by defining \c QT_NO_CAST_TO_ASCII when you
+    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
     compile your applications. You then need to call iString::toUtf8() (or
     iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
     convert the data to \c{const char *}.
@@ -3022,7 +3021,7 @@ void iByteArray::clear()
     The comparison is case sensitive.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. You
+    IX_NO_CAST_FROM_ASCII when you compile your applications. You
     then need to call iString::fromUtf8(), iString::fromLatin1(),
     or iString::fromLocal8Bit() explicitly if you want to convert the byte
     array to a iString before doing the comparison.
@@ -3039,7 +3038,7 @@ void iByteArray::clear()
     The comparison is case sensitive.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. You
+    IX_NO_CAST_FROM_ASCII when you compile your applications. You
     then need to call iString::fromUtf8(), iString::fromLatin1(),
     or iString::fromLocal8Bit() explicitly if you want to convert the byte
     array to a iString before doing the comparison.
@@ -3056,7 +3055,7 @@ void iByteArray::clear()
     The comparison is case sensitive.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. You
+    IX_NO_CAST_FROM_ASCII when you compile your applications. You
     then need to call iString::fromUtf8(), iString::fromLatin1(),
     or iString::fromLocal8Bit() explicitly if you want to convert the byte
     array to a iString before doing the comparison.
@@ -3073,7 +3072,7 @@ void iByteArray::clear()
     The comparison is case sensitive.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. You
+    IX_NO_CAST_FROM_ASCII when you compile your applications. You
     then need to call iString::fromUtf8(), iString::fromLatin1(),
     or iString::fromLocal8Bit() explicitly if you want to convert the byte
     array to a iString before doing the comparison.
@@ -3090,7 +3089,7 @@ void iByteArray::clear()
     The comparison is case sensitive.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. You
+    IX_NO_CAST_FROM_ASCII when you compile your applications. You
     then need to call iString::fromUtf8(), iString::fromLatin1(),
     or iString::fromLocal8Bit() explicitly if you want to convert the byte
     array to a iString before doing the comparison.
@@ -3107,7 +3106,7 @@ void iByteArray::clear()
     The comparison is case sensitive.
 
     You can disable this operator by defining \c
-    QT_NO_CAST_FROM_ASCII when you compile your applications. You
+    IX_NO_CAST_FROM_ASCII when you compile your applications. You
     then need to call iString::fromUtf8(), iString::fromLatin1(),
     or iString::fromLocal8Bit() explicitly if you want to convert the byte
     array to a iString before doing the comparison.
@@ -3791,20 +3790,6 @@ float iByteArray::toFloat(bool *ok) const
 }
 
 /*!
-    Returns a copy of the byte array, encoded as Base64.
-
-    \snippet code/src_corelib_tools_iByteArray.cpp 39
-
-    The algorithm used to encode Base64-encoded data is defined in \l{RFC 4648}.
-
-    \sa fromBase64()
-*/
-iByteArray iByteArray::toBase64() const
-{
-    return toBase64(Base64Encoding);
-}
-
-/*!
 
     \overload
 
@@ -4148,15 +4133,12 @@ iByteArray iByteArray::number(double n, char f, int prec)
     ensures that the raw \a data array itself will never be modified
     by iByteArray.
 
-    Here is an example of how to read data using a QDataStream on raw
-    data in memory without copying the raw data into a iByteArray:
-
     \snippet code/src_corelib_tools_iByteArray.cpp 43
 
     \warning A byte array created with fromRawData() is \e not
     '\\0'-terminated, unless the raw data contains a 0 character at
-    position \a size. While that does not matter for QDataStream or
-    functions like indexOf(), passing the byte array to a function
+    position \a size. While that does not matter
+    like indexOf(), passing the byte array to a function
     accepting a \c{const char *} expected to be '\\0'-terminated will
     fail.
 
@@ -4206,24 +4188,6 @@ iByteArray &iByteArray::setRawData(const char *data, uint size)
         }
     }
     return *this;
-}
-
-/*!
-    Returns a decoded copy of the Base64 array \a base64. Input is not checked
-    for validity; invalid characters in the input are skipped, enabling the
-    decoding process to continue with subsequent characters.
-
-    For example:
-
-    \snippet code/src_corelib_tools_iByteArray.cpp 44
-
-    The algorithm used to decode Base64-encoded data is defined in \l{RFC 4648}.
-
-    \sa toBase64()
-*/
-iByteArray iByteArray::fromBase64(const iByteArray &base64)
-{
-    return fromBase64(base64, Base64Encoding);
 }
 
 /*!
@@ -4322,17 +4286,6 @@ iByteArray iByteArray::fromHex(const iByteArray &hexEncoded)
     return res;
 }
 
-/*!
-    Returns a hex encoded copy of the byte array. The hex encoding uses the numbers 0-9 and
-    the letters a-f.
-
-    \sa fromHex()
-*/
-iByteArray iByteArray::toHex() const
-{
-    return toHex('\0');
-}
-
 /*! \overload
 
 
@@ -4365,7 +4318,7 @@ iByteArray iByteArray::toHex(char separator) const
     return hex;
 }
 
-static void q_fromPercentEncoding(iByteArray *ba, char percent)
+static void ix_fromPercentEncoding(iByteArray *ba, char percent)
 {
     if (ba->isEmpty())
         return;
@@ -4405,9 +4358,9 @@ static void q_fromPercentEncoding(iByteArray *ba, char percent)
         ba->truncate(outlen);
 }
 
-void q_fromPercentEncoding(iByteArray *ba)
+void ix_fromPercentEncoding(iByteArray *ba)
 {
-    q_fromPercentEncoding(ba, '%');
+    ix_fromPercentEncoding(ba, '%');
 }
 
 /*!
@@ -4424,7 +4377,7 @@ void q_fromPercentEncoding(iByteArray *ba)
     which is not a valid hexadecimal number) the output will be invalid as
     well. As an example: the sequence "%G5" could be decoded to 'W'.
 
-    \sa toPercentEncoding(), QUrl::fromPercentEncoding()
+    \sa toPercentEncoding()
 */
 iByteArray iByteArray::fromPercentEncoding(const iByteArray &input, char percent)
 {
@@ -4434,7 +4387,7 @@ iByteArray iByteArray::fromPercentEncoding(const iByteArray &input, char percent
         return iByteArray(input.data(), 0);
 
     iByteArray tmp = input;
-    q_fromPercentEncoding(&tmp, percent);
+    ix_fromPercentEncoding(&tmp, percent);
     return tmp;
 }
 
@@ -4516,9 +4469,9 @@ void ix_toPercentEncoding(iByteArray *ba, const char *exclude, const char *inclu
     ix_toPercentEncoding(ba, exclude, include, '%');
 }
 
-void q_normalizePercentEncoding(iByteArray *ba, const char *exclude)
+void ix_normalizePercentEncoding(iByteArray *ba, const char *exclude)
 {
-    q_fromPercentEncoding(ba, '%');
+    ix_fromPercentEncoding(ba, '%');
     ix_toPercentEncoding(ba, exclude, 0, '%');
 }
 
@@ -4544,7 +4497,7 @@ void q_normalizePercentEncoding(iByteArray *ba, const char *exclude)
 
     The hex encoding uses the numbers 0-9 and the uppercase letters A-F.
 
-    \sa fromPercentEncoding(), QUrl::toPercentEncoding()
+    \sa fromPercentEncoding()
 */
 iByteArray iByteArray::toPercentEncoding(const iByteArray &exclude, const iByteArray &include,
                                          char percent) const

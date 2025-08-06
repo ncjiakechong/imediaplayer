@@ -700,7 +700,7 @@ iLocale::iLocale(Language language, Country country)
 }
 
 /*!
-    \since 4.8
+
 
     Constructs a iLocale object with the specified \a language, \a script and
     \a country.
@@ -768,14 +768,14 @@ bool iLocale::operator!=(const iLocale &other) const
 
 /*!
     \fn void iLocale::swap(iLocale &other)
-    \since 5.6
+
 
     Swaps locale \a other with this locale. This operation is very fast and
     never fails.
 */
 
 /*!
-    \since 4.2
+
 
     Sets the \a options related to number conversions for this
     iLocale instance.
@@ -786,7 +786,7 @@ void iLocale::setNumberOptions(NumberOptions options)
 }
 
 /*!
-    \since 4.2
+
 
     Returns the options related to number conversions for this
     iLocale instance.
@@ -799,7 +799,7 @@ iLocale::NumberOptions iLocale::numberOptions() const
 }
 
 /*!
-    \since 4.8
+
 
     Returns a string that represents a join of a given \a list of strings with
     a separator defined by the locale.
@@ -879,7 +879,7 @@ iLocale::Language iLocale::language() const
 }
 
 /*!
-    \since 4.8
+
 
     Returns the script of this locale.
 
@@ -955,7 +955,7 @@ T toIntegral_helper(const iLocalePrivate *d, iStringView str, bool *ok)
 
 
 /*!
-    \since 4.8
+
 
     Returns the dash-separated language, script and country (and possibly other BCP47 fields)
     of this locale as a string.
@@ -1000,7 +1000,7 @@ iString iLocale::countryToString(Country country)
 }
 
 /*!
-    \since 4.8
+
 
     Returns a iString containing the name of \a script.
 
@@ -1097,7 +1097,7 @@ uint iLocale::toUInt(const iString &s, bool *ok) const
 
  \sa toInt(), toULong(), toDouble(), toString()
 
- \since 5.13
+
  */
 
 
@@ -1119,7 +1119,7 @@ long iLocale::toLong(const iString &s, bool *ok) const
 
  \sa toLong(), toInt(), toDouble(), toString()
 
- \since 5.13
+
 */
 
 ulong iLocale::toULong(const iString &s, bool *ok) const
@@ -1226,7 +1226,7 @@ double iLocale::toDouble(const iString &s, bool *ok) const
 
     \sa toUShort(), toString()
 
-    \since 5.1
+
 */
 
 short iLocale::toShort(const iStringRef &s, bool *ok) const
@@ -1246,7 +1246,7 @@ short iLocale::toShort(const iStringRef &s, bool *ok) const
 
     \sa toShort(), toString()
 
-    \since 5.1
+
 */
 
 ushort iLocale::toUShort(const iStringRef &s, bool *ok) const
@@ -1266,7 +1266,7 @@ ushort iLocale::toUShort(const iStringRef &s, bool *ok) const
 
     \sa toUInt(), toString()
 
-    \since 5.1
+
 */
 
 int iLocale::toInt(const iStringRef &s, bool *ok) const
@@ -1286,7 +1286,7 @@ int iLocale::toInt(const iStringRef &s, bool *ok) const
 
     \sa toInt(), toString()
 
-    \since 5.1
+
 */
 
 uint iLocale::toUInt(const iStringRef &s, bool *ok) const
@@ -1306,7 +1306,7 @@ uint iLocale::toUInt(const iStringRef &s, bool *ok) const
 
  \sa toInt(), toULong(), toDouble(), toString()
 
- \since 5.13
+
  */
 
 
@@ -1328,7 +1328,7 @@ long iLocale::toLong(const iStringRef &s, bool *ok) const
 
  \sa toLong(), toInt(), toDouble(), toString()
 
- \since 5.13
+
  */
 
 ulong iLocale::toULong(const iStringRef &s, bool *ok) const
@@ -1348,7 +1348,7 @@ ulong iLocale::toULong(const iStringRef &s, bool *ok) const
 
     \sa toInt(), toULongLong(), toDouble(), toString()
 
-    \since 5.1
+
 */
 
 
@@ -1370,7 +1370,7 @@ xlonglong iLocale::toLongLong(const iStringRef &s, bool *ok) const
 
     \sa toLongLong(), toInt(), toDouble(), toString()
 
-    \since 5.1
+
 */
 
 xulonglong iLocale::toULongLong(const iStringRef &s, bool *ok) const
@@ -1394,7 +1394,7 @@ xulonglong iLocale::toULongLong(const iStringRef &s, bool *ok) const
 
     \sa toDouble(), toInt(), toString()
 
-    \since 5.1
+
 */
 
 float iLocale::toFloat(const iStringRef &s, bool *ok) const
@@ -1423,7 +1423,7 @@ float iLocale::toFloat(const iStringRef &s, bool *ok) const
 
     \sa toFloat(), toInt(), toString()
 
-    \since 5.1
+
 */
 
 double iLocale::toDouble(const iStringRef &s, bool *ok) const
@@ -1443,7 +1443,7 @@ double iLocale::toDouble(const iStringRef &s, bool *ok) const
 
     \sa toUShort(), toString()
 
-    \since 5.10
+
 */
 
 short iLocale::toShort(iStringView s, bool *ok) const
@@ -1463,7 +1463,7 @@ short iLocale::toShort(iStringView s, bool *ok) const
 
     \sa toShort(), toString()
 
-    \since 5.10
+
 */
 
 ushort iLocale::toUShort(iStringView s, bool *ok) const
@@ -1483,7 +1483,7 @@ ushort iLocale::toUShort(iStringView s, bool *ok) const
 
     \sa toUInt(), toString()
 
-    \since 5.10
+
 */
 
 int iLocale::toInt(iStringView s, bool *ok) const
@@ -1503,7 +1503,7 @@ int iLocale::toInt(iStringView s, bool *ok) const
 
     \sa toInt(), toString()
 
-    \since 5.10
+
 */
 
 uint iLocale::toUInt(iStringView s, bool *ok) const
@@ -1523,7 +1523,7 @@ uint iLocale::toUInt(iStringView s, bool *ok) const
 
  \sa toInt(), toULong(), toDouble(), toString()
 
- \since 5.13
+
  */
 
 
@@ -1545,7 +1545,7 @@ long iLocale::toLong(iStringView s, bool *ok) const
 
  \sa toLong(), toInt(), toDouble(), toString()
 
- \since 5.13
+
  */
 
 ulong iLocale::toULong(iStringView s, bool *ok) const
@@ -1565,7 +1565,7 @@ ulong iLocale::toULong(iStringView s, bool *ok) const
 
     \sa toInt(), toULongLong(), toDouble(), toString()
 
-    \since 5.10
+
 */
 
 
@@ -1587,7 +1587,7 @@ xlonglong iLocale::toLongLong(iStringView s, bool *ok) const
 
     \sa toLongLong(), toInt(), toDouble(), toString()
 
-    \since 5.10
+
 */
 
 xulonglong iLocale::toULongLong(iStringView s, bool *ok) const
@@ -1608,7 +1608,7 @@ xulonglong iLocale::toULongLong(iStringView s, bool *ok) const
 
     \sa toDouble(), toInt(), toString()
 
-    \since 5.10
+
 */
 
 float iLocale::toFloat(iStringView s, bool *ok) const
@@ -1638,7 +1638,7 @@ float iLocale::toFloat(iStringView s, bool *ok) const
 
     \sa toFloat(), toInt(), toString()
 
-    \since 5.10
+
 */
 
 double iLocale::toDouble(iStringView s, bool *ok) const
@@ -1677,14 +1677,12 @@ iString iLocale::toString(xulonglong i) const
 }
 
 /*!
-    \since 4.1
+
 
     Returns the date format used for the current locale.
 
     If \a format is LongFormat the format will be a long version.
     Otherwise it uses a shorter version.
-
-    \sa QDate::toString(), QDate::fromString()
 */
 
 iString iLocale::dateFormat(FormatType format) const
@@ -1704,14 +1702,12 @@ iString iLocale::dateFormat(FormatType format) const
 }
 
 /*!
-    \since 4.1
+
 
     Returns the time format used for the current locale.
 
     If \a format is LongFormat the format will be a long version.
     Otherwise it uses a shorter version.
-
-    \sa QTime::toString(), QTime::fromString()
 */
 
 iString iLocale::timeFormat(FormatType format) const
@@ -1731,14 +1727,12 @@ iString iLocale::timeFormat(FormatType format) const
 }
 
 /*!
-    \since 4.4
+
 
     Returns the date time format used for the current locale.
 
     If \a format is ShortFormat the format will be a short version.
     Otherwise it uses a longer version.
-
-    \sa QDateTime::toString(), QDateTime::fromString()
 */
 
 iString iLocale::dateTimeFormat(FormatType format) const
@@ -1747,7 +1741,7 @@ iString iLocale::dateTimeFormat(FormatType format) const
 }
 
 /*!
-    \since 4.1
+
 
     Returns the decimal point character of this locale.
 */
@@ -1757,7 +1751,7 @@ iChar iLocale::decimalPoint() const
 }
 
 /*!
-    \since 4.1
+
 
     Returns the group separator character of this locale.
 */
@@ -1767,7 +1761,7 @@ iChar iLocale::groupSeparator() const
 }
 
 /*!
-    \since 4.1
+
 
     Returns the percent character of this locale.
 */
@@ -1777,7 +1771,7 @@ iChar iLocale::percent() const
 }
 
 /*!
-    \since 4.1
+
 
     Returns the zero digit character of this locale.
 */
@@ -1787,7 +1781,7 @@ iChar iLocale::zeroDigit() const
 }
 
 /*!
-    \since 4.1
+
 
     Returns the negative sign character of this locale.
 */
@@ -1797,7 +1791,7 @@ iChar iLocale::negativeSign() const
 }
 
 /*!
-    \since 4.5
+
 
     Returns the positive sign character of this locale.
 */
@@ -1807,7 +1801,7 @@ iChar iLocale::positiveSign() const
 }
 
 /*!
-    \since 4.1
+
 
     Returns the exponential character of this locale.
 */
@@ -1816,12 +1810,12 @@ iChar iLocale::exponential() const
     return d->exponential();
 }
 
-static bool qIsUpper(char c)
+static bool iIsUpper(char c)
 {
     return c >= 'A' && c <= 'Z';
 }
 
-static char qToLower(char c)
+static char iToLower(char c)
 {
     if (c >= 'A' && c <= 'Z')
         return c - 'A' + 'a';
@@ -1842,9 +1836,9 @@ iString iLocale::toString(double i, char f, int prec) const
     iLocaleData::DoubleForm form = iLocaleData::DFDecimal;
     uint flags = 0;
 
-    if (qIsUpper(f))
+    if (iIsUpper(f))
         flags = iLocaleData::CapitalEorX;
-    f = qToLower(f);
+    f = iToLower(f);
 
     switch (f) {
         case 'f':
@@ -1906,7 +1900,7 @@ iLocale iLocale::system()
 
 
 /*!
-    \since 4.2
+
 
     Returns the localized name of \a month, in the format specified
     by \a type.
@@ -1939,7 +1933,7 @@ iString iLocale::monthName(int month, FormatType type) const
 }
 
 /*!
-    \since 4.5
+
 
     Returns the localized name of \a month that is used as a
     standalone text, in the format specified by \a type.
@@ -1978,7 +1972,7 @@ iString iLocale::standaloneMonthName(int month, FormatType type) const
 }
 
 /*!
-    \since 4.2
+
 
     Returns the localized name of the \a day (where 1 represents
     Monday, 2 represents Tuesday and so on), in the format specified
@@ -2015,7 +2009,7 @@ iString iLocale::dayName(int day, FormatType type) const
 }
 
 /*!
-    \since 4.5
+
 
     Returns the localized name of the \a day (where 1 represents
     Monday, 2 represents Tuesday and so on) that is used as a
@@ -2069,7 +2063,7 @@ iLocale::MeasurementSystem iLocalePrivate::measurementSystem() const
 }
 
 /*!
-    \since 4.4
+
 
     Returns the measurement system for the locale.
 */
@@ -2079,7 +2073,7 @@ iLocale::MeasurementSystem iLocale::measurementSystem() const
 }
 
 /*!
-  \since 4.7
+
 
   Returns the text direction of the language.
 */
@@ -2122,11 +2116,11 @@ iShell::LayoutDirection iLocale::textDirection() const
 }
 
 /*!
-  \since 4.8
+
 
   Returns an uppercase copy of \a str.
 
-  If Qt Core is using the ICU libraries, they will be used to perform
+  If iShell Core is using the ICU libraries, they will be used to perform
   the transformation according to the rules of the current locale.
   Otherwise the conversion may be done in a platform-dependent manner,
   with iString::toUpper() as a generic fallback.
@@ -2139,11 +2133,11 @@ iString iLocale::toUpper(const iString &str) const
 }
 
 /*!
-  \since 4.8
+
 
   Returns a lowercase copy of \a str.
 
-  If Qt Core is using the ICU libraries, they will be used to perform
+  If iShell Core is using the ICU libraries, they will be used to perform
   the transformation according to the rules of the current locale.
   Otherwise the conversion may be done in a platform-dependent manner,
   with iString::toLower() as a generic fallback.
@@ -2157,7 +2151,7 @@ iString iLocale::toLower(const iString &str) const
 
 
 /*!
-    \since 4.5
+
 
     Returns the localized name of the "AM" suffix for times specified using
     the conventions of the 12-hour clock.
@@ -2170,7 +2164,7 @@ iString iLocale::amText() const
 }
 
 /*!
-    \since 4.5
+
 
     Returns the localized name of the "PM" suffix for times specified using
     the conventions of the 12-hour clock.
@@ -2829,7 +2823,7 @@ xulonglong iLocaleData::bytearrayToUnsLongLong(const char *num, int base, bool *
 }
 
 /*!
-    \since 4.8
+
 
     \enum iLocale::CurrencySymbolFormat
 
@@ -2841,7 +2835,7 @@ xulonglong iLocaleData::bytearrayToUnsLongLong(const char *num, int base, bool *
 */
 
 /*!
-    \since 4.8
+
     Returns a currency symbol according to the \a format.
 */
 iString iLocale::currencySymbol(iLocale::CurrencySymbolFormat format) const
@@ -2869,7 +2863,7 @@ iString iLocale::currencySymbol(iLocale::CurrencySymbolFormat format) const
 }
 
 /*!
-    \since 4.8
+
 
     Returns a localized string representation of \a value as a currency.
     If the \a symbol is provided it is used instead of the default currency symbol.
@@ -2895,7 +2889,7 @@ iString iLocale::toCurrencyString(xlonglong value, const iString &symbol) const
 }
 
 /*!
-    \since 4.8
+
     \overload
 */
 iString iLocale::toCurrencyString(xulonglong value, const iString &symbol) const
@@ -2912,7 +2906,7 @@ iString iLocale::toCurrencyString(xulonglong value, const iString &symbol) const
 }
 
 /*!
-    \since 5.7
+
     \overload toCurrencyString()
 
     Returns a localized string representation of \a value as a currency.
@@ -2946,7 +2940,7 @@ iString iLocale::toCurrencyString(double value, const iString &symbol, int preci
 */
 
 /*!
-    \since 5.10
+
 
     \enum iLocale::DataSizeFormat
 
@@ -2963,7 +2957,7 @@ iString iLocale::toCurrencyString(double value, const iString &symbol, int preci
 
 
 /*!
-    \since 5.10
+
 
     Converts a size in bytes to a human-readable localized string, comprising a
     number and a quantified unit. The quantifier is chosen such that the number
@@ -3016,7 +3010,7 @@ iString iLocale::formattedDataSize(xint64 bytes, int precision, DataSizeFormats 
 }
 
 /*!
-    \since 4.8
+
 
     Returns a native name of the language for the locale. For example
     "Schwiizertüütsch" for Swiss-German locale.
@@ -3029,7 +3023,7 @@ iString iLocale::nativeLanguageName() const
 }
 
 /*!
-    \since 4.8
+
 
     Returns a native name of the country for the locale. For example
     "España" for Spanish/Spain locale.

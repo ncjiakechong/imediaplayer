@@ -38,7 +38,7 @@ int iFindString(const iChar *haystack, int haystackLen, int from,
 #define RXERR_DISABLED   ("disabled feature used")
 #define RXERR_CHARCLASS  ("bad char class syntax")
 #define RXERR_LOOKAHEAD  ("bad lookahead syntax")
-#define RXERR_LOOKBEHIND ("lookbehinds not supported, see QTBUG-2371")
+#define RXERR_LOOKBEHIND ("lookbehinds not supported")
 #define RXERR_REPETITION ("bad repetition syntax")
 #define RXERR_OCTAL      ("invalid octal value")
 #define RXERR_LEFTDELIM  ("missing left delim")
@@ -49,7 +49,6 @@ int iFindString(const iChar *haystack, int haystackLen, int from,
 
 /*!
     \class iRegExp
-    \inmodule QtCore
     \reentrant
     \brief The iRegExp class provides pattern matching using regular expressions.
 
@@ -81,7 +80,7 @@ int iFindString(const iChar *haystack, int haystackLen, int from,
     \endtable
 
     A brief introduction to regexps is presented, a description of
-    Qt's regexp language, some examples, and the function
+    iShell's regexp language, some examples, and the function
     documentation itself. iRegExp is modeled on Perl's regexp
     language. It fully supports Unicode. iRegExp can also be used in a
     simpler, \e{wildcard mode} that is similar to the functionality
@@ -93,10 +92,6 @@ int iFindString(const iChar *haystack, int haystackLen, int from,
 
     A good text on regexps is \e {Mastering Regular Expressions}
     (Third Edition) by Jeffrey E. F.  Friedl, ISBN 0-596-52812-4.
-
-    \note In Qt 5, the new QRegularExpression class provides a Perl
-    compatible implementation of regular expressions and is recommended
-    in place of iRegExp.
 
     \tableofcontents
 
@@ -861,7 +856,7 @@ struct iRegExpEngineKeyHash
 {
     size_t operator()(const iRegExpEngineKey& key) const
     {
-        return ((iHashFunc()(key.pattern)
+        return ((iKeyHashFunc()(key.pattern)
                  ^ (std::hash<int>()(key.patternSyntax) << 1) >> 1)
                  ^ (std::hash<int>()(key.cs) << 1));
     }
@@ -1203,8 +1198,6 @@ struct iRegExpLookahead
 /*!
     \internal
     convert the pattern string to the RegExp syntax.
-
-    This is also used by QScriptEngine::newRegExp to convert to a pattern that JavaScriptCore can understan
  */
 iString ix_regexp_toCanonical(const iString &pattern, iRegExp::PatternSyntax patternSyntax)
 {
@@ -3530,7 +3523,6 @@ static void invalidateEngine(iRegExpPrivate *priv)
     the default.
 
     \value RegExp2 Like RegExp, but with \l{greedy quantifiers}.
-    (Introduced in Qt 4.2.)
 
     \value Wildcard This provides a simple pattern matching syntax
     similar to that used by shells (command interpreters) for "file
@@ -3625,12 +3617,12 @@ iRegExp &iRegExp::operator=(const iRegExp &rx)
 
     Move-assigns \a other to this iRegExp instance.
 
-    \since 5.2
+
 */
 
 /*!
     \fn void iRegExp::swap(iRegExp &other)
-    \since 4.8
+
 
     Swaps regular expression \a other with this regular
     expression. This operation is very fast and never fails.
@@ -3821,7 +3813,6 @@ void iRegExp::setMinimal(bool minimal)
     priv->minimal = minimal;
 }
 
-// ### Qt 5: make non-const
 /*!
     Returns \c true if \a str is matched exactly by this regular
     expression; otherwise returns \c false. You can determine how much of
@@ -3855,7 +3846,6 @@ bool iRegExp::exactMatch(const iString &str) const
     }
 }
 
-// ### Qt 5: make non-const
 /*!
     Attempts to find a match in \a str from position \a offset (0 by
     default). If \a offset is -1, the search starts at the last
@@ -3894,7 +3884,6 @@ int iRegExp::indexIn(const iString &str, int offset, CaretMode caretMode) const
     return priv->matchState.captured[0];
 }
 
-// ### Qt 5: make non-const
 /*!
     Attempts to find a match backwards in \a str from position \a
     offset. If \a offset is -1 (the default), the search starts at the
@@ -3947,7 +3936,7 @@ int iRegExp::matchedLength() const
 }
 
 /*!
-  \since 4.6
+
   Returns the number of captures contained in the regular expression.
  */
 int iRegExp::captureCount() const
@@ -4004,7 +3993,7 @@ std::list<iString> iRegExp::capturedTexts() const
         for (int i = 0; i < n; i += 2) {
             iString m;
             if (captured[i + 1] == 0)
-                m = iLatin1String(""); // ### Qt 5: don't distinguish between null and empty
+                m = iLatin1String(""); // ### don't distinguish between null and empty
             else if (captured[i] >= 0)
                 m = priv->t.mid(captured[i], captured[i + 1]);
             priv->capturedCache.push_back(m);

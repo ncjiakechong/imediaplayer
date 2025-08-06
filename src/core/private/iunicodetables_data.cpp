@@ -15,44 +15,44 @@ namespace iShell {
 
 namespace iUnicodeTables {
 
-static inline const Properties *qGetProp(uint ucs4)
+static inline const Properties *iGetProp(uint ucs4)
 {
     return uc_properties + GET_PROP_INDEX(ucs4);
 }
 
-static inline const Properties *qGetProp(ushort ucs2)
+static inline const Properties *iGetProp(ushort ucs2)
 {
     return uc_properties + GET_PROP_INDEX_UCS2(ucs2);
 }
 
 const Properties * properties(uint ucs4)
 {
-    return qGetProp(ucs4);
+    return iGetProp(ucs4);
 }
 
 const Properties * properties(ushort ucs2)
 {
-    return qGetProp(ucs2);
+    return iGetProp(ucs2);
 }
 
 GraphemeBreakClass graphemeBreakClass(uint ucs4)
 {
-    return static_cast<GraphemeBreakClass>(qGetProp(ucs4)->graphemeBreakClass);
+    return static_cast<GraphemeBreakClass>(iGetProp(ucs4)->graphemeBreakClass);
 }
 
 WordBreakClass wordBreakClass(uint ucs4)
 {
-    return static_cast<WordBreakClass>(qGetProp(ucs4)->wordBreakClass);
+    return static_cast<WordBreakClass>(iGetProp(ucs4)->wordBreakClass);
 }
 
 SentenceBreakClass sentenceBreakClass(uint ucs4)
 {
-    return static_cast<SentenceBreakClass>(qGetProp(ucs4)->sentenceBreakClass);
+    return static_cast<SentenceBreakClass>(iGetProp(ucs4)->sentenceBreakClass);
 }
 
 LineBreakClass lineBreakClass(uint ucs4)
 {
-    return static_cast<LineBreakClass>(qGetProp(ucs4)->lineBreakClass);
+    return static_cast<LineBreakClass>(iGetProp(ucs4)->lineBreakClass);
 }
 
 } // namespace iUnicodeTables
