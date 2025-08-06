@@ -28,6 +28,8 @@ struct _iMetaType {
     iTypeIdContainer _typeIdContainer;
     iTypeIdRegister  _typeIdRegister;
     iMetaTypeConverter _metaTypeConverter;
+
+    static void initSystemConvert();
 };
 
 IX_GLOBAL_STATIC(_iMetaType, _iMetaTypeDef)
@@ -39,25 +41,34 @@ iAbstractConverterFunction::~iAbstractConverterFunction()
 
 int iVariant::iRegisterMetaType(const char *type, int hint)
 {
-    iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
-    iTypeIdRegister::iterator it = _iMetaTypeDef->_typeIdRegister.find(iLatin1String(type));
-    if (it != _iMetaTypeDef->_typeIdRegister.end())
-        return it->second;
+    bool needInitSystemConvert = !_iMetaTypeDef.exists();
 
-    if ((hint > 0)
-        && (hint < iTypeIdContainer::NumBits)
-        && _iMetaTypeDef->_typeIdContainer.allocateSpecific(hint)) {
+    do {
+        iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
+        iTypeIdRegister::iterator it = _iMetaTypeDef->_typeIdRegister.find(iLatin1String(type));
+        if (it != _iMetaTypeDef->_typeIdRegister.end())
+            return it->second;
+
+        if ((hint > 0)
+            && (hint < iTypeIdContainer::NumBits)
+            && _iMetaTypeDef->_typeIdContainer.allocateSpecific(hint)) {
+            _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
+            break;
+        }
+
+        hint = _iMetaTypeDef->_typeIdContainer.allocateNext();
         _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
-        return hint;
-    }
+    } while(false);
 
-    hint = _iMetaTypeDef->_typeIdContainer.allocateNext();
-    _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
+    if (needInitSystemConvert)
+        _iMetaType::initSystemConvert();
+
     return hint;
 }
 
 bool iVariant::registerConverterFunction(const iAbstractConverterFunction *f, int from, int to)
 {
+    IX_ASSERT(_iMetaTypeDef.exists());
     iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
     std::pair<iMetaTypeConverter::iterator,bool> ret;
     ret = _iMetaTypeDef->_metaTypeConverter.insert(
@@ -315,6 +326,7 @@ bool iVariant::convert(int t, void *result) const
 
     } while (0);
 
+    IX_ASSERT(_iMetaTypeDef.exists());
     iMetaTypeConverter::const_iterator it;
     iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
     it = _iMetaTypeDef->_metaTypeConverter.find(std::pair<int, int>(m_typeId, t));
@@ -327,163 +339,157 @@ bool iVariant::convert(int t, void *result) const
     return it->second->convert(it->second, m_dataImpl->data, result);
 }
 
-
 /////////////////////////////////////////////////////////////////
 /// system type convert implement
 /////////////////////////////////////////////////////////////////
-struct systemConvertHelper
+void _iMetaType::initSystemConvert()
 {
-    systemConvertHelper()
-    {
-        iRegisterConverter<char, short>();
-        iRegisterConverter<char, int>();
-        iRegisterConverter<char, long>();
-        iRegisterConverter<char, long long>();
-        iRegisterConverter<char, float>();
-        iRegisterConverter<char, double>();
-        iRegisterConverter<char, unsigned char>();
-        iRegisterConverter<char, unsigned short>();
-        iRegisterConverter<char, unsigned int>();
-        iRegisterConverter<char, unsigned long>();
-        iRegisterConverter<char, unsigned long long>();
+    iRegisterConverter<char, short>();
+    iRegisterConverter<char, int>();
+    iRegisterConverter<char, long>();
+    iRegisterConverter<char, long long>();
+    iRegisterConverter<char, float>();
+    iRegisterConverter<char, double>();
+    iRegisterConverter<char, unsigned char>();
+    iRegisterConverter<char, unsigned short>();
+    iRegisterConverter<char, unsigned int>();
+    iRegisterConverter<char, unsigned long>();
+    iRegisterConverter<char, unsigned long long>();
 
-        iRegisterConverter<unsigned char, char>();
-        iRegisterConverter<unsigned char, short>();
-        iRegisterConverter<unsigned char, int>();
-        iRegisterConverter<unsigned char, long>();
-        iRegisterConverter<unsigned char, long long>();
-        iRegisterConverter<unsigned char, float>();
-        iRegisterConverter<unsigned char, double>();
-        iRegisterConverter<unsigned char, unsigned short>();
-        iRegisterConverter<unsigned char, unsigned int>();
-        iRegisterConverter<unsigned char, unsigned long>();
-        iRegisterConverter<unsigned char, unsigned long long>();
+    iRegisterConverter<unsigned char, char>();
+    iRegisterConverter<unsigned char, short>();
+    iRegisterConverter<unsigned char, int>();
+    iRegisterConverter<unsigned char, long>();
+    iRegisterConverter<unsigned char, long long>();
+    iRegisterConverter<unsigned char, float>();
+    iRegisterConverter<unsigned char, double>();
+    iRegisterConverter<unsigned char, unsigned short>();
+    iRegisterConverter<unsigned char, unsigned int>();
+    iRegisterConverter<unsigned char, unsigned long>();
+    iRegisterConverter<unsigned char, unsigned long long>();
 
-        iRegisterConverter<short, char>();
-        iRegisterConverter<short, int>();
-        iRegisterConverter<short, long>();
-        iRegisterConverter<short, long long>();
-        iRegisterConverter<short, float>();
-        iRegisterConverter<short, double>();
-        iRegisterConverter<short, unsigned char>();
-        iRegisterConverter<short, unsigned short>();
-        iRegisterConverter<short, unsigned int>();
-        iRegisterConverter<short, unsigned long>();
-        iRegisterConverter<short, unsigned long long>();
+    iRegisterConverter<short, char>();
+    iRegisterConverter<short, int>();
+    iRegisterConverter<short, long>();
+    iRegisterConverter<short, long long>();
+    iRegisterConverter<short, float>();
+    iRegisterConverter<short, double>();
+    iRegisterConverter<short, unsigned char>();
+    iRegisterConverter<short, unsigned short>();
+    iRegisterConverter<short, unsigned int>();
+    iRegisterConverter<short, unsigned long>();
+    iRegisterConverter<short, unsigned long long>();
 
-        iRegisterConverter<unsigned short, char>();
-        iRegisterConverter<unsigned short, short>();
-        iRegisterConverter<unsigned short, int>();
-        iRegisterConverter<unsigned short, long>();
-        iRegisterConverter<unsigned short, long long>();
-        iRegisterConverter<unsigned short, float>();
-        iRegisterConverter<unsigned short, double>();
-        iRegisterConverter<unsigned short, unsigned char>();
-        iRegisterConverter<unsigned short, unsigned int>();
-        iRegisterConverter<unsigned short, unsigned long>();
-        iRegisterConverter<unsigned short, unsigned long long>();
+    iRegisterConverter<unsigned short, char>();
+    iRegisterConverter<unsigned short, short>();
+    iRegisterConverter<unsigned short, int>();
+    iRegisterConverter<unsigned short, long>();
+    iRegisterConverter<unsigned short, long long>();
+    iRegisterConverter<unsigned short, float>();
+    iRegisterConverter<unsigned short, double>();
+    iRegisterConverter<unsigned short, unsigned char>();
+    iRegisterConverter<unsigned short, unsigned int>();
+    iRegisterConverter<unsigned short, unsigned long>();
+    iRegisterConverter<unsigned short, unsigned long long>();
 
-        iRegisterConverter<int, char>();
-        iRegisterConverter<int, short>();
-        iRegisterConverter<int, long>();
-        iRegisterConverter<int, long long>();
-        iRegisterConverter<int, float>();
-        iRegisterConverter<int, double>();
-        iRegisterConverter<int, unsigned char>();
-        iRegisterConverter<int, unsigned short>();
-        iRegisterConverter<int, unsigned int>();
-        iRegisterConverter<int, unsigned long>();
-        iRegisterConverter<int, unsigned long long>();
+    iRegisterConverter<int, char>();
+    iRegisterConverter<int, short>();
+    iRegisterConverter<int, long>();
+    iRegisterConverter<int, long long>();
+    iRegisterConverter<int, float>();
+    iRegisterConverter<int, double>();
+    iRegisterConverter<int, unsigned char>();
+    iRegisterConverter<int, unsigned short>();
+    iRegisterConverter<int, unsigned int>();
+    iRegisterConverter<int, unsigned long>();
+    iRegisterConverter<int, unsigned long long>();
 
-        iRegisterConverter<unsigned int, char>();
-        iRegisterConverter<unsigned int, short>();
-        iRegisterConverter<unsigned int, int>();
-        iRegisterConverter<unsigned int, long>();
-        iRegisterConverter<unsigned int, long long>();
-        iRegisterConverter<unsigned int, float>();
-        iRegisterConverter<unsigned int, double>();
-        iRegisterConverter<unsigned int, unsigned char>();
-        iRegisterConverter<unsigned int, unsigned short>();
-        iRegisterConverter<unsigned int, unsigned long>();
-        iRegisterConverter<unsigned int, unsigned long long>();
+    iRegisterConverter<unsigned int, char>();
+    iRegisterConverter<unsigned int, short>();
+    iRegisterConverter<unsigned int, int>();
+    iRegisterConverter<unsigned int, long>();
+    iRegisterConverter<unsigned int, long long>();
+    iRegisterConverter<unsigned int, float>();
+    iRegisterConverter<unsigned int, double>();
+    iRegisterConverter<unsigned int, unsigned char>();
+    iRegisterConverter<unsigned int, unsigned short>();
+    iRegisterConverter<unsigned int, unsigned long>();
+    iRegisterConverter<unsigned int, unsigned long long>();
 
-        iRegisterConverter<long, char>();
-        iRegisterConverter<long, short>();
-        iRegisterConverter<long, int>();
-        iRegisterConverter<long, long long>();
-        iRegisterConverter<long, float>();
-        iRegisterConverter<long, double>();
-        iRegisterConverter<long, unsigned char>();
-        iRegisterConverter<long, unsigned short>();
-        iRegisterConverter<long, unsigned int>();
-        iRegisterConverter<long, unsigned long>();
-        iRegisterConverter<long, unsigned long long>();
+    iRegisterConverter<long, char>();
+    iRegisterConverter<long, short>();
+    iRegisterConverter<long, int>();
+    iRegisterConverter<long, long long>();
+    iRegisterConverter<long, float>();
+    iRegisterConverter<long, double>();
+    iRegisterConverter<long, unsigned char>();
+    iRegisterConverter<long, unsigned short>();
+    iRegisterConverter<long, unsigned int>();
+    iRegisterConverter<long, unsigned long>();
+    iRegisterConverter<long, unsigned long long>();
 
-        iRegisterConverter<unsigned long, char>();
-        iRegisterConverter<unsigned long, short>();
-        iRegisterConverter<unsigned long, int>();
-        iRegisterConverter<unsigned long, long>();
-        iRegisterConverter<unsigned long, long long>();
-        iRegisterConverter<unsigned long, float>();
-        iRegisterConverter<unsigned long, double>();
-        iRegisterConverter<unsigned long, unsigned char>();
-        iRegisterConverter<unsigned long, unsigned short>();
-        iRegisterConverter<unsigned long, unsigned int>();
-        iRegisterConverter<unsigned long, unsigned long long>();
+    iRegisterConverter<unsigned long, char>();
+    iRegisterConverter<unsigned long, short>();
+    iRegisterConverter<unsigned long, int>();
+    iRegisterConverter<unsigned long, long>();
+    iRegisterConverter<unsigned long, long long>();
+    iRegisterConverter<unsigned long, float>();
+    iRegisterConverter<unsigned long, double>();
+    iRegisterConverter<unsigned long, unsigned char>();
+    iRegisterConverter<unsigned long, unsigned short>();
+    iRegisterConverter<unsigned long, unsigned int>();
+    iRegisterConverter<unsigned long, unsigned long long>();
 
-        iRegisterConverter<long long, char>();
-        iRegisterConverter<long long, short>();
-        iRegisterConverter<long long, int>();
-        iRegisterConverter<long long, float>();
-        iRegisterConverter<long long, double>();
-        iRegisterConverter<long long, unsigned char>();
-        iRegisterConverter<long long, unsigned short>();
-        iRegisterConverter<long long, unsigned int>();
-        iRegisterConverter<long long, unsigned long>();
-        iRegisterConverter<long long, unsigned long long>();
+    iRegisterConverter<long long, char>();
+    iRegisterConverter<long long, short>();
+    iRegisterConverter<long long, int>();
+    iRegisterConverter<long long, float>();
+    iRegisterConverter<long long, double>();
+    iRegisterConverter<long long, unsigned char>();
+    iRegisterConverter<long long, unsigned short>();
+    iRegisterConverter<long long, unsigned int>();
+    iRegisterConverter<long long, unsigned long>();
+    iRegisterConverter<long long, unsigned long long>();
 
-        iRegisterConverter<unsigned long long, char>();
-        iRegisterConverter<unsigned long long, short>();
-        iRegisterConverter<unsigned long long, int>();
-        iRegisterConverter<unsigned long long, long>();
-        iRegisterConverter<unsigned long long, long long>();
-        iRegisterConverter<unsigned long long, float>();
-        iRegisterConverter<unsigned long long, double>();
-        iRegisterConverter<unsigned long long, unsigned char>();
-        iRegisterConverter<unsigned long long, unsigned short>();
-        iRegisterConverter<unsigned long long, unsigned int>();
-        iRegisterConverter<unsigned long long, unsigned long>();
+    iRegisterConverter<unsigned long long, char>();
+    iRegisterConverter<unsigned long long, short>();
+    iRegisterConverter<unsigned long long, int>();
+    iRegisterConverter<unsigned long long, long>();
+    iRegisterConverter<unsigned long long, long long>();
+    iRegisterConverter<unsigned long long, float>();
+    iRegisterConverter<unsigned long long, double>();
+    iRegisterConverter<unsigned long long, unsigned char>();
+    iRegisterConverter<unsigned long long, unsigned short>();
+    iRegisterConverter<unsigned long long, unsigned int>();
+    iRegisterConverter<unsigned long long, unsigned long>();
 
-        iRegisterConverter<float, char>();
-        iRegisterConverter<float, short>();
-        iRegisterConverter<float, int>();
-        iRegisterConverter<float, long long>();
-        iRegisterConverter<float, long>();
-        iRegisterConverter<float, double>();
-        iRegisterConverter<float, unsigned char>();
-        iRegisterConverter<float, unsigned short>();
-        iRegisterConverter<float, unsigned int>();
-        iRegisterConverter<float, unsigned long>();
-        iRegisterConverter<float, unsigned long long>();
+    iRegisterConverter<float, char>();
+    iRegisterConverter<float, short>();
+    iRegisterConverter<float, int>();
+    iRegisterConverter<float, long long>();
+    iRegisterConverter<float, long>();
+    iRegisterConverter<float, double>();
+    iRegisterConverter<float, unsigned char>();
+    iRegisterConverter<float, unsigned short>();
+    iRegisterConverter<float, unsigned int>();
+    iRegisterConverter<float, unsigned long>();
+    iRegisterConverter<float, unsigned long long>();
 
-        iRegisterConverter<double, char>();
-        iRegisterConverter<double, short>();
-        iRegisterConverter<double, int>();
-        iRegisterConverter<double, long>();
-        iRegisterConverter<double, long long>();
-        iRegisterConverter<double, float>();
-        iRegisterConverter<double, unsigned char>();
-        iRegisterConverter<double, unsigned short>();
-        iRegisterConverter<double, unsigned int>();
-        iRegisterConverter<double, unsigned long>();
-        iRegisterConverter<double, unsigned long long>();
+    iRegisterConverter<double, char>();
+    iRegisterConverter<double, short>();
+    iRegisterConverter<double, int>();
+    iRegisterConverter<double, long>();
+    iRegisterConverter<double, long long>();
+    iRegisterConverter<double, float>();
+    iRegisterConverter<double, unsigned char>();
+    iRegisterConverter<double, unsigned short>();
+    iRegisterConverter<double, unsigned int>();
+    iRegisterConverter<double, unsigned long>();
+    iRegisterConverter<double, unsigned long long>();
 
-        iRegisterConverter(&std::string::c_str);
-        iRegisterConverter(&std::wstring::c_str);
-        iRegisterConverter(&iString::utf16);
-    }
-};
-
-static systemConvertHelper s_convertHelp;
+    iRegisterConverter(&std::string::c_str);
+    iRegisterConverter(&std::wstring::c_str);
+    iRegisterConverter(&iString::utf16);
+}
 
 } // namespace iShell

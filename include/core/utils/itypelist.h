@@ -142,13 +142,13 @@ template <int n>
 struct iGetter
 {
     template <class Ret, class Head, class Tail>
-    inline static Ret& get(iTypeList<Head, Tail>& val)
+    static inline Ret& get(iTypeList<Head, Tail>& val)
     {
         return iGetter<n-1>::template get<Ret, typename Tail::HeadType, typename Tail::TailType>(val.tail);
     }
 
     template <class Ret, class Head, class Tail>
-    inline static const Ret& get(const iTypeList<Head, Tail>& val)
+    static inline const Ret& get(const iTypeList<Head, Tail>& val)
     {
         return iGetter<n-1>::template get<Ret, typename Tail::HeadType, typename Tail::TailType>(val.tail);
     }
@@ -159,13 +159,13 @@ template <>
 struct iGetter<0>
 {
     template <class Ret, class Head, class Tail>
-    inline static Ret& get(iTypeList<Head, Tail>& val)
+    static inline Ret& get(iTypeList<Head, Tail>& val)
     {
         return val.head;
     }
 
     template <class Ret, class Head, class Tail>
-    inline static const Ret& get(const iTypeList<Head, Tail>& val)
+    static inline const Ret& get(const iTypeList<Head, Tail>& val)
     {
         return val.head;
     }

@@ -24,7 +24,7 @@ static bool ilog_default_filter(void*, const char*, ilog_level_t)
 
 static void ilog_default_callback(void*, const char* tag, ilog_level_t level, const char *msg)
 {
-    static char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
+    static const char log_level_arr[ILOG_LEVEL_MAX] = {'E', 'W', 'N', 'I', 'D', 'V'};
     char cur_level = '-';
 
     if ((0 <= level) && (level < ILOG_LEVEL_MAX)) {

@@ -20,10 +20,10 @@ namespace iShell {
 
 typedef iBasicAtomicBitField<iEvent::MaxUser - iEvent::User + 1> UserEventTypeRegistry;
 
+static UserEventTypeRegistry userEventTypeRegistry;
+
 static inline int registerEventTypeZeroBased(int id)
 {
-    static UserEventTypeRegistry userEventTypeRegistry;
-
     // if the type hint hasn't been registered yet, take it:
     if (id < UserEventTypeRegistry::NumBits && id >= 0 && userEventTypeRegistry.allocateSpecific(id))
         return id;

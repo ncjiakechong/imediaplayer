@@ -686,8 +686,8 @@ private:
     friend class iByteArray;
     friend struct iAbstractConcatenable;
 
-    template <typename T> static
-    T toIntegral_helper(const iChar *data, int len, bool *ok, int base)
+    template <typename T>
+    static T toIntegral_helper(const iChar *data, int len, bool *ok, int base)
     {
         using Int64 = typename std::conditional<std::is_unsigned<T>::value, xulonglong, xlonglong>::type;
         using Int32 = typename std::conditional<std::is_unsigned<T>::value, uint, int>::type;
