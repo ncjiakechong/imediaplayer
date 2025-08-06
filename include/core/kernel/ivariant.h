@@ -25,7 +25,7 @@ struct iAbstractConverterFunction
     explicit iAbstractConverterFunction(int from, int to, Converter c = IX_NULLPTR)
         : fromTypeId(from), toTypeId(to), convert(c) {}
 
-    virtual ~iAbstractConverterFunction();
+    ~iAbstractConverterFunction();
 
     int fromTypeId;
     int toTypeId;
