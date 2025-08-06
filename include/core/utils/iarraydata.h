@@ -11,31 +11,33 @@
 #ifndef IARRAYDATA_H
 #define IARRAYDATA_H
 
-#include <core/global/imetaprogramming.h>
-#include <core/thread/iatomiccounter.h>
 #include <string.h>
 
-namespace ishell {
+#include <core/global/iglobal.h>
+#include <core/global/imetaprogramming.h>
+#include <core/utils/irefcount.h>
+
+namespace iShell {
 
 struct iArrayData
 {
-    iAtomicCounter<int> ref; // -1 means static, (!0 && !1) means shared
+    iRefCount ref; // -1 means static, (!0 && !1) means shared
     int size;
     uint alloc : 31;
     uint capacityReserved : 1;
 
-    intptr_t offset; // in bytes from beginning of header
+    xptrdiff offset; // in bytes from beginning of header
 
     void *data()
     {
-        i_assert(size == 0
+        ix_assert(size == 0
                 || offset < 0 || size_t(offset) >= sizeof(iArrayData));
         return reinterpret_cast<char *>(this) + offset;
     }
 
     const void *data() const
     {
-        i_assert(size == 0
+        ix_assert(size == 0
                 || offset < 0 || size_t(offset) >= sizeof(iArrayData));
         return reinterpret_cast<const char *>(this) + offset;
     }
@@ -50,8 +52,9 @@ struct iArrayData
 
     enum AllocationOption {
         CapacityReserved    = 0x1,
-        RawData             = 0x2,
-        Grow                = 0x4,
+        Unsharable          = 0x2,
+        RawData             = 0x4,
+        Grow                = 0x8,
 
         Default = 0
     };
@@ -105,7 +108,7 @@ struct iTypedArrayData
         typedef T *pointer;
         typedef T &reference;
 
-        inline iterator() : i(nullptr) {}
+        inline iterator() : i(IX_NULLPTR) {}
         inline iterator(T *n) : i(n) {}
         inline T &operator*() const { return *i; }
         inline T *operator->() const { return i; }
@@ -139,7 +142,7 @@ struct iTypedArrayData
         typedef const T *pointer;
         typedef const T &reference;
 
-        inline const_iterator() : i(nullptr) {}
+        inline const_iterator() : i(IX_NULLPTR) {}
         inline const_iterator(const T *n) : i(n) {}
         inline const_iterator(const const_iterator &o): i(o.i) {} // #### Qt 6: remove, the default version is fine
         inline explicit const_iterator(const iterator &o): i(o.i) {}
@@ -181,33 +184,32 @@ struct iTypedArrayData
     static iTypedArrayData *allocate(size_t capacity,
             AllocationOptions options = Default)
     {
-        I_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
+        IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
         return static_cast<iTypedArrayData *>(iArrayData::allocate(sizeof(T),
-                    I_ALIGNOF(AlignmentDummy), capacity, options));
+                    IX_ALIGNOF(AlignmentDummy), capacity, options));
     }
 
     static iTypedArrayData *reallocateUnaligned(iTypedArrayData *data, size_t capacity,
             AllocationOptions options = Default)
     {
-        I_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
+        IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
         return static_cast<iTypedArrayData *>(iArrayData::reallocateUnaligned(data, sizeof(T),
                     capacity, options));
     }
 
     static void deallocate(iArrayData *data)
     {
-        I_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
-        iArrayData::deallocate(data, sizeof(T), I_ALIGNOF(AlignmentDummy));
+        IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
+        iArrayData::deallocate(data, sizeof(T), IX_ALIGNOF(AlignmentDummy));
     }
 
     static iTypedArrayData *fromRawData(const T *data, size_t n,
             AllocationOptions options = Default)
     {
-        I_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
+        IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
         iTypedArrayData *result = allocate(0, options | RawData);
         if (result) {
-            int count = result->ref.value();
-            i_assert((0 == count) || (1 == count)); // No shared empty, please!
+            ix_assert(!result->ref.isShared()); // No shared empty, please!
 
             result->offset = reinterpret_cast<const char *>(data)
                 - reinterpret_cast<const char *>(result);
@@ -218,14 +220,20 @@ struct iTypedArrayData
 
     static iTypedArrayData *sharedNull()
     {
-        I_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
+        IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
         return static_cast<iTypedArrayData *>(iArrayData::sharedNull());
     }
 
     static iTypedArrayData *sharedEmpty()
     {
-        I_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
+        IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
         return allocate(/* capacity */ 0);
+    }
+
+    static iTypedArrayData *unsharableEmpty()
+    {
+        IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iArrayData));
+        return allocate(/* capacity */ 0, Unsharable);
     }
 };
 
@@ -243,6 +251,15 @@ struct iArrayDataPointerRef
     iTypedArrayData<T> *ptr;
 };
 
+#define IX_STATIC_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(size, offset) \
+    { {iAtomicCounter<int>(-1)}, size, 0, 0, offset } \
+    /**/
+
+#define IX_STATIC_ARRAY_DATA_HEADER_INITIALIZER(type, size) \
+    IX_STATIC_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(size,\
+        ((sizeof(iArrayData) + (IX_ALIGNOF(type) - 1)) & ~(IX_ALIGNOF(type) - 1) )) \
+    /**/
+
 namespace iPrivate {
 struct iContainerImplHelper
 {
@@ -251,6 +268,6 @@ struct iContainerImplHelper
 };
 }
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IARRAYDATA_H

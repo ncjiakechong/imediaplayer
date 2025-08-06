@@ -16,7 +16,7 @@
 
 #include "private/icoreposix.h"
 
-namespace ishell {
+namespace iShell {
 
 timespec igettime()
 {
@@ -25,7 +25,7 @@ timespec igettime()
     return tv;
 }
 
-int i_open_pipe (intptr_t *fds, int flags)
+int ix_open_pipe (xintptr *fds, int flags)
 {
     int pipefd[2];
     int ecode;
@@ -57,7 +57,7 @@ int i_open_pipe (intptr_t *fds, int flags)
     return 0;
 }
 
-int i_set_fd_nonblocking (intptr_t fd, bool nonblock)
+int ix_set_fd_nonblocking (xintptr fd, bool nonblock)
 {
     int fcntl_flags;
     fcntl_flags = fcntl (fd, F_GETFL);
@@ -78,4 +78,4 @@ int i_set_fd_nonblocking (intptr_t fd, bool nonblock)
     return 0;
 }
 
-} // namespace ishell
+} // namespace iShell

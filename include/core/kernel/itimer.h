@@ -13,12 +13,12 @@
 
 #include <core/kernel/iobject.h>
 
-namespace ishell {
+namespace iShell {
 
 class iTimer : public iObject
 {
 public:
-    explicit iTimer(iObject *parent = I_NULLPTR);
+    explicit iTimer(iObject *parent = IX_NULLPTR);
     ~iTimer();
 
     inline bool isActive() const { return m_id >= 0; }
@@ -54,6 +54,6 @@ private:
     iTimer &operator=(const iTimer &);
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ITIMER_H

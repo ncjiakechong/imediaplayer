@@ -12,25 +12,25 @@
 #include "core/global/imacro.h"
 #include "core/kernel/ideadlinetimer.h"
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 #include <ctime>
 #include <chrono>
 #else
 #include "private/icoreposix.h"
 #endif
 
-namespace ishell {
+namespace iShell {
 
-static inline std::pair<int64_t, int64_t> toSecsAndNSecs(int64_t nsecs)
+static inline std::pair<xint64, xint64> toSecsAndNSecs(xint64 nsecs)
 {
-    int64_t secs = nsecs / (1000*1000*1000);
+    xint64 secs = nsecs / (1000*1000*1000);
     if (nsecs < 0)
         --secs;
     nsecs -= secs * 1000*1000*1000;
     return std::make_pair(secs, nsecs);
 }
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 
 iDeadlineTimer iDeadlineTimer::current(TimerType timerType)
 {
@@ -38,7 +38,7 @@ iDeadlineTimer iDeadlineTimer::current(TimerType timerType)
             std::chrono::steady_clock::time_point(std::chrono::steady_clock::duration::zero());
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
 
-    int64_t currentTime  = int64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(now - min).count());
+    xint64 currentTime  = xint64(std::chrono::duration_cast<std::chrono::nanoseconds>(now - min).count());
 
     iDeadlineTimer result;
     result.t1 = toSecsAndNSecs(currentTime).first;
@@ -60,13 +60,13 @@ iDeadlineTimer iDeadlineTimer::current(TimerType timerType)
 }
 #endif
 
-iDeadlineTimer::iDeadlineTimer(int64_t msecs, TimerType type)
+iDeadlineTimer::iDeadlineTimer(xint64 msecs, TimerType type)
     : t2(0)
 {
     setRemainingTime(msecs, type);
 }
 
-void iDeadlineTimer::setRemainingTime(int64_t msecs, TimerType timerType)
+void iDeadlineTimer::setRemainingTime(xint64 msecs, TimerType timerType)
 {
     if (msecs == -1)
         *this = iDeadlineTimer(Forever, timerType);
@@ -74,7 +74,7 @@ void iDeadlineTimer::setRemainingTime(int64_t msecs, TimerType timerType)
         setPreciseRemainingTime(0, msecs * 1000 * 1000, timerType);
 }
 
-void iDeadlineTimer::setPreciseRemainingTime(int64_t secs, int64_t nsecs, TimerType timerType)
+void iDeadlineTimer::setPreciseRemainingTime(xint64 secs, xint64 nsecs, TimerType timerType)
 {
     if (secs == -1) {
         *this = iDeadlineTimer(Forever, timerType);
@@ -102,35 +102,35 @@ void iDeadlineTimer::setTimerType(TimerType timerType)
     type = timerType;
 }
 
-int64_t iDeadlineTimer::remainingTime() const
+xint64 iDeadlineTimer::remainingTime() const
 {
-    int64_t ns = remainingTimeNSecs();
+    xint64 ns = remainingTimeNSecs();
     return ns <= 0 ? ns : (ns + 999999) / (1000 * 1000);
 }
 
-int64_t iDeadlineTimer::remainingTimeNSecs() const
+xint64 iDeadlineTimer::remainingTimeNSecs() const
 {
     if (isForever())
         return -1;
-    int64_t raw = rawRemainingTimeNSecs();
+    xint64 raw = rawRemainingTimeNSecs();
     return raw < 0 ? 0 : raw;
 }
 
-int64_t iDeadlineTimer::rawRemainingTimeNSecs() const
+xint64 iDeadlineTimer::rawRemainingTimeNSecs() const
 {
     iDeadlineTimer now = current(timerType());
 
     return (t1 - now.t1) * (1000*1000*1000) + t2 - now.t2;
 }
 
-int64_t iDeadlineTimer::deadline() const
+xint64 iDeadlineTimer::deadline() const
 {
     if (isForever())
         return t1;
     return deadlineNSecs() / (1000 * 1000);
 }
 
-int64_t iDeadlineTimer::deadlineNSecs() const
+xint64 iDeadlineTimer::deadlineNSecs() const
 {
     if (isForever())
         return t1;
@@ -138,19 +138,19 @@ int64_t iDeadlineTimer::deadlineNSecs() const
     return t1 * 1000 * 1000 * 1000 + t2;
 }
 
-void iDeadlineTimer::setDeadline(int64_t msecs, TimerType timerType)
+void iDeadlineTimer::setDeadline(xint64 msecs, TimerType timerType)
 {
-    if (msecs == (std::numeric_limits<int64_t>::max)()) {
+    if (msecs == (std::numeric_limits<xint64>::max)()) {
         setPreciseDeadline(msecs, 0, timerType);    // msecs == MAX implies Forever
     } else {
         setPreciseDeadline(msecs / 1000, msecs % 1000 * 1000 * 1000, timerType);
     }
 }
 
-void iDeadlineTimer::setPreciseDeadline(int64_t secs, int64_t nsecs, TimerType timerType)
+void iDeadlineTimer::setPreciseDeadline(xint64 secs, xint64 nsecs, TimerType timerType)
 {
     type = timerType;
-    if (secs == (std::numeric_limits<int64_t>::max)() || nsecs == (std::numeric_limits<int64_t>::max)()) {
+    if (secs == (std::numeric_limits<xint64>::max)() || nsecs == (std::numeric_limits<xint64>::max)()) {
         *this = iDeadlineTimer(Forever, timerType);
     } else {
         t1 = secs + toSecsAndNSecs(nsecs).first;
@@ -158,9 +158,9 @@ void iDeadlineTimer::setPreciseDeadline(int64_t secs, int64_t nsecs, TimerType t
     }
 }
 
-iDeadlineTimer iDeadlineTimer::addNSecs(iDeadlineTimer dt, int64_t nsecs)
+iDeadlineTimer iDeadlineTimer::addNSecs(iDeadlineTimer dt, xint64 nsecs)
 {
-    if (dt.isForever() || nsecs == (std::numeric_limits<int64_t>::max)()) {
+    if (dt.isForever() || nsecs == (std::numeric_limits<xint64>::max)()) {
         dt = iDeadlineTimer(Forever, dt.timerType());
     } else {
         dt.t1 += toSecsAndNSecs(nsecs).first;
@@ -174,4 +174,4 @@ iDeadlineTimer iDeadlineTimer::addNSecs(iDeadlineTimer dt, int64_t nsecs)
     return dt;
 }
 
-} // namespace ishell
+} // namespace iShell

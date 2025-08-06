@@ -13,7 +13,7 @@
 
 #include <stddef.h>
 
-namespace ishell {
+namespace iShell {
 
 template <typename T>
 struct is_reference
@@ -256,13 +256,13 @@ template <class T> struct iAlignOf : iAlignOf_Default<T> { };
 template <class T> struct iAlignOf<T &> : iAlignOf<T> {};
 template <size_t N, class T> struct iAlignOf<T[N]> : iAlignOf<T> {};
 
-#define I_EMULATED_ALIGNOF(T) \
+#define IX_EMULATED_ALIGNOF(T) \
     (size_t(iAlignOf<T>::Value))
 
-#ifndef I_ALIGNOF
-#define I_ALIGNOF(T) I_EMULATED_ALIGNOF(T)
+#ifndef IX_ALIGNOF
+#define IX_ALIGNOF(T) IX_EMULATED_ALIGNOF(T)
 #endif
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IMETAPROGRAMMING_H

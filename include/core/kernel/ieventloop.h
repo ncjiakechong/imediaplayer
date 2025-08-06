@@ -14,12 +14,12 @@
 #include <core/kernel/iobject.h>
 #include <core/thread/iatomiccounter.h>
 
-namespace ishell {
+namespace iShell {
 
 class iEventLoop : public iObject
 {
 public:
-    iEventLoop(iObject* parent = I_NULLPTR);
+    iEventLoop(iObject* parent = IX_NULLPTR);
     virtual ~iEventLoop();
 
     int exec();
@@ -34,6 +34,6 @@ protected:
     iAtomicCounter<int> m_returnCode;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IEVENTLOOP_H

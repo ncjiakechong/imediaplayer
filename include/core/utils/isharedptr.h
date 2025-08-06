@@ -15,7 +15,7 @@
 #include <core/global/imetaprogramming.h>
 #include <core/thread/iatomiccounter.h>
 
-namespace ishell {
+namespace iShell {
 
 class iObject;
 
@@ -98,7 +98,7 @@ namespace isharedpointer {
         DestroyerFn _extFree;
         DestroyerFn _objFree;
 
-        friend class ishell::iObject;
+        friend class iShell::iObject;
     };
 
     // This class extends ExternalRefCountData and implements
@@ -121,7 +121,7 @@ namespace isharedpointer {
 
         static inline void objDeleter(ExternalRefCountData *self)
         {
-            i_check_ptr(self);
+            ix_check_ptr(self);
             Self *realself = static_cast<Self *>(self);
             realself->extra.execute();
 
@@ -150,7 +150,7 @@ namespace isharedpointer {
 
         static ExternalRefCountData *getAndRef(const iObject * obj)
         {
-            ExternalRefCountData *that =ExternalRefCountData::getAndTest(obj, I_NULLPTR);
+            ExternalRefCountData *that =ExternalRefCountData::getAndTest(obj, IX_NULLPTR);
             if (that) {
                 that->weakRef();
                 return that;
@@ -172,7 +172,7 @@ namespace isharedpointer {
         }
     private:
         WeakRefCountWithCustomDeleter()
-            : ExternalRefCountData(2, -1, I_NULLPTR, dataDeleter)
+            : ExternalRefCountData(2, -1, IX_NULLPTR, dataDeleter)
         {
         }
 
@@ -203,7 +203,7 @@ public:
     bool operator !() const { return isNull(); }
     T *operator->() const { return data(); }
 
-    iSharedPtr() : value(I_NULLPTR), d(I_NULLPTR) { }
+    iSharedPtr() : value(IX_NULLPTR), d(IX_NULLPTR) { }
     ~iSharedPtr() { deref(d); }
 
     template <class X>
@@ -236,7 +236,7 @@ public:
     }
 
     template <class X>
-    inline iSharedPtr(const iWeakPtr<X> &other) : value(I_NULLPTR), d(I_NULLPTR)
+    inline iSharedPtr(const iWeakPtr<X> &other) : value(IX_NULLPTR), d(IX_NULLPTR)
     { *this = other; }
 
     template <class X>
@@ -276,7 +276,7 @@ private:
     inline void internalConstruct(X *ptr, Deleter deleter)
     {
         if (!ptr) {
-            d = I_NULLPTR;
+            d = IX_NULLPTR;
             return;
         }
 
@@ -308,14 +308,14 @@ private:
                 o->weakRef();
             } else {
                 o->checkObjectShared(actual);
-                o = I_NULLPTR;
+                o = IX_NULLPTR;
             }
         }
 
         std::swap(d, o);
         std::swap(this->value, actual);
         if (!d || d->strongCount() == 0)
-            this->value = I_NULLPTR;
+            this->value = IX_NULLPTR;
 
         // dereference saved data
         deref(o);
@@ -335,15 +335,15 @@ public:
     typedef value_type *pointer;
     typedef const value_type *const_pointer;
 
-    bool isNull() const { return (d == I_NULLPTR || d->strongCount() == 0 || value == I_NULLPTR); }
+    bool isNull() const { return (d == IX_NULLPTR || d->strongCount() == 0 || value == IX_NULLPTR); }
     bool operator !() const { return isNull(); }
-    T *data() const { return (d == I_NULLPTR || d->strongCount() == 0) ? I_NULLPTR : value; }
+    T *data() const { return (d == IX_NULLPTR || d->strongCount() == 0) ? IX_NULLPTR : value; }
 
-    inline iWeakPtr() : d(I_NULLPTR), value(I_NULLPTR) { }
+    inline iWeakPtr() : d(IX_NULLPTR), value(IX_NULLPTR) { }
     inline ~iWeakPtr() { if (d) d->weakUnref(); }
 
     template <class X>
-    inline iWeakPtr(X *ptr) : d(ptr ? isharedpointer::WeakRefCountWithCustomDeleter::getAndRef(ptr) : I_NULLPTR), value(ptr)
+    inline iWeakPtr(X *ptr) : d(ptr ? isharedpointer::WeakRefCountWithCustomDeleter::getAndRef(ptr) : IX_NULLPTR), value(ptr)
     { }
 
     template <class X>
@@ -375,7 +375,7 @@ public:
     }
 
     template <class X>
-    inline iWeakPtr(const iWeakPtr<X> &o) : d(I_NULLPTR), value(I_NULLPTR)
+    inline iWeakPtr(const iWeakPtr<X> &o) : d(IX_NULLPTR), value(IX_NULLPTR)
     { *this = o; }
 
     template <class X>
@@ -396,7 +396,7 @@ public:
     { return !(*this == o); }
 
     template <class X>
-    inline iWeakPtr(const iSharedPtr<X> &o) : d(I_NULLPTR), value(I_NULLPTR)
+    inline iWeakPtr(const iSharedPtr<X> &o) : d(IX_NULLPTR), value(IX_NULLPTR)
     { *this = o; }
 
     template <class X>
@@ -444,6 +444,6 @@ iWeakPtr<T> iSharedPtr<T>::toWeakRef() const
     return iWeakPtr<T>(*this);
 }
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ISHAREDPTR_H

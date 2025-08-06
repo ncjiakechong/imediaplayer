@@ -14,14 +14,14 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 namespace isharedpointer {
 
 ExternalRefCountData::~ExternalRefCountData()
 {
-    i_assert(!_weakRef.value());
-    i_assert(_strongRef.value() <= 0);
+    ix_assert(!_weakRef.value());
+    ix_assert(_strongRef.value() <= 0);
 }
 
 int ExternalRefCountData::strongUnref()
@@ -52,12 +52,12 @@ int ExternalRefCountData::weakUnref()
 
 void ExternalRefCountData::setObjectShared(const iObject *obj, bool share)
 {
-    i_check_ptr(obj);
+    ix_check_ptr(obj);
     if (!share)
         return;
 
     iObject* d = const_cast<iObject*>(obj);
-    if (d->m_refCount.testAndSet(I_NULLPTR, this)) {
+    if (d->m_refCount.testAndSet(IX_NULLPTR, this)) {
         weakRef();
     }
 }
@@ -70,7 +70,7 @@ void ExternalRefCountData::checkObjectShared(const iObject *)
 
 ExternalRefCountData* ExternalRefCountData::getAndTest(const iObject* obj, ExternalRefCountData* data)
 {
-    i_check_ptr(obj);
+    ix_check_ptr(obj);
 
     ExternalRefCountData *that = obj->m_refCount.load();
     if (that) {
@@ -80,7 +80,7 @@ ExternalRefCountData* ExternalRefCountData::getAndTest(const iObject* obj, Exter
     // we can create the refcount data because it doesn't exist
     that = data;
     iObject* d = const_cast<iObject*>(obj);
-    if (!d->m_refCount.testAndSet(I_NULLPTR, that)) {
+    if (!d->m_refCount.testAndSet(IX_NULLPTR, that)) {
         that = d->m_refCount.load();
     }
 
@@ -89,4 +89,4 @@ ExternalRefCountData* ExternalRefCountData::getAndTest(const iObject* obj, Exter
 
 } // namespace isharedpointer
 
-} // namespace ishell
+} // namespace iShell

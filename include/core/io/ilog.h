@@ -16,14 +16,15 @@
 #include <stdint.h>
 #include <iostream>
 
+#include <core/global/iglobal.h>
 #include <core/global/imacro.h>
 
-namespace ishell {
+namespace iShell {
 
 
 /* A simple logging subsystem */
 
-// #define ILOG_TAG "ishell"
+// #define ILOG_TAG "iShell"
 
 typedef enum ilog_level {
     ILOG_ERROR  = 0,    /* Error messages */
@@ -43,20 +44,20 @@ struct iLogTarget
 };
 
 struct iHexUInt8 {
-    iHexUInt8(uint8_t _v) : value(_v) {}
-    uint8_t value;
+    iHexUInt8(xuint8 _v) : value(_v) {}
+    xuint8 value;
 };
 struct iHexUInt16 {
-    iHexUInt16(uint16_t _v) : value(_v) {}
-    uint16_t value;
+    iHexUInt16(xuint16 _v) : value(_v) {}
+    xuint16 value;
 };
 struct iHexUInt32 {
-    iHexUInt32(uint32_t _v) : value(_v) {}
-    uint32_t value;
+    iHexUInt32(xuint32 _v) : value(_v) {}
+    xuint32 value;
 };
 struct iHexUInt64 {
-    iHexUInt64(uint64_t _v) : value(_v) {}
-    uint64_t value;
+    iHexUInt64(xuint64 _v) : value(_v) {}
+    xuint64 value;
 };
 
 class iLogger{
@@ -74,29 +75,29 @@ class iLogger{
     // for bool
     void append(bool value);
 
-    // for int8_t
-    void append(int8_t value);
+    // for xint8
+    void append(xint8 value);
 
-    // for uint8_t
-    void append(uint8_t value);
+    // for xuint8
+    void append(xuint8 value);
 
-    // for int16_t
-    void append(int16_t value);
+    // for xint16
+    void append(xint16 value);
 
-    // for uint16_t
-    void append(uint16_t value);
+    // for xuint16
+    void append(xuint16 value);
 
-    // for int32_t
-    void append(int32_t value);
+    // for xint32
+    void append(xint32 value);
 
-    // for uint32_t
-    void append(uint32_t value);
+    // for xuint32
+    void append(xuint32 value);
 
-    // for int64_t
-    void append(int64_t value);
+    // for xint64
+    void append(xint64 value);
 
-    // for uint64_t
-    void append(uint64_t value);
+    // for xuint64
+    void append(xuint64 value);
 
     // for iHexUInt8
     void append(iHexUInt8 value);
@@ -149,7 +150,7 @@ class iLogger{
         append("(UNKOWN)");
     }
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
     // Template parameter pack to generate recursive code
     void append(void) {}
     template<typename T, typename... TArgs>
@@ -166,7 +167,7 @@ class iLogger{
     char m_buff[1024];
 };
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 template<typename T, typename... TArgs>
 void iLogMeta(const char* tag, ilog_level_t level, T value, TArgs... args) {
     iLogger logger;
@@ -559,6 +560,6 @@ void iLogMeta(const char* tag, ilog_level_t level, T1 value1) {
 #define ilog_warn(...)    iLogMeta(ILOG_TAG, ILOG_WARN, ##__VA_ARGS__)
 #define ilog_error(...)   iLogMeta(ILOG_TAG, ILOG_ERROR, ##__VA_ARGS__)
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ILOG_H

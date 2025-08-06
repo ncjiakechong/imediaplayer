@@ -18,7 +18,7 @@
 #include <core/thread/imutex.h>
 #include <core/thread/icondition.h>
 
-namespace ishell {
+namespace iShell {
 
 class iThread;
 class iObject;
@@ -33,7 +33,7 @@ public:
     iEvent* event;
 
     inline iPostEvent()
-        : receiver(I_NULLPTR), event(I_NULLPTR)
+        : receiver(IX_NULLPTR), event(IX_NULLPTR)
     { }
     inline iPostEvent(iObject *r, iEvent *e)
         : receiver(r), event(e)
@@ -59,7 +59,7 @@ public:
     bool                            requiresCoreApplication;
 
     std::list<iPostEvent>           postEventList;
-    iAtomicCounter<intptr_t>        threadId;
+    iAtomicCounter<xintptr>        threadId;
     iAtomicPointer<iThread>         thread;
     iAtomicPointer<iEventDispatcher> dispatcher;
     iAtomicPointer<iEventLoop>      eventLoop;
@@ -72,7 +72,7 @@ private:
 
 class iThreadImpl {
 public:
-    iThreadImpl(iThread* thread) : m_thread(thread), m_platform(I_NULLPTR) {}
+    iThreadImpl(iThread* thread) : m_thread(thread), m_platform(IX_NULLPTR) {}
     ~iThreadImpl();
 
     bool start();
@@ -85,6 +85,6 @@ private:
     void*    m_platform;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ITHREAD_P_H

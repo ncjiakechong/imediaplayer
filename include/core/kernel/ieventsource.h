@@ -14,15 +14,15 @@
 #include <list>
 #include <core/kernel/ipoll.h>
 
-namespace ishell {
+namespace iShell {
 
 class iEventDispatcher;
 
 typedef enum
 {
-  I_EVENT_SOURCE_READY = 1 << 0,
-  I_EVENT_SOURCE_CAN_RECURSE = 1 << 1,
-  I_EVENT_SOURCE_BLOCKED = 1 << 2
+  IX_EVENT_SOURCE_READY = 1 << 0,
+  IX_EVENT_SOURCE_CAN_RECURSE = 1 << 1,
+  IX_EVENT_SOURCE_BLOCKED = 1 << 2
 } iEventSourceFlags;
 
 class iEventSource
@@ -82,12 +82,12 @@ private:
     int m_priority;
     int m_refCount;
 
-    uint32_t m_flags;
+    xuint32 m_flags;
 
     iEventDispatcher* m_dispatcher;
     std::list<iPollFD*> m_pollFds;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IEVENTSOURCE_H

@@ -11,7 +11,7 @@
 #ifndef ISEMAPHORE_H
 #define ISEMAPHORE_H
 
-namespace ishell {
+namespace iShell {
 
 class iSemaphoreImp;
 
@@ -62,6 +62,6 @@ private:
     iSemaphoreImp* m_semph;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ISEMAPHORE_H

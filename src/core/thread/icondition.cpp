@@ -11,7 +11,7 @@
 
 #include "core/global/imacro.h"
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 #include <chrono>
 #include <mutex>
 #include <thread>
@@ -26,7 +26,7 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 class iConditionImpl
 {
@@ -39,7 +39,7 @@ public:
     virtual int broadcast() = 0;
 };
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 
 class platform_cond_imp : public iConditionImpl
 {
@@ -109,7 +109,7 @@ public:
         }
 
         pthread_mutexattr_destroy(&attr);
-        if (pthread_cond_init(&_cond, I_NULLPTR)) {
+        if (pthread_cond_init(&_cond, IX_NULLPTR)) {
             ilog_error("pthread_cond_init error");
         }
     }
@@ -140,7 +140,7 @@ public:
         struct timespec abstime;
         struct timeval tv;
 
-        gettimeofday(&tv, I_NULLPTR);
+        gettimeofday(&tv, IX_NULLPTR);
         abstime.tv_sec  = tv.tv_sec + milliseconds / 1000;
         abstime.tv_nsec = tv.tv_usec*1000 + (milliseconds % 1000)*1000000;
         if (abstime.tv_nsec >= 1000000000)
@@ -212,4 +212,4 @@ void iCondition::broadcast()
     m_cond->broadcast();
 }
 
-} // namespace ishell
+} // namespace iShell

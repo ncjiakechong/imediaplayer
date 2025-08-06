@@ -17,7 +17,7 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 // we allow for 2^24 = 8^8 = 16777216 simultaneously running timers
 struct iTimerIdFreeListConstants : public iFreeListDefaultConstants
@@ -109,4 +109,4 @@ void iEventDispatcher::closingDown()
 {
 }
 
-} // namespace ishell
+} // namespace iShell

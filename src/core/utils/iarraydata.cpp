@@ -9,27 +9,28 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-
-#include "core/utils/iarraydata.h"
-#include "core/io/ilog.h"
-
 #include <stdlib.h>
 #include <limits.h>
 
+#include "core/io/ilog.h"
+#include "core/utils/iarraydata.h"
+#include "private/itools_p.h"
+
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 const iArrayData iArrayData::shared_null[2] = {
     { {iAtomicCounter<int>(-1)}, 0, 0, 0, sizeof(iArrayData) }, // shared null
     /* zero initialized terminator */};
 
-static const iArrayData i_array[3] = {
+static const iArrayData ix_array[3] = {
     { {iAtomicCounter<int>(-1)}, 0, 0, 0, sizeof(iArrayData) }, // shared empty
     { {iAtomicCounter<int>(0)}, 0, 0, 0, sizeof(iArrayData) }, // unsharable empty
     /* zero initialized terminator */};
 
-static const iArrayData &i_array_empty = i_array[0];
+static const iArrayData &ix_array_empty = ix_array[0];
+static const iArrayData &ix_array_unsharable_empty = ix_array[1];
 
 static inline size_t calculateBlockSize(size_t &capacity, size_t objectSize, size_t headerSize,
                                         uint options)
@@ -38,11 +39,11 @@ static inline size_t calculateBlockSize(size_t &capacity, size_t objectSize, siz
     // allocSize = objectSize * capacity + headerSize, but checked for overflow
     // plus padded to grow in size
     if (options & iArrayData::Grow) {
-        auto r = qCalculateGrowingBlockSize(capacity, objectSize, headerSize);
+        auto r = iCalculateGrowingBlockSize(capacity, objectSize, headerSize);
         capacity = r.elementCount;
         return r.size;
     } else {
-        return qCalculateBlockSize(capacity, objectSize, headerSize);
+        return iCalculateBlockSize(capacity, objectSize, headerSize);
     }
     return 0;
 }
@@ -59,37 +60,40 @@ iArrayData *iArrayData::allocate(size_t objectSize, size_t alignment,
         size_t capacity, AllocationOptions options)
 {
     // Alignment is a power of two
-    i_assert(alignment >= I_ALIGNOF(iArrayData)
+    ix_assert(alignment >= IX_ALIGNOF(iArrayData)
             && !(alignment & (alignment - 1)));
 
     // Don't allocate empty headers
     if (!(options & RawData) && !capacity) {
-        return const_cast<iArrayData *>(&i_array_empty);
+        if (options & Unsharable)
+            return const_cast<iArrayData *>(&ix_array_unsharable_empty);
+
+        return const_cast<iArrayData *>(&ix_array_empty);
     }
 
     size_t headerSize = sizeof(iArrayData);
 
-    // Allocate extra (alignment - I_ALIGNOF(iArrayData)) padding bytes so we
+    // Allocate extra (alignment - IX_ALIGNOF(iArrayData)) padding bytes so we
     // can properly align the data array. This assumes malloc is able to
     // provide appropriate alignment for the header -- as it should!
     // Padding is skipped when allocating a header for RawData.
     if (!(options & RawData))
-        headerSize += (alignment - I_ALIGNOF(iArrayData));
+        headerSize += (alignment - IX_ALIGNOF(iArrayData));
 
     if (headerSize > size_t(INT_MAX))
-        return I_NULLPTR;
+        return IX_NULLPTR;
 
     size_t allocSize = calculateBlockSize(capacity, objectSize, headerSize, options);
     iArrayData *header = static_cast<iArrayData *>(::malloc(allocSize));
     if (header) {
-        uintptr_t data = (uintptr_t(header) + sizeof(iArrayData) + alignment - 1)
+        xuintptr data = (xuintptr(header) + sizeof(iArrayData) + alignment - 1)
                 & ~(alignment - 1);
 
-        header->ref = 1;
+        header->ref.atomic = bool(!(options & Unsharable));
         header->size = 0;
         header->alloc = capacity;
         header->capacityReserved = bool(options & CapacityReserved);
-        header->offset = data - uintptr_t(header);
+        header->offset = data - xuintptr(header);
     }
 
     return header;
@@ -98,8 +102,8 @@ iArrayData *iArrayData::allocate(size_t objectSize, size_t alignment,
 iArrayData *iArrayData::reallocateUnaligned(iArrayData *data, size_t objectSize, size_t capacity,
                                             AllocationOptions options)
 {
-    i_assert(data);
-    i_assert(data->isMutable());
+    ix_assert(data);
+    ix_assert(data->isMutable());
 
     size_t headerSize = sizeof(iArrayData);
     size_t allocSize = calculateBlockSize(capacity, objectSize, headerSize, options);
@@ -113,12 +117,15 @@ void iArrayData::deallocate(iArrayData *data, size_t objectSize,
         size_t alignment)
 {
     // Alignment is a power of two
-    i_assert(alignment >= I_ALIGNOF(iArrayData)
+    ix_assert(alignment >= IX_ALIGNOF(iArrayData)
             && !(alignment & (alignment - 1)));
 
-    if ((I_NULLPTR != data) && (-1 == data->ref.value())) {
+    if (data == &ix_array_unsharable_empty)
+        return;
+
+    if ((IX_NULLPTR != data) && data->ref.isStatic()) {
         ilog_warn("iArrayData::deallocate Static data cannot be deleted");
-        i_assert(0);
+        ix_assert(0);
     }
 
     ::free(data);
@@ -153,4 +160,4 @@ iContainerImplHelper::CutResult iContainerImplHelper::mid(int originalLength, in
 }
 }
 
-} // namespace ishell
+} // namespace iShell

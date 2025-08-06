@@ -19,18 +19,18 @@
 #include "core/io/ilog.h"
 #include "private/ithread_p.h"
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 #include <algorithm>
 #endif
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 class  iMetaCallEvent : public iEvent
 {
 public:
-    iMetaCallEvent(const iSharedPtr<_iconnection>& conn, const iSharedPtr<void>& arg, iSemaphore* semph = I_NULLPTR)
+    iMetaCallEvent(const iSharedPtr<_iconnection>& conn, const iSharedPtr<void>& arg, iSemaphore* semph = IX_NULLPTR)
         : iEvent(MetaCall), connection(conn), arguments(arg), semaphore(semph)
         {}
 
@@ -47,8 +47,8 @@ public:
 
 iObject::iObject(iObject *parent)
     : m_threadData(iThreadData::current())
-    , m_parent(I_NULLPTR)
-    , m_currentChildBeingDeleted(I_NULLPTR)
+    , m_parent(IX_NULLPTR)
+    , m_currentChildBeingDeleted(IX_NULLPTR)
     , m_wasDeleted(false)
     , m_isDeletingChildren(false)
 {
@@ -60,8 +60,8 @@ iObject::iObject(iObject *parent)
 iObject::iObject(const std::string& name, iObject* parent)
     : m_objName(name)
     , m_threadData(iThreadData::current())
-    , m_parent(I_NULLPTR)
-    , m_currentChildBeingDeleted(I_NULLPTR)
+    , m_parent(IX_NULLPTR)
+    , m_currentChildBeingDeleted(IX_NULLPTR)
     , m_wasDeleted(false)
     , m_isDeletingChildren(false)
 {
@@ -73,7 +73,7 @@ iObject::iObject(const std::string& name, iObject* parent)
 iObject::iObject(const iObject& other)
     : m_objName(other.m_objName)
     , m_threadData(iThreadData::current())
-    , m_currentChildBeingDeleted(I_NULLPTR)
+    , m_currentChildBeingDeleted(IX_NULLPTR)
     , m_wasDeleted(false)
     , m_isDeletingChildren(false)
 {
@@ -81,7 +81,7 @@ iObject::iObject(const iObject& other)
 
     setParent(other.m_parent);
 
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_objLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
     const_iterator it = other.m_senders.begin();
     const_iterator itEnd = other.m_senders.end();
 
@@ -112,21 +112,21 @@ iObject::~iObject()
 
     m_isDeletingChildren = true;
     // delete children objects
-    // don't use qDeleteAll as the destructor of the child might
+    // don't use iDeleteAll as the destructor of the child might
     // delete siblings
     for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
         m_currentChildBeingDeleted = *it;
-        *it = I_NULLPTR;
+        *it = IX_NULLPTR;
         delete m_currentChildBeingDeleted;
     }
 
     m_children.clear();
-    m_currentChildBeingDeleted = I_NULLPTR;
+    m_currentChildBeingDeleted = IX_NULLPTR;
     m_isDeletingChildren = false;
 
     // remove it from parent object
     if (m_parent)
-        setParent(I_NULLPTR);
+        setParent(IX_NULLPTR);
 
     if (!m_runningTimers.empty()) {
         if (m_threadData == iThreadData::current()) {
@@ -154,20 +154,20 @@ void iObject::moveToThread(iThread *targetThread)
         return;
     }
 
-    if (I_NULLPTR != m_parent) {
+    if (IX_NULLPTR != m_parent) {
         ilog_warn("iObject::moveToThread: Cannot move objects with a parent");
         return;
     }
 
     iThreadData *currentData = iThreadData::current();
-    iThreadData *targetData = targetThread ? iThread::get2(targetThread) : I_NULLPTR;
-    if ((m_threadData->thread == I_NULLPTR) && (currentData == targetData)) {
+    iThreadData *targetData = targetThread ? iThread::get2(targetThread) : IX_NULLPTR;
+    if ((m_threadData->thread == IX_NULLPTR) && (currentData == targetData)) {
         // one exception to the rule: we allow moving objects with no thread affinity to the current thread
         currentData = m_threadData;
     } else if (m_threadData != currentData) {
         ilog_warn("iObject::moveToThread: Current thread (", currentData->thread.load(), ")"
                   " is not the object's thread (", m_threadData->thread.load(), ").\n"
-                  "Cannot move to target thread (", targetData ? targetData->thread.load() : I_NULLPTR,")\n");
+                  "Cannot move to target thread (", targetData ? targetData->thread.load() : IX_NULLPTR,")\n");
 
         return;
     }
@@ -306,7 +306,7 @@ void iObject::setParent(iObject *o)
         } else {
             iObjectList::iterator it = std::find(m_parent->m_children.begin(), m_parent->m_children.end(), this);
             if (m_parent->m_isDeletingChildren && (it != m_parent->m_children.end())) {
-                *it = I_NULLPTR;
+                *it = IX_NULLPTR;
             } else {
                 m_parent->m_children.erase(it);
                 // remove children
@@ -322,7 +322,7 @@ void iObject::setParent(iObject *o)
         // object hierarchies are constrained to a single thread
         if (m_threadData != m_parent->m_threadData) {
             ilog_warn("iObject::setParent: Cannot set parent, new parent is in a different thread");
-            m_parent = I_NULLPTR;
+            m_parent = IX_NULLPTR;
             return;
         }
 
@@ -344,19 +344,19 @@ void iObject::setObjectName(const std::string &name)
 
 void iObject::signalConnect(_isignalBase* sender)
 {
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_objLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
     m_senders.insert(sender);
 }
 
 void iObject::signalDisconnect(_isignalBase* sender)
 {
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_objLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
     m_senders.erase(sender);
 }
 
 void iObject::disconnectAll()
 {
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_objLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_objLock);
     const_iterator it = m_senders.begin();
     const_iterator itEnd = m_senders.end();
 
@@ -397,8 +397,8 @@ const std::map<std::string, iSharedPtr<_iproperty_base>>& iObject::getOrInitProp
 {
     static std::map<std::string, iSharedPtr<_iproperty_base>> s_propertys;
 
-    std::map<std::string, isignal<iVariant>*>* propertyNofity = I_NULLPTR;
-    std::map<std::string, iSharedPtr<_iproperty_base>>* propertyIns = I_NULLPTR;
+    std::map<std::string, isignal<iVariant>*>* propertyNofity = IX_NULLPTR;
+    std::map<std::string, iSharedPtr<_iproperty_base>>* propertyIns = IX_NULLPTR;
     if (s_propertys.size() <= 0) {
         propertyIns = &s_propertys;
     }
@@ -430,7 +430,7 @@ void iObject::doInitProperty(std::map<std::string, iSharedPtr<_iproperty_base>>*
 
 bool iObject::event(iEvent *e)
 {
-    i_assert(e);
+    ix_assert(e);
     switch (e->type()) {
     case iEvent::MetaCall: {
         iMetaCallEvent* event = static_cast<iMetaCallEvent*>(e);
@@ -523,7 +523,7 @@ _isignalBase::_isignalBase()
 
 _isignalBase::_isignalBase(const _isignalBase& s)
 {
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_sigLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::const_iterator it = s.m_connected_slots.begin();
     connections_list::const_iterator itEnd = s.m_connected_slots.end();
 
@@ -542,7 +542,7 @@ _isignalBase::~_isignalBase()
 
 void _isignalBase::disconnectAll()
 {
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_sigLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     while (!m_connected_slots.empty()) {
         _iconnection* conn = m_connected_slots.front();
         conn->getdest()->signalDisconnect(this);
@@ -554,7 +554,7 @@ void _isignalBase::disconnectAll()
 
 void _isignalBase::disconnect(iObject* pclass)
 {
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_sigLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::iterator it = m_connected_slots.begin();
     connections_list::iterator itEnd = m_connected_slots.end();
 
@@ -578,14 +578,14 @@ void _isignalBase::slotConnect(_iconnection* conn)
         return;
     }
 
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_sigLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     m_connected_slots.push_back(conn);
     conn->getdest()->signalConnect(this);
 }
 
 void _isignalBase::slotDisconnect(iObject* pslot)
 {
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_sigLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::iterator it = m_connected_slots.begin();
     connections_list::iterator itEnd = m_connected_slots.end();
 
@@ -602,7 +602,7 @@ void _isignalBase::slotDisconnect(iObject* pslot)
 
 void _isignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
 {
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_sigLock);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
     connections_list::iterator it = m_connected_slots.begin();
     connections_list::iterator itEnd = m_connected_slots.end();
 
@@ -617,8 +617,8 @@ void _isignalBase::slotDuplicate(const iObject* oldtarget, iObject* newtarget)
 
 void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
 {
-    i_assert(clone);
-    iMutex::ScopedLock lock I_GCC_UNUSED (m_sigLock);
+    ix_assert(clone);
+    iMutex::ScopedLock lock IX_GCC_UNUSED (m_sigLock);
 
     iThreadData* currentThreadData = iThreadData::current();
     for (connections_list::const_iterator it = m_connected_slots.begin();
@@ -664,9 +664,9 @@ void _isignalBase::doEmit(void* args, clone_args_t clone, free_args_t free)
 
 _iconnection::_iconnection()
     : m_type(AutoConnection)
-    , m_pobject(I_NULLPTR)
-    , m_pfunc(I_NULLPTR)
-    , m_emitcb(I_NULLPTR)
+    , m_pobject(IX_NULLPTR)
+    , m_pfunc(IX_NULLPTR)
+    , m_emitcb(IX_NULLPTR)
 {
 }
 
@@ -694,11 +694,11 @@ _iconnection* _iconnection::duplicate(iObject* newobj) const
 
 void _iconnection::emits(void* args) const
 {
-    if (I_NULLPTR == m_emitcb) {
+    if (IX_NULLPTR == m_emitcb) {
         return;
     }
 
     m_emitcb(m_pobject, m_pfunc, args);
 }
 
-} // namespace ishell
+} // namespace iShell

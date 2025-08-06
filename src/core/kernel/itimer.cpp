@@ -13,7 +13,7 @@
 #include "core/kernel/ievent.h"
 #include "core/kernel/ieventdispatcher.h"
 
-namespace ishell {
+namespace iShell {
 
 iTimer::iTimer(iObject *parent)
     : iObject(parent)

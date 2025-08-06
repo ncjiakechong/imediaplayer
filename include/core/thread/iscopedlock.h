@@ -12,8 +12,9 @@
 #define ISCOPEDLOCK_H
 
 #include <stdint.h>
+#include <core/global/iglobal.h>
 
-namespace ishell {
+namespace iShell {
 
 template <class M>
 class iScopedLock
@@ -24,11 +25,11 @@ class iScopedLock
     /// The destructor unlocks the mutex.
 {
 public:
-    explicit iScopedLock(M& mutex): m_mutex(uintptr_t(&mutex))
+    explicit iScopedLock(M& mutex): m_mutex(xuintptr(&mutex))
     {
-        // i_assert((m_mutex & uintptr_t(1u)) == uintptr_t(0));
+        // ix_assert((m_mutex & xuintptr(1u)) == xuintptr(0));
         mutex.lock();
-        m_mutex |= uintptr_t(1u);
+        m_mutex |= xuintptr(1u);
     }
 
     ~iScopedLock()
@@ -38,27 +39,27 @@ public:
 
     inline void unlock()
     {
-        if ((m_mutex & uintptr_t(1u)) == uintptr_t(1u)) {
-            m_mutex &= ~uintptr_t(1u);
+        if ((m_mutex & xuintptr(1u)) == xuintptr(1u)) {
+            m_mutex &= ~xuintptr(1u);
             mutex()->unlock();
         }
     }
 
     inline void relock()
     {
-        if ((m_mutex & uintptr_t(1u)) == uintptr_t(0u)) {
+        if ((m_mutex & xuintptr(1u)) == xuintptr(0u)) {
             mutex()->lock();
-            m_mutex |= uintptr_t(1u);
+            m_mutex |= xuintptr(1u);
         }
     }
 
     inline M* mutex() const
     {
-        return reinterpret_cast<M*>(m_mutex & ~uintptr_t(1u));
+        return reinterpret_cast<M*>(m_mutex & ~xuintptr(1u));
     }
 
 private:
-    uintptr_t m_mutex;
+    xuintptr m_mutex;
 
     iScopedLock();
     iScopedLock(const iScopedLock&);
@@ -92,6 +93,6 @@ private:
     iScopedUnlock& operator = (const iScopedUnlock&);
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ISCOPEDLOCK_H

@@ -14,8 +14,7 @@
 #include <core/utils/ipoint.h>
 #include <core/utils/isize.h>
 
-namespace ishell {
-
+namespace iShell {
 
 class iRect
 {
@@ -202,7 +201,7 @@ inline iPoint iRect::bottomLeft() const
 { return iPoint(x1, y2); }
 
 inline iPoint iRect::center() const
-{ return iPoint(int((int64_t(x1)+x2)/2), int((int64_t(y1)+y2)/2)); } // cast avoids overflow on addition
+{ return iPoint(int((xint64(x1)+x2)/2), int((xint64(y1)+y2)/2)); } // cast avoids overflow on addition
 
 inline int iRect::width() const
 { return  x2 - x1 + 1; }
@@ -740,6 +739,6 @@ inline iRect iRectF::toRect() const
     return iRect(std::round(xp), std::round(yp), std::round(w), std::round(h));
 }
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IRECT_H

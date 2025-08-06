@@ -11,7 +11,7 @@
 #ifndef IEVENT_H
 #define IEVENT_H
 
-namespace ishell {
+namespace iShell {
 
 class iObject;
 
@@ -77,6 +77,6 @@ protected:
     iObject *c;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IEVENT_H

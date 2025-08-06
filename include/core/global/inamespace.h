@@ -11,7 +11,7 @@
 #ifndef INAMESPACE_H
 #define INAMESPACE_H
 
-namespace ishell {
+namespace iShell {
 
 enum ConnectionType {
     AutoConnection,
@@ -32,6 +32,20 @@ enum AspectRatioMode {
     KeepAspectRatioByExpanding
 };
 
-} // namespace ishell
+enum ChecksumType {
+    ChecksumIso3309,
+    ChecksumItuV41
+};
+
+enum Initialization {
+    Uninitialized
+};
+
+enum CaseSensitivity {
+    CaseInsensitive,
+    CaseSensitive
+};
+
+} // namespace iShell
 
 #endif // INAMESPACE_H

@@ -17,7 +17,7 @@
 #include <core/kernel/iobject.h>
 #include <core/kernel/ipoll.h>
 
-namespace ishell {
+namespace iShell {
 
 class iObject;
 class iThread;
@@ -40,10 +40,10 @@ public:
     static int allocateTimerId();
     static void releaseTimerId(int timerId);
 
-    explicit iEventDispatcher(iObject* parent = I_NULLPTR);
+    explicit iEventDispatcher(iObject* parent = IX_NULLPTR);
     virtual ~iEventDispatcher();
 
-    static iEventDispatcher *instance(iThread *thread = I_NULLPTR);
+    static iEventDispatcher *instance(iThread *thread = IX_NULLPTR);
 
     virtual bool processEvents() = 0;
 
@@ -74,6 +74,6 @@ private:
     friend class iEventSource;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IEVENTDISPATCHER_H

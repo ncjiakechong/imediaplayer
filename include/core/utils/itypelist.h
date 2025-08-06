@@ -13,7 +13,7 @@
 
 #include <core/global/imetaprogramming.h>
 
-namespace ishell {
+namespace iShell {
 
 
 template <class Head, class Tail>
@@ -432,6 +432,6 @@ struct iTypeAllReplacer<iTypeList<Head, Tail>, T, R>
 };
 
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ITYPELIST_H

@@ -23,7 +23,7 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 
 class iPostEventSource : public iEventSource
@@ -41,13 +41,13 @@ public:
 
     virtual bool check()
     {
-        return prepare(I_NULLPTR);
+        return prepare(IX_NULLPTR);
     }
 
     virtual bool dispatch()
     {
         lastSerialNumber = serialNumber.value();
-        iCoreApplication::sendPostedEvents(I_NULLPTR, 0);
+        iCoreApplication::sendPostedEvents(IX_NULLPTR, 0);
         return true;
     }
 
@@ -62,7 +62,7 @@ public:
 
     virtual bool prepare(int *timeout)
     {
-        int64_t __dummy_timeout = -1;
+        xint64 __dummy_timeout = -1;
         if (timerList.timerWait(__dummy_timeout)) {
             *timeout = (int)__dummy_timeout;
         } else {
@@ -92,15 +92,15 @@ iEventDispatcher_generic::iEventDispatcher_generic(iObject *parent)
     : iEventDispatcher(parent)
     , m_pollChanged(false)
     , m_inCheckOrPrepare(0)
-    , m_wakeup(I_NULLPTR)
-    , m_cachedPollArray(I_NULLPTR)
+    , m_wakeup(IX_NULLPTR)
+    , m_cachedPollArray(IX_NULLPTR)
     , m_cachedPollArraySize(0)
-    , m_postSource(I_NULLPTR)
-    , m_timerSource(I_NULLPTR)
+    , m_postSource(IX_NULLPTR)
+    , m_timerSource(IX_NULLPTR)
 {
     m_wakeup = new iWakeup();
     m_wakeup->getPollfd(&m_wakeUpRec);
-    addPoll(&m_wakeUpRec, I_NULLPTR);
+    addPoll(&m_wakeUpRec, IX_NULLPTR);
 
     m_postSource = new iPostEventSource(0);
     m_postSource->attach(this);
@@ -114,11 +114,11 @@ iEventDispatcher_generic::~iEventDispatcher_generic()
 {
     m_timerSource->detach();
     m_timerSource->unref();
-    m_timerSource = I_NULLPTR;
+    m_timerSource = IX_NULLPTR;
 
     m_postSource->detach();
     m_postSource->unref();
-    m_postSource = I_NULLPTR;
+    m_postSource = IX_NULLPTR;
 
     std::map<int, std::list<iEventSource*>>::iterator mapIt;
     for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
@@ -162,7 +162,7 @@ void iEventDispatcher_generic::interrupt()
 bool iEventDispatcher_generic::processEvents()
 {
     iThreadData* data = iThread::get2(thread());
-    i_assert(data == iThreadData::current());
+    ix_assert(data == iThreadData::current());
 
     bool result = eventIterate(true, true);
     while (!result)
@@ -277,7 +277,7 @@ int iEventDispatcher_generic::removeEventSource(iEventSource* source)
 
 int iEventDispatcher_generic::addPoll(iPollFD* fd, iEventSource* source)
 {
-    i_assert(fd);
+    ix_assert(fd);
     if (thread() != iThread::currentThread()) {
         ilog_warn("iEventDispatcher_generic::addPoll: fd cannot be added from another thread");
         return -1;
@@ -355,16 +355,16 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, int* timeout)
                 break;
             }
 
-            if (!(source->flags() & I_EVENT_SOURCE_READY)) {
+            if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
                 ++m_inCheckOrPrepare;
                 result = source->prepare(&sourceTimeout);
                 --m_inCheckOrPrepare;
             }
 
             if (result)
-                source->setFlags(source->flags() | I_EVENT_SOURCE_READY);
+                source->setFlags(source->flags() | IX_EVENT_SOURCE_READY);
 
-            if (source->flags() & I_EVENT_SOURCE_READY) {
+            if (source->flags() & IX_EVENT_SOURCE_READY) {
                 ++n_ready;
                 current_timeout = 0;
                 current_priority = source->priority();
@@ -398,10 +398,10 @@ int iEventDispatcher_generic::eventQuery(int max_priority, int*, iPollFD* fds, i
 {
     int n_poll;
     iPollRec* lastpollrec;
-    uint16_t events;
+    xuint16 events;
 
     n_poll = 0;
-    lastpollrec = I_NULLPTR;
+    lastpollrec = IX_NULLPTR;
     for (std::list<iPollRec*>::iterator it = m_pollRecords.begin();
          it != m_pollRecords.end(); ++it) {
         iPollRec* pollrec = *it;
@@ -413,7 +413,7 @@ int iEventDispatcher_generic::eventQuery(int max_priority, int*, iPollFD* fds, i
          * flags in the events field of the pollfd while it should
          * just ignoring them. So we mask them out here.
          */
-        events = pollrec->fd->events & ~(I_IO_ERR|I_IO_HUP|I_IO_NVAL);
+        events = pollrec->fd->events & ~(IX_IO_ERR|IX_IO_HUP|IX_IO_NVAL);
 
         if (lastpollrec && pollrec->fd->fd == lastpollrec->fd->fd) {
             if (n_poll - 1 < n_fds)
@@ -463,7 +463,7 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
                 && ((*itRec)->fd->fd == fds[i].fd)) {
             iPollRec *pollrec = *itRec;
             if (pollrec->priority <= max_priority) {
-                pollrec->fd->revents = fds[i].revents & (pollrec->fd->events | I_IO_ERR | I_IO_HUP | I_IO_NVAL);
+                pollrec->fd->revents = fds[i].revents & (pollrec->fd->events | IX_IO_ERR | IX_IO_HUP | IX_IO_NVAL);
             }
             ++itRec;
         }
@@ -483,16 +483,16 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
                 break;
             }
 
-            if (!(source->flags() & I_EVENT_SOURCE_READY)) {
+            if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
                 ++m_inCheckOrPrepare;
                 result = source->check();
                 --m_inCheckOrPrepare;
             }
 
             if (result)
-                source->setFlags(source->flags() | I_EVENT_SOURCE_READY);
+                source->setFlags(source->flags() | IX_EVENT_SOURCE_READY);
 
-            if (!(source->flags() & I_EVENT_SOURCE_READY))
+            if (!(source->flags() & IX_EVENT_SOURCE_READY))
                 continue;
 
             ++n_ready;
@@ -510,14 +510,14 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
 
 void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingDispatches)
 {
-    i_assert(pendingDispatches);
+    ix_assert(pendingDispatches);
     std::list<iEventSource*>::const_iterator it;
 
     for (it = pendingDispatches->cbegin(); it != pendingDispatches->cend(); ++it) {
         bool need_deattch;
         iEventSource* source = *it;
 
-        source->setFlags(source->flags() & ~I_EVENT_SOURCE_READY);
+        source->setFlags(source->flags() & ~IX_EVENT_SOURCE_READY);
         source->ref();
 
         need_deattch = !source->dispatch();
@@ -538,7 +538,7 @@ bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
     int timeout;
     bool some_ready;
     int nfds, allocated_nfds;
-    iPollFD *fds = I_NULLPTR;
+    iPollFD *fds = IX_NULLPTR;
 
     if (!m_cachedPollArray) {
         m_cachedPollArraySize = (uint)m_pollRecords.size();
@@ -560,7 +560,7 @@ bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
     if (!block)
         timeout = 0;
 
-    int32_t ret = 0;
+    xint32 ret = 0;
     if ((nfds > 0) || timeout != 0)
         ret = iPoll(fds, nfds, timeout);
 
@@ -576,4 +576,4 @@ bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
     return some_ready;
 }
 
-} // namespace ishell
+} // namespace iShell

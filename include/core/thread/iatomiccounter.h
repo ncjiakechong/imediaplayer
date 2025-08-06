@@ -14,11 +14,11 @@
 #include <core/global/imacro.h>
 #include <core/thread/imutex.h>
 
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 #include <atomic>
 #endif
 
-namespace ishell {
+namespace iShell {
 
 template <typename T>
 class iAtomicCounter
@@ -77,7 +77,7 @@ public:
 
 
 private:
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
     typedef std::atomic<ValueType> ImplType;
 #else // generic implementation based on iMutex
     struct ImplType
@@ -94,7 +94,7 @@ private:
 //
 // inlines
 //
-#ifdef I_HAVE_CXX11
+#ifdef IX_HAVE_CXX11
 //
 // C++11 atomics
 //
@@ -317,6 +317,6 @@ inline bool iAtomicCounter<T>::operator ! () const
 
 #endif
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // IATOMICCOUNTER_H

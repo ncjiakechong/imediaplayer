@@ -16,7 +16,7 @@
 #include <core/kernel/iobject.h>
 #include <core/thread/icondition.h>
 
-namespace ishell {
+namespace iShell {
 
 class iThreadImpl;
 class iThreadData;
@@ -26,14 +26,14 @@ class iEventDispatcher;
 class iThread : public iObject
 {
 public:
-    static intptr_t currentThreadId();
+    static xintptr currentThreadId();
     static iThread* currentThread();
     static void yieldCurrentThread();
     static iThreadData* get2(iThread *thread)
-        { i_check_ptr(thread); return thread->m_data;}
+        { ix_check_ptr(thread); return thread->m_data;}
     static void msleep(unsigned long);
 
-    explicit iThread(iObject *parent = I_NULLPTR);
+    explicit iThread(iObject *parent = IX_NULLPTR);
     virtual ~iThread();
 
     enum Priority {
@@ -68,12 +68,12 @@ public:
     // default argument causes thread to block indefinetely
     bool wait(long time = -1);
 
-    intptr_t threadId() const;
+    xintptr threadId() const;
 
     iEventDispatcher* eventDispatcher() const;
 
 protected:
-    iThread(iThreadData* data, iObject *parent = I_NULLPTR);
+    iThread(iThreadData* data, iObject *parent = IX_NULLPTR);
 
     virtual bool event(iEvent *e);
     virtual void run();
@@ -102,6 +102,6 @@ protected:
     friend class iThreadImpl;
 };
 
-} // namespace ishell
+} // namespace iShell
 
 #endif // ITHREAD_H

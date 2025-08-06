@@ -13,7 +13,7 @@
 
 #define ILOG_TAG "test"
 
-using namespace ishell;
+using namespace iShell;
 
 // Some types
 struct A
@@ -35,7 +35,7 @@ struct C
 template <typename T1, typename T2>
 void foo(T1 const &, T2 const &)
 {
-    if(ishell::is_convertible<T1, T2>::value)
+    if(iShell::is_convertible<T1, T2>::value)
     {
         ilog_debug("Type t1 is convertible to t2");
     }

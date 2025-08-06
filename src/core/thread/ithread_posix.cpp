@@ -20,7 +20,7 @@
 
 #define ILOG_TAG "core"
 
-namespace ishell {
+namespace iShell {
 
 // Does some magic and calculate the Unix scheduler priorities
 // sched_policy is IN/OUT: it must be set to a valid policy before calling this function
@@ -94,7 +94,7 @@ void iThreadImpl::internalThreadFunc()
 {
     iThread * thread = this->m_thread;
     iThreadData *data = thread->m_data;
-    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, I_NULLPTR);
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, IX_NULLPTR);
 
     {
         iMutex::ScopedLock locker(thread->m_mutex);
@@ -103,7 +103,7 @@ void iThreadImpl::internalThreadFunc()
         data->ref();
     }
 
-    if (I_NULLPTR == data->dispatcher.load())
+    if (IX_NULLPTR == data->dispatcher.load())
         data->dispatcher = iCoreApplication::createEventDispatcher();
 
     if (data->dispatcher.load()) // custom event dispatcher set?
@@ -145,7 +145,7 @@ static void* __internal_thread_func(void *userdata)
 {
     iThreadImpl* imp = static_cast<iThreadImpl*>(userdata);
     imp->internalThreadFunc();
-    return I_NULLPTR;
+    return IX_NULLPTR;
 }
 
 bool iThreadImpl::start()
@@ -212,7 +212,7 @@ bool iThreadImpl::start()
         code = pthread_create(&threadId, &attr, __internal_thread_func, this);
     }
 
-    m_thread->m_data->threadId = (intptr_t)threadId;
+    m_thread->m_data->threadId = (xintptr)threadId;
     pthread_attr_destroy(&attr);
 
     return ((0 == code) ? true : false);
@@ -225,12 +225,12 @@ void iThread::msleep(unsigned long t)
     ts.tv_sec = (time_t) (t / 1000ULL);
     ts.tv_nsec = (long) ((t % 1000ULL) * ((unsigned long long) 1000000ULL));
 
-    nanosleep(&ts, I_NULLPTR);
+    nanosleep(&ts, IX_NULLPTR);
 }
 
-intptr_t iThread::currentThreadId()
+xintptr iThread::currentThreadId()
 {
-    return (intptr_t)pthread_self();
+    return (xintptr)pthread_self();
 }
 
 void iThread::yieldCurrentThread()
@@ -238,4 +238,4 @@ void iThread::yieldCurrentThread()
     pthread_yield();
 }
 
-} // namespace ishell
+} // namespace iShell

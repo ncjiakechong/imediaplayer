@@ -21,6 +21,7 @@ INCLUDEPATH += \
 LIBS += \
 
 SOURCES += \
+    $$PWD/imath.cpp \
     kernel/icoreapplication.cpp \
     kernel/itimer.cpp \
     kernel/ideadlinetimer.cpp \
@@ -42,4 +43,5 @@ HEADERS += \
     ../../include/core/kernel/ievent.h \
     ../../include/core/kernel/ieventsource.h \
     ../../include/core/kernel/ipoll.h \
-    ../../include/core/kernel/ivariant.h
+    ../../include/core/kernel/ivariant.h \
+    ../../include/core/kernel/imath.h

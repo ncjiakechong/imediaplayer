@@ -6,6 +6,8 @@
 
 SOURCES += \
     $$PWD/iarraydata.cpp \
+    $$PWD/ibytearray.cpp \
+    $$PWD/ibytearraymatcher.cpp \
     $$PWD/ifreelist.cpp \
     $$PWD/irect.cpp \
     $$PWD/isharedptr.cpp \
@@ -19,4 +21,8 @@ HEADERS += \
     ../../include/core/utils/isize.h \
     ../../include/core/utils/ituple.h \
     ../../include/core/utils/itypelist.h \
-    ../../include/core/utils/iarraydata.h
+    ../../include/core/utils/iarraydata.h \
+    ../../include/core/utils/ibytearray.h \
+    ../../include/core/utils/ialgorithms.h \
+    ../../include/core/utils/irefcount.h \
+    ../../include/core/utils/ibytearraymatcher.h
