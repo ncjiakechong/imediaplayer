@@ -541,7 +541,7 @@ bool iObject::connectImpl(const _iConnection& conn)
 
     sender_map::iterator it = connectionLists->allsignals.find(c->_signal);
     if (connectionLists->allsignals.end() == it) {
-        it = connectionLists->allsignals.insert(std::pair<_iConnection::MemberFunction, _iConnectionList>(c->_signal, _iConnectionList())).first;
+        it = connectionLists->allsignals.insert(std::pair<_iMemberFunction, _iConnectionList>(c->_signal, _iConnectionList())).first;
     }
 
     IX_ASSERT(connectionLists->allsignals.end() != it);
@@ -662,7 +662,7 @@ bool iObject::disconnectImpl(const _iConnection& conn)
     return success;
 }
 
-void iObject::emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelper& arg)
+void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg)
 {
     struct ConnectionListsRef {
         _iObjectConnectionList* connectionLists;
@@ -991,7 +991,7 @@ void _iConnection::deref()
     }
 }
 
-void _iConnection::setSignal(iObject* sender, MemberFunction signal)
+void _iConnection::setSignal(iObject* sender, _iMemberFunction signal)
 {
     _sender = sender;
     _signal = signal;
@@ -1012,10 +1012,10 @@ void _iConnection::emits(void* args) const
     _impl(Call, this, _receiver, _slot, args);
 }
 
-size_t iConKeyHashFunc::operator()(const _iConnection::MemberFunction& key) const
+size_t iConKeyHashFunc::operator()(const _iMemberFunction& key) const
 {
     union {
-        _iConnection::MemberFunction func;
+        _iMemberFunction func;
         size_t key;
     } __adapoter;
 

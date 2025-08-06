@@ -1283,14 +1283,11 @@ template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR) >
     static Function safeFunc(IX_TYPEOF(IX_NULLPTR)) { return IX_NULLPTR; }
 };
 
+typedef void (iObject::*_iMemberFunction)();
+
 // internal base class (interface) containing functions required to call a slot managed by a pointer to function.
 class _iConnection
 {
-public:
-    typedef void (iObject::*MemberFunction)();
-
-    ~_iConnection();
-
 protected:
     enum Operation {
         Destroy,
@@ -1305,7 +1302,7 @@ protected:
     typedef _iConnection* (*ImplFn)(int which, const _iConnection* this_, iObject* receiver, void* const* func, void* args);
 
     _iConnection(ImplFn impl, ConnectionType type);
-    // virtual ~_iConnection(); // ignore destructor
+    ~_iConnection();
 
     void ref();
     void deref();
@@ -1315,7 +1312,7 @@ protected:
     inline bool compare(void* const* func) const {return (IX_NULLPTR != _impl(Compare, this, _receiver, func, IX_NULLPTR));}
 
     void setSlot(iObject* receiver, void* const* slot);
-    void setSignal(iObject* sender, MemberFunction signal);
+    void setSignal(iObject* sender, _iMemberFunction signal);
 
     void emits(void* args) const;
 
@@ -1333,7 +1330,7 @@ protected:
     iObject* _receiver;
 
     ImplFn _impl;
-    MemberFunction _signal;
+    _iMemberFunction _signal;
     void* const * _slot;
 
     _iConnection();
@@ -1344,7 +1341,7 @@ protected:
 
 struct iConKeyHashFunc
 {
-    size_t operator()(const _iConnection::MemberFunction& key) const;
+    size_t operator()(const _iMemberFunction& key) const;
 };
 
 template<typename SignalFunc, typename SlotFunc>
@@ -1405,7 +1402,7 @@ public:
         typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
 
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
-        _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor);
+        _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
         setSignal(const_cast<iObject*>(sender), tSignal);
 
         void* const* tSlot = IX_NULLPTR;
@@ -1430,7 +1427,7 @@ struct _iProperty
 
     get_t _get;
     set_t _set;
-    _iConnection::MemberFunction _signal;
+    _iMemberFunction _signal;
 };
 
 template<class Obj, typename retGet, typename setArg, typename signalArg>
@@ -1446,7 +1443,7 @@ struct _iPropertyHelper : public _iProperty
         typedef void (Obj::*SignalFuncAdaptor)();
 
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(_signalfunc);
-        _signal = static_cast<_iConnection::MemberFunction>(tSignalAdptor);
+        _signal = static_cast<_iMemberFunction>(tSignalAdptor);
     }
 
     static iVariant getFunc(const _iProperty* _this, const iObject* obj) {
@@ -1544,7 +1541,7 @@ private:
     typedef typename ThisFuncitonPointer::Arguments Arguments; \
     \
     SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(&IX_ThisType::name); \
-    _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor); \
+    _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor); \
     \
     Arguments tArgs = Arguments(__VA_ARGS__); \
     _iArgumentHelper argHelper = {&tArgs, &ThisFuncitonPointer::cloneArgs, &ThisFuncitonPointer::freeArgs, &ThisFuncitonPointer::cloneArgAdaptor, &ThisFuncitonPointer::freeArgAdaptor}; \

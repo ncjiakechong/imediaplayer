@@ -513,7 +513,7 @@ protected:
 
     virtual void initProperty();
     virtual bool event(iEvent *e);
-    void emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelper& arg);
+    void emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg);
 
 private:
     struct _iConnectionList {
@@ -522,7 +522,7 @@ private:
         _iConnection *last;
     };
 
-    typedef std::unordered_map<_iConnection::MemberFunction, _iConnectionList, iConKeyHashFunc> sender_map;
+    typedef std::unordered_map<_iMemberFunction, _iConnectionList, iConKeyHashFunc> sender_map;
 
     class _iObjectConnectionList
     {
