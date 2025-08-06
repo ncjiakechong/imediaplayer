@@ -218,6 +218,10 @@ struct is_convertible<const T1&, T2>
 template<typename T1, typename T2> struct is_convertible<T1, T2&> { enum { value = false }; };
 template<typename T1, typename T2> struct is_convertible<T1&, T2> { enum { value = false }; };
 template<typename T> struct is_convertible<T&, T&> { enum { value = true }; };
+// void as a return value
+template<typename T> struct is_convertible<void, T> { enum { value = true }; };
+template<typename T> struct is_convertible<T, void> { enum { value = true }; };
+template<> struct is_convertible<void, void> { enum { value = true }; };
 
 #if defined(_MSC_VER)
 #define TYPEWRAPPER_DEFAULTVALUE(T) type_wrapper<T>::TYPE()

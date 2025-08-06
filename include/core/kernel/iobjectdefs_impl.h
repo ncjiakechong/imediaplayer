@@ -708,7 +708,6 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 
 template<typename Ret> struct FunctionPointer<Ret (*) ()>
 {
-    typedef void Object;
     typedef iTuple<iNullTypeList> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) ();
@@ -722,13 +721,12 @@ template<typename Ret> struct FunctionPointer<Ret (*) ()>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void*) {
+    static void call(Function f, void*, void*) {
         (*f)();
     }
 };
 template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
 {
-    typedef void Object;
     typedef iTuple<Arg1> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1);
@@ -746,7 +744,7 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()));
@@ -754,7 +752,6 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
 };
 template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (*) (Arg1, Arg2)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2);
@@ -772,7 +769,7 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()));
@@ -781,7 +778,6 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2, Arg3> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3);
@@ -799,7 +795,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
@@ -809,7 +805,6 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3)>
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4);
@@ -828,7 +823,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
@@ -839,7 +834,6 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
@@ -858,7 +852,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
@@ -870,7 +864,6 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
@@ -889,7 +882,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
@@ -901,7 +894,6 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
@@ -921,7 +913,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
@@ -934,7 +926,6 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
@@ -954,7 +945,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
@@ -967,7 +958,6 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
@@ -987,7 +977,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()),  static_cast<Arg2>(tArgs->template get<1>()),
@@ -1001,7 +991,6 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10)>
 {
-    typedef void Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
@@ -1022,7 +1011,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, void*, void* args) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
@@ -1075,15 +1064,23 @@ protected:
     void emits(void* args) const;
 
 protected:
-    int m_orphaned : 1;
-    int m_isMemberFunc : 1;
-    int m_ref : 30;
-    ConnectionType m_type;
-    iObject* m_senderObj;
-    iObject* m_receiverObj;
-    MemberFunction m_sigFunc;
-    Function m_slotFunc;
-    const ImplFn m_impl;
+    int _orphaned : 1;
+    int _isMemberFunc : 1;
+    int _ref : 30;
+    ConnectionType _type;
+
+    // The next pointer for the singly-linked ConnectionList
+    _iConnection* _recvNext;
+    //senders linked list
+    _iConnection* _sendNext;
+    _iConnection** _sendPrev;
+
+    iObject* _senderObj;
+    iObject* _receiverObj;
+
+    ImplFn _impl;
+    MemberFunction _sigFunc;
+    Function _slotFunc;
 
     _iConnection();
     _iConnection(const _iConnection&);
@@ -1122,9 +1119,9 @@ class _iObjConnection : public _iConnection
         case Clone:
             {
             const _iObjConnection* objCon = static_cast<const _iObjConnection*>(this_);
-            _iObjConnection* objConNew = new _iObjConnection(objCon->m_type);
-            objConNew->setSignal(objCon->m_senderObj, objCon->m_sigFunc);
-            objConNew ->setSlot(r, objCon->m_slotFunc, objCon->m_isMemberFunc);
+            _iObjConnection* objConNew = new _iObjConnection(objCon->_type);
+            objConNew->setSignal(objCon->_senderObj, objCon->_sigFunc);
+            objConNew ->setSlot(r, objCon->_slotFunc, objCon->_isMemberFunc);
             return objConNew;
             }
             break;
@@ -1154,7 +1151,7 @@ public:
 
         _iConnection::Function tFunc;
         tFunc.memberFunc = tSlot;
-        setSlot(const_cast<iObject*>(receiverObj), tFunc, true);
+        setSlot(const_cast<iObject*>(receiverObj), tFunc, SlotFuncType::IsPointerToMemberFunction);
     }
 };
 
@@ -1166,7 +1163,6 @@ class _iRegulerConnection : public _iConnection
 {
     typedef FunctionPointer<SignalFunc> SignalFuncType;
     typedef FunctionPointer<SlotFunc> SlotFuncType;
-    typedef typename FunctionPointer<SlotFunc>::Object SlotObject;
 
     static void* impl(int which, const _iConnection* this_, iObject* r, Function f, void* a)
     {
@@ -1179,7 +1175,7 @@ class _iRegulerConnection : public _iConnection
             {
             SlotFunc tSlot = reinterpret_cast<SlotFunc>(f.regulerFunc);
             SlotFuncType::template call<typename SignalFuncType::Arguments, typename SignalFuncType::ReturnType>(
-                        tSlot, static_cast<SlotObject*>(r), a);
+                        tSlot, static_cast<void*>(r), a);
             }
             break;
 
@@ -1187,9 +1183,9 @@ class _iRegulerConnection : public _iConnection
             {
             const _iRegulerConnection* objCon = static_cast<const _iRegulerConnection*>(this_);
 
-            _iRegulerConnection* objConNew = new _iRegulerConnection(objCon->m_type);
-            objConNew->setSignal(objCon->m_senderObj, objCon->m_sigFunc);
-            objConNew ->setSlot(r, objCon->m_slotFunc, objCon->m_isMemberFunc);
+            _iRegulerConnection* objConNew = new _iRegulerConnection(objCon->_type);
+            objConNew->setSignal(objCon->_senderObj, objCon->_sigFunc);
+            objConNew ->setSlot(r, objCon->_slotFunc, objCon->_isMemberFunc);
             return objConNew;
             }
             break;
@@ -1212,12 +1208,15 @@ public:
         _iConnection::MemberFunction tSignal = static_cast<_iConnection::MemberFunction>(tSignalAdptor);
         setSignal(const_cast<iObject*>(senderObj), tSignal);
 
-        _iConnection::RegulerFunction tSlot = reinterpret_cast<_iConnection::RegulerFunction>(slotFunc);
-
         _iConnection::Function tFunc;
-        tFunc.regulerFunc = tSlot;
-        setSlot(const_cast<iObject*>(receiverObj), tFunc, false);
+        tFunc.regulerFunc = reinterpret_cast<_iConnection::RegulerFunction>(slotFunc);
+        setSlot(const_cast<iObject*>(receiverObj), tFunc, SlotFuncType::IsPointerToMemberFunction);
     }
+};
+
+struct iConKeyHashFunc
+{
+    size_t operator()(const _iConnection::MemberFunction& key) const;
 };
 
 // implementation of _iObjConnectionOld for which the slot is a pointer to member function of a iObject
@@ -1251,8 +1250,8 @@ class _iObjConnectionOld : public _iConnection
         case Clone:
             {
             const _iObjConnectionOld* objCon = static_cast<const _iObjConnectionOld*>(this_);
-            _iObjConnectionOld* objConNew = new _iObjConnectionOld(objCon->m_type);
-            objConNew ->setSlot(r, objCon->m_slotFunc, objCon->m_isMemberFunc);
+            _iObjConnectionOld* objConNew = new _iObjConnectionOld(objCon->_type);
+            objConNew ->setSlot(r, objCon->_slotFunc, objCon->_isMemberFunc);
             return objConNew;
             }
             break;

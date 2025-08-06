@@ -453,6 +453,10 @@ int test_object(void)
     iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_constref);
 
+    iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, IX_NULLPTR);
+    iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_static);
+    iObject::disconnect(&tst_obj, &TestObject::tst_slot_struct, &tst_obj, &TestObject::tst_slot_constref);
+
 
 
 //    tst_sig.tst_sig_struct.connect(&tst_obj, &TestObject::tst_slot_type_change); // build error
