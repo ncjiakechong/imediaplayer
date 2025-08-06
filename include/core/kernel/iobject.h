@@ -12,10 +12,10 @@
 #define IOBJECT_H
 
 #include <set>
-#include <map>
 #include <list>
 #include <string>
 #include <stdarg.h>
+#include <unordered_map>
 
 #include <core/utils/ituple.h>
 #include <core/utils/istring.h>
@@ -23,14 +23,15 @@
 #include <core/kernel/ivariant.h>
 #include <core/thread/iatomicpointer.h>
 #include <core/global/inamespace.h>
+#include <core/utils/ihashfunctions.h>
 
 namespace iShell {
 
 #define IPROPERTY_BEGIN(PARENT) \
-    virtual const std::map<iString, iSharedPtr<_iproperty_base>>& getOrInitProperty() { \
-        static std::map<iString, iSharedPtr<_iproperty_base>> s_propertys; \
-        std::map<iString, isignal<iVariant>*>* propertyNofity = IX_NULLPTR; \
-        std::map<iString, iSharedPtr<_iproperty_base>>* propertyIns = IX_NULLPTR; \
+    virtual const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>& getOrInitProperty() { \
+        static std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc> s_propertys; \
+        std::unordered_map<iString, isignal<iVariant>*, iHashFunc>* propertyNofity = IX_NULLPTR; \
+        std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>* propertyIns = IX_NULLPTR; \
         if (s_propertys.size() <= 0) { \
             propertyIns = &s_propertys; \
         } \
@@ -46,8 +47,8 @@ namespace iShell {
         return s_propertys; \
     } \
     \
-    void doInitProperty(std::map<iString, iSharedPtr<_iproperty_base>>* propIns, \
-                      std::map<iString, isignal<iVariant>*>* propNotify) { \
+    void doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>* propIns, \
+                      std::unordered_map<iString, isignal<iVariant>*, iHashFunc>* propNotify) { \
         typedef PARENT PARENT_CLASS; \
         PARENT_CLASS::doInitProperty(propIns, propNotify);
 
@@ -652,7 +653,7 @@ public:
     void observeProperty(const char *name, desttype* pclass, void (desttype::*pmemfun)(param)) {
         getOrInitProperty();
 
-        std::map<iString, isignal<iVariant>*>::const_iterator it;
+        std::unordered_map<iString, isignal<iVariant>*, iHashFunc>::const_iterator it;
         it = m_propertyNofity.find(iString(name));
         if (it == m_propertyNofity.cend() || !it->second)
             return;
@@ -1162,14 +1163,14 @@ public:
     }
 
 protected:
-    virtual const std::map<iString, iSharedPtr<_iproperty_base>>& getOrInitProperty();
-    void doInitProperty(std::map<iString, iSharedPtr<_iproperty_base>>* propIns,
-                      std::map<iString, isignal<iVariant>*>* propNotify);
+    virtual const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>& getOrInitProperty();
+    void doInitProperty(std::unordered_map<iString, iSharedPtr<_iproperty_base>, iHashFunc>* propIns,
+                      std::unordered_map<iString, isignal<iVariant>*, iHashFunc>* propNotify);
 
 
     virtual bool event(iEvent *e);
 
-    std::map<iString, isignal<iVariant>*> m_propertyNofity;
+    std::unordered_map<iString, isignal<iVariant>*, iHashFunc> m_propertyNofity;
 
 private:
     typedef std::set<_isignalBase*> sender_set;

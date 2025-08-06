@@ -10,6 +10,7 @@ SOURCES += \
     $$PWD/ibytearray.cpp \
     $$PWD/ichar.cpp \
     $$PWD/ifreelist.cpp \
+    $$PWD/ihashfunctions.cpp \
     $$PWD/ilocale.cpp \
     $$PWD/irect.cpp \
     $$PWD/iregexp.cpp \
@@ -40,4 +41,5 @@ HEADERS += \
     ../../include/core/utils/istringview.h \
     ../../include/core/utils/ilocale.h \
     ../../include/core/utils/ibitarray.h \
-    ../../include/core/utils/icache.h
+    ../../include/core/utils/icache.h \
+    ../../include/core/utils/ihashfunctions.h
