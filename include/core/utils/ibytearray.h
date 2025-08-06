@@ -51,7 +51,7 @@ char *istrncpy(char *dst, const char *src, uint len);
 int istrcmp(const char *str1, const char *str2);
 int istrcmp(const iByteArray &str1, const iByteArray &str2);
 int istrcmp(const iByteArray &str1, const char *str2);
-static inline int istrcmp(const char *str1, const iByteArray &str2)
+inline int istrcmp(const char *str1, const iByteArray &str2)
 { return -istrcmp(str2, str1); }
 
 inline int istrncmp(const char *str1, const char *str2, uint len)

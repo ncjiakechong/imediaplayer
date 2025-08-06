@@ -19,7 +19,7 @@ namespace iShell {
 
 namespace iUnicodeTables {
 
-static const unsigned short uc_property_trie[] = {
+const unsigned short uc_property_trie[] = {
     // [0x0..0x11000)
 
     6256, 6288, 6320, 6352, 6384, 6416, 6448, 6480,
@@ -6122,7 +6122,7 @@ static const unsigned short uc_property_trie[] = {
 #define GET_PROP_INDEX_UCS2(ucs2) \
        (uc_property_trie[uc_property_trie[ucs2>>5] + (ucs2 & 0x1f)])
 
-static const Properties uc_properties[] = {
+const Properties uc_properties[] = {
     { 9, 18, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 0, 0, 21, 2 },
     { 9, 8, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3, 0, 5, 17, 2 },
     { 9, 7, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 2, 2, 37, 2 },
@@ -8777,7 +8777,7 @@ static const Properties uc_properties[] = {
     { 12, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 12, 0 }
 };
 
-static const unsigned short specialCaseMap[] = {
+const unsigned short specialCaseMap[] = {
     0x0, // placeholder
     0x1, 0x2c65,
     0x1, 0x2c66,
@@ -9081,7 +9081,7 @@ static const unsigned short specialCaseMap[] = {
 };
 
 
-static const unsigned short uc_decomposition_trie[] = {
+const unsigned short uc_decomposition_trie[] = {
     // 0 - 0x3400
 
     1548, 1548, 1548, 1548, 1548, 1548, 1548, 1548,
@@ -10902,7 +10902,7 @@ static const unsigned short uc_decomposition_trie[] = {
            ? uc_decomposition_trie[uc_decomposition_trie[((ucs4 - 0x3400)>>8) + 0x340] + (ucs4 & 0xff)] \
            : 0xffff))
 
-static const unsigned short uc_decomposition_map[] = {
+const unsigned short uc_decomposition_map[] = {
     0x103, 0x20, 0x210, 0x20, 0x308, 0x109, 0x61, 0x210,
     0x20, 0x304, 0x109, 0x32, 0x109, 0x33, 0x210, 0x20,
     0x301, 0x110, 0x3bc, 0x210, 0x20, 0x327, 0x109, 0x31,
@@ -12707,7 +12707,7 @@ static const unsigned short uc_decomposition_map[] = {
     0xde00
 };
 
-static const unsigned short uc_ligature_trie[] = {
+const unsigned short uc_ligature_trie[] = {
     // 0 - 0x3100
 
     631, 631, 631, 631, 631, 631, 631, 631,
@@ -13104,7 +13104,7 @@ static const unsigned short uc_ligature_trie[] = {
            ? uc_ligature_trie[uc_ligature_trie[((ucs4 - 0x3100)>>8) + 0x188] + (ucs4 & 0xff)] \
            : 0xffff))
 
-static const unsigned short uc_ligature_map[] = {
+const unsigned short uc_ligature_map[] = {
     0x54, 0x41, 0xc0, 0x45, 0xc8, 0x49, 0xcc, 0x4e,
     0x1f8, 0x4f, 0xd2, 0x55, 0xd9, 0x57, 0x1e80, 0x59,
     0x1ef2, 0x61, 0xe0, 0x65, 0xe8, 0x69, 0xec, 0x6e,
@@ -13359,7 +13359,7 @@ struct NormalizationCorrection {
     int version;
 };
 
-static const NormalizationCorrection uc_normalization_corrections[] = {
+const NormalizationCorrection uc_normalization_corrections[] = {
     { 0xf951, 0x96fb, 6 },
     { 0x2f868, 0x2136a, 7 },
     { 0x2f874, 0x5f33, 7 },

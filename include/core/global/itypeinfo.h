@@ -20,13 +20,13 @@ namespace iShell {
 */
 
 template <typename T>
-static constexpr bool iIsRelocatable()
+constexpr bool iIsRelocatable()
 {
     return std::is_enum<T>::value || std::is_integral<T>::value;
 }
 
 template <typename T>
-static constexpr bool iIsTrivial()
+constexpr bool iIsTrivial()
 {
     return std::is_enum<T>::value || std::is_integral<T>::value;
 }

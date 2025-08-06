@@ -698,14 +698,14 @@ namespace iShell {
     \sa xint64
 */
 
-template <typename T> static inline
-size_t simdSwapLoop(const uchar *, size_t, uchar *) noexcept
+template <typename T>
+static inline size_t simdSwapLoop(const uchar *, size_t, uchar *) noexcept
 {
     return 0;
 }
 
-template <typename T> static inline
-void *bswapLoop(const uchar *src, size_t n, uchar *dst) noexcept
+template <typename T>
+static inline void *bswapLoop(const uchar *src, size_t n, uchar *dst) noexcept
 {
     // Buffers cannot partially overlap: either they're identical or totally
     // disjoint (note: they can be adjacent).
