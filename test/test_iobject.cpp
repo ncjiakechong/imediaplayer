@@ -319,6 +319,7 @@ int test_object(void)
 {
     TestSignals tst_sig;
     TestObject tst_obj;
+    tst_sig.emit_signals();
 
     iRegisterConverter<TestObject*, iObject*>();
 

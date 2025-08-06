@@ -75,13 +75,13 @@ const iObject* iMetaObject::cast(const iObject *obj) const
     return (obj && obj->metaObject()->inherits(this)) ? obj : IX_NULLPTR;
 }
 
-void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>& ppt)
+void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>& ppt)
 {
     m_initProperty = true;
     m_property = ppt;
 }
 
-const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* iMetaObject::property() const
+const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* iMetaObject::property() const
 {
     if (!m_initProperty)
         return IX_NULLPTR;
@@ -455,7 +455,9 @@ void iObject::setObjectName(const iString &name)
 
 void iObject::cleanConnectionLists()
 {
-    if (m_connectionLists->dirty && (0 == m_connectionLists->inUse)) {
+    if ((IX_NULLPTR != m_connectionLists)
+        && m_connectionLists->dirty
+        && (0 == m_connectionLists->inUse)) {
         // remove broken connections
         for (sender_map::iterator it = m_connectionLists->allsignals.begin(); it != m_connectionLists->allsignals.end(); ++it) {
             _iConnectionList& connectionList = it->second;
@@ -655,6 +657,8 @@ bool iObject::disconnectImpl(const _iConnection& conn)
     if (connectionLists->orphaned && !connectionLists->inUse)
         delete connectionLists;
 
+    s->cleanConnectionLists();
+
     return success;
 }
 
@@ -720,10 +724,8 @@ void iObject::emitImpl(_iConnection::MemberFunction signal, const _iArgumentHelp
 
     iScopedLock<iMutex> locker(m_signalSlotLock);
     ConnectionListsRef connectionLists = this->m_connectionLists;
-    if (IX_NULLPTR == connectionLists.connectionLists) {
-        locker.unlock();
+    if (IX_NULLPTR == connectionLists.connectionLists)
         return;
-    }
 
     sender_map::iterator it = connectionLists->allsignals.find(signal);
     if (connectionLists->allsignals.end() == it)
@@ -805,8 +807,8 @@ iVariant iObject::property(const char *name) const
     const iMetaObject* mo = metaObject();
 
     do {
-        std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-        const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
+        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+        const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
         if (!propertys)
             continue;
 
@@ -824,8 +826,8 @@ bool iObject::setProperty(const char *name, const iVariant& value)
     const iMetaObject* mo = metaObject();
 
     do {
-        std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-        const std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
+        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+        const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
         if (!propertys)
             continue;
 
@@ -841,24 +843,17 @@ bool iObject::setProperty(const char *name, const iVariant& value)
 
 void iObject::initProperty()
 {
-    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc> pptImp;
-
-    std::unordered_map<iString, iSharedPtr<_iproperty_base>, iKeyHashFunc, iKeyEqualFunc>* pptIns = IX_NULLPTR;
-
     const iMetaObject* mobj = iObject::metaObject();
-    if (IX_NULLPTR == mobj->property()) {
-        pptIns = &pptImp;
-    }
+    if (IX_NULLPTR != mobj->property())
+        return;
 
-    if (pptIns) {
-        pptIns->insert(std::pair<iString, iSharedPtr<_iproperty_base>>(
-                            iString("objectName"),
-                            iSharedPtr<_iproperty_base>(newProperty(&iObject::objectName, &iObject::setObjectName, &iObject::objectNameChanged))));
-    }
+    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> pptImp;
 
-    if (pptIns) {
-        const_cast<iMetaObject*>(mobj)->setProperty(*pptIns);
-    }
+    pptImp.insert(std::pair<iString, iSharedPtr<_iProperty>>(
+                        iString("objectName"),
+                        iSharedPtr<_iProperty>(newProperty(&iObject::objectName, &iObject::setObjectName, &iObject::objectNameChanged))));
+
+    const_cast<iMetaObject*>(mobj)->setProperty(pptImp);
 }
 
 static void iDeleteInEventHandler(iObject* obj)
