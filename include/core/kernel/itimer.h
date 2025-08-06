@@ -83,7 +83,7 @@ public: //slot
     void stop();
 
     // SIGNAL
-    void timeout(xintptr userdata) ISIGNAL(timeout);
+    void timeout(xintptr userdata) ISIGNAL(timeout, userdata);
 
 protected:
     virtual bool event(iEvent *);

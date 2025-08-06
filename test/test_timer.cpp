@@ -31,7 +31,7 @@ class TestTimer : public iObject
     IX_OBJECT(TestTimer)
 public:
     TestTimer(iObject* parent = IX_NULLPTR)
-        : iObject(parent), m_quit(this)
+        : iObject(parent), m_quit(this), m_t500(0), m_t1s(0), m_t3s(0), m_t500_count(0), m_startTime(0)
     {
         connect(&m_quit, &iTimer::timeout, this, &TestTimer::quit);
     }
@@ -43,8 +43,8 @@ public:
             ilog_debug("singleShot lambda timeout ", userdata);
         });
 
-        xint64 cur = iDeadlineTimer::current().deadline();
-        double disCur = cur / 1000.0;
+        m_startTime = iDeadlineTimer::current().deadline();
+        double disCur = m_startTime / 1000.0;
         ilog_debug("TestTimer: [", iThread::currentThreadId(), "]start now:", disCur);
         m_t500 = startTimer(500, 500);
         m_t1s = startTimer(1000, 1000, PreciseTimer);
@@ -70,23 +70,30 @@ public:
         double disCur = cur / 1000.0;
         ilog_debug("TestTimer[ id ", event->timerId(), ", duration: ", event->userData()," ], now: ", disCur);
 
+        if (m_t500 == event->timerId()) {
+            ++m_t500_count;
+            IX_ASSERT((event->userData()*m_t500_count*0.8 <= cur - m_startTime) && (cur - m_startTime <= event->userData()*m_t500_count*1.2));
+        }
+
         if (m_t1s == event->timerId()) {
+            IX_ASSERT((event->userData()*0.8 <= cur - m_startTime) && (cur - m_startTime <= event->userData()*1.2));
             killTimer(m_t1s);
             m_t1s = 0;
         }
 
         if (m_t3s == event->timerId()) {
+            IX_ASSERT((event->userData()*0.8 <= cur - m_startTime) && (cur - m_startTime <= event->userData()*1.2));
             m_quit.setSingleShot(true);
-            m_quit.start(100);
+            m_quit.start(100, 100);
         }
 
         return true;
     }
 
-    void quit() {
+    void quit(xintptr userdata) {
         xint64 cur = iDeadlineTimer::current().deadline();
         double disCur = cur / 1000.0;
-        ilog_debug("TestTimer: [", iThread::currentThreadId(), "]quit now:", disCur);
+        ilog_debug("TestTimer: [", iThread::currentThreadId(), ", duration: ", userdata, "], quit now:", disCur);
         iCoreApplication::postEvent(iThread::currentThread(), new iEvent(iEvent::Quit));
     }
 
@@ -96,6 +103,8 @@ private:
     int m_t500;
     int m_t1s;
     int m_t3s;
+    int m_t500_count;
+    xint64 m_startTime;
 
     iTimer m_quit;
 
