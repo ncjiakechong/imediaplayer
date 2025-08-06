@@ -534,7 +534,7 @@ private:
 
         _iObjectConnectionList()
             : orphaned(false), dirty(false), inUse(0)
-        { }
+        {}
     };
 
     typedef std::list<iObject *> iObjectList;
