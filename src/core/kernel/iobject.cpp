@@ -168,7 +168,7 @@ iObject::~iObject()
                         continue;
                     }
 
-                    iMutex *m = &c->_receiver->m_signalSlotLock;
+                    iMutex *m = &const_cast<iObject*>(c->_receiver)->m_signalSlotLock;
                     bool needToUnlock = iOrderedMutexLocker::relock(signalSlotMutex, m);
 
                     if (c->_receiver) {
@@ -205,7 +205,7 @@ iObject::~iObject()
          */
         _iConnection *node = m_senders;
         while (node) {
-            iObject *sender = node->_sender;
+            iObject *sender = const_cast<iObject*>(node->_sender);
             // Send disconnectNotify before removing the connection from sender's connection list.
             // This ensures any eventual destructor of sender will block on getting receiver's lock
             // and not finish until we release it.
@@ -519,8 +519,8 @@ bool iObject::connectImpl(const _iConnection& conn)
         return false;
     }
 
-    iObject *s = conn._sender;
-    iObject *r = conn._receiver;
+    iObject *s = const_cast<iObject*>(conn._sender);
+    iObject *r = const_cast<iObject*>(conn._receiver);
 
     iOrderedMutexLocker locker(&s->m_signalSlotLock, &r->m_signalSlotLock);
 
@@ -602,7 +602,7 @@ bool iObject::disconnectHelper(const _iConnection &conn)
             bool needToUnlock = false;
             iMutex *receiverMutex = IX_NULLPTR;
             if (c->_receiver) {
-                receiverMutex = &c->_receiver->m_signalSlotLock;
+                receiverMutex = &const_cast<iObject*>(c->_receiver)->m_signalSlotLock;
                 // need to relock this receiver and sender in the correct order
                 needToUnlock = iOrderedMutexLocker::relock(&m_signalSlotLock, receiverMutex);
             }
@@ -634,7 +634,7 @@ bool iObject::disconnectImpl(const _iConnection& conn)
         return false;
     }
 
-    iObject *s = conn._sender;
+    iObject *s = const_cast<iObject*>(conn._sender);
 
     iMutex *senderMutex = &s->m_signalSlotLock;
     iScopedLock<iMutex> locker(*senderMutex);
@@ -761,7 +761,7 @@ void iObject::emitImpl(_iMemberFunction signal, void *args, void* ret)
         if (conn->_orphaned || (IX_NULLPTR == conn->_receiver))
             continue;
 
-        iObject* const receiver = conn->_receiver;
+        iObject* const receiver = const_cast<iObject*>(conn->_receiver);
         const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
 
         // determine if this connection should be sent immediately or
@@ -964,7 +964,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
         return false;
 
     iThreadData* currentThreadData = iThreadData::current();
-    iObject* const receiver = c._receiver;
+    iObject* const receiver = const_cast<iObject*>(c._receiver);
     const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
 
     // determine if this connection should be sent immediately or
@@ -1034,13 +1034,13 @@ void _iConnection::deref()
     }
 }
 
-void _iConnection::setSignal(iObject* sender, _iMemberFunction signal)
+void _iConnection::setSignal(const iObject* sender, _iMemberFunction signal)
 {
     _sender = sender;
     _signal = signal;
 }
 
-void _iConnection::setSlot(iObject* receiver, void * const *slot)
+void _iConnection::setSlot(const iObject* receiver, void * const *slot)
 {
     _receiver = receiver;
     _slot = slot;

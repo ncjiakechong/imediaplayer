@@ -69,11 +69,12 @@ elseif(WIN32)
 
 	find_library(USER32 user32)
 	set (Depend_Libs ${USER32})
+
 endif()
 
-include_directories( ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../../include ${GLIB2_INCLUDE_DIRS} )
+include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../../include ${GLIB2_INCLUDE_DIRS})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 add_library(${PROJECT_NAME} SHARED ${ComSource} ${OsSource})
 
-target_link_libraries(${PROJECT_NAME} ${Depend_Libs} )
+target_link_libraries(${PROJECT_NAME} ${Depend_Libs})

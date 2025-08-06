@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 project(imediaplayertest)
+enable_testing()
 
 set (Source
     main.cpp
@@ -16,11 +17,13 @@ if(UNIX)
     list(APPEND Depend_Libs imultimedia)
 endif()
 
-include_directories( ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../include )
+include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../include)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 # Create the executable
 add_executable(${PROJECT_NAME} ${Source})
 
-target_link_libraries( ${PROJECT_NAME} ${Depend_Libs} )
+target_link_libraries(${PROJECT_NAME} ${Depend_Libs})
+
+add_test(${PROJECT_NAME} ${PROJECT_NAME})

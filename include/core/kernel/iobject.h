@@ -49,10 +49,10 @@ public:
     void setObjectName(const iString& name);
     const iString& objectName() const { return m_objName; }
 
-    // SIGNALS start
+    /// SIGNALS start
     void objectNameChanged(const iString& name) ISIGNAL(objectNameChanged, name)
     void destroyed(iObject* obj) ISIGNAL(destroyed, obj)
-    // SIGNALS end
+    /// SIGNALS end
 
     void setParent(iObject *parent);
 
@@ -74,7 +74,7 @@ public:
         return observePropertyImp(name, conn);
     }
 
-    //Connect a signal to a pointer to qobject member function
+    /// Connect a signal to a slot(member function or unary function)
     template <typename Func1, typename Func2>
     static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal,
                              const typename FunctionPointer<Func2>::Object *receiver, Func2 slot,
@@ -94,7 +94,7 @@ public:
         return connectImpl(conn);
     }
 
-    //connect to a function pointer  (not a member)
+    /// connect to a function pointer (not a member)
     template <typename Func1, typename Func2>
     static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, Func2 slot) {
         typedef FunctionPointer<Func1> SignalType;
@@ -112,6 +112,7 @@ public:
         return connectImpl(conn);
     }
 
+    /// Disconnect signal/slot link
     template <typename Func1, typename Func2>
     static inline bool disconnect(const typename FunctionPointer<typename FunctionHelper<Func1>::Function>::Object *sender, Func1 signal,
                                   const typename FunctionPointer<typename FunctionHelper<Func2>::Function>::Object *receiver, Func2 slot) {
@@ -132,7 +133,9 @@ public:
         return disconnectImpl(conn);
     }
 
-    /// Invokes the member on the object obj. Returns true if the member could be invoked. Returns false if there is no such member or the parameters did not match.
+    /// Invokes the member on the object obj. 
+    /// Returns true if the member could be invoked.
+    /// Returns false if there is no such member or the parameters did not match.
     /// The invocation can be either synchronous or asynchronous, depending on type:
     ///   If type is DirectConnection, the member will be invoked immediately.
     ///   If type is QueuedConnection, a iEvent will be sent and the member is invoked as soon as the application enters the main event loop.
