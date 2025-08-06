@@ -132,32 +132,32 @@ class IX_CORE_EXPORT iLogger{
     iString m_buff;
 };
 
-iLogger& operator<<(iLogger&, bool);
-iLogger& operator<<(iLogger&, xint8);
-iLogger& operator<<(iLogger&, xuint8);
-iLogger& operator<<(iLogger&, xint16);
-iLogger& operator<<(iLogger&, xuint16);
-iLogger& operator<<(iLogger&, xint32);
-iLogger& operator<<(iLogger&, xuint32);
-iLogger& operator<<(iLogger&, xint64);
-iLogger& operator<<(iLogger&, xuint64);
-iLogger& operator<<(iLogger&, iHexUInt8);
-iLogger& operator<<(iLogger&, iHexUInt16);
-iLogger& operator<<(iLogger&, iHexUInt32);
-iLogger& operator<<(iLogger&, iHexUInt64);
-iLogger& operator<<(iLogger&, float);
-iLogger& operator<<(iLogger&, double);
-iLogger& operator<<(iLogger&, const iChar&);
-iLogger& operator<<(iLogger&, const char*);
-iLogger& operator<<(iLogger&, const wchar_t*);
-iLogger& operator<<(iLogger&, const char16_t*);
-iLogger& operator<<(iLogger&, const char32_t*);
-iLogger& operator<<(iLogger&, const std::string&);
-iLogger& operator<<(iLogger&, const std::wstring&);
-iLogger& operator<<(iLogger&, const std::u16string&);
-iLogger& operator<<(iLogger&, const std::u32string&);
-iLogger& operator<<(iLogger&, const iString&);
-iLogger& operator<<(iLogger&, const void*);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, bool);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, xint8);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, xuint8);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, xint16);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, xuint16);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, xint32);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, xuint32);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, xint64);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, xuint64);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, iHexUInt8);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, iHexUInt16);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, iHexUInt32);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, iHexUInt64);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, float);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, double);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iChar&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const char*);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const wchar_t*);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const char16_t*);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const char32_t*);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::string&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::wstring&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::u16string&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::u32string&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iString&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const void*);
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,

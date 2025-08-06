@@ -28,7 +28,7 @@
 
 namespace iShell {
 
-class IX_CORE_EXPORT iTextCodec
+class iTextCodec
 {
 public:
     enum ConversionFlag {

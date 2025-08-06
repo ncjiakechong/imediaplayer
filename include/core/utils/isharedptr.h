@@ -67,7 +67,7 @@ namespace isharedpointer {
     // The deleter is stored in the destroyer member and is always a pointer to
     // a static function in ExternalRefCountWithCustomDeleter or in
     // ExternalRefCountWithContiguousData
-    struct ExternalRefCountData
+    struct IX_CORE_EXPORT ExternalRefCountData
     {
         typedef void (*DestroyerFn)(ExternalRefCountData*);
         virtual ~ExternalRefCountData();

@@ -9,12 +9,12 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include "core/global/imacro.h"
+#include "core/global/iglobal.h"
 #include "core/io/ilog.h"
 
 #define ILOG_TAG "ix:core"
 
-using namespace iShell;
+namespace iShell {
 
 void ix_assert(const char *assertion, const char *, int)
 {
@@ -27,3 +27,5 @@ void ix_assert_x(const char *what, const char *, int )
     iLogMeta(ILOG_TAG, ILOG_ERROR, what);
     std::abort();
 }
+
+} // namespace iShell

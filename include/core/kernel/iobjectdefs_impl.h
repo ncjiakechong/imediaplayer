@@ -1286,7 +1286,7 @@ template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR) >
 typedef void (iObject::*_iMemberFunction)();
 
 // internal base class (interface) containing functions required to call a slot managed by a pointer to function.
-class _iConnection
+class IX_CORE_EXPORT _iConnection
 {
 protected:
     enum Operation {
@@ -1416,7 +1416,7 @@ public:
 /**
  * @brief property
  */
-struct _iProperty
+struct IX_CORE_EXPORT _iProperty
 {
     typedef iVariant (*get_t)(const _iProperty*, const iObject*);
     typedef void (*set_t)(const _iProperty*, iObject*, const iVariant&);
@@ -1480,7 +1480,7 @@ _iProperty* newProperty(retGet (Obj::*get)() const, void (Obj::*set)(setArg), vo
     return new _iPropertyHelper<Obj, retGet, setArg, signalArg>(get, set, signal);
 }
 
-class iMetaObject
+class IX_CORE_EXPORT iMetaObject
 {
 public:
     iMetaObject(const iMetaObject* supper);

@@ -500,8 +500,8 @@ public:
     static iString number(xulonglong, int base=10);
     static iString number(double, char f='g', int prec=6);
 
-    friend bool operator==(const iString &s1, const iString &s2);
-    friend bool operator<(const iString &s1, const iString &s2);
+    friend IX_CORE_EXPORT bool operator==(const iString &s1, const iString &s2);
+    friend IX_CORE_EXPORT bool operator<(const iString &s1, const iString &s2);
     friend inline bool operator>(const iString &s1, const iString &s2) { return s2 < s1; }
     friend inline bool operator!=(const iString &s1, const iString &s2) { return !(s1 == s2); }
     friend inline bool operator<=(const iString &s1, const iString &s2) { return !(s1 > s2); }
@@ -1311,10 +1311,10 @@ inline iStringRef::iStringRef(const iString *aString)
     :m_string(aString), m_position(0), m_size(aString?aString->size() : 0){}
 
 // iStringRef <> iStringRef
-bool operator==(const iStringRef &s1, const iStringRef &s2);
+IX_CORE_EXPORT bool operator==(const iStringRef &s1, const iStringRef &s2);
 inline bool operator!=(const iStringRef &s1, const iStringRef &s2)
 { return !(s1 == s2); }
-bool operator<(const iStringRef &s1, const iStringRef &s2);
+IX_CORE_EXPORT bool operator<(const iStringRef &s1, const iStringRef &s2);
 inline bool operator>(const iStringRef &s1, const iStringRef &s2)
 { return s2 < s1; }
 inline bool operator<=(const iStringRef &s1, const iStringRef &s2)
@@ -1323,7 +1323,7 @@ inline bool operator>=(const iStringRef &s1, const iStringRef &s2)
 { return !(s1 < s2); }
 
 // iString <> iStringRef
-bool operator==(const iString &lhs, const iStringRef &rhs);
+IX_CORE_EXPORT bool operator==(const iString &lhs, const iStringRef &rhs);
 inline bool operator!=(const iString &lhs, const iStringRef &rhs) { return lhs.compare(rhs) != 0; }
 inline bool operator< (const iString &lhs, const iStringRef &rhs) { return lhs.compare(rhs) <  0; }
 inline bool operator> (const iString &lhs, const iStringRef &rhs) { return lhs.compare(rhs) >  0; }
@@ -1357,7 +1357,7 @@ inline int iStringRef::compare(const iStringRef &s1, iLatin1String s2, iShell::C
 { return iString::compare_helper(s1.constData(), s1.length(), s2, cs); }
 
 // iLatin1String <> iStringRef
-bool operator==(iLatin1String lhs, const iStringRef &rhs);
+IX_CORE_EXPORT bool operator==(iLatin1String lhs, const iStringRef &rhs);
 inline bool operator!=(iLatin1String lhs, const iStringRef &rhs) { return rhs.compare(lhs) != 0; }
 inline bool operator< (iLatin1String lhs, const iStringRef &rhs) { return rhs.compare(lhs) >  0; }
 inline bool operator> (iLatin1String lhs, const iStringRef &rhs) { return rhs.compare(lhs) <  0; }
