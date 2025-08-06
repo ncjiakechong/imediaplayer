@@ -131,7 +131,7 @@ void iGstreamerPlayerControl::setPlaybackRate(xreal rate)
 
 void iGstreamerPlayerControl::setPosition(xint64 pos)
 {
-    ilog_debug(__FUNCTION__, " : ", pos/1000.0);
+    ilog_debug(__FUNCTION__, ": ", pos/1000.0);
 
     pushState();
 
@@ -440,7 +440,7 @@ void iGstreamerPlayerControl::setBufferProgress(int progress)
     if (m_bufferProgress == progress || m_mediaStatus == iMediaPlayer::NoMedia)
         return;
 
-    ilog_debug(__FUNCTION__, " : ", progress);
+    ilog_debug(__FUNCTION__, ": ", progress);
     m_bufferProgress = progress;
 
     if (m_currentState == iMediaPlayer::PlayingState &&

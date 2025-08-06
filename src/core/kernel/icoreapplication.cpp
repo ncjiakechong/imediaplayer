@@ -340,7 +340,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
     int insertionOffset = static_cast<int>(threadData->postEventList.size());
     int idx = 0;
 
-    // TODO: re-architect
+    // TODO: insertionOffset replace using timestamp?
     do {
         if (threadData->postEventList.empty() || (idx >= insertionOffset))
             break;
