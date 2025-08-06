@@ -31,7 +31,7 @@ public:
     iEventDispatcher_generic(iObject* parent = IX_NULLPTR);
     ~iEventDispatcher_generic();
 
-    virtual bool processEvents();
+    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags);
 
     virtual void registerTimer(int timerId, int interval, TimerType timerType, iObject *object);
     virtual bool unregisterTimer(int timerId);

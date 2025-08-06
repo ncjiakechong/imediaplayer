@@ -159,14 +159,16 @@ void iEventDispatcher_generic::interrupt()
     wakeUp();
 }
 
-bool iEventDispatcher_generic::processEvents()
+bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flags)
 {
     iThreadData* data = iThread::get2(thread());
     IX_ASSERT(data == iThreadData::current());
 
-    bool result = eventIterate(true, true);
-    while (!result)
-        result = eventIterate(true, true);
+    const bool canWait = (flags & iEventLoop::WaitForMoreEvents);
+
+    bool result = eventIterate(canWait, true);
+    while (!result && canWait)
+        result = eventIterate(canWait, true);
 
     return result;
 }
