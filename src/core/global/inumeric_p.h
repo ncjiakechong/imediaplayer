@@ -172,7 +172,7 @@ add_overflow(T v1, T v2, T *r)
     *r = T(U(v1) + U(v2));
 
     // If int is two's complement, assume all integer types are too.
-    if (std::is_same<xint32, int>::value) {
+    if (is_same<xint32, int>::value) {
         // Two's complement equivalent (generates slightly shorter code):
         //  x ^ y             is negative if x and y have different signs
         //  x & y             is negative if x and y are negative
@@ -208,7 +208,7 @@ sub_overflow(T v1, T v2, T *r)
     using U = typename std::make_unsigned<T>::type;
     *r = T(U(v1) - U(v2));
 
-    if (std::is_same<xint32, int>::value)
+    if (is_same<xint32, int>::value)
         return ((v1 ^ *r) & (~v2 ^ *r)) < 0;
 
     bool s1 = (v1 < 0);

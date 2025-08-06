@@ -81,7 +81,7 @@ public:
 
     inline int tst_slot_return() {
         ilog_debug(this, " tst_slot_return");
-        return 0;
+        return 1;
     }
 
     inline void tst_slot_int0() {
@@ -271,6 +271,7 @@ public:
     }
 
 public:
+    int tst_sig_int_ret() ISIGNAL(tst_sig_int_ret)
     void tst_sig_int0() ISIGNAL(tst_sig_int0)
     void tst_sig_int1(int arg1) ISIGNAL(tst_sig_int1, arg1)
     void tst_sig_int2(int arg1, int arg2) ISIGNAL(tst_sig_int2, arg1, arg2)
@@ -324,6 +325,10 @@ int test_object(void)
     iRegisterConverter<TestObject*, iObject*>();
 
     ilog_debug("+++++++++connect 1");
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_obj, &TestObject::tst_slot_int0);
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_obj, &TestObject::tst_slot_return);
+    iObject::connect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_obj, &TestObject::tst_slot_int0, QueuedConnection);
+
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, &tst_obj, &TestObject::tst_slot_return);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int0, &tst_obj, &TestObject::tst_slot_int0);
 
@@ -389,6 +394,7 @@ int test_object(void)
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int8, &tst_obj, &TestObject::tst_slot_int7);
     iObject::connect(&tst_sig, &TestSignals::tst_sig_int8, &tst_obj, &TestObject::tst_slot_int8);
 
+    IX_ASSERT((1 == IEMIT tst_sig.tst_sig_int_ret()));
 
     IEMIT tst_sig.tst_sig_int0();
     IEMIT tst_sig.tst_sig_int1(1);

@@ -50,6 +50,25 @@ struct CheckCompatibleArguments<0, iTypeList<Head1, Tail1>, iTypeList<Head2, Tai
     enum { value = true };
 };
 
+/*
+   trick to set the return value of a slot that works even if the signal or the slot returns void
+   to be used like     function(), ApplyReturnValue<ReturnType>(&return_value)
+   if function() returns a value, the operator,(T, ApplyReturnValue<ReturnType>) is called, but if it
+   returns void, the builtin one is used without an error.
+*/
+template <typename T>
+struct ApplyReturnValue {
+    void *data;
+    explicit ApplyReturnValue(void* data_) : data(data_) {}
+};
+template<typename T, typename U>
+void operator,(T value, const ApplyReturnValue<U>& container) {
+    if (IX_NULLPTR != container.data)
+        *reinterpret_cast<U *>(container.data) = value;
+}
+template<typename T>
+void operator,(T, const ApplyReturnValue<void>&) {}
+
 template<typename Func> struct FunctionPointer { enum {ArgumentCount = -1, IsPointerToMemberFunction = false}; };
 
 template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) ()>
@@ -75,8 +94,8 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) ()>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void *) {
-        (o->*f)();
+    static void call(Function f, Object* o, void*, void* ret) {
+        (o->*f)(), ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1)>
@@ -110,10 +129,10 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        (o->*f)(static_cast<Arg1>(tArgs->template get<0>()));
+        (o->*f)(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2)>
@@ -143,10 +162,11 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()));
+        (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
@@ -177,11 +197,12 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-                static_cast<Arg3>(tArgs->template get<2>()));
+                static_cast<Arg3>(tArgs->template get<2>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
@@ -213,11 +234,12 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-                static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()));
+                static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -250,12 +272,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-                static_cast<Arg5>(tArgs->template get<4>()));
+                static_cast<Arg5>(tArgs->template get<4>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -288,12 +311,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-                static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()));
+                static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -327,13 +351,14 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
                 static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-                static_cast<Arg7>(tArgs->template get<6>()));
+                static_cast<Arg7>(tArgs->template get<6>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -367,13 +392,14 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
                 static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-                static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()));
+                static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -407,14 +433,15 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
                 static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
                 static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
-                static_cast<Arg9>(tArgs->template get<8>()));
+                static_cast<Arg9>(tArgs->template get<8>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -449,14 +476,15 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
                 static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
                 static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
-                static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>()));
+                static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 
@@ -483,8 +511,8 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void *) {
-        (o->*f)();
+    static void call(Function f, Object* o, void*, void* ret) {
+        (o->*f)(), ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1) const>
@@ -516,10 +544,10 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        (o->*f)(static_cast<Arg1>(tArgs->template get<0>()));
+        (o->*f)(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2) const>
@@ -549,10 +577,11 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()));
+        (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
@@ -583,11 +612,12 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-                static_cast<Arg3>(tArgs->template get<2>()));
+                static_cast<Arg3>(tArgs->template get<2>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
@@ -619,11 +649,12 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-                static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()));
+                static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -656,12 +687,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-                static_cast<Arg5>(tArgs->template get<4>()));
+                static_cast<Arg5>(tArgs->template get<4>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -694,12 +726,13 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-                static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()));
+                static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -733,13 +766,14 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) c
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
                 static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-                static_cast<Arg7>(tArgs->template get<6>()));
+                static_cast<Arg7>(tArgs->template get<6>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -773,13 +807,14 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
                 static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-                static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()));
+                static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -813,14 +848,15 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
                 static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
                 static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
-                static_cast<Arg9>(tArgs->template get<8>()));
+                static_cast<Arg9>(tArgs->template get<8>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -855,14 +891,15 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object* o, void* args) {
+    static void call(Function f, Object* o, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
                 static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
                 static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
                 static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
-                static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>()));
+                static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>())),
+                ApplyReturnValue<R>(ret);
     }
 };
 
@@ -889,8 +926,8 @@ template<typename Ret> struct FunctionPointer<Ret (*) ()>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void*) {
-        (*f)();
+    static void call(Function f, Object*, void*, void* ret) {
+        (*f)(), ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
@@ -920,10 +957,10 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        (*f)(static_cast<Arg1>(tArgs->template get<0>()));
+        (*f)(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (*) (Arg1, Arg2)>
@@ -953,10 +990,11 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()));
+        (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>())),
+            ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3>
@@ -987,11 +1025,12 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-            static_cast<Arg3>(tArgs->template get<2>()));
+            static_cast<Arg3>(tArgs->template get<2>())),
+            ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
@@ -1023,11 +1062,12 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
-                static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()));
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>())),
+            ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -1060,12 +1100,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
             static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-            static_cast<Arg5>(tArgs->template get<4>()));
+            static_cast<Arg5>(tArgs->template get<4>())),
+            ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -1098,12 +1139,13 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
             static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
-            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()));
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>())),
+            ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -1137,13 +1179,14 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
             static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
             static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-            static_cast<Arg7>(tArgs->template get<6>()));
+            static_cast<Arg7>(tArgs->template get<6>())),
+            ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -1177,13 +1220,14 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
             static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
             static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
-            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()));
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>())),
+            ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -1217,14 +1261,15 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()),  static_cast<Arg2>(tArgs->template get<1>()),
             static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
             static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
             static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
-            static_cast<Arg9>(tArgs->template get<8>()));
+            static_cast<Arg9>(tArgs->template get<8>())),
+            ApplyReturnValue<R>(ret);
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
@@ -1259,16 +1304,25 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     }
 
     template <typename SignalArgs, typename R>
-    static void call(Function f, Object*, void* args) {
+    static void call(Function f, Object*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
         (*f)(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
             static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
             static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
             static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
-            static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>()));
+            static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>())),
+            ApplyReturnValue<R>(ret);
     }
 };
+
+template <typename T>
+struct _iFuncRequiresRet
+{ static const bool value = true; };
+
+template <>
+struct _iFuncRequiresRet<void>
+{ static const bool value = false; };
 
 class iObject;
 
@@ -1299,7 +1353,7 @@ protected:
     // don't use virtual functions here; we don't want the
     // compiler to create tons of per-polymorphic-class stuff that
     // we'll never need. We just use one function pointer.
-    typedef _iConnection* (*ImplFn)(int which, const _iConnection* this_, iObject* receiver, void* const* func, void* args);
+    typedef _iConnection* (*ImplFn)(int which, const _iConnection* this_, iObject* receiver, void* const* func, void* args, void* ret);
 
     _iConnection(ImplFn impl, ConnectionType type);
     ~_iConnection();
@@ -1307,14 +1361,14 @@ protected:
     void ref();
     void deref();
 
-    inline _iConnection* clone() const {return _impl(Clone, this, _receiver, _slot, IX_NULLPTR);}
-    inline _iConnection* duplicate(iObject* newobj) const { return _impl(Clone, this, newobj, _slot, IX_NULLPTR);}
-    inline bool compare(void* const* func) const {return (IX_NULLPTR != _impl(Compare, this, _receiver, func, IX_NULLPTR));}
+    inline _iConnection* clone() const {return _impl(Clone, this, _receiver, _slot, IX_NULLPTR, IX_NULLPTR);}
+    inline _iConnection* duplicate(iObject* newobj) const { return _impl(Clone, this, newobj, _slot, IX_NULLPTR, IX_NULLPTR);}
+    inline bool compare(void* const* func) const {return (IX_NULLPTR != _impl(Compare, this, _receiver, func, IX_NULLPTR, IX_NULLPTR));}
 
     void setSlot(iObject* receiver, void* const* slot);
     void setSignal(iObject* sender, _iMemberFunction signal);
 
-    void emits(void* args) const;
+    void emits(void* args, void* ret) const;
 
     int _orphaned : 1;
     int _ref : 31;
@@ -1350,7 +1404,7 @@ class _iConnectionHelper : public _iConnection
     typedef FunctionPointer<SignalFunc> SignalFuncType;
     SlotFunc _func;
 
-    static _iConnection* impl(int which, const _iConnection* this_, iObject* r, void* const* f, void* a)
+    static _iConnection* impl(int which, const _iConnection* this_, iObject* r, void* const* f, void* args, void* ret)
     {
         typedef FunctionPointer<SlotFunc> SlotFuncType;
         typedef typename FunctionPointer<SlotFunc>::Object SlotObject;
@@ -1373,7 +1427,7 @@ class _iConnectionHelper : public _iConnection
             {
             const _iConnectionHelper* objCon = static_cast<const _iConnectionHelper*>(this_);
             SlotFuncType::template call<typename SignalFuncType::Arguments, typename SignalFuncType::ReturnType>(
-                        objCon->_func, static_cast<SlotObject*>(r), a);
+                        objCon->_func, static_cast<SlotObject*>(r), args, ret);
             }
             break;
 
@@ -1475,8 +1529,8 @@ struct _iPropertyHelper : public _iProperty
 template<class Obj, typename retGet, typename setArg, typename signalArg>
 _iProperty* newProperty(retGet (Obj::*get)() const, void (Obj::*set)(setArg), void (Obj::*signal)(signalArg))
 {
-    IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<setArg>::TYPE>::VALUE));
-    IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<signalArg>::TYPE>::VALUE));
+    IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<setArg>::TYPE>::value));
+    IX_COMPILER_VERIFY((is_same<typename type_wrapper<retGet>::TYPE, typename type_wrapper<signalArg>::TYPE>::value));
     return new _iPropertyHelper<Obj, retGet, setArg, signalArg>(get, set, signal);
 }
 
@@ -1545,7 +1599,7 @@ private:
     \
     Arguments tArgs = Arguments(__VA_ARGS__); \
     _iArgumentHelper argHelper = {&tArgs, &ThisFuncitonPointer::cloneArgs, &ThisFuncitonPointer::freeArgs, &ThisFuncitonPointer::cloneArgAdaptor, &ThisFuncitonPointer::freeArgAdaptor}; \
-    emitImpl(tSignal, argHelper); \
+    return emitHelper< typename ThisFuncitonPointer::ReturnType >(tSignal, argHelper); \
     }
 
 #define IEMIT

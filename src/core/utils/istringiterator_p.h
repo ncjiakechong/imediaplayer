@@ -31,7 +31,7 @@ namespace iShell {
 class iStringIterator
 {
     iString::const_iterator i, pos, e;
-    IX_COMPILER_VERIFY((std::is_same<iString::const_iterator, const iChar *>::value));
+    IX_COMPILER_VERIFY((is_same<iString::const_iterator, const iChar *>::value));
 public:
     explicit iStringIterator(iStringView string, xsizetype idx = 0)
         : i(string.begin()),
