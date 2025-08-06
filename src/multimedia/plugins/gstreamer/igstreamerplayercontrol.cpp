@@ -172,6 +172,10 @@ void iGstreamerPlayerControl::pause()
 {
     ilog_debug("enter");
     m_userRequestedState = iMediaPlayer::PausedState;
+    // If the playback has not been started yet but pause is requested.
+    // Seek to the beginning to show first frame.
+    if (m_pendingSeekPosition == -1 && m_session->position() == 0)
+        m_pendingSeekPosition = 0;
 
     playOrPause(iMediaPlayer::PausedState);
 }
@@ -375,8 +379,10 @@ void iGstreamerPlayerControl::updateSessionState(iMediaPlayer::State state)
         }
         m_pendingSeekPosition = -1;
 
-        if (m_currentState == iMediaPlayer::PlayingState)
-            m_session->play();
+        if (m_currentState == iMediaPlayer::PlayingState) {
+            if (m_bufferProgress == -1 || m_bufferProgress == 100)
+                m_session->play();
+        }
     }
 
     updateMediaStatus();
@@ -386,6 +392,10 @@ void iGstreamerPlayerControl::updateSessionState(iMediaPlayer::State state)
 
 void iGstreamerPlayerControl::updateMediaStatus()
 {
+    //EndOfMedia status should be kept, until reset by pause, play or setMedia
+    if (m_mediaStatus == iMediaPlayer::EndOfMedia)
+        return;
+
     pushState();
     iMediaPlayer::MediaStatus oldStatus = m_mediaStatus;
 
@@ -412,10 +422,6 @@ void iGstreamerPlayerControl::updateMediaStatus()
 
     if (m_currentState == iMediaPlayer::PlayingState)
         m_mediaStatus = iMediaPlayer::StalledMedia;
-
-    //EndOfMedia status should be kept, until reset by pause, play or setMedia
-    if (oldStatus == iMediaPlayer::EndOfMedia)
-        m_mediaStatus = iMediaPlayer::EndOfMedia;
 
     popAndNotifyState();
 }
