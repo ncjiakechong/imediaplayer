@@ -29,6 +29,97 @@
 
 namespace iShell {
 
+static thread_local iThreadData *currentThreadData = IX_NULLPTR;
+
+static pthread_once_t current_thread_data_once = PTHREAD_ONCE_INIT;
+static pthread_key_t current_thread_data_key;
+
+static void destroy_current_thread_data(void *p)
+{
+
+    // POSIX says the value in our key is set to zero before calling
+    // this destructor function, so we need to set it back to the
+    // right value...
+    pthread_setspecific(current_thread_data_key, p);
+    iThreadData *data = static_cast<iThreadData *>(p);
+    if (data->isAdopted)
+        data->deref();
+
+    // ... but we must reset it to zero before returning so we aren't
+    // called again (POSIX allows implementations to call destructor
+    // functions repeatedly until all values are zero)
+    pthread_setspecific(current_thread_data_key, IX_NULLPTR);
+}
+
+static void create_current_thread_data_key()
+{
+    pthread_key_create(&current_thread_data_key, destroy_current_thread_data);
+}
+
+// thread wrapper for the main() thread
+class iAdoptedThread : public iThread
+{
+    IX_OBJECT(iAdoptedThread)
+public:
+    iAdoptedThread(iThreadData *data)
+        : iThread(data)
+    {
+        m_running = true;
+        m_finished = false;
+    }
+
+    ~iAdoptedThread();
+
+protected:
+    void run() {
+        // this function should never be called
+        ilog_error(__FUNCTION__, ": Internal error, this implementation should never be called.");
+    }
+};
+
+iAdoptedThread::~iAdoptedThread()
+{
+}
+
+// Utility functions for getting, setting and clearing thread specific data.
+static iThreadData *get_thread_data()
+{
+    return currentThreadData;
+}
+
+static void set_thread_data(iThreadData *data)
+{
+    currentThreadData = data;
+    pthread_once(&current_thread_data_once, create_current_thread_data_key);
+    pthread_setspecific(current_thread_data_key, data);
+}
+
+static void clear_thread_data()
+{
+    currentThreadData = IX_NULLPTR;
+    pthread_setspecific(current_thread_data_key, IX_NULLPTR);
+}
+
+iThreadData* iThreadData::current(bool createIfNecessary)
+{
+    iThreadData *data = get_thread_data();
+    if (!data && createIfNecessary) {
+        data = new iThreadData;
+        set_thread_data(data);
+        data->isAdopted = true;
+        data->thread = new iAdoptedThread(data);
+        data->threadHd = iThread::currentThreadHd();
+        data->deref();
+    }
+
+    return data;
+}
+
+void iThreadData::clearCurrentThreadData()
+{
+    clear_thread_data();
+}
+
 // Does some magic and calculate the Unix scheduler priorities
 // sched_policy is IN/OUT: it must be set to a valid policy before calling this function
 // sched_priority is OUT only
@@ -106,8 +197,8 @@ void iThreadImpl::internalThreadFunc()
     {
         iMutex::ScopedLock locker(thread->m_mutex);
         data->threadHd = iThread::currentThreadHd();
-        data->setCurrent();
         data->ref();
+        set_thread_data(data);
     }
 
     if (IX_NULLPTR == data->dispatcher.load())

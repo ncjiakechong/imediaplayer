@@ -38,6 +38,7 @@ GstBusSyncReply iGstreamerBusHelper::syncGstBusFilter(GstBus* , GstMessage* mess
          it != d->syncFilters.end(); ++it) {
         iObject *filter = *it;
         iGstreamerMsgEvent evt(message);
+        // TODO
         if (iCoreApplication::sendEvent(filter, &evt)) {
             gst_message_unref(message);
             return GST_BUS_DROP;
@@ -146,6 +147,7 @@ void iGstreamerBusHelper::doProcessMessage(const iGstreamerMessage& msg)
          it != busFilters.end(); ++it) {
         iObject *filter = *it;
         iGstreamerMsgEvent evt(msg.rawMessage());
+        // TODO
         if (iCoreApplication::sendEvent(filter, &evt))
             break;
     }

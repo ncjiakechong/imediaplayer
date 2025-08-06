@@ -52,10 +52,9 @@ public:
     void ref();
     void deref();
 
-    void setCurrent();
-
 public:
     bool                            quitNow;
+    bool                            isAdopted;
     bool                            requiresCoreApplication;
 
     std::list<iPostEvent>           postEventList;

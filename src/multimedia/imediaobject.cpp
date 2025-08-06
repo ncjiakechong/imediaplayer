@@ -76,13 +76,13 @@ bool iMediaObject::isAvailable() const
 
 int iMediaObject::notifyInterval() const
 {
-    return m_notifyTimer->interval();
+    return m_notifyTimer.interval();
 }
 
 void iMediaObject::setNotifyInterval(int milliSeconds)
 {
-    if (m_notifyTimer->interval() != milliSeconds) {
-        m_notifyTimer->setInterval(milliSeconds);
+    if (m_notifyTimer.interval() != milliSeconds) {
+        m_notifyTimer.setInterval(milliSeconds);
 
         IEMIT notifyIntervalChanged(milliSeconds);
     }
@@ -130,14 +130,31 @@ void iMediaObject::unbind(iObject *object)
     constructor is protected.
 */
 
-iMediaObject::iMediaObject(iObject *parent):
-    iObject(parent)
-
+iMediaObject::iMediaObject(iObject *parent)
+    : iObject(parent)
+    , m_notifyTimer(IX_NULLPTR)
 {
-    m_notifyTimer = new iTimer(this);
-    m_notifyTimer->setInterval(1000);
+    m_notifyTimer.setInterval(1000);
+    connect(&m_notifyTimer, &iTimer::timeout, this, &iMediaObject::_x_notify);
 
     setupControls();
+}
+
+void iMediaObject::_x_notify()
+{
+    for (std::unordered_set<iString, iKeyHashFunc>::const_iterator it = m_notifyProperties.cbegin(); it != m_notifyProperties.cend(); ++it) {
+        const iMetaObject* mo = metaObject();
+
+        do {
+            const _iProperty* tProperty = mo->property(*it);
+            if (IX_NULLPTR == tProperty)
+                continue;
+
+            iVariant value = tProperty->_get(tProperty, this);
+            IEMIT tProperty->_signal(tProperty, this, value);
+            break;
+        } while ((mo = mo->superClass()));
+    }
 }
 
 /*!
@@ -146,9 +163,23 @@ iMediaObject::iMediaObject(iObject *parent):
 
     \sa notifyInterval
 */
-
 void iMediaObject::addPropertyWatch(iByteArray const &name)
 {
+    const_cast<iMediaObject*>(this)->initProperty();
+    const iMetaObject* mo = metaObject();
+
+    do {
+        const _iProperty* tProperty = mo->property(iString(name));
+        if (IX_NULLPTR == tProperty)
+            continue;
+
+        m_notifyProperties.insert(name);
+
+        if (!m_notifyTimer.isActive())
+            m_notifyTimer.start();
+
+        return;
+    } while ((mo = mo->superClass()));
 }
 
 /*!
@@ -160,6 +191,12 @@ void iMediaObject::addPropertyWatch(iByteArray const &name)
 
 void iMediaObject::removePropertyWatch(iByteArray const &name)
 {
+    std::unordered_set<iString, iKeyHashFunc>::const_iterator it = m_notifyProperties.find(name);
+    if (it != m_notifyProperties.cend())
+        m_notifyProperties.erase(it);
+
+    if (m_notifyProperties.empty())
+        m_notifyTimer.stop();
 }
 
 /*!

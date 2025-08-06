@@ -77,16 +77,26 @@ const iObject* iMetaObject::cast(const iObject *obj) const
 
 void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>& ppt)
 {
+    if (m_initProperty) {
+        IX_ASSERT(0);
+        return;
+    }
+
     m_initProperty = true;
     m_property = ppt;
 }
 
-const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* iMetaObject::property() const
+const _iProperty* iMetaObject::property(const iString& name) const
 {
     if (!m_initProperty)
         return IX_NULLPTR;
 
-    return &m_property;
+    std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
+    it = m_property.find(name);
+    if (it == m_property.cend() || it->second.isNull())
+        return IX_NULLPTR;
+
+    return it->second.data();
 }
 
 iObject::iObject(iObject *parent)
@@ -806,14 +816,11 @@ iVariant iObject::property(const char *name) const
     const iMetaObject* mo = metaObject();
 
     do {
-        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-        const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
-        if (IX_NULLPTR == propertys)
+        const _iProperty* tProperty = mo->property(iString(name));
+        if (IX_NULLPTR == tProperty)
             continue;
 
-        it = propertys->find(iString(name));
-        if (it != propertys->cend())
-            return it->second->_get(it->second.data(), this);
+        return tProperty->_get(tProperty, this);
     } while ((mo = mo->superClass()));
 
     return iVariant();
@@ -825,16 +832,12 @@ bool iObject::setProperty(const char *name, const iVariant& value)
     const iMetaObject* mo = metaObject();
 
     do {
-        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
-        const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* propertys = mo->property();
-        if (IX_NULLPTR == propertys)
+        const _iProperty* tProperty = mo->property(iString(name));
+        if (IX_NULLPTR == tProperty)
             continue;
 
-        it = propertys->find(iString(name));
-        if (it != propertys->cend()) {
-            it->second->_set(it->second.data(), this, value);
-            return true;
-        }
+        tProperty->_set(tProperty, this, value);
+        return true;
     } while ((mo = mo->superClass()));
 
     return false;
@@ -843,7 +846,7 @@ bool iObject::setProperty(const char *name, const iVariant& value)
 void iObject::initProperty()
 {
     const iMetaObject* mobj = iObject::metaObject();
-    if (IX_NULLPTR != mobj->property())
+    if (mobj->hasProperty())
         return;
 
     std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> pptImp;

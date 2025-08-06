@@ -31,6 +31,8 @@
 
 namespace iShell {
 
+static thread_local iThreadData *currentThreadData = IX_NULLPTR;
+
 #ifdef IX_OS_WIN
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 #pragma pack(push,8)
@@ -57,6 +59,68 @@ void SetThreadName(DWORD dwThreadID, const char* threadName) {
     #pragma warning(pop)
 }
 #endif
+
+// thread wrapper for the main() thread
+class iAdoptedThread : public iThread
+{
+    IX_OBJECT(iAdoptedThread)
+public:
+    iAdoptedThread(iThreadData *data)
+        : iThread(data)
+    {
+        m_running = true;
+        m_finished = false;
+    }
+
+    ~iAdoptedThread();
+
+protected:
+    void run() {
+        // this function should never be called
+        ilog_error(__FUNCTION__, ": Internal error, this implementation should never be called.");
+    }
+};
+
+iAdoptedThread::~iAdoptedThread()
+{
+}
+
+// Utility functions for getting, setting and clearing thread specific data.
+static iThreadData *get_thread_data()
+{
+    return currentThreadData;
+}
+
+static void set_thread_data(iThreadData *data)
+{
+    currentThreadData = data;
+}
+
+static void clear_thread_data()
+{
+    currentThreadData = IX_NULLPTR;
+}
+
+iThreadData* iThreadData::current(bool createIfNecessary)
+{
+    iThreadData *data = get_thread_data();
+    if (!data && createIfNecessary) {
+        // TODO: memory leak
+        data = new iThreadData;
+        set_thread_data(data);
+        data->isAdopted = true;
+        data->thread = new iAdoptedThread(data);
+        data->threadHd = iThread::currentThreadHd();
+        data->deref();
+    }
+
+    return data;
+}
+
+void iThreadData::clearCurrentThreadData()
+{
+    clear_thread_data();
+}
 
 iThreadImpl::~iThreadImpl()
 {
@@ -88,8 +152,8 @@ void iThreadImpl::internalThreadFunc()
     {
         iMutex::ScopedLock locker(thread->m_mutex);
         data->threadHd = iThread::currentThreadHd();
-        data->setCurrent();
         data->ref();
+        set_thread_data(data);
     }
 
     if (IX_NULLPTR == data->dispatcher.load())

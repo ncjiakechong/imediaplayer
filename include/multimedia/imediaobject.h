@@ -11,6 +11,7 @@
 #ifndef IMEDIAOBJECT_H
 #define IMEDIAOBJECT_H
 
+#include <unordered_set>
 #include <core/kernel/iobject.h>
 #include <core/kernel/itimer.h>
 
@@ -55,8 +56,10 @@ protected:
 
 private:
     void setupControls();
+    void _x_notify();
 
-    iTimer* m_notifyTimer;
+    iTimer m_notifyTimer;
+    std::unordered_set<iString, iKeyHashFunc> m_notifyProperties;
 };
 
 } // namespace iShell

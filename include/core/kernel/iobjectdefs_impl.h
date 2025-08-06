@@ -1474,14 +1474,16 @@ struct IX_CORE_EXPORT _iProperty
 {
     typedef iVariant (*get_t)(const _iProperty*, const iObject*);
     typedef void (*set_t)(const _iProperty*, iObject*, const iVariant&);
+    typedef void (*signal_t)(const _iProperty*, iObject*, const iVariant&);
 
-    _iProperty(get_t g = IX_NULLPTR, set_t s = IX_NULLPTR)
-        : _get(g), _set(s) {}
+    _iProperty(get_t get, set_t set, signal_t signal)
+        : _get(get), _set(set), _signal(signal) {}
     // virtual ~_iProperty(); // ignore destructor
 
     get_t _get;
     set_t _set;
-    _iMemberFunction _signal;
+    signal_t _signal;
+    _iMemberFunction _signalRaw;
 };
 
 template<class Obj, typename retGet, typename setArg, typename signalArg>
@@ -1492,12 +1494,12 @@ struct _iPropertyHelper : public _iProperty
     typedef void (Obj::*psignalfunc_t)(signalArg);
 
     _iPropertyHelper(pgetfunc_t _getfunc = IX_NULLPTR, psetfunc_t _setfunc = IX_NULLPTR, psignalfunc_t _signalfunc = IX_NULLPTR)
-        : _iProperty(getFunc, setFunc)
-        , _getFunc(_getfunc), _setFunc(_setfunc) {
+        : _iProperty(&getFunc, &setFunc, &signalFunc)
+        , _getFunc(_getfunc), _setFunc(_setfunc), _signalFunc(_signalfunc) {
         typedef void (Obj::*SignalFuncAdaptor)();
 
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(_signalfunc);
-        _signal = static_cast<_iMemberFunction>(tSignalAdptor);
+        _signalRaw = static_cast<_iMemberFunction>(tSignalAdptor);
     }
 
     static iVariant getFunc(const _iProperty* _this, const iObject* obj) {
@@ -1522,8 +1524,20 @@ struct _iPropertyHelper : public _iProperty
         (_classThis->*(_typedThis->_setFunc))(value.value<typename type_wrapper<setArg>::TYPE>());
     }
 
+    static void signalFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
+        Obj* _classThis = static_cast<Obj*>(obj);
+        const _iPropertyHelper *_typedThis = static_cast<const _iPropertyHelper *>(_this);
+        IX_CHECK_PTR(_typedThis);
+        if (IX_NULLPTR == _typedThis->_signalFunc)
+            return;
+
+        IX_CHECK_PTR(_classThis);
+        (_classThis->*(_typedThis->_signalFunc))(value.value<typename type_wrapper<signalArg>::TYPE>());
+    }
+
     pgetfunc_t _getFunc;
     psetfunc_t _setFunc;
+    psignalfunc_t _signalFunc;
 };
 
 template<class Obj, typename retGet, typename setArg, typename signalArg>
@@ -1546,7 +1560,8 @@ public:
     const iObject *cast(const iObject *obj) const;
 
     void setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>& ppt);
-    const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>* property() const;
+    const _iProperty* property(const iString& name) const;
+    bool hasProperty() const { return m_initProperty; }
 
 private:
     bool m_initProperty;
@@ -1571,7 +1586,7 @@ private:
 #define IPROPERTY_BEGIN \
     virtual void initProperty() { \
         const iMetaObject* mobj = IX_ThisType::metaObject(); \
-        if (IX_NULLPTR != mobj->property()) \
+        if (mobj->hasProperty()) \
             return; \
         \
         std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> pptImp;

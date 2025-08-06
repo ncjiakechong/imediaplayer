@@ -29,26 +29,9 @@
 
 #include "igstreamermessage_p.h"
 
-
 namespace iShell {
 
 class iTimer;
-
-//class iGstreamerSyncMessageFilter {
-//public:
-//    virtual ~iGstreamerSyncMessageFilter();
-
-//    //returns true if message was processed and should be dropped, false otherwise
-//    virtual bool processSyncMessage(const iGstreamerMessage &message) = 0;
-//};
-
-//class iGstreamerBusMessageFilter {
-//public:
-//    virtual ~iGstreamerBusMessageFilter();
-
-//    //returns true if message was processed and should be dropped, false otherwise
-//    virtual bool processBusMessage(const iGstreamerMessage &message) = 0;
-//};
 
 class iGstreamerMsgEvent : public iEvent
 {
