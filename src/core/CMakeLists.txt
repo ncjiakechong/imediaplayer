@@ -54,14 +54,18 @@ set (ComSource
 
 if(UNIX)
 	set (OsSource
-		thread/ieventdispatcher_glib.cpp
         thread/ithread_posix.cpp
 		kernel/icoreposix.cpp)
 	
-	find_package(PkgConfig)
-	pkg_check_modules(GLIB2 REQUIRED glib-2.0)
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(GLIB_PKG glib-2.0)
 
-	set (Depend_Libs ${GLIB2_LIBRARIES} pthread rt)
+	if (DEFINED GLIB_PKG_INCLUDE_DIRS AND DEFINED GLIB_PKG_LIBRARIES)
+	add_definitions(-DIBUILD_HAVE_GLIB)
+	list(APPEND OsSource thread/ieventdispatcher_glib.cpp)
+	endif ()
+
+	set (Depend_Libs ${GLIB_PKG_LIBRARIES} pthread rt)
 
 elseif(WIN32)
 	set (OsSource
@@ -72,7 +76,7 @@ elseif(WIN32)
 
 endif()
 
-include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../../include ${GLIB2_INCLUDE_DIRS})
+include_directories(${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/../../include ${GLIB_PKG_INCLUDE_DIRS} ${USER32_INCLUDE_DIRS})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 add_library(${PROJECT_NAME} SHARED ${ComSource} ${OsSource})
