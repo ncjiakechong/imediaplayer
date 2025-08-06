@@ -1,0 +1,111 @@
+/////////////////////////////////////////////////////////////////
+/// Copyright 2012-2018
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    ithread.h
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/// @date    2018-11-11
+/////////////////////////////////////////////////////////////////
+/// Edit History
+/// -----------------------------------------------------------
+/// DATE                     NAME          DESCRIPTION
+/// 2018-11-11          anfengce@        Create.
+/////////////////////////////////////////////////////////////////
+#ifndef ITHREAD_H
+#define ITHREAD_H
+
+#include <limits.h>
+
+#include <core/kernel/iobject.h>
+#include <core/thread/icondition.h>
+
+namespace ishell {
+
+class iThreadImpl;
+class iThreadData;
+class iEventLoop;
+class iEventDispatcher;
+
+class iThread : public iObject
+{
+public:
+    static intptr_t currentThreadId();
+    static iThread* currentThread();
+    static void yieldCurrentThread();
+    static iThreadData* get2(iThread *thread)
+        { i_check_ptr(thread); return thread->m_data;}
+    static void msleep(unsigned long);
+
+    explicit iThread(iObject *parent = I_NULLPTR);
+    virtual ~iThread();
+
+    enum Priority {
+        IdlePriority,
+
+        LowestPriority,
+        LowPriority,
+        NormalPriority,
+        HighPriority,
+        HighestPriority,
+
+        TimeCriticalPriority,
+
+        InheritPriority
+    };
+
+    void setPriority(Priority priority);
+    Priority priority() const;
+
+    bool isFinished() const;
+    bool isRunning() const;
+
+    void requestInterruption();
+    bool isInterruptionRequested() const;
+
+    void setStackSize(uint stackSize);
+    uint stackSize() const;
+
+    void exit(int retCode = 0);
+    void start(Priority pri = InheritPriority);
+
+    // default argument causes thread to block indefinetely
+    bool wait(long time = -1);
+
+    iEventDispatcher* eventDispatcher() const;
+
+protected:
+    iThread(iThreadData* data, iObject *parent = I_NULLPTR);
+
+    virtual bool event(iEvent *e);
+    virtual void run();
+    int exec();
+
+protected:
+    bool m_running;
+    bool m_finished;
+    bool m_isInFinish;
+
+    bool m_exited;
+    int m_returnCode;
+
+    uint m_stackSize;
+    Priority m_priority;
+
+    iThreadData* m_data;
+    iThreadImpl* m_impl;
+
+    mutable iMutex m_mutex;
+    iCondition m_doneCond;
+
+    iThread(const iThread&);
+    iThread& operator = (const iThread&);
+
+    friend class iThreadImpl;
+};
+
+} // namespace ishell
+
+#endif // ITHREAD_H

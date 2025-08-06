@@ -1,0 +1,101 @@
+/////////////////////////////////////////////////////////////////
+/// Copyright 2012-2018
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    ipoll.h
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/// @date    2018-12-3
+/////////////////////////////////////////////////////////////////
+/// Edit History
+/// -----------------------------------------------------------
+/// DATE                     NAME          DESCRIPTION
+/// 2018-12-3          anfengce@        Create.
+/////////////////////////////////////////////////////////////////
+#ifndef IPOLL_H
+#define IPOLL_H
+
+#include <stdint.h>
+
+namespace ishell {
+
+typedef enum /*< flags >*/
+{
+    /* Event types that can be polled for.  These bits may be set in `events'
+       to indicate the interesting event types; they will appear in `revents'
+       to indicate the status of the file descriptor.  */
+    I_IO_IN  = 1 << 0,      /* There is data to read.  */
+    I_IO_PRI = 1 << 1,      /* There is urgent data to read.  */
+    I_IO_OUT = 1 << 2,      /* Writing now will not block.  */
+
+    /* Event types always implicitly polled for.  These bits need not be set in
+       `events', but they will appear in `revents' to indicate the status of
+       the file descriptor.  */
+    I_IO_ERR = 1 << 3,      /* Error condition.  */
+    I_IO_HUP = 1 << 4,      /* Hung up.  */
+    I_IO_NVAL = 1 << 5      /* Invalid polling request.  */
+} iIOCondition;
+
+/* Any definitions using iPollFD are primarily
+ * for Unix and not guaranteed to be the compatible on all
+ * operating systems on which GLib runs. Right now, the
+ * iCore does use these functions on Win32 as well, but interprets
+ * them in a fairly different way than on Unix. If you use
+ * these definitions, you are should be prepared to recode
+ * for different operating systems.
+ *
+ * Note that on systems with a working poll(2), that function is used
+ * in place of iPollFD(). Thus iPollFD() must have the same signature as
+ * poll(), meaning iPollFD must have the same layout as struct pollfd.
+ *
+ * On Win32, the fd in a iPollFD should be Win32 HANDLE (*not* a file
+ * descriptor as provided by the C runtime) that can be used by
+ * MsgWaitForMultipleObjects. This does *not* include file handles
+ * from CreateFile, SOCKETs, nor pipe handles. (But you can use
+ * WSAEventSelect to signal events when a SOCKET is readable).
+ *
+ * On Win32, fd can also be the special value I_WIN32_MSG_HANDLE to
+ * indicate polling for messages.
+ *
+ * But note that I_WIN32_MSG_HANDLE iPollFDs should not be used by GDK
+ * (GTK) programs, as GDK itself wants to read messages and convert them
+ * to GDK events.
+ *
+ * So, unless you really know what you are doing, it's best not to try
+ * to use the main loop polling stuff for your own needs on
+ * Windows.
+ */
+typedef struct _iPollFD iPollFD;
+
+/**
+ * iPollFD:
+ * @fd: the file descriptor to poll
+ * @events: a bitwise combination from iIOCondition, specifying which
+ *     events should be polled for. Typically for reading from a file
+ *     descriptor you would use I_IO_IN | I_IO_HUP | I_IO_ERR, and
+ *     for writing you would use I_IO_OUT | I_IO_ERR.
+ * @revents: a bitwise combination of flags from iIOCondition, returned
+ *     from the poll() function to indicate which events occurred.
+ *
+ * Represents a file descriptor, which events to poll for, and which events
+ * occurred.
+ */
+struct _iPollFD
+{
+    intptr_t	fd;
+    uint16_t 	events;
+    uint16_t 	revents;
+};
+
+/* Poll the file descriptors described by the NFDS structures starting at
+   FDS.  If TIMEOUT is nonzero and not -1, allow TIMEOUT milliseconds for
+   an event to occur; if TIMEOUT is -1, block until an event occurs.
+   Returns the number of file descriptors with events, zero if timed out,
+   or -1 for errors.  */
+int32_t iPoll (iPollFD *fds, uint32_t nfds, int32_t timeout);
+
+} // namespace ishell
+
+#endif // IPOLL_H

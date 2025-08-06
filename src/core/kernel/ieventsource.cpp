@@ -1,0 +1,169 @@
+/////////////////////////////////////////////////////////////////
+/// Copyright 2012-2018
+/// All rights reserved.
+/////////////////////////////////////////////////////////////////
+/// @file    ieventsource.cpp
+/// @brief   Short description
+/// @details description.
+/// @version 1.0
+/// @author  anfengce@
+/// @date    2018-12-5
+/////////////////////////////////////////////////////////////////
+/// Edit History
+/// -----------------------------------------------------------
+/// DATE                     NAME          DESCRIPTION
+/// 2018-12-5          anfengce@        Create.
+/////////////////////////////////////////////////////////////////
+
+#include "core/kernel/ieventdispatcher.h"
+#include "core/kernel/ieventsource.h"
+#include "core/thread/ithread.h"
+#include "core/io/ilog.h"
+#include "private/ithread_p.h"
+
+#define ILOG_TAG "core"
+
+namespace ishell {
+
+iEventSource::iEventSource(int priority)
+    : m_priority(priority)
+    , m_refCount(1)
+    , m_flags(0)
+    , m_dispatcher(I_NULLPTR)
+{
+}
+
+iEventSource::~iEventSource()
+{
+    if (m_dispatcher)
+        detach();
+}
+
+void iEventSource::ref()
+{
+    if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
+        ilog_warn("iEventSource::ref in diffrent thread");
+    }
+
+    ++m_refCount;
+}
+
+void iEventSource::unref()
+{
+    int nowRef = -1;
+
+    if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
+        ilog_warn("iEventSource::ref in diffrent thread");
+    }
+
+    --m_refCount;
+    nowRef = m_refCount;
+
+    if (0 == nowRef)
+        delete this;
+}
+
+int iEventSource::attach(iEventDispatcher* dispatcher)
+{
+    if (I_NULLPTR == dispatcher) {
+        ilog_warn("iEventSource::attach to invalid dispatcher");
+        return -1;
+    }
+
+    if (iThread::currentThread() != dispatcher->thread()) {
+        ilog_warn("iEventSource::attach must in same thread as dispatcher");
+        return -1;
+    }
+
+    if (I_NULLPTR != m_dispatcher) {
+        ilog_warn("iEventSource::attach has attached to ", m_dispatcher->objectName());
+        return -1;
+    }
+
+    // ref();
+    m_dispatcher = dispatcher;
+    dispatcher->addEventSource(this);
+
+    std::list<iPollFD*>::const_iterator it;
+    for (it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+        dispatcher->addPoll(*it, this);
+    }
+
+    return 0;
+}
+
+int iEventSource::detach()
+{
+    if (I_NULLPTR == m_dispatcher) {
+        ilog_warn("iEventSource::detach invalid");
+        return -1;
+    }
+
+    if (iThread::currentThread() != m_dispatcher->thread()) {
+        ilog_warn("iEventSource::detach must in same thread as dispatcher");
+        return -1;
+    }
+
+    std::list<iPollFD*>::const_iterator it;
+    for (it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+        m_dispatcher->removePoll(*it, this);
+    }
+
+    m_dispatcher->removeEventSource(this);
+
+    // unref();
+    m_dispatcher = I_NULLPTR;
+    return 0;
+}
+
+int iEventSource::addPoll(iPollFD* fd)
+{
+    if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
+        ilog_warn("iEventSource::addPoll must in same thread as dispatcher");
+        return -1;
+    }
+
+    m_pollFds.push_back(fd);
+
+    if (m_dispatcher)
+        m_dispatcher->addPoll(fd, this);
+
+    return 0;
+}
+
+int iEventSource::removePoll(iPollFD* fd)
+{
+    if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
+        ilog_warn("iEventSource::addPoll must in same thread as dispatcher");
+        return -1;
+    }
+
+    for (std::list<iPollFD*>::const_iterator it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+        if ((*it) == fd) {
+            m_pollFds.erase(it);
+            break;
+        }
+    }
+
+    if (m_dispatcher)
+        m_dispatcher->removePoll(fd, this);
+
+    return 0;
+}
+
+bool iEventSource::prepare(int*)
+{
+    return false;
+}
+
+bool iEventSource::check()
+{
+    return false;
+}
+
+bool iEventSource::dispatch()
+{
+    return true;
+}
+
+} // namespace ishell
