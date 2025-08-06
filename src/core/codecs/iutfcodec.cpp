@@ -22,12 +22,12 @@ enum { Endian = 0, Data = 1 };
 
 static const uchar utf8bom[] = { 0xef, 0xbb, 0xbf };
 
-static inline bool simdEncodeAscii(uchar *, const ushort *, const ushort *, const ushort *)
+static inline bool simdEncodeAscii(uchar *, const xuint16 *, const xuint16 *, const xuint16 *)
 {
     return false;
 }
 
-static inline bool simdDecodeAscii(ushort *, const uchar *, const uchar *, const uchar *)
+static inline bool simdDecodeAscii(xuint16 *, const uchar *, const uchar *, const uchar *)
 {
     return false;
 }
@@ -43,16 +43,16 @@ iByteArray iUtf8::convertFromUnicode(const iChar *uc, xsizetype len)
     // create a iByteArray with the worst case scenario size
     iByteArray result(len * 3, iShell::Uninitialized);
     uchar *dst = reinterpret_cast<uchar *>(const_cast<char *>(result.constData()));
-    const ushort *src = reinterpret_cast<const ushort *>(uc);
-    const ushort *const end = src + len;
+    const xuint16 *src = reinterpret_cast<const xuint16 *>(uc);
+    const xuint16 *const end = src + len;
 
     while (src != end) {
-        const ushort *nextAscii = end;
+        const xuint16 *nextAscii = end;
         if (simdEncodeAscii(dst, nextAscii, src, end))
             break;
 
         do {
-            ushort uc = *src++;
+            xuint16 uc = *src++;
             int res = iUtf8Functions::toUtf8<iUtf8BaseTraits>(uc, dst, src, end);
             if (res < 0) {
                 // encoding error - append '?'
@@ -82,8 +82,8 @@ iByteArray iUtf8::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec:
 
     iByteArray rstr(rlen, iShell::Uninitialized);
     uchar *cursor = reinterpret_cast<uchar *>(const_cast<char *>(rstr.constData()));
-    const ushort *src = reinterpret_cast<const ushort *>(uc);
-    const ushort *const end = src + len;
+    const xuint16 *src = reinterpret_cast<const xuint16 *>(uc);
+    const xuint16 *const end = src + len;
 
     int invalid = 0;
     if (state && !(state->flags & iTextCodec::IgnoreHeader)) {
@@ -93,10 +93,10 @@ iByteArray iUtf8::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec:
         *cursor++ = utf8bom[2];
     }
 
-    const ushort *nextAscii = src;
+    const xuint16 *nextAscii = src;
     while (src != end) {
         int res;
-        ushort uc;
+        xuint16 uc;
         if (surrogate_high != -1) {
             uc = surrogate_high;
             surrogate_high = -1;
@@ -174,7 +174,7 @@ iString iUtf8::convertToUnicode(const char *chars, xsizetype len)
 
 iChar *iUtf8::convertToUnicode(iChar *buffer, const char *chars, xsizetype len)
 {
-    ushort *dst = reinterpret_cast<ushort *>(buffer);
+    xuint16 *dst = reinterpret_cast<xuint16 *>(buffer);
     const uchar *src = reinterpret_cast<const uchar *>(chars);
     const uchar *end = src + len;
 
@@ -211,7 +211,7 @@ iChar *iUtf8::convertToUnicode(iChar *buffer, const char *chars, xsizetype len)
 iString iUtf8::convertToUnicode(const char *chars, xsizetype len, iTextCodec::ConverterState *state)
 {
     bool headerdone = false;
-    ushort replacement = iChar::ReplacementCharacter;
+    xuint16 replacement = iChar::ReplacementCharacter;
     int invalid = 0;
     int res;
     uchar ch = 0;
@@ -228,7 +228,7 @@ iString iUtf8::convertToUnicode(const char *chars, xsizetype len, iTextCodec::Co
     //   3 of 4 bytes       same                        +1 (same)
     iString result(len + 1, iShell::Uninitialized);
 
-    ushort *dst = reinterpret_cast<ushort *>(const_cast<iChar *>(result.constData()));
+    xuint16 *dst = reinterpret_cast<xuint16 *>(const_cast<iChar *>(result.constData()));
     const uchar *src = reinterpret_cast<const uchar *>(chars);
     const uchar *end = src + len;
 
@@ -308,7 +308,7 @@ iString iUtf8::convertToUnicode(const char *chars, xsizetype len, iTextCodec::Co
             *dst++ = iChar::ReplacementCharacter;
     }
 
-    result.truncate(dst - (const ushort *)result.unicode());
+    result.truncate(dst - (const xuint16 *)result.unicode());
     if (state) {
         state->invalidChars += invalid;
         if (headerdone)
@@ -327,8 +327,8 @@ iString iUtf8::convertToUnicode(const char *chars, xsizetype len, iTextCodec::Co
 struct iUtf8NoOutputTraits : public iUtf8BaseTraitsNoAscii
 {
     struct NoOutput {};
-    static void appendUtf16(const NoOutput &, ushort) {}
-    static void appendUcs4(const NoOutput &, uint) {}
+    static void appendUtf16(const NoOutput &, xuint16) {}
+    static void appendUcs4(const NoOutput &, xuint32) {}
 };
 
 iUtf8::ValidUtf8Result iUtf8::isValidUtf8(const char *chars, xsizetype len)
@@ -364,14 +364,14 @@ iUtf8::ValidUtf8Result iUtf8::isValidUtf8(const char *chars, xsizetype len)
 
 int iUtf8::compareUtf8(const char *utf8, xsizetype u8len, const iChar *utf16, xsizetype u16len)
 {
-    uint uc1, uc2;
-    auto src1 = reinterpret_cast<const uchar *>(utf8);
-    auto end1 = src1 + u8len;
+    xuint32 uc1, uc2;
+    const uchar* src1 = reinterpret_cast<const uchar *>(utf8);
+    const uchar* end1 = src1 + u8len;
     iStringIterator src2(utf16, utf16 + u16len);
 
     while (src1 < end1 && src2.hasNext()) {
         uchar b = *src1++;
-        uint *output = &uc1;
+        xuint32 *output = &uc1;
         int res = iUtf8Functions::fromUtf8<iUtf8BaseTraits>(b, output, src1, end1);
         if (res < 0) {
             // decoding error
@@ -389,22 +389,22 @@ int iUtf8::compareUtf8(const char *utf8, xsizetype u8len, const iChar *utf16, xs
 
 int iUtf8::compareUtf8(const char *utf8, xsizetype u8len, iLatin1String s)
 {
-    uint uc1;
-    auto src1 = reinterpret_cast<const uchar *>(utf8);
-    auto end1 = src1 + u8len;
-    auto src2 = reinterpret_cast<const uchar *>(s.latin1());
-    auto end2 = src2 + s.size();
+    xuint32 uc1;
+    const uchar* src1 = reinterpret_cast<const uchar *>(utf8);
+    const uchar* end1 = src1 + u8len;
+    const uchar* src2 = reinterpret_cast<const uchar *>(s.latin1());
+    const uchar* end2 = src2 + s.size();
 
     while (src1 < end1 && src2 < end2) {
         uchar b = *src1++;
-        uint *output = &uc1;
+        xuint32 *output = &uc1;
         int res = iUtf8Functions::fromUtf8<iUtf8BaseTraits>(b, output, src1, end1);
         if (res < 0) {
             // decoding error
             uc1 = iChar::ReplacementCharacter;
         }
 
-        uint uc2 = *src2++;
+        xuint32 uc2 = *src2++;
         if (uc1 != uc2)
             return int(uc1) - int(uc2);
     }
@@ -436,9 +436,9 @@ iByteArray iUtf16::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec
         data += 2;
     }
     if (endian == BigEndianness)
-        iToBigEndian<ushort>(uc, len, data);
+        iToBigEndian<xuint16>(uc, len, data);
     else
-        iToLittleEndian<ushort>(uc, len, data);
+        iToLittleEndian<xuint16>(uc, len, data);
 
     if (state) {
         state->remainingChars = 0;
@@ -553,13 +553,13 @@ iByteArray iUtf32::convertFromUnicode(const iChar *uc, xsizetype len, iTextCodec
     iStringIterator i(uc, uc + len);
     if (endian == BigEndianness) {
         while (i.hasNext()) {
-            uint cp = i.next();
+            xuint32 cp = i.next();
             iToBigEndian(cp, data);
             data += 4;
         }
     } else {
         while (i.hasNext()) {
-            uint cp = i.next();
+            xuint32 cp = i.next();
             iToLittleEndian(cp, data);
             data += 4;
         }
@@ -617,7 +617,7 @@ iString iUtf32::convertToUnicode(const char *chars, xsizetype len, iTextCodec::C
                     continue;
                 }
             }
-            uint code = (endian == BigEndianness) ? iFromBigEndian<xuint32>(tuple) : iFromLittleEndian<xuint32>(tuple);
+            xuint32 code = (endian == BigEndianness) ? iFromBigEndian<xuint32>(tuple) : iFromLittleEndian<xuint32>(tuple);
             if (iChar::requiresSurrogates(code)) {
                 *qch++ = iChar::highSurrogate(code);
                 *qch++ = iChar::lowSurrogate(code);

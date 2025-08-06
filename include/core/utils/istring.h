@@ -155,9 +155,9 @@ bool iStringView::endsWith(iLatin1String s, iShell::CaseSensitivity cs) const
 
 class IX_CORE_EXPORT iString
 {
-    typedef iTypedArrayData<ushort> Data;
+    typedef iTypedArrayData<xuint16> Data;
 public:
-    typedef iArrayDataPointer<ushort> DataPointer;
+    typedef iArrayDataPointer<xuint16> DataPointer;
 
     inline iString();
     explicit iString(const iChar *unicode, xsizetype size = -1);
@@ -378,12 +378,12 @@ public:
 
     iString repeated(xsizetype times) const;
 
-    const ushort *utf16() const;
+    const xuint16 *utf16() const;
 
     iByteArray toLatin1() const;
     iByteArray toUtf8() const;
     iByteArray toLocal8Bit() const;
-    std::list<uint> toUcs4() const;
+    std::list<xuint32> toUcs4() const;
 
     // note - this are all inline so we can benefit from strlen() compile time optimizations
     static inline iString fromLatin1(const char *str, xsizetype size = -1)
@@ -404,21 +404,21 @@ public:
     { return str.isNull() ? iString() : fromUtf8(str.data(), istrnlen(str.constData(), str.size())); }
     static inline iString fromLocal8Bit(const iByteArray &str)
     { return str.isNull() ? iString() : fromLocal8Bit(str.data(), istrnlen(str.constData(), str.size())); }
-    static iString fromUtf16(const ushort *, xsizetype size = -1);
-    static iString fromUcs4(const uint *, xsizetype size = -1);
+    static iString fromUtf16(const xuint16 *, xsizetype size = -1);
+    static iString fromUcs4(const xuint32 *, xsizetype size = -1);
     static iString fromRawData(const iChar *, xsizetype size);
 
     static iString fromUtf16(const char16_t *str, xsizetype size = -1)
-    { return fromUtf16(reinterpret_cast<const ushort *>(str), size); }
+    { return fromUtf16(reinterpret_cast<const xuint16 *>(str), size); }
     static iString fromUcs4(const char32_t *str, xsizetype size = -1)
-    { return fromUcs4(reinterpret_cast<const uint *>(str), size); }
+    { return fromUcs4(reinterpret_cast<const xuint32 *>(str), size); }
 
     inline xsizetype toWCharArray(wchar_t *array) const;
     static inline iString fromWCharArray(const wchar_t *string, xsizetype size = -1);
 
     iString &setRawData(const iChar *unicode, xsizetype size);
     iString &setUnicode(const iChar *unicode, xsizetype size);
-    inline iString &setUtf16(const ushort *utf16, xsizetype size);
+    inline iString &setUtf16(const xuint16 *utf16, xsizetype size);
 
     int compare(const iString &s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     int compare(iLatin1String other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
@@ -597,7 +597,7 @@ public:
 
 private:
     DataPointer d;
-    static const ushort _empty;
+    static const xuint16 _empty;
 
     friend inline bool operator==(iChar, const iString &);
     friend inline bool operator< (iChar, const iString &);
@@ -637,7 +637,7 @@ private:
     static iByteArray toLatin1_helper_inplace(iString &);
     static iByteArray toUtf8_helper(const iString &);
     static iByteArray toLocal8Bit_helper(const iChar *data, xsizetype size);
-    static xsizetype toUcs4_helper(const ushort *uc, xsizetype length, uint *out);
+    static xsizetype toUcs4_helper(const xuint16 *uc, xsizetype length, xuint32 *out);
     static xlonglong toIntegral_helper(iStringView string, bool *ok, int base);
     static xulonglong toIntegral_helper(iStringView string, bool *ok, uint base);
     void replace_helper(size_t *indices, xsizetype nIndices, xsizetype blen, const iChar *after, xsizetype alen);
@@ -671,7 +671,7 @@ private:
 #define IX_UNICODE_LITERAL(str) u"" str
 #define iStringLiteral(str) \
     (iString(iString::DataPointer(IX_NULLPTR,  \
-                            const_cast<ushort*>(reinterpret_cast<const ushort*>(IX_UNICODE_LITERAL(str))), \
+                            const_cast<xuint16*>(reinterpret_cast<const xuint16*>(IX_UNICODE_LITERAL(str))), \
                             sizeof(IX_UNICODE_LITERAL(str))/2 - 1))) \
     /**/
 
@@ -762,15 +762,15 @@ inline xsizetype iString::toWCharArray(wchar_t *array) const
         memcpy(array, data(), sizeof(iChar) * size());
         return size();
     } else {
-        return toUcs4_helper(reinterpret_cast<const ushort *>(data()), size(),
-                                      reinterpret_cast<uint *>(array));
+        return toUcs4_helper(reinterpret_cast<const xuint16 *>(data()), size(),
+                                      reinterpret_cast<xuint32 *>(array));
     }
 }
 
 inline iString iString::fromWCharArray(const wchar_t *string, xsizetype size)
 {
-    return sizeof(wchar_t) == sizeof(iChar) ? fromUtf16(reinterpret_cast<const ushort *>(string), size)
-                                            : fromUcs4(reinterpret_cast<const uint *>(string), size);
+    return sizeof(wchar_t) == sizeof(iChar) ? fromUtf16(reinterpret_cast<const xuint16 *>(string), size)
+                                            : fromUcs4(reinterpret_cast<const xuint32 *>(string), size);
 }
 
 
@@ -797,7 +797,7 @@ inline void iString::squeeze()
     }
 }
 
-inline iString &iString::setUtf16(const ushort *autf16, xsizetype asize)
+inline iString &iString::setUtf16(const xuint16 *autf16, xsizetype asize)
 { return setUnicode(reinterpret_cast<const iChar *>(autf16), asize); }
 inline iChar& iString::operator[](xsizetype i)
 { IX_ASSERT(i >= 0 && i < size()); return data()[i]; }
@@ -986,8 +986,8 @@ inline iString iString::fromStdU32String(const std::u32string &s)
 inline std::u32string iString::toStdU32String() const
 {
     std::u32string u32str(length(), char32_t(0));
-    int len = toUcs4_helper(reinterpret_cast<const ushort *>(constData()), length(),
-                            reinterpret_cast<uint*>(&u32str[0]));
+    int len = toUcs4_helper(reinterpret_cast<const xuint16 *>(constData()), length(),
+                            reinterpret_cast<xuint32*>(&u32str[0]));
     u32str.resize(len);
     return u32str;
 }

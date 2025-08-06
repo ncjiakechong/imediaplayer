@@ -28,7 +28,7 @@ namespace iShell {
 
 // in iurlrecode.cpp
 extern int ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
-                                          iUrl::ComponentFormattingOptions encoding, const ushort *tableModifications = 0);
+                                          iUrl::ComponentFormattingOptions encoding, const xuint16 *tableModifications = 0);
 
 // in iurlidna.cpp
 enum AceLeadingDot { AllowLeadingDot, ForbidLeadingDot };

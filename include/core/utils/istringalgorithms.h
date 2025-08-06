@@ -24,8 +24,8 @@ class iStringView;
 
 namespace iPrivate {
 
-IX_CORE_EXPORT xsizetype xustrlen(const ushort *str);
-IX_CORE_EXPORT const ushort *xustrchr(iStringView str, ushort ch);
+IX_CORE_EXPORT xsizetype xustrlen(const xuint16 *str);
+IX_CORE_EXPORT const xuint16 *xustrchr(iStringView str, xuint16 ch);
 
 IX_CORE_EXPORT int compareStrings(iStringView   lhs, iStringView   rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
 IX_CORE_EXPORT int compareStrings(iStringView   lhs, iLatin1String rhs, iShell::CaseSensitivity cs = iShell::CaseSensitive);
@@ -61,7 +61,7 @@ IX_CORE_EXPORT xsizetype count(iStringView haystack, iStringView needle, iShell:
 IX_CORE_EXPORT iByteArray convertToLatin1(iStringView str);
 IX_CORE_EXPORT iByteArray convertToUtf8(iStringView str);
 IX_CORE_EXPORT iByteArray convertToLocal8Bit(iStringView str);
-IX_CORE_EXPORT std::list<uint> convertToUcs4(iStringView str);
+IX_CORE_EXPORT std::list<xuint32> convertToUcs4(iStringView str);
 IX_CORE_EXPORT bool isRightToLeft(iStringView string);
 
 IX_CORE_EXPORT bool isAscii(iLatin1String s);

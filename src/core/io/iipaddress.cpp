@@ -25,9 +25,9 @@ static iString number(xuint8 val, int base = 10)
 typedef iVarLengthArray<char, 64> Buffer;
 static const iChar *checkedToAscii(Buffer &buffer, const iChar *begin, const iChar *end)
 {
-    const ushort *const ubegin = reinterpret_cast<const ushort *>(begin);
-    const ushort *const uend = reinterpret_cast<const ushort *>(end);
-    const ushort *src = ubegin;
+    const xuint16 *const ubegin = reinterpret_cast<const xuint16 *>(begin);
+    const xuint16 *const uend = reinterpret_cast<const xuint16 *>(end);
+    const xuint16 *src = ubegin;
 
     buffer.resize(uend - ubegin + 1);
     char *dst = buffer.data();
@@ -281,7 +281,7 @@ void toString(iString &appendTo, IPv6Address address)
         }
     }
 
-    const iChar colon = ushort(':');
+    const iChar colon = xuint16(':');
     if (zeroRunLength < 4)
         zeroRunOffset = -1;
     else if (zeroRunOffset == 0)

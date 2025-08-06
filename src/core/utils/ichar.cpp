@@ -42,7 +42,7 @@ using namespace iUnicodeTables;
 */
 
 /*!
-    \fn const ushort iLatin1Char::unicode() const
+    \fn const xuint16 iLatin1Char::unicode() const
 
     Converts a Latin-1 character to an 16-bit-encoded Unicode representation
     of the character.
@@ -583,7 +583,7 @@ using namespace iUnicodeTables;
 */
 
 /*!
-    \fn iChar::iChar(uint code)
+    \fn iChar::iChar(xuint32 code)
 
     Constructs a iChar for the character with Unicode code point \a code.
 */
@@ -638,7 +638,7 @@ using namespace iUnicodeTables;
     Note that this gives no indication of whether the character is
     available in a particular font.
 */
-bool iChar::isPrint(uint ucs4)
+bool iChar::isPrint(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -659,7 +659,7 @@ bool iChar::isPrint(uint ucs4)
 */
 
 /*!
-    \fn bool iChar::isSpace(uint ucs4)
+    \fn bool iChar::isSpace(xuint32 ucs4)
     \overload
 
 
@@ -671,7 +671,7 @@ bool iChar::isPrint(uint ucs4)
 /*!
     \internal
 */
-bool iChar::isSpace_helper(uint ucs4)
+bool iChar::isSpace_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -697,7 +697,7 @@ bool iChar::isSpace_helper(uint ucs4)
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a mark (Mark_* categories); otherwise returns \c false.
 */
-bool iChar::isMark(uint ucs4)
+bool iChar::isMark(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -721,7 +721,7 @@ bool iChar::isMark(uint ucs4)
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a punctuation mark (Punctuation_* categories); otherwise returns \c false.
 */
-bool iChar::isPunct(uint ucs4)
+bool iChar::isPunct(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -749,7 +749,7 @@ bool iChar::isPunct(uint ucs4)
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a symbol (Symbol_* categories); otherwise returns \c false.
 */
-bool iChar::isSymbol(uint ucs4)
+bool iChar::isSymbol(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -768,7 +768,7 @@ bool iChar::isSymbol(uint ucs4)
 */
 
 /*!
-    \fn bool iChar::isLetter(uint ucs4)
+    \fn bool iChar::isLetter(xuint32 ucs4)
     \overload
 
 
@@ -779,7 +779,7 @@ bool iChar::isSymbol(uint ucs4)
 /*!
     \internal
 */
-bool iChar::isLetter_helper(uint ucs4)
+bool iChar::isLetter_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -801,7 +801,7 @@ bool iChar::isLetter_helper(uint ucs4)
 */
 
 /*!
-    \fn bool iChar::isNumber(uint ucs4)
+    \fn bool iChar::isNumber(xuint32 ucs4)
     \overload
 
 
@@ -814,7 +814,7 @@ bool iChar::isLetter_helper(uint ucs4)
 /*!
     \internal
 */
-bool iChar::isNumber_helper(uint ucs4)
+bool iChar::isNumber_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -832,7 +832,7 @@ bool iChar::isNumber_helper(uint ucs4)
 */
 
 /*!
-    \fn bool iChar::isLetterOrNumber(uint ucs4)
+    \fn bool iChar::isLetterOrNumber(xuint32 ucs4)
     \overload
 
 
@@ -843,7 +843,7 @@ bool iChar::isNumber_helper(uint ucs4)
 /*!
     \internal
 */
-bool iChar::isLetterOrNumber_helper(uint ucs4)
+bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -868,7 +868,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 */
 
 /*!
-    \fn bool iChar::isDigit(uint ucs4)
+    \fn bool iChar::isDigit(xuint32 ucs4)
     \overload
 
 
@@ -915,7 +915,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 */
 
 /*!
-    \fn static bool iChar::isNonCharacter(uint ucs4)
+    \fn static bool iChar::isNonCharacter(xuint32 ucs4)
     \overload
 
 
@@ -930,7 +930,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 */
 
 /*!
-    \fn static bool iChar::isHighSurrogate(uint ucs4)
+    \fn static bool iChar::isHighSurrogate(xuint32 ucs4)
     \overload
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
@@ -939,7 +939,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 */
 
 /*!
-    \fn static bool iChar::isLowSurrogate(uint ucs4)
+    \fn static bool iChar::isLowSurrogate(xuint32 ucs4)
     \overload
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
@@ -948,7 +948,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 */
 
 /*!
-    \fn static bool iChar::isSurrogate(uint ucs4)
+    \fn static bool iChar::isSurrogate(xuint32 ucs4)
     \overload
 
 
@@ -959,7 +959,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 */
 
 /*!
-    \fn static bool iChar::requiresSurrogates(uint ucs4)
+    \fn static bool iChar::requiresSurrogates(xuint32 ucs4)
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     can be split into the high and low parts of a UTF16 surrogate
@@ -968,28 +968,28 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
 */
 
 /*!
-    \fn static uint iChar::surrogateToUcs4(ushort high, ushort low)
+    \fn static xuint32 iChar::surrogateToUcs4(xuint16 high, xuint16 low)
 
     Converts a UTF16 surrogate pair with the given \a high and \a low values
     to it's UCS-4-encoded code point.
 */
 
 /*!
-    \fn static uint iChar::surrogateToUcs4(iChar high, iChar low)
+    \fn static xuint32 iChar::surrogateToUcs4(iChar high, iChar low)
     \overload
 
     Converts a UTF16 surrogate pair (\a high, \a low) to it's UCS-4-encoded code point.
 */
 
 /*!
-    \fn static ushort iChar::highSurrogate(uint ucs4)
+    \fn static xuint16 iChar::highSurrogate(xuint32 ucs4)
 
     Returns the high surrogate part of a UCS-4-encoded code point.
     The returned result is undefined if \a ucs4 is smaller than 0x10000.
 */
 
 /*!
-    \fn static ushort iChar::lowSurrogate(uint ucs4)
+    \fn static xuint16 iChar::lowSurrogate(xuint32 ucs4)
 
     Returns the low surrogate part of a UCS-4-encoded code point.
     The returned result is undefined if \a ucs4 is smaller than 0x10000.
@@ -1006,7 +1006,7 @@ bool iChar::isLetterOrNumber_helper(uint ucs4)
     Returns the numeric value of the digit specified by the UCS-4-encoded
     character, \a ucs4, or -1 if the character is not a digit.
 */
-int iChar::digitValue(uint ucs4)
+int iChar::digitValue(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return -1;
@@ -1023,7 +1023,7 @@ int iChar::digitValue(uint ucs4)
     \overload
     Returns the category of the UCS-4-encoded character specified by \a ucs4.
 */
-iChar::Category iChar::category(uint ucs4)
+iChar::Category iChar::category(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return iChar::Other_NotAssigned;
@@ -1040,7 +1040,7 @@ iChar::Category iChar::category(uint ucs4)
     \overload
     Returns the direction of the UCS-4-encoded character specified by \a ucs4.
 */
-iChar::Direction iChar::direction(uint ucs4)
+iChar::Direction iChar::direction(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return iChar::DirL;
@@ -1063,7 +1063,7 @@ iChar::Direction iChar::direction(uint ucs4)
     character specified by \a ucs4
     (needed for certain languages such as Arabic or Syriac).
 */
-iChar::JoiningType iChar::joiningType(uint ucs4)
+iChar::JoiningType iChar::joiningType(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return iChar::Joining_None;
@@ -1092,7 +1092,7 @@ iChar::JoiningType iChar::joiningType(uint ucs4)
 
     \sa mirroredChar()
 */
-bool iChar::hasMirrored(uint ucs4)
+bool iChar::hasMirrored(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return false;
@@ -1109,7 +1109,7 @@ bool iChar::hasMirrored(uint ucs4)
 */
 
 /*!
-    \fn static bool iChar::isLower(uint ucs4)
+    \fn static bool iChar::isLower(xuint32 ucs4)
     \overload
 
 
@@ -1129,7 +1129,7 @@ bool iChar::hasMirrored(uint ucs4)
 */
 
 /*!
-    \fn static bool iChar::isUpper(uint ucs4)
+    \fn static bool iChar::isUpper(xuint32 ucs4)
     \overload
 
 
@@ -1149,7 +1149,7 @@ bool iChar::hasMirrored(uint ucs4)
 */
 
 /*!
-    \fn static bool iChar::isTitleCase(uint ucs4)
+    \fn static bool iChar::isTitleCase(xuint32 ucs4)
     \overload
 
 
@@ -1174,7 +1174,7 @@ bool iChar::hasMirrored(uint ucs4)
 
     \sa hasMirrored()
 */
-uint iChar::mirroredChar(uint ucs4)
+xuint32 iChar::mirroredChar(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
@@ -1196,12 +1196,12 @@ enum {
 };
 
 // buffer has to have a length of 3. It's needed for Hangul decomposition
-static const unsigned short * decompositionHelper
-    (uint ucs4, xsizetype *length, int *tag, unsigned short *buffer)
+static const xuint16 * decompositionHelper
+    (xuint32 ucs4, xsizetype *length, int *tag, xuint16 *buffer)
 {
     if (ucs4 >= Hangul_SBase && ucs4 < Hangul_SBase + Hangul_SCount) {
         // compute Hangul syllable decomposition as per UAX #15
-        const uint SIndex = ucs4 - Hangul_SBase;
+        const xuint32 SIndex = ucs4 - Hangul_SBase;
         buffer[0] = Hangul_LBase + SIndex / Hangul_NCount; // L
         buffer[1] = Hangul_VBase + (SIndex % Hangul_NCount) / Hangul_TCount; // V
         buffer[2] = Hangul_TBase + SIndex % Hangul_TCount; // T
@@ -1210,14 +1210,14 @@ static const unsigned short * decompositionHelper
         return buffer;
     }
 
-    const unsigned short index = GET_DECOMPOSITION_INDEX(ucs4);
+    const xuint16 index = GET_DECOMPOSITION_INDEX(ucs4);
     if (index == 0xffff) {
         *length = 0;
         *tag = iChar::NoDecomposition;
         return IX_NULLPTR;
     }
 
-    const unsigned short *decomposition = uc_decomposition_map+index;
+    const xuint16 *decomposition = uc_decomposition_map+index;
     *tag = (*decomposition) & 0xff;
     *length = (*decomposition) >> 8;
     return decomposition+1;
@@ -1237,12 +1237,12 @@ iString iChar::decomposition() const
     Decomposes the UCS-4-encoded character specified by \a ucs4 into it's
     constituent parts. Returns an empty string if no decomposition exists.
 */
-iString iChar::decomposition(uint ucs4)
+iString iChar::decomposition(xuint32 ucs4)
 {
-    unsigned short buffer[3];
+    xuint16 buffer[3];
     xsizetype length;
     int tag;
-    const unsigned short *d = decompositionHelper(ucs4, &length, &tag, buffer);
+    const xuint16 *d = decompositionHelper(ucs4, &length, &tag, buffer);
     return iString(reinterpret_cast<const iChar *>(d), length);
 }
 
@@ -1258,11 +1258,11 @@ iString iChar::decomposition(uint ucs4)
     Returns the tag defining the composition of the UCS-4-encoded character
     specified by \a ucs4. Returns iChar::NoDecomposition if no decomposition exists.
 */
-iChar::Decomposition iChar::decompositionTag(uint ucs4)
+iChar::Decomposition iChar::decompositionTag(xuint32 ucs4)
 {
     if (ucs4 >= Hangul_SBase && ucs4 < Hangul_SBase + Hangul_SCount)
         return iChar::Canonical;
-    const unsigned short index = GET_DECOMPOSITION_INDEX(ucs4);
+    const xuint16 index = GET_DECOMPOSITION_INDEX(ucs4);
     if (index == 0xffff)
         return iChar::NoDecomposition;
     return (iChar::Decomposition)(uc_decomposition_map[index] & 0xff);
@@ -1284,7 +1284,7 @@ iChar::Decomposition iChar::decompositionTag(uint ucs4)
     Returns the combining class for the UCS-4-encoded character specified by
     \a ucs4, as defined in the Unicode standard.
 */
-unsigned char iChar::combiningClass(uint ucs4)
+unsigned char iChar::combiningClass(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return 0;
@@ -1305,7 +1305,7 @@ unsigned char iChar::combiningClass(uint ucs4)
     Returns the Unicode script property value for the character specified in
     its UCS-4-encoded form as \a ucs4.
 */
-iChar::Script iChar::script(uint ucs4)
+iChar::Script iChar::script(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return iChar::Script_Unknown;
@@ -1323,7 +1323,7 @@ iChar::Script iChar::script(uint ucs4)
     Returns the Unicode version that introduced the character specified in
     its UCS-4-encoded form as \a ucs4.
 */
-iChar::UnicodeVersion iChar::unicodeVersion(uint ucs4)
+iChar::UnicodeVersion iChar::unicodeVersion(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return iChar::Unicode_Unassigned;
@@ -1344,7 +1344,7 @@ static inline T convertCase_helper(T uc, iUnicodeTables::Case which) noexcept
     const auto fold = properties(uc)->cases[which];
 
     if (fold.special) {
-        const ushort *specialCase = specialCaseMap + fold.diff;
+        const xuint16 *specialCase = specialCaseMap + fold.diff;
         // so far, there are no special cases beyond BMP (guaranteed by the qunicodetables generator)
         return *specialCase == 1 ? specialCase[1] : uc;
     }
@@ -1365,7 +1365,7 @@ static inline T convertCase_helper(T uc, iUnicodeTables::Case which) noexcept
     by \a ucs4 if the character is uppercase or titlecase; otherwise returns
     the character itself.
 */
-uint iChar::toLower(uint ucs4)
+xuint32 iChar::toLower(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
@@ -1385,7 +1385,7 @@ uint iChar::toLower(uint ucs4)
     by \a ucs4 if the character is lowercase or titlecase; otherwise returns
     the character itself.
 */
-uint iChar::toUpper(uint ucs4)
+xuint32 iChar::toUpper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
@@ -1405,31 +1405,31 @@ uint iChar::toUpper(uint ucs4)
     by \a ucs4 if the character is lowercase or uppercase; otherwise returns
     the character itself.
 */
-uint iChar::toTitleCase(uint ucs4)
+xuint32 iChar::toTitleCase(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
     return convertCase_helper(ucs4, iUnicodeTables::TitleCase);
 }
 
-uint foldCase(const ushort *ch, const ushort *start)
+xuint32 foldCase(const xuint16 *ch, const xuint16 *start)
 {
-    uint ucs4 = *ch;
+    xuint32 ucs4 = *ch;
     if (iChar::isLowSurrogate(ucs4) && ch > start && iChar::isHighSurrogate(*(ch - 1)))
         ucs4 = iChar::surrogateToUcs4(*(ch - 1), ucs4);
     return convertCase_helper(ucs4, iUnicodeTables::CaseFold);
 }
 
-uint foldCase(uint ch, uint &last)
+xuint32 foldCase(xuint32 ch, xuint32 &last)
 {
-    uint ucs4 = ch;
+    xuint32 ucs4 = ch;
     if (iChar::isLowSurrogate(ucs4) && iChar::isHighSurrogate(last))
         ucs4 = iChar::surrogateToUcs4(last, ucs4);
     last = ch;
     return convertCase_helper(ucs4, iUnicodeTables::CaseFold);
 }
 
-ushort foldCase(ushort ch)
+xuint16 foldCase(xuint16 ch)
 {
     return convertCase_helper(ch, iUnicodeTables::CaseFold);
 }
@@ -1451,7 +1451,7 @@ iChar foldCase(iChar ch)
     Returns the case folded equivalent of the UCS-4-encoded character specified
     by \a ucs4. For most Unicode characters this is the same as toLower().
 */
-uint iChar::toCaseFolded(uint ucs4)
+xuint32 iChar::toCaseFolded(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
         return ucs4;
@@ -1514,13 +1514,13 @@ uint iChar::toCaseFolded(uint ucs4)
 */
 
 /*!
-    \fn ushort & iChar::unicode()
+    \fn xuint16 & iChar::unicode()
 
     Returns a reference to the numeric Unicode value of the iChar.
 */
 
 /*!
-    \fn ushort iChar::unicode() const
+    \fn xuint16 iChar::unicode() const
 
     Returns the numeric Unicode value of the iChar.
 */
@@ -1591,16 +1591,16 @@ void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version
 {
     xsizetype length;
     int tag;
-    unsigned short buffer[3];
+    xuint16 buffer[3];
 
     iString &s = *str;
 
-    const unsigned short *utf16 = reinterpret_cast<unsigned short *>(s.data());
-    const unsigned short *uc = utf16 + s.length();
+    const xuint16 *utf16 = reinterpret_cast<xuint16 *>(s.data());
+    const xuint16 *uc = utf16 + s.length();
     while (uc != utf16 + from) {
-        uint ucs4 = *(--uc);
+        xuint32 ucs4 = *(--uc);
         if (iChar(ucs4).isLowSurrogate() && uc != utf16) {
-            ushort high = *(uc - 1);
+            xuint16 high = *(uc - 1);
             if (iChar(high).isHighSurrogate()) {
                 --uc;
                 ucs4 = iChar::surrogateToUcs4(high, ucs4);
@@ -1610,29 +1610,29 @@ void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version
         if (iChar::unicodeVersion(ucs4) > version)
             continue;
 
-        const unsigned short *d = decompositionHelper(ucs4, &length, &tag, buffer);
+        const xuint16 *d = decompositionHelper(ucs4, &length, &tag, buffer);
         if (!d || (canonical && tag != iChar::Canonical))
             continue;
 
         xsizetype pos = uc - utf16;
         s.replace(pos, iChar::requiresSurrogates(ucs4) ? 2 : 1, reinterpret_cast<const iChar *>(d), length);
         // since the replace invalidates the pointers and we do decomposition recursive
-        utf16 = reinterpret_cast<unsigned short *>(s.data());
+        utf16 = reinterpret_cast<xuint16 *>(s.data());
         uc = utf16 + pos + length;
     }
 }
 
 
 struct UCS2Pair {
-    ushort u1;
-    ushort u2;
+    xuint16 u1;
+    xuint16 u2;
 };
 
 inline bool operator<(const UCS2Pair &ligature1, const UCS2Pair &ligature2)
 { return ligature1.u1 < ligature2.u1; }
-inline bool operator<(ushort u1, const UCS2Pair &ligature)
+inline bool operator<(xuint16 u1, const UCS2Pair &ligature)
 { return u1 < ligature.u1; }
-inline bool operator<(const UCS2Pair &ligature, ushort u1)
+inline bool operator<(const UCS2Pair &ligature, xuint16 u1)
 { return ligature.u1 < u1; }
 
 struct UCS2SurrogatePair {
@@ -1642,36 +1642,36 @@ struct UCS2SurrogatePair {
 
 inline bool operator<(const UCS2SurrogatePair &ligature1, const UCS2SurrogatePair &ligature2)
 { return iChar::surrogateToUcs4(ligature1.p1.u1, ligature1.p1.u2) < iChar::surrogateToUcs4(ligature2.p1.u1, ligature2.p1.u2); }
-inline bool operator<(uint u1, const UCS2SurrogatePair &ligature)
+inline bool operator<(xuint32 u1, const UCS2SurrogatePair &ligature)
 { return u1 < iChar::surrogateToUcs4(ligature.p1.u1, ligature.p1.u2); }
-inline bool operator<(const UCS2SurrogatePair &ligature, uint u1)
+inline bool operator<(const UCS2SurrogatePair &ligature, xuint32 u1)
 { return iChar::surrogateToUcs4(ligature.p1.u1, ligature.p1.u2) < u1; }
 
-static uint inline ligatureHelper(uint u1, uint u2)
+static xuint32 inline ligatureHelper(xuint32 u1, xuint32 u2)
 {
     if (u1 >= Hangul_LBase && u1 <= Hangul_SBase + Hangul_SCount) {
         // compute Hangul syllable composition as per UAX #15
         // hangul L-V pair
-        const uint LIndex = u1 - Hangul_LBase;
+        const xuint32 LIndex = u1 - Hangul_LBase;
         if (LIndex < Hangul_LCount) {
-            const uint VIndex = u2 - Hangul_VBase;
+            const xuint32 VIndex = u2 - Hangul_VBase;
             if (VIndex < Hangul_VCount)
                 return Hangul_SBase + (LIndex * Hangul_VCount + VIndex) * Hangul_TCount;
         }
         // hangul LV-T pair
-        const uint SIndex = u1 - Hangul_SBase;
+        const xuint32 SIndex = u1 - Hangul_SBase;
         if (SIndex < Hangul_SCount && (SIndex % Hangul_TCount) == 0) {
-            const uint TIndex = u2 - Hangul_TBase;
+            const xuint32 TIndex = u2 - Hangul_TBase;
             if (TIndex <= Hangul_TCount)
                 return u1 + TIndex;
         }
     }
 
-    const unsigned short index = GET_LIGATURE_INDEX(u2);
+    const xuint16 index = GET_LIGATURE_INDEX(u2);
     if (index == 0xffff)
         return 0;
-    const unsigned short *ligatures = uc_ligature_map+index;
-    ushort length = *ligatures++;
+    const xuint16 *ligatures = uc_ligature_map+index;
+    xuint16 length = *ligatures++;
     if (iChar::requiresSurrogates(u1)) {
         const UCS2SurrogatePair *data = reinterpret_cast<const UCS2SurrogatePair *>(ligatures);
         const UCS2SurrogatePair *r = std::lower_bound(data, data + length, u1);
@@ -1679,8 +1679,8 @@ static uint inline ligatureHelper(uint u1, uint u2)
             return iChar::surrogateToUcs4(r->p2.u1, r->p2.u2);
     } else {
         const UCS2Pair *data = reinterpret_cast<const UCS2Pair *>(ligatures);
-        const UCS2Pair *r = std::lower_bound(data, data + length, ushort(u1));
-        if (r != data + length && r->u1 == ushort(u1))
+        const UCS2Pair *r = std::lower_bound(data, data + length, xuint16(u1));
+        if (r != data + length && r->u1 == xuint16(u1))
             return r->u2;
     }
 
@@ -1694,7 +1694,7 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
     if (from < 0 || s.length() - from < 2)
         return;
 
-    uint stcode = 0; // starter code point
+    xuint32 stcode = 0; // starter code point
     xsizetype starter = -1; // starter position
     xsizetype next = -1; // to prevent i == next
     int lastCombining = 255; // to prevent combining > lastCombining
@@ -1702,9 +1702,9 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
     xsizetype pos = from;
     while (pos < s.length()) {
         xsizetype i = pos;
-        uint uc = s.at(pos).unicode();
+        xuint32 uc = s.at(pos).unicode();
         if (iChar(uc).isHighSurrogate() && pos < s.length()-1) {
-            ushort low = s.at(pos+1).unicode();
+            xuint16 low = s.at(pos+1).unicode();
             if (iChar(low).isLowSurrogate()) {
                 uc = iChar::surrogateToUcs4(uc, low);
                 ++pos;
@@ -1723,7 +1723,7 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
         int combining = p->combiningClass;
         if ((i == next || combining > lastCombining) && starter >= from) {
             // allowed to form ligature with S
-            uint ligature = ligatureHelper(stcode, uc);
+            xuint32 ligature = ligatureHelper(stcode, uc);
             if (ligature) {
                 stcode = ligature;
                 iChar *d = s.data();
@@ -1756,15 +1756,15 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype
     iString &s = *str;
     const xsizetype l = s.length()-1;
 
-    uint u1, u2;
-    ushort c1, c2;
+    xuint32 u1, u2;
+    xuint16 c1, c2;
 
     xsizetype pos = from;
     while (pos < l) {
         xsizetype p2 = pos+1;
         u1 = s.at(pos).unicode();
         if (iChar(u1).isHighSurrogate()) {
-            ushort low = s.at(p2).unicode();
+            xuint16 low = s.at(p2).unicode();
             if (iChar(low).isLowSurrogate()) {
                 u1 = iChar::surrogateToUcs4(u1, low);
                 if (p2 >= l)
@@ -1777,7 +1777,7 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype
     advance:
         u2 = s.at(p2).unicode();
         if (iChar(u2).isHighSurrogate() && p2 < l) {
-            ushort low = s.at(p2+1).unicode();
+            xuint16 low = s.at(p2+1).unicode();
             if (iChar(low).isLowSurrogate()) {
                 u2 = iChar::surrogateToUcs4(u2, low);
                 ++p2;
@@ -1850,7 +1850,7 @@ bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode
 
     enum { NFQC_YES = 0, NFQC_NO = 1, NFQC_MAYBE = 3 };
 
-    const ushort *string = reinterpret_cast<const ushort *>(str->constData());
+    const xuint16 *string = reinterpret_cast<const xuint16 *>(str->constData());
     xsizetype length = str->length();
 
     // this avoids one out of bounds check in the loop
@@ -1860,7 +1860,7 @@ bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode
     uchar lastCombining = 0;
     for (xsizetype i = from; i < length; ++i) {
         xsizetype pos = i;
-        uint uc = string[i];
+        xuint32 uc = string[i];
         if (uc < 0x80) {
             // ASCII characters are stable code points
             lastCombining = 0;
@@ -1869,7 +1869,7 @@ bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode
         }
 
         if (iChar::isHighSurrogate(uc)) {
-            ushort low = string[i + 1];
+            xuint16 low = string[i + 1];
             if (!iChar::isLowSurrogate(low)) {
                 // treat surrogate like stable code point
                 lastCombining = 0;

@@ -26,12 +26,12 @@ namespace iShell {
 
 iLocale::Language iLocalePrivate::codeToLanguage(iStringView code)
 {
-    const auto len = code.size();
+    const xsizetype len = code.size();
     if (len != 2 && len != 3)
         return iLocale::C;
-    ushort uc1 = code[0].toLower().unicode();
-    ushort uc2 = code[1].toLower().unicode();
-    ushort uc3 = len > 2 ? code[2].toLower().unicode() : 0;
+    xuint16 uc1 = code[0].toLower().unicode();
+    xuint16 uc2 = code[1].toLower().unicode();
+    xuint16 uc3 = len > 2 ? code[2].toLower().unicode() : 0;
 
     const unsigned char *c = language_code_list;
     for (; *c != 0; c += 3) {
@@ -70,7 +70,7 @@ iLocale::Language iLocalePrivate::codeToLanguage(iStringView code)
 
 iLocale::Script iLocalePrivate::codeToScript(iStringView code)
 {
-    const auto len = code.size();
+    const xsizetype len = code.size();
     if (len != 4)
         return iLocale::AnyScript;
 
@@ -90,13 +90,13 @@ iLocale::Script iLocalePrivate::codeToScript(iStringView code)
 
 iLocale::Country iLocalePrivate::codeToCountry(iStringView code)
 {
-    const auto len = code.size();
+    const xsizetype len = code.size();
     if (len != 2 && len != 3)
         return iLocale::AnyCountry;
 
-    ushort uc1 = code[0].toUpper().unicode();
-    ushort uc2 = code[1].toUpper().unicode();
-    ushort uc3 = len > 2 ? code[2].toUpper().unicode() : 0;
+    xuint16 uc1 = code[0].toUpper().unicode();
+    xuint16 uc2 = code[1].toUpper().unicode();
+    xuint16 uc3 = len > 2 ? code[2].toUpper().unicode() : 0;
 
     const unsigned char *c = country_code_list;
     for (; *c != 0; c += 3) {
@@ -562,14 +562,14 @@ const iLocaleData *iLocaleData::c()
     return c_data;
 }
 
-static inline iString getLocaleData(const ushort *data, int size)
+static inline iString getLocaleData(const xuint16 *data, int size)
 {
     return size > 0 ? iString::fromRawData(reinterpret_cast<const iChar *>(data), size) : iString();
 }
 
-static iString getLocaleListData(const ushort *data, int size, int index)
+static iString getLocaleListData(const xuint16 *data, int size, int index)
 {
-    static const ushort separator = ';';
+    static const xuint16 separator = ';';
     while (index && size > 0) {
         while (*data != separator)
             ++data, --size;
@@ -577,7 +577,7 @@ static iString getLocaleListData(const ushort *data, int size, int index)
         ++data;
         --size;
     }
-    const ushort *end = data;
+    const xuint16 *end = data;
     while (size > 0 && *end != separator)
         ++end, --size;
     return getLocaleData(data, end - data);
@@ -1999,9 +1999,9 @@ iString iLocaleData::doubleToString(const iChar _zero, const iChar plus, const i
         iString digits = iString::fromLatin1(buf.data(), length);
 
         if (_zero.unicode() != '0') {
-            ushort z = _zero.unicode() - '0';
+            xuint16 z = _zero.unicode() - '0';
             for (int i = 0; i < digits.length(); ++i)
-                reinterpret_cast<ushort *>(digits.data())[i] += z;
+                reinterpret_cast<xuint16 *>(digits.data())[i] += z;
         }
 
         bool always_show_decpt = (flags & ForcePoint);
@@ -2266,7 +2266,7 @@ bool iLocaleData::numberToCLocale(iStringView s, iLocale::NumberOptions number_o
                                   CharBuff *result) const
 {
     const iChar *uc = s.data();
-    auto l = s.size();
+    xsizetype l = s.size();
     decltype(l) idx = 0;
 
     // Skip whitespace

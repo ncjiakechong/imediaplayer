@@ -535,8 +535,8 @@ xlonglong istrtoll(const char * nptr, const char **endptr, int base, bool *ok)
 
 iString iulltoa(xulonglong l, int base, const iChar _zero)
 {
-    ushort buff[65]; // length of MAX_ULLONG in base 2
-    ushort *p = buff + 65;
+    xuint16 buff[65]; // length of MAX_ULLONG in base 2
+    xuint16 *p = buff + 65;
 
     if (base != 10 || _zero.unicode() == '0') {
         while (l != 0) {

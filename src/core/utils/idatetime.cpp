@@ -1662,8 +1662,8 @@ static inline iShell::TimeSpec getSpec(const iDateTimeData &d)
 // Refresh the LocalTime validity and offset
 static void refreshDateTime(iDateTimeData &d)
 {
-    auto status = getStatus(d);
-    const auto spec = extractSpec(status);
+    iDateTimePrivate::StatusFlags status = getStatus(d);
+    const iShell::TimeSpec spec = extractSpec(status);
     const xint64 msecs = getMSecs(d);
     xint64 epochMSecs = 0;
     int offsetFromUtc = 0;
@@ -1687,7 +1687,7 @@ static void refreshDateTime(iDateTimeData &d)
     // LocalTime and TimeZone might fall into a "missing" DST transition hour
     // Calling toEpochMSecs will adjust the returned date/time if it does
     if (spec == iShell::LocalTime) {
-        auto dstStatus = extractDaylightStatus(status);
+        iDateTimePrivate::DaylightStatus dstStatus = extractDaylightStatus(status);
         epochMSecs = localMSecsToEpochMSecs(msecs, &dstStatus, &testDate, &testTime);
     }
     if (timeToMSecs(testDate, testTime) == msecs) {
@@ -1709,8 +1709,8 @@ static void refreshDateTime(iDateTimeData &d)
 // Check the UTC / offsetFromUTC validity
 static void checkValidDateTime(iDateTimeData &d)
 {
-    auto status = getStatus(d);
-    auto spec = extractSpec(status);
+    iDateTimePrivate::StatusFlags status = getStatus(d);
+    iShell::TimeSpec spec = extractSpec(status);
     switch (spec) {
     case iShell::OffsetFromUTC:
     case iShell::UTC:
@@ -1735,7 +1735,7 @@ static void checkValidDateTime(iDateTimeData &d)
 
 static void setTimeSpec(iDateTimeData &d, iShell::TimeSpec spec, int offsetSeconds)
 {
-    auto status = getStatus(d);
+    iDateTimePrivate::StatusFlags status = getStatus(d);
     status &= ~(iDateTimePrivate::ValidDateTime | iDateTimePrivate::DaylightMask |
                 iDateTimePrivate::TimeSpecMask);
 
@@ -1884,7 +1884,7 @@ inline iDateTime::Data &iDateTime::Data::operator=(const Data &other)
     if (d == other.d)
         return *this;
 
-    auto x = d;
+    iDateTimePrivate* x = d;
     d = other.d;
     if (!other.isShort()) {
         // check if we could shrink
@@ -2184,7 +2184,7 @@ iDateTime &iDateTime::operator=(const iDateTime &other)
 
 bool iDateTime::isNull() const
 {
-    auto status = getStatus(d);
+    iDateTimePrivate::StatusFlags status = getStatus(d);
     return !(status & iDateTimePrivate::ValidDate) &&
             !(status & iDateTimePrivate::ValidTime);
 }
@@ -2203,7 +2203,7 @@ bool iDateTime::isNull() const
 
 bool iDateTime::isValid() const
 {
-    auto status = getStatus(d);
+    iDateTimePrivate::StatusFlags status = getStatus(d);
     return status & iDateTimePrivate::ValidDateTime;
 }
 
@@ -2215,7 +2215,7 @@ bool iDateTime::isValid() const
 
 iDate iDateTime::date() const
 {
-    auto status = getStatus(d);
+    iDateTimePrivate::StatusFlags status = getStatus(d);
     if (!(status & iDateTimePrivate::ValidDate))
         return iDate();
     iDate dt;
@@ -2231,7 +2231,7 @@ iDate iDateTime::date() const
 
 iTime iDateTime::time() const
 {
-    auto status = getStatus(d);
+    iDateTimePrivate::StatusFlags status = getStatus(d);
     if (!(status & iDateTimePrivate::ValidTime))
         return iTime();
     iTime tm;
@@ -2275,7 +2275,7 @@ int iDateTime::offsetFromUtc() const
     if (!isValid())
         return 0;
 
-    auto spec = getSpec(d);
+    iShell::TimeSpec spec = getSpec(d);
     if (spec == iShell::LocalTime) {
         // we didn't cache the value, so we need to calculate it now...
         xint64 msecs = getMSecs(d);
@@ -2318,7 +2318,7 @@ iString iDateTime::timeZoneAbbreviation() const
         break;
     case iShell::LocalTime:  {
         iString abbrev;
-        auto status = extractDaylightStatus(getStatus(d));
+        iDateTimePrivate::DaylightStatus status = extractDaylightStatus(getStatus(d));
         localMSecsToEpochMSecs(getMSecs(d), &status, IX_NULLPTR, IX_NULLPTR, &abbrev);
         return abbrev;
         }
@@ -2346,7 +2346,7 @@ bool iDateTime::isDaylightTime() const
     case iShell::TimeZone:
         break;
     case iShell::LocalTime: {
-        auto status = extractDaylightStatus(getStatus(d));
+        iDateTimePrivate::DaylightStatus status = extractDaylightStatus(getStatus(d));
         if (status == iDateTimePrivate::UnknownDaylightTime)
             localMSecsToEpochMSecs(getMSecs(d), &status);
         return (status == iDateTimePrivate::DaylightTime);
@@ -2454,7 +2454,7 @@ xint64 iDateTime::toMSecsSinceEpoch() const
 
     case iShell::LocalTime: {
         // recalculate the local timezone
-        auto status = extractDaylightStatus(getStatus(d));
+        iDateTimePrivate::DaylightStatus status = extractDaylightStatus(getStatus(d));
         return localMSecsToEpochMSecs(getMSecs(d), &status);
     }
 
@@ -2501,8 +2501,8 @@ xint64 iDateTime::toSecsSinceEpoch() const
 */
 void iDateTime::setMSecsSinceEpoch(xint64 msecs)
 {
-    const auto spec = getSpec(d);
-    auto status = getStatus(d);
+    const iShell::TimeSpec spec = getSpec(d);
+    iDateTimePrivate::StatusFlags status = getStatus(d);
 
     status &= ~iDateTimePrivate::ValidityMask;
     switch (spec) {
@@ -2578,7 +2578,7 @@ static inline void massageAdjustedDateTime(const iDateTimeData &d, iDate *date, 
       (far more common) other cases; and it makes little difference, as the two
       answers do then differ only in DST-ness.)
     */
-    auto spec = getSpec(d);
+    iShell::TimeSpec spec = getSpec(d);
     if (spec == iShell::LocalTime) {
         iDateTimePrivate::DaylightStatus status = iDateTimePrivate::UnknownDaylightTime;
         localMSecsToEpochMSecs(timeToMSecs(*date, *time), &status, date, time);
@@ -2693,7 +2693,7 @@ iDateTime iDateTime::addMSecs(xint64 msecs) const
         return iDateTime();
 
     iDateTime dt(*this);
-    auto spec = getSpec(d);
+    iShell::TimeSpec spec = getSpec(d);
     if (spec == iShell::LocalTime || spec == iShell::TimeZone) {
         // Convert to real UTC first in case crosses DST transition
         dt.setMSecsSinceEpoch(toMSecsSinceEpoch() + msecs);

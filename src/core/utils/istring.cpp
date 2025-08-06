@@ -53,7 +53,7 @@ static bool points_into_range(const T *p, const T *b, const T *e, Cmp less = {})
     return !less(p, b) && less(p, e);
 }
 
-const ushort iString::_empty = 0;
+const xuint16 iString::_empty = 0;
 
 /*
  * Note on the use of SIMD in istring.cpp:
@@ -101,11 +101,11 @@ static inline bool ix_ends_with(iStringView haystack, iStringView needle, iShell
 static inline bool ix_ends_with(iStringView haystack, iLatin1String needle, iShell::CaseSensitivity cs);
 static inline bool ix_ends_with(iStringView haystack, iChar needle, iShell::CaseSensitivity cs);
 
-xsizetype iPrivate::xustrlen(const ushort *str)
+xsizetype iPrivate::xustrlen(const xuint16 *str)
 {
     xsizetype result = 0;
 
-    if (sizeof(wchar_t) == sizeof(ushort))
+    if (sizeof(wchar_t) == sizeof(xuint16))
         return wcslen(reinterpret_cast<const wchar_t *>(str));
 
     while (*str++)
@@ -121,10 +121,10 @@ xsizetype iPrivate::xustrlen(const ushort *str)
  * character is not found, this function returns a pointer to the end of the
  * string -- that is, \c{str.end()}.
  */
-const ushort *iPrivate::xustrchr(iStringView str, ushort c)
+const xuint16 *iPrivate::xustrchr(iStringView str, xuint16 c)
 {
-    const ushort *n = str.utf16();
-    const ushort *e = n + str.size();
+    const xuint16 *n = str.utf16();
+    const xuint16 *e = n + str.size();
 
     --n;
     while (++n != e)
@@ -201,14 +201,14 @@ bool iPrivate::isLatin1(iStringView s)
 }
 
 // conversion between Latin 1 and UTF-16
-void ix_from_latin1(ushort *dst, const char *str, size_t size)
+void ix_from_latin1(xuint16 *dst, const char *str, size_t size)
 {
     while (size--)
         *dst++ = (uchar)*str++;
 }
 
 template <bool Checked>
-static void ix_to_latin1_internal(uchar *dst, const ushort *src, xsizetype length)
+static void ix_to_latin1_internal(uchar *dst, const xuint16 *src, xsizetype length)
 {
     while (length--) {
         if (Checked)
@@ -219,12 +219,12 @@ static void ix_to_latin1_internal(uchar *dst, const ushort *src, xsizetype lengt
     }
 }
 
-static void ix_to_latin1(uchar *dst, const ushort *src, xsizetype length)
+static void ix_to_latin1(uchar *dst, const xuint16 *src, xsizetype length)
 {
     ix_to_latin1_internal<true>(dst, src, length);
 }
 
-void ix_to_latin1_unchecked(uchar *dst, const ushort *src, xsizetype length)
+void ix_to_latin1_unchecked(uchar *dst, const xuint16 *src, xsizetype length)
 {
     ix_to_latin1_internal<false>(dst, src, length);
 }
@@ -259,12 +259,12 @@ static int ucstricmp(const iChar *a, const iChar *ae, const iChar *b, const iCha
 // Case-insensitive comparison between a Unicode string and a iLatin1String
 static int ucstricmp(const iChar *a, const iChar *ae, const char *b, const char *be)
 {
-    auto e = ae;
+    const iChar* e = ae;
     if (be - b < ae - a)
         e = a + (be - b);
 
     while (a < e) {
-        int diff = foldCase(a->unicode()) - foldCase(ushort{uchar(*b)});
+        int diff = foldCase(a->unicode()) - foldCase(xuint16{uchar(*b)});
         if ((diff))
             return diff;
         ++a;
@@ -281,13 +281,13 @@ static int ucstricmp(const iChar *a, const iChar *ae, const char *b, const char 
 // Case-insensitive comparison between a Unicode string and a UTF-8 string
 static int ucstricmp8(const char *utf8, const char *utf8end, const iChar *utf16, const iChar *utf16end)
 {
-    auto src1 = reinterpret_cast<const uchar *>(utf8);
-    auto end1 = reinterpret_cast<const uchar *>(utf8end);
+    const uchar* src1 = reinterpret_cast<const uchar *>(utf8);
+    const uchar* end1 = reinterpret_cast<const uchar *>(utf8end);
     iStringIterator src2(utf16, utf16end);
 
     while (src1 < end1 && src2.hasNext()) {
-        uint uc1;
-        uint *output = &uc1;
+        xuint32 uc1;
+        xuint32 *output = &uc1;
         uchar b = *src1++;
         int res = iUtf8Functions::fromUtf8<iUtf8BaseTraits>(b, output, src1, end1);
         if (res < 0) {
@@ -297,7 +297,7 @@ static int ucstricmp8(const char *utf8, const char *utf8end, const iChar *utf16,
             uc1 = iChar::toCaseFolded(uc1);
         }
 
-        uint uc2 = iChar::toCaseFolded(src2.next());
+        xuint32 uc2 = iChar::toCaseFolded(src2.next());
         int diff = uc1 - uc2;   // can't underflow
         if (diff)
             return diff;
@@ -360,8 +360,8 @@ static int ucstrncmp(const iChar *a, const iChar *b, size_t l)
 
 static int ucstrncmp(const iChar *a, const uchar *c, size_t l)
 {
-    const ushort *uc = reinterpret_cast<const ushort *>(a);
-    const ushort *e = uc + l;
+    const xuint16 *uc = reinterpret_cast<const xuint16 *>(a);
+    const xuint16 *e = uc + l;
 
     while (uc < e) {
         int diff = *uc - *c;
@@ -465,7 +465,7 @@ static int ix_compare_strings(iLatin1String lhs, iLatin1String rhs, iShell::Case
         return lencmp(xsizetype(0), rhs.size());
     if (cs == iShell::CaseInsensitive)
         return latin1nicmp(lhs.data(), lhs.size(), rhs.data(), rhs.size());
-    const auto l = std::min(lhs.size(), rhs.size());
+    const xsizetype l = std::min(lhs.size(), rhs.size());
     int r = istrncmp(lhs.data(), rhs.data(), l);
     return r ? r : lencmp(lhs.size(), rhs.size());
 }
@@ -1274,7 +1274,7 @@ inline char iToLower(char ch)
     \sa utf16(), toLatin1(), toUtf8(), toLocal8Bit(), toStdU16String(), toStdU32String()
 */
 
-xsizetype iString::toUcs4_helper(const ushort *uc, xsizetype length, uint *out)
+xsizetype iString::toUcs4_helper(const xuint16 *uc, xsizetype length, xuint32 *out)
 {
     xsizetype count = 0;
 
@@ -1364,9 +1364,9 @@ iString::iString(xsizetype size, iChar ch)
     } else {
         d = DataPointer(Data::allocate(size), size);
         d.data()[size] = '\0';
-        ushort *i = d.data() + size;
-        ushort *b = d.data();
-        const ushort value = ch.unicode();
+        xuint16 *i = d.data() + size;
+        xuint16 *b = d.data();
+        const xuint16 value = ch.unicode();
         while (i != b)
            *--i = value;
     }
@@ -1494,7 +1494,7 @@ void iString::resize(xsizetype size)
     if (size < 0)
         size = 0;
 
-    const auto capacityAtEnd = capacity() - d.freeSpaceAtBegin();
+    const xsizetype capacityAtEnd = capacity() - d.freeSpaceAtBegin();
     if (d.needsDetach() || size > capacityAtEnd)
         reallocData(size, d.detachFlags() | Data::GrowsForward);
     d.size = size;
@@ -1600,7 +1600,7 @@ void iString::reallocGrowData(xsizetype alloc, Data::ArrayOptions options)
         alloc = 1;
 
     if (d.needsDetach()) {
-        const auto newSize = std::min(alloc, d.size);
+        const xsizetype newSize = std::min(alloc, d.size);
         DataPointer dd(DataPointer::allocateGrow(d, alloc, newSize, options));
         dd.copyAppend(d.data(), d.data() + newSize);
         dd.data()[dd.size] = 0;
@@ -1811,15 +1811,15 @@ iString& iString::insert(xsizetype i, const iChar *unicode, xsizetype size)
     if (i < 0 || size <= 0)
         return *this;
 
-    const auto s = reinterpret_cast<const ushort *>(unicode);
-    if (points_into_range<ushort>(s, d.data(), d.data() + d.size)) {
-        iVarLengthArray<ushort> arry(size);
-        memcpy(arry.data(), s, size * sizeof(ushort));
+    const xuint16* s = reinterpret_cast<const xuint16 *>(unicode);
+    if (points_into_range<xuint16>(s, d.data(), d.data() + d.size)) {
+        iVarLengthArray<xuint16> arry(size);
+        memcpy(arry.data(), s, size * sizeof(xuint16));
         return insert(i, iStringView(arry.data(), arry.size()));
     }
 
-    const auto oldSize = this->size();
-    const auto newSize = std::max(i, oldSize) + size;
+    const xsizetype oldSize = this->size();
+    const xsizetype newSize = std::max(i, oldSize) + size;
     const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), size);
 
     auto flags = d.detachFlags() | Data::GrowsForward;
@@ -1852,8 +1852,8 @@ iString& iString::insert(xsizetype i, iChar ch)
     if (i < 0)
         return *this;
 
-    const auto oldSize = size();
-    const auto newSize = std::max(i, oldSize) + 1;
+    const xsizetype oldSize = size();
+    const xsizetype newSize = std::max(i, oldSize) + 1;
     const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), 1);
 
     auto flags = d.detachFlags() | Data::GrowsForward;
@@ -1919,9 +1919,9 @@ iString &iString::append(const iChar *str, xsizetype len)
         const bool shouldGrow = d.shouldGrowBeforeInsert(d.constEnd(), len);
         if (d.needsDetach() || size() + len > capacity() || shouldGrow)
             reallocGrowData(size() + len, d.detachFlags() | Data::GrowsForward);
-        IX_COMPILER_VERIFY(sizeof(iChar) == sizeof(ushort));
-        // the following should be safe as iChar uses ushort as underlying data
-        const ushort *char16String = reinterpret_cast<const ushort *>(str);
+        IX_COMPILER_VERIFY(sizeof(iChar) == sizeof(xuint16));
+        // the following should be safe as iChar uses xuint16 as underlying data
+        const xuint16 *char16String = reinterpret_cast<const xuint16 *>(str);
         d.copyAppend(char16String, char16String + len);
         d.data()[d.size] = '\0';
     }
@@ -1943,7 +1943,7 @@ iString &iString::append(iLatin1String str)
             reallocGrowData(size() + len, d.detachFlags() | Data::GrowsForward);
 
         if (d.freeSpaceAtBegin() == 0) {  // fast path
-            ushort *i = d.data() + d.size;
+            xuint16 *i = d.data() + d.size;
             ix_from_latin1(i, s, size_t(len));
             d.size += len;
         } else {  // slow path
@@ -2096,7 +2096,7 @@ iString &iString::remove(xsizetype pos, xsizetype len)
 template<typename T>
 static void removeStringImpl(iString &s, const T &needle, iShell::CaseSensitivity cs)
 {
-    const auto needleSize = needle.size();
+    const xsizetype needleSize = needle.size();
     if (!needleSize)
         return;
 
@@ -2137,8 +2137,8 @@ iString &iString::remove(const iString &str, iShell::CaseSensitivity cs)
 {
     const auto s = str.d.data();
     if (points_into_range(s, d.data(), d.data() + d.size)) {
-        iVarLengthArray<ushort> arry(str.size());
-        memcpy(arry.data(), s, str.size()* sizeof(ushort));
+        iVarLengthArray<xuint16> arry(str.size());
+        memcpy(arry.data(), s, str.size()* sizeof(xuint16));
         removeStringImpl(*this, iStringView(arry.data(), arry.size()), cs);
     } else
         removeStringImpl(*this, iToStringViewIgnoringNull(str), cs);
@@ -2308,7 +2308,7 @@ iChar *textCopy(const iChar *start, xsizetype len)
     return copy;
 }
 
-bool pointsIntoRange(const iChar *ptr, const ushort *base, xsizetype len)
+bool pointsIntoRange(const iChar *ptr, const xuint16 *base, xsizetype len)
 {
     const iChar *const start = reinterpret_cast<const iChar *>(base);
     const std::less<const iChar *> less;
@@ -2468,7 +2468,7 @@ iString& iString::replace(iChar ch, const iString &after, iShell::CaseSensitivit
     if (size() == 0)
         return *this;
 
-    ushort cc = (cs == iShell::CaseSensitive ? ch.unicode() : ch.toCaseFolded().unicode());
+    xuint16 cc = (cs == iShell::CaseSensitive ? ch.unicode() : ch.toCaseFolded().unicode());
 
     xsizetype index = 0;
     while (1) {
@@ -2514,19 +2514,19 @@ iString& iString::replace(iChar before, iChar after, iShell::CaseSensitivity cs)
         const xsizetype idx = indexOf(before, 0, cs);
         if (idx != -1) {
             detach();
-            const ushort a = after.unicode();
-            ushort *i = d.data();
-            ushort *const e = i + d.size;
+            const xuint16 a = after.unicode();
+            xuint16 *i = d.data();
+            xuint16 *const e = i + d.size;
             i += idx;
             *i = a;
             if (cs == iShell::CaseSensitive) {
-                const ushort b = before.unicode();
+                const xuint16 b = before.unicode();
                 while (++i != e) {
                     if (*i == b)
                         *i = a;
                 }
             } else {
-                const ushort b = foldCase(before.unicode());
+                const xuint16 b = foldCase(before.unicode());
                 while (++i != e) {
                     if (foldCase(*i) == b)
                         *i = a;
@@ -2553,8 +2553,8 @@ iString &iString::replace(iLatin1String before, iLatin1String after, iShell::Cas
 {
     xsizetype alen = after.size();
     xsizetype blen = before.size();
-    iVarLengthArray<ushort> a(alen);
-    iVarLengthArray<ushort> b(blen);
+    iVarLengthArray<xuint16> a(alen);
+    iVarLengthArray<xuint16> b(blen);
     ix_from_latin1(a.data(), after.latin1(), alen);
     ix_from_latin1(b.data(), before.latin1(), blen);
     return replace((const iChar *)b.data(), blen, (const iChar *)a.data(), alen, cs);
@@ -2575,7 +2575,7 @@ iString &iString::replace(iLatin1String before, iLatin1String after, iShell::Cas
 iString &iString::replace(iLatin1String before, const iString &after, iShell::CaseSensitivity cs)
 {
     xsizetype blen = before.size();
-    iVarLengthArray<ushort> b(blen);
+    iVarLengthArray<xuint16> b(blen);
     ix_from_latin1(b.data(), before.latin1(), blen);
     return replace((const iChar *)b.data(), blen, after.constData(), after.d.size, cs);
 }
@@ -2595,7 +2595,7 @@ iString &iString::replace(iLatin1String before, const iString &after, iShell::Ca
 iString &iString::replace(const iString &before, iLatin1String after, iShell::CaseSensitivity cs)
 {
     xsizetype alen = after.size();
-    iVarLengthArray<ushort> a(alen);
+    iVarLengthArray<xuint16> a(alen);
     ix_from_latin1(a.data(), after.latin1(), alen);
     return replace(before.constData(), before.d.size, (const iChar *)a.data(), alen, cs);
 }
@@ -2615,7 +2615,7 @@ iString &iString::replace(const iString &before, iLatin1String after, iShell::Ca
 iString &iString::replace(iChar c, iLatin1String after, iShell::CaseSensitivity cs)
 {
     xsizetype alen = after.size();
-    iVarLengthArray<ushort> a(alen);
+    iVarLengthArray<xuint16> a(alen);
     ix_from_latin1(a.data(), after.latin1(), alen);
     return replace(&c, 1, (const iChar *)a.data(), alen, cs);
 }
@@ -3941,7 +3941,7 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
 
     // We can return our own buffer to the caller.
     // Conversion to Latin-1 always shrinks the buffer by half.
-    const ushort *data = s.d.data();
+    const xuint16 *data = s.d.data();
     xsizetype length = s.d.size;
 
     // Swap the d pointers.
@@ -3955,8 +3955,8 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
 
     char *ddata = ba_d.data();
 
-    // multiply the allocated capacity by sizeof(ushort)
-    ba_d.d_ptr()->alloc *= sizeof(ushort);
+    // multiply the allocated capacity by sizeof(xuint16)
+    ba_d.d_ptr()->alloc *= sizeof(xuint16);
 
     // do the in-place conversion
     ix_to_latin1(reinterpret_cast<uchar *>(ddata), data, length);
@@ -4086,12 +4086,12 @@ iByteArray iPrivate::convertToUtf8(iStringView string)
     return ix_convert_to_utf8(string);
 }
 
-static std::list<uint> ix_convert_to_ucs4(iStringView string);
+static std::list<xuint32> ix_convert_to_ucs4(iStringView string);
 
 /*!
 
 
-    Returns a UCS-4/UTF-32 representation of the string as a std::vector<uint>.
+    Returns a UCS-4/UTF-32 representation of the string as a std::vector<xuint32>.
 
     UCS-4 is a Unicode codec and therefore it is lossless. All characters from
     this string will be encoded in UCS-4. Any invalid sequence of code units in
@@ -4102,15 +4102,15 @@ static std::list<uint> ix_convert_to_ucs4(iStringView string);
 
     \sa fromUtf8(), toUtf8(), toLatin1(), toLocal8Bit(), iTextCodec, fromUcs4(), toWCharArray()
 */
-std::list<uint> iString::toUcs4() const
+std::list<xuint32> iString::toUcs4() const
 {
     return ix_convert_to_ucs4(*this);
 }
 
-static std::list<uint> ix_convert_to_ucs4(iStringView string)
+static std::list<xuint32> ix_convert_to_ucs4(iStringView string)
 {
-    std::list<uint> v(string.length());
-    std::list<uint>::iterator vit = v.begin();
+    std::list<xuint32> v(string.length());
+    std::list<xuint32>::iterator vit = v.begin();
     iStringIterator it(string);
     while (it.hasNext()) {
         *vit = it.next();
@@ -4126,7 +4126,7 @@ static std::list<uint> ix_convert_to_ucs4(iStringView string)
     \internal
     \relates iStringView
 
-    Returns a UCS-4/UTF-32 representation of \a string as a std::vector<uint>.
+    Returns a UCS-4/UTF-32 representation of \a string as a std::vector<xuint32>.
 
     UCS-4 is a Unicode codec and therefore it is lossless. All characters from
     this string will be encoded in UCS-4. Any invalid sequence of code units in
@@ -4138,7 +4138,7 @@ static std::list<uint> ix_convert_to_ucs4(iStringView string)
     \sa iString::toUcs4(), iStringView::toUcs4(), iPrivate::convertToLatin1(),
     iPrivate::convertToLocal8Bit(), iPrivate::convertToUtf8()
 */
-std::list<uint> iPrivate::convertToUcs4(iStringView string)
+std::list<xuint32> iPrivate::convertToUcs4(iStringView string)
 {
     return ix_convert_to_ucs4(string);
 }
@@ -4155,7 +4155,7 @@ iString::DataPointer iString::fromLatin1_helper(const char *str, xsizetype size)
             size = istrlen(str);
         d = DataPointer(Data::allocate(size), size);
         d.data()[size] = '\0';
-        ushort *dst = d.data();
+        xuint16 *dst = d.data();
         ix_from_latin1(dst, str, size_t(size));
     }
     return d;
@@ -4286,7 +4286,7 @@ iString iString::fromUtf8_helper(const char *str, xsizetype size)
 
     \sa utf16(), setUtf16(), fromStdU16String()
 */
-iString iString::fromUtf16(const ushort *unicode, xsizetype size)
+iString iString::fromUtf16(const xuint16 *unicode, xsizetype size)
 {
     if (!unicode)
         return iString();
@@ -4299,7 +4299,7 @@ iString iString::fromUtf16(const ushort *unicode, xsizetype size)
 }
 
 /*!
-   \fn iString iString::fromUtf16(const ushort *str, int size)
+   \fn iString iString::fromUtf16(const xuint16 *str, int size)
 
 
     Returns a iString initialized with the first \a size characters
@@ -4319,7 +4319,7 @@ iString iString::fromUtf16(const ushort *unicode, xsizetype size)
 */
 
 /*!
-    \fn iString iString::fromUcs4(const uint *str, int size)
+    \fn iString iString::fromUcs4(const uixuint32nt *str, int size)
 
 
     Returns a iString initialized with the first \a size characters
@@ -4340,7 +4340,7 @@ iString iString::fromUtf16(const ushort *unicode, xsizetype size)
 
     \sa toUcs4(), fromUtf16(), utf16(), setUtf16(), fromWCharArray(), fromStdU32String()
 */
-iString iString::fromUcs4(const uint *unicode, xsizetype size)
+iString iString::fromUcs4(const xuint32 *unicode, xsizetype size)
 {
     if (!unicode)
         return iString();
@@ -4371,7 +4371,7 @@ iString& iString::setUnicode(const iChar *unicode, xsizetype size)
 }
 
 /*!
-    \fn iString &iString::setUtf16(const ushort *unicode, int size)
+    \fn iString &iString::setUtf16(const xuint16 *unicode, int size)
 
     Resizes the string to \a size characters and copies \a unicode
     into the string.
@@ -5018,7 +5018,7 @@ int iString::compare_helper(const iChar *data1, xsizetype length1, const char *d
     if (length2 < 0)
         length2 = xsizetype(strlen(data2));
     // ### make me nothrow in all cases
-    iVarLengthArray<ushort> s2(length2);
+    iVarLengthArray<xuint16> s2(length2);
     const auto beg = reinterpret_cast<iChar *>(s2.data());
     const auto end = iUtf8::convertToUnicode(beg, data2, length2);
     return ix_compare_strings(iStringView(data1, length1), iStringView(beg, end - beg), cs);
@@ -5097,7 +5097,7 @@ int iString::localeAwareCompare_helper(const iChar *data1, xsizetype length1,
 */
 
 /*!
-    \fn const ushort *iString::utf16() const
+    \fn const xuint16 *iString::utf16() const
 
     Returns the iString as a '\\0\'-terminated array of unsigned
     shorts. The result remains valid until the string is modified.
@@ -5107,13 +5107,13 @@ int iString::localeAwareCompare_helper(const iChar *data1, xsizetype length1,
     \sa unicode()
 */
 
-const ushort *iString::utf16() const
+const xuint16 *iString::utf16() const
 {
     if (!d.isMutable()) {
         // ensure '\0'-termination for ::fromRawData strings
         const_cast<iString*>(this)->reallocData(d.size, d.detachFlags());
     }
-    return reinterpret_cast<const ushort *>(d.data());
+    return reinterpret_cast<const xuint16 *>(d.data());
 }
 
 /*!
@@ -5419,9 +5419,9 @@ iString &iString::sprintf(const char *cformat, ...)
     string and \c{%s} arguments must be UTF-8 encoded.
 
     \note The \c{%lc} escape sequence expects a unicode character of type
-    \c ushort, or \c ushort (as returned by iChar::unicode()).
+    \c xuint16, or \c xuint16 (as returned by iChar::unicode()).
     The \c{%ls} escape sequence expects a pointer to a zero-terminated array
-    of unicode characters of type \c ushort, or ushort (as returned by
+    of unicode characters of type \c xuint16, or xuint16 (as returned by
     iString::utf16()). This is at odds with the printf() in the standard C++
     library, which defines \c {%lc} to print a wchar_t and \c{%ls} to print
     a \c{wchar_t*}, and might also produce compiler warnings on platforms
@@ -5713,7 +5713,7 @@ iString iString::vasprintf(const char *cformat, va_list ap)
             }
             case 'c': {
                 if (length_mod == lm_l)
-                    subst = iChar((ushort) va_arg(ap, int));
+                    subst = iChar((xuint16) va_arg(ap, int));
                 else
                     subst = iLatin1Char((uchar) va_arg(ap, int));
                 ++c;
@@ -5721,8 +5721,8 @@ iString iString::vasprintf(const char *cformat, va_list ap)
             }
             case 's': {
                 if (length_mod == lm_l) {
-                    const ushort *buff = va_arg(ap, const ushort*);
-                    const ushort *ch = buff;
+                    const xuint16 *buff = va_arg(ap, const xuint16*);
+                    const xuint16 *ch = buff;
                     while (*ch != 0)
                         ++ch;
                     subst.setUtf16(buff, ch - buff);
@@ -6470,7 +6470,7 @@ iString iString::repeated(xsizetype times) const
     memcpy(result.d.data(), d.data(), d.size * sizeof(iChar));
 
     xsizetype sizeSoFar = d.size;
-    ushort *end = result.d.data() + sizeSoFar;
+    xuint16 *end = result.d.data() + sizeSoFar;
 
     const xsizetype halfResultSize = resultSize >> 1;
     while (sizeSoFar <= halfResultSize) {
@@ -6504,10 +6504,10 @@ void ix_string_normalize(iString *data, iString::NormalizationForm mode, iChar::
             if (n.version > version) {
                 xsizetype pos = from;
                 if (iChar::requiresSurrogates(n.ucs4)) {
-                    ushort ucs4High = iChar::highSurrogate(n.ucs4);
-                    ushort ucs4Low = iChar::lowSurrogate(n.ucs4);
-                    ushort oldHigh = iChar::highSurrogate(n.old_mapping);
-                    ushort oldLow = iChar::lowSurrogate(n.old_mapping);
+                    xuint16 ucs4High = iChar::highSurrogate(n.ucs4);
+                    xuint16 ucs4Low = iChar::lowSurrogate(n.ucs4);
+                    xuint16 oldHigh = iChar::highSurrogate(n.old_mapping);
+                    xuint16 oldLow = iChar::lowSurrogate(n.old_mapping);
                     while (pos < s.length() - 1) {
                         if (s.at(pos).unicode() == ucs4High && s.at(pos + 1).unicode() == ucs4Low) {
                             if (!d)
@@ -6825,7 +6825,7 @@ iString iString::arg(iStringView a, int fieldWidth, iChar fillChar) const
 */
 iString iString::arg(iLatin1String a, int fieldWidth, iChar fillChar) const
 {
-    iVarLengthArray<ushort> utf16(a.size());
+    iVarLengthArray<xuint16> utf16(a.size());
     ix_from_latin1(utf16.data(), a.data(), a.size());
     return arg(iStringView(utf16.data(), utf16.size()), fieldWidth, fillChar);
 }
@@ -7229,8 +7229,8 @@ iString iString::arg(double a, int fieldWidth, char fmt, int prec, iChar fillCha
     return replaceArgEscapes(*this, d, fieldWidth, arg, locale_arg, fillChar);
 }
 
-static inline ushort to_unicode(const iChar c) { return c.unicode(); }
-static inline ushort to_unicode(const char c) { return iLatin1Char{c}.unicode(); }
+static inline xuint16 to_unicode(const iChar c) { return c.unicode(); }
+static inline xuint16 to_unicode(const char c) { return iLatin1Char{c}.unicode(); }
 
 template <typename Char>
 static int getEscape(const Char *uc, xsizetype *pos, xsizetype len, int maxNumber = 999)
@@ -7241,12 +7241,12 @@ static int getEscape(const Char *uc, xsizetype *pos, xsizetype len, int maxNumbe
         ++i;
     if (i < len) {
         int escape = to_unicode(uc[i]) - '0';
-        if (uint(escape) >= 10U)
+        if (xuint32(escape) >= 10U)
             return -1;
         ++i;
         while (i < len) {
             int digit = to_unicode(uc[i]) - '0';
-            if (uint(digit) >= 10U)
+            if (xuint32(digit) >= 10U)
                 break;
             escape = (escape * 10) + digit;
             ++i;
@@ -7320,8 +7320,8 @@ static ParseResult parseMultiArgFormatString(StringView s)
     ParseResult result;
 
     const auto uc = s.data();
-    const auto len = s.size();
-    const auto end = len - 1;
+    const xsizetype len = s.size();
+    const xsizetype end = len - 1;
     xsizetype i = 0;
     xsizetype last = 0;
 
@@ -7416,10 +7416,10 @@ iString iString::multiArg(xsizetype numArgs, const iString **args) const
 */
 bool iString::isSimpleText() const
 {
-    const ushort *p = d.data();
-    const ushort * const end = p + d.size;
+    const xuint16 *p = d.data();
+    const xuint16 * const end = p + d.size;
     while (p < end) {
-        ushort uc = *p;
+        xuint16 uc = *p;
         // sort out regions of complex text formatting
         if (uc > 0x058f && (uc < 0x1100 || uc > 0xfb0f)) {
             return false;
@@ -7564,7 +7564,7 @@ bool iString::isRightToLeft() const
 */
 iString iString::fromRawData(const iChar *unicode, xsizetype size)
 {
-    return iString(DataPointer::fromRawData(const_cast<ushort *>(reinterpret_cast<const ushort *>(unicode)), size));
+    return iString(DataPointer::fromRawData(const_cast<xuint16 *>(reinterpret_cast<const xuint16 *>(unicode)), size));
 }
 
 /*!
@@ -8443,13 +8443,13 @@ iString &iString::setRawData(const iChar *unicode, xsizetype size)
 */
 bool iPrivate::isRightToLeft(iStringView string)
 {
-    const ushort *p = string.utf16();
-    const ushort * const end = p + string.size();
+    const xuint16 *p = string.utf16();
+    const xuint16 * const end = p + string.size();
     int isolateLevel = 0;
     while (p < end) {
-        uint ucs4 = *p;
+        xuint32 ucs4 = *p;
         if (iChar::isHighSurrogate(ucs4) && p < end - 1) {
-            ushort low = p[1];
+            xuint16 low = p[1];
             if (iChar::isLowSurrogate(low)) {
                 ucs4 = iChar::surrogateToUcs4(ucs4, low);
                 ++p;
@@ -8521,8 +8521,8 @@ bool ix_starts_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivi
 {
     if (haystack.isNull())
         return needle.isNull(); // historical behavior
-    const auto haystackLen = haystack.size();
-    const auto needleLen = needle.size();
+    const xsizetype haystackLen = haystack.size();
+    const xsizetype needleLen = needle.size();
     if (haystackLen == 0)
         return needleLen == 0;
     if (needleLen > haystackLen)
@@ -8590,8 +8590,8 @@ bool ix_ends_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity
 {
     if (haystack.isNull())
         return needle.isNull(); // historical behavior
-    const auto haystackLen = haystack.size();
-    const auto needleLen = needle.size();
+    const xsizetype haystackLen = haystack.size();
+    const xsizetype needleLen = needle.size();
     if (haystackLen == 0)
         return needleLen == 0;
     if (haystackLen < needleLen)
@@ -8661,29 +8661,29 @@ char32_t foldCaseHelper(Pointer ch, Pointer start) = delete;
 template <>
 char32_t foldCaseHelper<const iChar*>(const iChar* ch, const iChar* start)
 {
-    return foldCase(reinterpret_cast<const ushort*>(ch),
-                    reinterpret_cast<const ushort*>(start));
+    return foldCase(reinterpret_cast<const xuint16*>(ch),
+                    reinterpret_cast<const xuint16*>(start));
 }
 
 template <>
 char32_t foldCaseHelper<const char*>(const char* ch, const char*)
 {
-    return foldCase(ushort(uchar(*ch)));
+    return foldCase(xuint16(uchar(*ch)));
 }
 
 template <typename T>
-ushort valueTypeToUtf16(T t) = delete;
+xuint16 valueTypeToUtf16(T t) = delete;
 
 template <>
-ushort valueTypeToUtf16<iChar>(iChar t)
+xuint16 valueTypeToUtf16<iChar>(iChar t)
 {
     return t.unicode();
 }
 
 template <>
-ushort valueTypeToUtf16<char>(char t)
+xuint16 valueTypeToUtf16<char>(char t)
 {
-    return ushort{uchar(t)};
+    return xuint16{uchar(t)};
 }
 }
 
@@ -8701,10 +8701,10 @@ static inline xsizetype qFindChar(iStringView str, iChar ch, xsizetype from, iSh
     if (from < 0)
         from = std::max(from + str.size(), xsizetype(0));
     if (from < str.size()) {
-        const ushort *s = str.utf16();
-        ushort c = ch.unicode();
-        const ushort *n = s + from;
-        const ushort *e = s + str.size();
+        const xuint16 *s = str.utf16();
+        xuint16 c = ch.unicode();
+        const xuint16 *n = s + from;
+        const xuint16 *e = s + str.size();
         if (cs == iShell::CaseSensitive) {
             n = iPrivate::xustrchr(iStringView(n, e), c);
             if (n != e)
@@ -8744,16 +8744,16 @@ xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringVie
     if (l > 500 && sl > 5)
         return iFindStringBoyerMoore(haystack0, from, needle0, cs);
 
-    auto sv = [sl](const ushort *v) { return iStringView(v, sl); };
+    auto sv = [sl](const xuint16 *v) { return iStringView(v, sl); };
     /*
         We use some hashing for efficiency's sake. Instead of
         comparing strings, we compare the hash value of str with that
         of a part of this iString. Only if that matches, we call
         qt_string_compare().
     */
-    const ushort *needle = needle0.utf16();
-    const ushort *haystack = haystack0.utf16() + from;
-    const ushort *end = haystack0.utf16() + (l - sl);
+    const xuint16 *needle = needle0.utf16();
+    const xuint16 *haystack = haystack0.utf16() + from;
+    const xuint16 *end = haystack0.utf16() + (l - sl);
     const std::size_t sl_minus_1 = sl - 1;
     std::size_t hashNeedle = 0, hashHaystack = 0;
     xsizetype idx;
@@ -8775,7 +8775,7 @@ xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringVie
             ++haystack;
         }
     } else {
-        const ushort *haystack_start = haystack0.utf16();
+        const xuint16 *haystack_start = haystack0.utf16();
         for (idx = 0; idx < sl; ++idx) {
             hashNeedle = (hashNeedle<<1) + foldCase(needle + idx, needle);
             hashHaystack = (hashHaystack<<1) + foldCase(haystack + idx, haystack_start);
@@ -8804,7 +8804,7 @@ static inline xsizetype qLastIndexOf(Haystack haystack, iChar needle,
     if (std::size_t(from) >= std::size_t(haystack.size()))
         return -1;
     if (from >= 0) {
-        ushort c = needle.unicode();
+        xuint16 c = needle.unicode();
         const auto b = haystack.data();
         auto n = b + from;
         if (cs == iShell::CaseSensitive) {
@@ -8891,7 +8891,7 @@ xsizetype iPrivate::findString(iStringView haystack, xsizetype from, iLatin1Stri
     if (haystack.size() < needle.size())
         return -1;
 
-    iVarLengthArray<ushort> s(needle.size());
+    iVarLengthArray<xuint16> s(needle.size());
     ix_from_latin1(s.data(), needle.latin1(), needle.size());
     return iPrivate::findString(haystack, from, iStringView(reinterpret_cast<const iChar*>(s.constData()), s.size()), cs);
 }
@@ -8901,7 +8901,7 @@ xsizetype iPrivate::findString(iLatin1String haystack, xsizetype from, iStringVi
     if (haystack.size() < needle.size())
         return -1;
 
-    iVarLengthArray<ushort> s(haystack.size());
+    iVarLengthArray<xuint16> s(haystack.size());
     ix_from_latin1(s.data(), haystack.latin1(), haystack.size());
     return iPrivate::findString(iStringView(reinterpret_cast<const iChar*>(s.constData()), s.size()), from, needle, cs);
 }
@@ -8911,9 +8911,9 @@ xsizetype iPrivate::findString(iLatin1String haystack, xsizetype from, iLatin1St
     if (haystack.size() < needle.size())
         return -1;
 
-    iVarLengthArray<ushort> h(haystack.size());
+    iVarLengthArray<xuint16> h(haystack.size());
     ix_from_latin1(h.data(), haystack.latin1(), haystack.size());
-    iVarLengthArray<ushort> n(needle.size());
+    iVarLengthArray<xuint16> n(needle.size());
     ix_from_latin1(n.data(), needle.latin1(), needle.size());
     return iPrivate::findString(iStringView(reinterpret_cast<const iChar*>(h.constData()), h.size()), from,
                                  iStringView(reinterpret_cast<const iChar*>(n.constData()), n.size()), cs);
