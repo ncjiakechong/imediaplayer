@@ -15,7 +15,7 @@
 #include <stdlib.h>
 
 #include "core/utils/ibytearray.h"
-#include "core/utils/ibytearraymatcher.h"
+#include "private/ibytearraymatcher.h"
 #include "private/istringalgorithms_p.h"
 #include "core/kernel/imath.h"
 #include "private/inumeric_p.h"
@@ -740,7 +740,7 @@ xuint16 qChecksum(const char *data, uint len, iShell::ChecksumType standard)
     This issue does not apply to \l{iString}s since they represent
     characters using Unicode.
 
-    \sa iString, QBitArray
+    \sa iString, iBitArray
 */
 
 /*!
@@ -4018,8 +4018,7 @@ iByteArray &iByteArray::setNum(double n, char f, int prec)
             break;
     }
 
-    IX_ASSERT(0);
-    // *this = iLocaleData::doubleToString(n, prec, form, -1, flags).toLatin1();
+    *this = iLocaleData::c()->doubleToString(n, prec, form, -1, flags).toLatin1();
     return *this;
 }
 

@@ -19,9 +19,11 @@ using namespace iShell;
 void ix_assert(const char *assertion, const char *, int)
 {
     iLogMeta(ILOG_TAG, ILOG_ERROR, assertion);
+    std::abort();
 }
 
 void ix_assert_x(const char *what, const char *, int )
 {
     iLogMeta(ILOG_TAG, ILOG_ERROR, what);
+    std::abort();
 }

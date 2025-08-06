@@ -22,7 +22,7 @@
 // We mean it.
 //
 
-#include <core/utils/iendian.h>
+#include <core/global/iendian.h>
 
 namespace iShell {
 

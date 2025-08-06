@@ -123,11 +123,7 @@ void iArrayData::deallocate(iArrayData *data, size_t,
     if (data == &ix_array_unsharable_empty)
         return;
 
-    if ((IX_NULLPTR != data) && data->ref.isStatic()) {
-        ilog_warn("iArrayData::deallocate Static data cannot be deleted");
-        IX_ASSERT(0);
-    }
-
+    IX_ASSERT_X(data == 0 || !data->ref.isStatic(), "iArrayData::deallocate Static data cannot be deleted");
     ::free(data);
 }
 

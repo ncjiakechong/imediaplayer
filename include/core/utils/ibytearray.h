@@ -175,13 +175,6 @@ public:
     int lastIndexOf(const char *c, int from = -1) const;
     int lastIndexOf(const iByteArray &a, int from = -1) const;
 
-//    inline bool operator==(const iString &s2) const;
-//    inline bool operator!=(const iString &s2) const;
-//    inline bool operator<(const iString &s2) const;
-//    inline bool operator>(const iString &s2) const;
-//    inline bool operator<=(const iString &s2) const;
-//    inline bool operator>=(const iString &s2) const;
-
     inline bool contains(char c) const;
     inline bool contains(const char *a) const;
     inline bool contains(const iByteArray &a) const;
@@ -254,6 +247,22 @@ public:
     std::list<iByteArray> split(char sep) const;
 
     iByteArray repeated(int times) const;
+
+    iByteArray &append(const iString &s);
+    iByteArray &insert(int i, const iString &s);
+    iByteArray &replace(const iString &before, const char *after);
+    iByteArray &replace(char c, const iString &after);
+    iByteArray &replace(const iString &before, const iByteArray &after);
+
+    iByteArray &operator+=(const iString &s);
+    int indexOf(const iString &s, int from = 0) const;
+    int lastIndexOf(const iString &s, int from = -1) const;
+    inline bool operator==(const iString &s2) const;
+    inline bool operator!=(const iString &s2) const;
+    inline bool operator<(const iString &s2) const;
+    inline bool operator>(const iString &s2) const;
+    inline bool operator<=(const iString &s2) const;
+    inline bool operator>=(const iString &s2) const;
 
     short toShort(bool *ok = IX_NULLPTR, int base = 10) const;
     ushort toUShort(bool *ok = IX_NULLPTR, int base = 10) const;

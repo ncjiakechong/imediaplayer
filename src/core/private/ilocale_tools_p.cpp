@@ -33,92 +33,13 @@
 
 namespace iShell {
 
-inline int xDoubleSscanf(const char *buf, int, const char *format, double *d, int *processed)
+inline int iDoubleSscanf(const char *buf, int, const char *format, double *d, int *processed)
 {
     return sscanf(buf, format, d, processed);
 }
 inline int xDoubleSnprintf(char *buf, size_t buflen, int, const char *format, double d)
 {
     return snprintf(buf, buflen, format, d);
-}
-
-
-/*
- * Convert a string to an unsigned long long integer.
- *
- * Assumes that the upper and lower case
- * alphabets and digits are each contiguous.
- */
-xulonglong ix_strtoull(const char * nptr, char **endptr, int base)
-{
-    const char *s;
-    unsigned long long acc;
-    char c;
-    unsigned long long cutoff;
-    int neg, any, cutlim;
-
-    /*
-     * See strtoq for comments as to the logic used.
-     */
-    s = nptr;
-    do {
-        c = *s++;
-    } while (ascii_isspace(c));
-    if (c == '-') {
-        neg = 1;
-        c = *s++;
-    } else {
-        neg = 0;
-        if (c == '+')
-            c = *s++;
-    }
-    if ((base == 0 || base == 16) &&
-        c == '0' && (*s == 'x' || *s == 'X') &&
-        ((s[1] >= '0' && s[1] <= '9') ||
-        (s[1] >= 'A' && s[1] <= 'F') ||
-        (s[1] >= 'a' && s[1] <= 'f'))) {
-        c = s[1];
-        s += 2;
-        base = 16;
-    }
-    if (base == 0)
-        base = c == '0' ? 8 : 10;
-    acc = any = 0;
-    if (base < 2 || base > 36)
-        goto noconv;
-
-    cutoff = ULLONG_MAX / base;
-    cutlim = ULLONG_MAX % base;
-    for ( ; ; c = *s++) {
-        if (c >= '0' && c <= '9')
-            c -= '0';
-        else if (c >= 'A' && c <= 'Z')
-            c -= 'A' - 10;
-        else if (c >= 'a' && c <= 'z')
-            c -= 'a' - 10;
-        else
-            break;
-        if (c >= base)
-            break;
-        if (any < 0 || acc > cutoff || (acc == cutoff && c > cutlim))
-            any = -1;
-        else {
-            any = 1;
-            acc *= base;
-            acc += c;
-        }
-    }
-    if (any < 0) {
-        acc = ULLONG_MAX;
-        errno = ERANGE;
-    } else if (!any) {
-noconv:
-        errno = EINVAL;
-    } else if (neg)
-        acc = (unsigned long long) -(long long)acc;
-    if (endptr != NULL)
-                *endptr = const_cast<char *>(any ? s - 1 : nptr);
-    return (acc);
 }
 
 /*
@@ -352,7 +273,7 @@ void ix_doubleToAscii(double d, iLocaleData::DoubleForm form, int precision, cha
             // This is why the final decimal point is offset by 1, relative to the number after 'e'.
             bool ok;
             const char *endptr;
-            decpt = xstrtoll(target.data() + eSign + 1, &endptr, 10, &ok) + 1;
+            decpt = istrtoll(target.data() + eSign + 1, &endptr, 10, &ok) + 1;
             IX_ASSERT(ok);
             IX_ASSERT(endptr - target.data() <= length);
         } else {
@@ -445,7 +366,7 @@ double ix_asciiToDouble(const char *num, int numLen, bool &ok, int &processed,
 
     double d = 0.0;
 
-    if (xDoubleSscanf(num, 0, "%lf%n", &d, &processed) < 1)
+    if (iDoubleSscanf(num, 0, "%lf%n", &d, &processed) < 1)
         processed = 0;
 
     if ((strayCharMode == TrailingJunkProhibited && processed != numLen) || iIsNaN(d)) {
@@ -497,7 +418,7 @@ double ix_asciiToDouble(const char *num, int numLen, bool &ok, int &processed,
  * Assumes that the upper and lower case
  * alphabets and digits are each contiguous.
  */
-unsigned long long qt_strtoull(const char * nptr, char **endptr, int base)
+unsigned long long ix_strtoull(const char * nptr, char **endptr, int base)
 {
     const char *s;
     unsigned long long acc;
@@ -569,7 +490,7 @@ noconv:
     return (acc);
 }
 
-xulonglong xstrtoull(const char * nptr, const char **endptr, int base, bool *ok)
+xulonglong istrtoull(const char * nptr, const char **endptr, int base, bool *ok)
 {
     // strtoull accepts negative numbers. We don't.
     // Use a different variable so we pass the original nptr to strtoul
@@ -596,7 +517,7 @@ xulonglong xstrtoull(const char * nptr, const char **endptr, int base, bool *ok)
     return result;
 }
 
-xlonglong xstrtoll(const char * nptr, const char **endptr, int base, bool *ok)
+xlonglong istrtoll(const char * nptr, const char **endptr, int base, bool *ok)
 {
     *ok = true;
     errno = 0;
@@ -613,7 +534,7 @@ xlonglong xstrtoll(const char * nptr, const char **endptr, int base, bool *ok)
     return result;
 }
 
-iString xulltoa(xulonglong l, int base, const iChar _zero)
+iString iulltoa(xulonglong l, int base, const iChar _zero)
 {
     ushort buff[65]; // length of MAX_ULLONG in base 2
     ushort *p = buff + 65;
@@ -717,11 +638,11 @@ iString &exponentForm(iChar zero, iChar decimal, iChar exponential,
     return digits;
 }
 
-double xstrtod(const char *s00, const char **se, bool *ok)
+double istrtod(const char *s00, const char **se, bool *ok)
 {
     const int len = static_cast<int>(strlen(s00));
     IX_ASSERT(len >= 0);
-    return xstrntod(s00, len, se, ok);
+    return istrntod(s00, len, se, ok);
 }
 
 /*!
@@ -729,7 +650,7 @@ double xstrtod(const char *s00, const char **se, bool *ok)
 
   Converts the initial portion of the string pointed to by \a s00 to a double, using the 'C' locale.
  */
-double xstrntod(const char *s00, int len, const char **se, bool *ok)
+double istrntod(const char *s00, int len, const char **se, bool *ok)
 {
     int processed = 0;
     bool nonNullOk = false;
@@ -741,7 +662,7 @@ double xstrntod(const char *s00, int len, const char **se, bool *ok)
     return d;
 }
 
-iString xdtoa(xreal d, int *decpt, int *sign)
+iString idtoa(xreal d, int *decpt, int *sign)
 {
     bool nonNullSign = false;
     int nonNullDecpt = 0;

@@ -37,7 +37,7 @@ public:
         if (count == -1) // isStatic
             return true;
 
-        return (--atomic != 0);
+        return (0 != --atomic);
     }
 
     bool setSharable(bool sharable)

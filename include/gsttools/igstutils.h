@@ -72,11 +72,11 @@ namespace iGstUtils {
             QAbstractVideoBuffer::HandleType handleType = QAbstractVideoBuffer::NoHandle);
 #endif
 
-    GstCaps *capsForFormats(const QList<QVideoFrame::PixelFormat> &formats);
+    GstCaps *capsForFormats(const std::list<QVideoFrame::PixelFormat> &formats);
     void setFrameTimeStamps(QVideoFrame *frame, GstBuffer *buffer);
 
-    void setMetaData(GstElement *element, const QMap<iByteArray, iVariant> &data);
-    void setMetaData(GstBin *bin, const QMap<iByteArray, iVariant> &data);
+    void setMetaData(GstElement *element, const std::map<iByteArray, iVariant> &data);
+    void setMetaData(GstBin *bin, const std::map<iByteArray, iVariant> &data);
 
     GstCaps *videoFilterCaps();
 

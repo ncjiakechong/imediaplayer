@@ -10,7 +10,7 @@
 /////////////////////////////////////////////////////////////////
 
 #include "core/utils/ichar.h"
-#include "core/utils/istringmatcher.h"
+#include "private/istringmatcher.h"
 
 namespace iShell {
 
@@ -279,7 +279,7 @@ int iStringMatcher::indexIn(const iChar *str, int length, int from) const
     \internal
 */
 
-int xFindStringBoyerMoore(
+int iFindStringBoyerMoore(
     const iChar *haystack, int haystackLen, int haystackOffset,
     const iChar *needle, int needleLen, iShell::CaseSensitivity cs)
 {

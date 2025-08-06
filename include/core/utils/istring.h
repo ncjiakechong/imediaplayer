@@ -27,6 +27,7 @@
 
 namespace iShell {
 
+class iRegExp;
 class iCharRef;
 class iString;
 class iTextCodec;
@@ -270,6 +271,15 @@ public:
     int count(const iString &s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     int count(const iStringRef &s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
+    int indexOf(const iRegExp &, int from = 0) const;
+    int lastIndexOf(const iRegExp &, int from = -1) const;
+    inline bool contains(const iRegExp &rx) const { return indexOf(rx) != -1; }
+    int count(const iRegExp &) const;
+
+    int indexOf(iRegExp &, int from = 0) const;
+    int lastIndexOf(iRegExp &, int from = -1) const;
+    inline bool contains(iRegExp &rx) const { return indexOf(rx) != -1; }
+
     enum SectionFlag {
         SectionDefault             = 0x00,
         SectionSkipEmpty           = 0x01,
@@ -280,7 +290,8 @@ public:
     typedef uint SectionFlags;
 
     iString section(iChar sep, int start, int end = -1, SectionFlags flags = SectionDefault) const;
-    iString section(const iString &in_sep, int start, int end = -1, SectionFlags flags = SectionDefault) const;
+    iString section(const iString &sep, int start, int end, SectionFlags flags) const;
+    iString section(const iRegExp &reg, int start, int end = -1, SectionFlags flags = SectionDefault) const;
 
     iString left(int n) const;
     iString right(int n) const;
@@ -365,6 +376,9 @@ public:
                      iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iString &replace(iChar c, const iString &after, iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iString &replace(iChar c, iLatin1String after, iShell::CaseSensitivity cs = iShell::CaseSensitive);
+    iString &replace(const iRegExp &rx, const iString &after);
+    inline iString &remove(const iRegExp &rx)
+    { return replace(rx, iString()); }
 
     enum SplitBehavior { KeepEmptyParts, SkipEmptyParts };
 
@@ -376,6 +390,9 @@ public:
                       iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     std::vector<iStringRef> splitRef(iChar sep, SplitBehavior behavior = KeepEmptyParts,
                       iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
+
+    std::list<iString> split(const iRegExp &sep, SplitBehavior behavior = KeepEmptyParts) const;
+    std::vector<iStringRef> splitRef(const iRegExp &sep, SplitBehavior behavior = KeepEmptyParts) const;
 
     enum NormalizationForm {
         NormalizationForm_D,
@@ -1034,36 +1051,35 @@ inline bool iString::operator<=(const iByteArray &s) const
 inline bool iString::operator>=(const iByteArray &s) const
 { return iString::compare_helper(constData(), size(), s.constData(), s.size()) >= 0; }
 
-//inline bool iByteArray::operator==(const iString &s) const
-//{ return iString::compare_helper(s.constData(), s.size(), constData(), istrnlen(constData(), size())) == 0; }
-//inline bool iByteArray::operator!=(const iString &s) const
-//{ return iString::compare_helper(s.constData(), s.size(), constData(), istrnlen(constData(), size())) != 0; }
-//inline bool iByteArray::operator<(const iString &s) const
-//{ return iString::compare_helper(s.constData(), s.size(), constData(), size()) > 0; }
-//inline bool iByteArray::operator>(const iString &s) const
-//{ return iString::compare_helper(s.constData(), s.size(), constData(), size()) < 0; }
-//inline bool iByteArray::operator<=(const iString &s) const
-//{ return iString::compare_helper(s.constData(), s.size(), constData(), size()) >= 0; }
-//inline bool iByteArray::operator>=(const iString &s) const
-//{ return iString::compare_helper(s.constData(), s.size(), constData(), size()) <= 0; }
+inline bool iByteArray::operator==(const iString &s) const
+{ return iString::compare_helper(s.constData(), s.size(), constData(), istrnlen(constData(), size())) == 0; }
+inline bool iByteArray::operator!=(const iString &s) const
+{ return iString::compare_helper(s.constData(), s.size(), constData(), istrnlen(constData(), size())) != 0; }
+inline bool iByteArray::operator<(const iString &s) const
+{ return iString::compare_helper(s.constData(), s.size(), constData(), size()) > 0; }
+inline bool iByteArray::operator>(const iString &s) const
+{ return iString::compare_helper(s.constData(), s.size(), constData(), size()) < 0; }
+inline bool iByteArray::operator<=(const iString &s) const
+{ return iString::compare_helper(s.constData(), s.size(), constData(), size()) >= 0; }
+inline bool iByteArray::operator>=(const iString &s) const
+{ return iString::compare_helper(s.constData(), s.size(), constData(), size()) <= 0; }
 
-
-//inline iByteArray &iByteArray::append(const iString &s)
-//{ return append(s.toUtf8()); }
-//inline iByteArray &iByteArray::insert(int i, const iString &s)
-//{ return insert(i, s.toUtf8()); }
-//inline iByteArray &iByteArray::replace(char c, const iString &after)
-//{ return replace(c, after.toUtf8()); }
-//inline iByteArray &iByteArray::replace(const iString &before, const char *after)
-//{ return replace(before.toUtf8(), after); }
-//inline iByteArray &iByteArray::replace(const iString &before, const iByteArray &after)
-//{ return replace(before.toUtf8(), after); }
-//inline iByteArray &iByteArray::operator+=(const iString &s)
-//{ return operator+=(s.toUtf8()); }
-//inline int iByteArray::indexOf(const iString &s, int from) const
-//{ return indexOf(s.toUtf8(), from); }
-//inline int iByteArray::lastIndexOf(const iString &s, int from) const
-//{ return lastIndexOf(s.toUtf8(), from); }
+inline iByteArray &iByteArray::append(const iString &s)
+{ return append(s.toUtf8()); }
+inline iByteArray &iByteArray::insert(int i, const iString &s)
+{ return insert(i, s.toUtf8()); }
+inline iByteArray &iByteArray::replace(char c, const iString &after)
+{ return replace(c, after.toUtf8()); }
+inline iByteArray &iByteArray::replace(const iString &before, const char *after)
+{ return replace(before.toUtf8(), after); }
+inline iByteArray &iByteArray::replace(const iString &before, const iByteArray &after)
+{ return replace(before.toUtf8(), after); }
+inline iByteArray &iByteArray::operator+=(const iString &s)
+{ return operator+=(s.toUtf8()); }
+inline int iByteArray::indexOf(const iString &s, int from) const
+{ return indexOf(s.toUtf8(), from); }
+inline int iByteArray::lastIndexOf(const iString &s, int from) const
+{ return lastIndexOf(s.toUtf8(), from); }
 
 
 inline const iString operator+(const iString &s1, const iString &s2)

@@ -13,6 +13,7 @@
 
 #include <core/kernel/ivariant.h>
 #include <core/utils/istring.h>
+#include <core/utils/ishareddata.h>
 
 namespace iShell {
 
@@ -1005,7 +1006,7 @@ private:
     friend class iLocalePrivate;
     friend class QSystemLocale;
 
-    iSharedPtr<iLocalePrivate> d;
+    iSharedDataPointer<iLocalePrivate> d;
 };
 
 inline iString iLocale::toString(short i) const

@@ -24,7 +24,7 @@
 
 #include "private/ilocale_p.h"
 #include "core/utils/istring.h"
-#include "core/utils/iendian.h"
+#include "core/global/iendian.h"
 
 namespace iShell {
 
@@ -39,8 +39,8 @@ double ix_asciiToDouble(const char *num, int numLen, bool &ok, int &processed,
 void ix_doubleToAscii(double d, iLocaleData::DoubleForm form, int precision, char *buf, int bufSize,
                       bool &sign, int &length, int &decpt);
 
-iString xulltoa(xulonglong l, int base, const iChar _zero);
-iString xdtoa(xreal d, int *decpt, int *sign);
+iString iulltoa(xulonglong l, int base, const iChar _zero);
+iString idtoa(xreal d, int *decpt, int *sign);
 
 enum PrecisionMode {
     PMDecimalDigits =             0x01,
@@ -70,10 +70,10 @@ inline bool isZero(double d)
     }
 }
 
-double xstrtod(const char *s00, char const **se, bool *ok);
-double xstrntod(const char *s00, int len, char const **se, bool *ok);
-xlonglong xstrtoll(const char *nptr, const char **endptr, int base, bool *ok);
-xulonglong xstrtoull(const char *nptr, const char **endptr, int base, bool *ok);
+double istrtod(const char *s00, char const **se, bool *ok);
+double istrntod(const char *s00, int len, char const **se, bool *ok);
+xlonglong istrtoll(const char *nptr, const char **endptr, int base, bool *ok);
+xulonglong istrtoull(const char *nptr, const char **endptr, int base, bool *ok);
 
 } // namespace iShell
 

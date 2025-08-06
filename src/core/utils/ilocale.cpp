@@ -585,9 +585,9 @@ static iString getLocaleListData(const ushort *data, int size, int index)
 
 static const int locale_data_size = sizeof(locale_data)/sizeof(iLocaleData) - 1;
 
-IX_GLOBAL_STATIC_WITH_ARGS(iSharedPtr<iLocalePrivate>, defaultLocalePrivate,
+IX_GLOBAL_STATIC_WITH_ARGS(iSharedDataPointer<iLocalePrivate>, defaultLocalePrivate,
                           (iLocalePrivate::create(defaultData(), default_number_options)))
-IX_GLOBAL_STATIC_WITH_ARGS(iSharedPtr<iLocalePrivate>, systemLocalePrivate,
+IX_GLOBAL_STATIC_WITH_ARGS(iExplicitlySharedDataPointer<iLocalePrivate>, systemLocalePrivate,
                           (iLocalePrivate::create(systemData())))
 
 static iLocalePrivate *localePrivateByName(const iString &name)
@@ -1676,24 +1676,6 @@ iString iLocale::toString(xulonglong i) const
     return d->m_data->unsLongLongToString(i, -1, 10, -1, flags);
 }
 
-
-static bool timeFormatContainsAP(iStringView format)
-{
-    int i = 0;
-    while (i < format.size()) {
-        if (format.at(i).unicode() == '\'') {
-            ix_readEscapedFormatString(format, &i);
-            continue;
-        }
-
-        if (format.at(i).toLower().unicode() == 'a')
-            return true;
-
-        ++i;
-    }
-    return false;
-}
-
 /*!
     \since 4.1
 
@@ -2352,7 +2334,7 @@ iString iLocaleData::longLongToString(const iChar zero, const iChar group,
       Negating std::numeric_limits<xlonglong>::min() hits undefined behavior, so
       taking an absolute value has to cast to unsigned to change sign.
      */
-    iString num_str = xulltoa(negative ? -xulonglong(l) : xulonglong(l), base, zero);
+    iString num_str = iulltoa(negative ? -xulonglong(l) : xulonglong(l), base, zero);
 
     uint cnt_thousand_sep = 0;
     if (flags & ThousandsGroup && base == 10) {
@@ -2430,7 +2412,7 @@ iString iLocaleData::unsLongLongToString(const iChar zero, const iChar group,
                                             unsigned flags)
 {
     const iChar resultZero = base == 10 ? zero : iChar(iLatin1Char('0'));
-    iString num_str = l ? xulltoa(l, base, zero) : iString(resultZero);
+    iString num_str = l ? iulltoa(l, base, zero) : iString(resultZero);
 
     bool precision_not_specified = false;
     if (precision == -1) {
@@ -2793,7 +2775,7 @@ xlonglong iLocaleData::bytearrayToLongLong(const char *num, int base, bool *ok)
         return 0;
     }
 
-    xlonglong l = xstrtoll(num, &endptr, base, &_ok);
+    xlonglong l = istrtoll(num, &endptr, base, &_ok);
 
     if (!_ok) {
         if (ok != nullptr)
@@ -2822,7 +2804,7 @@ xulonglong iLocaleData::bytearrayToUnsLongLong(const char *num, int base, bool *
 {
     bool _ok;
     const char *endptr;
-    xulonglong l = xstrtoull(num, &endptr, base, &_ok);
+    xulonglong l = istrtoull(num, &endptr, base, &_ok);
 
     if (!_ok) {
         if (ok != nullptr)
