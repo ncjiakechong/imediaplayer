@@ -746,7 +746,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 
 template<typename Ret> struct FunctionPointer<Ret (*) ()>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<iNullTypeList> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) ();
@@ -766,7 +766,7 @@ template<typename Ret> struct FunctionPointer<Ret (*) ()>
 };
 template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1);
@@ -792,7 +792,7 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1)>
 };
 template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (*) (Arg1, Arg2)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2);
@@ -820,7 +820,7 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3);
@@ -849,7 +849,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3)>
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4);
@@ -880,7 +880,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
@@ -912,7 +912,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
@@ -944,7 +944,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
@@ -978,7 +978,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
@@ -1012,7 +1012,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
@@ -1047,7 +1047,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10)>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
