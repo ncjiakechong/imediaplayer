@@ -31,9 +31,10 @@ class TestCase : public iObject
 public:
     TestCase(iObject* parent = IX_NULLPTR) : iObject(parent) {}
 
-    int start() {
-        tstcase_sig.connect(this, &TestCase::doTestCase, QueuedConnection);
-        tstcase_sig.emits();
+    int start() const {
+        TestCase* _This = const_cast<TestCase*>(this);
+        _This->tstcase_sig.connect(_This, &TestCase::doTestCase, QueuedConnection);
+        _This->tstcase_sig.emits();
 
         return 0;
     }
