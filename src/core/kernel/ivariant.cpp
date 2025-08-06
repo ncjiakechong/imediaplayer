@@ -117,7 +117,7 @@ void iVariant::iAbstractVariantImpl::free()
 }
 
 iVariant::iVariant()
-    : m_typeId(0)
+    : m_typeId(-1)
 {
 }
 
@@ -143,7 +143,7 @@ iVariant& iVariant::operator=(const iVariant &other)
 
 bool iVariant::isNull() const
 {
-    if ((0 != m_typeId) && !m_dataImpl.isNull())
+    if ((0 <= m_typeId) && !m_dataImpl.isNull())
         return false;
 
     return true;
@@ -151,12 +151,15 @@ bool iVariant::isNull() const
 
 void iVariant::clear()
 {
-    m_typeId = 0;
+    m_typeId = -1;
     m_dataImpl.clear();
 }
 
 bool iVariant::equal(const iVariant &other) const
 {
+    if (isNull() || other.isNull())
+        return (isNull() && other.isNull());
+
     iVariant::iTypeHandler handler;
     {
         iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);

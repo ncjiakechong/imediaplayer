@@ -1107,7 +1107,8 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     case GST_STATE_PLAYING:
                         m_everPlayed = true;
                         if (m_state != iMediaPlayer::PlayingState) {
-                            IEMIT stateChanged(m_state = iMediaPlayer::PlayingState);
+                            m_state = iMediaPlayer::PlayingState;
+                            IEMIT stateChanged(m_state);
 
                             // For rtsp streams duration information might not be available
                             // until playback starts.

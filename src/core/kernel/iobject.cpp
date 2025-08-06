@@ -50,7 +50,8 @@ iMetaCallEvent::~iMetaCallEvent()
 }
 
 iMetaObject::iMetaObject(const iMetaObject* supper)
-    : m_initProperty(false)
+    : m_propertyCandidate(false)
+    , m_propertyInited(false)
     , m_superdata(supper)
 {
 }
@@ -77,18 +78,17 @@ const iObject* iMetaObject::cast(const iObject *obj) const
 
 void iMetaObject::setProperty(const std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>& ppt)
 {
-    if (m_initProperty) {
-        IX_ASSERT(0);
+    if (m_propertyCandidate && m_propertyInited)
         return;
-    }
 
-    m_initProperty = true;
+    m_propertyInited = m_propertyCandidate;
+    m_propertyCandidate = true;
     m_property = ppt;
 }
 
 const _iProperty* iMetaObject::property(const iString& name) const
 {
-    if (!m_initProperty)
+    if (!hasProperty())
         return IX_NULLPTR;
 
     std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc>::const_iterator it;
@@ -672,7 +672,7 @@ bool iObject::disconnectImpl(const _iConnection& conn)
     return success;
 }
 
-void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, void* ret)
+void iObject::emitImpl(_iMemberFunction signal, void *args, void* ret)
 {
     struct ConnectionListsRef {
         _iObjectConnectionList* connectionLists;
@@ -700,30 +700,30 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, voi
     };
 
     struct ConnectArgHelper {
-        const _iArgumentHelper& _arg;
+        void* _args;
 
         iSharedPtr<void> _rawArg;
         iSharedPtr<void> _cloneArg;
         iSharedPtr<void> _cloneAdaptorArg;
-        ConnectArgHelper(const _iArgumentHelper& a) :_arg(a) {}
+        ConnectArgHelper(void* a) :_args(a) {}
 
         static void fakefree(void*) {}
 
         const iSharedPtr<void>& arg(const _iConnection& c, bool clone) {
-            if ((IX_NULLPTR != c._argWraper) && _cloneAdaptorArg.isNull())
-                _cloneAdaptorArg = iSharedPtr<void>(c._argWraper(_arg.args), c._argDeleter);
+            if (c._isArgAdapter && _cloneAdaptorArg.isNull())
+                _cloneAdaptorArg = iSharedPtr<void>(c._argWraper(_args), c._argDeleter);
 
-            if (IX_NULLPTR != c._argWraper)
+            if (c._isArgAdapter)
                 return _cloneAdaptorArg;
 
             if (clone && _cloneArg.isNull())
-                _cloneArg = iSharedPtr<void>(_arg.cloneArgs(_arg.args), _arg.freeArgs);
+                _cloneArg = iSharedPtr<void>(c._argWraper(_args), c._argDeleter);
 
             if (clone)
                 return _cloneArg;
 
             if (_rawArg.isNull())
-                _rawArg = iSharedPtr<void>(_arg.args, fakefree);
+                _rawArg = iSharedPtr<void>(_args, fakefree);
 
             return _rawArg;
         }
@@ -750,7 +750,7 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, voi
     // We need to check against last here to ensure that signals added
     // during the signal emission are not emitted in this emission.
     _iConnection* last = list.last;
-    ConnectArgHelper argHelper(arg);
+    ConnectArgHelper argHelper(args);
     iSharedPtr<void> _cloneArgs;
     iSharedPtr<void> _cloneArgsAdaptor;
 
@@ -807,12 +807,19 @@ void iObject::emitImpl(_iMemberFunction signal, const _iArgumentHelper& arg, voi
 const iMetaObject* iObject::metaObject() const
 {
     static iMetaObject staticMetaObject = iMetaObject(IX_NULLPTR);
+    if (!staticMetaObject.hasProperty()) {
+        std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> ppt;
+        staticMetaObject.setProperty(ppt);
+        initProperty(&staticMetaObject);
+        // protected for non-initProperty object
+        staticMetaObject.setProperty(ppt);
+    }
+
     return &staticMetaObject;
 }
 
 iVariant iObject::property(const char *name) const
 {
-    const_cast<iObject*>(this)->initProperty();
     const iMetaObject* mo = metaObject();
 
     do {
@@ -828,7 +835,6 @@ iVariant iObject::property(const char *name) const
 
 bool iObject::setProperty(const char *name, const iVariant& value)
 {
-    initProperty();
     const iMetaObject* mo = metaObject();
 
     do {
@@ -843,10 +849,10 @@ bool iObject::setProperty(const char *name, const iVariant& value)
     return false;
 }
 
-void iObject::initProperty()
+void iObject::initProperty(iMetaObject* mobj) const
 {
-    const iMetaObject* mobj = iObject::metaObject();
-    if (mobj->hasProperty())
+    const iMetaObject* _mobj = iObject::metaObject();
+    if (_mobj != mobj)
         return;
 
     std::unordered_map<iString, iSharedPtr<_iProperty>, iKeyHashFunc, iKeyEqualFunc> pptImp;
@@ -855,7 +861,7 @@ void iObject::initProperty()
                         iString("objectName"),
                         iSharedPtr<_iProperty>(newProperty(&iObject::objectName, &iObject::setObjectName, &iObject::objectNameChanged))));
 
-    const_cast<iMetaObject*>(mobj)->setProperty(pptImp);
+    mobj->setProperty(pptImp);
 }
 
 static void iDeleteInEventHandler(iObject* obj)
@@ -920,7 +926,7 @@ void iObject::reregisterTimers(void* args)
     delete timerList;
 }
 
-bool iObject::invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& arg)
+bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
 {
     if (IX_NULLPTR == c._receiver)
         return false;
@@ -934,7 +940,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& ar
     uint _type = c._type & Connection_PrimaryMask;
     if ((AutoConnection == _type && receiverInSameThread)
         || (DirectConnection == _type)) {
-        c.emits(arg.args, IX_NULLPTR);
+        c.emits(args, IX_NULLPTR);
         return true;
     } else if (_type == BlockingQueuedConnection) {
         if (receiverInSameThread) {
@@ -943,7 +949,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& ar
         }
         iSemaphore semaphore;
         iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
-        iSharedPtr<void> _a(arg.cloneArgs(arg.args), arg.freeArgs);
+        iSharedPtr<void> _a(c._argWraper(args), c._argDeleter);
         iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
         iCoreApplication::postEvent(receiver, event);
         semaphore.acquire();
@@ -951,14 +957,15 @@ bool iObject::invokeMethodImpl(const _iConnection& c, const _iArgumentHelper& ar
     }
 
     iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
-    iSharedPtr<void> _a(arg.cloneArgs(arg.args), arg.freeArgs);
+    iSharedPtr<void> _a(c._argWraper(args), c._argDeleter);
     iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
     iCoreApplication::postEvent(receiver, event);
     return true;
 }
 
 _iConnection::_iConnection(ImplFn impl, ConnectionType type)
-    : _orphaned(false)
+    : _isArgAdapter(false)
+    , _orphaned(false)
     , _ref(1)
     , _type(type)
     , _nextConnectionList(IX_NULLPTR)
