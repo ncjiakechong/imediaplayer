@@ -87,19 +87,19 @@ public:
 
 private:
     template <typename Char>
-    using if_compatible_char = typename std::enable_if<iPrivate::IsCompatibleCharType<Char>::value, bool>::type;
+    using if_compatible_char = typename enable_if<iPrivate::IsCompatibleCharType<Char>::value, bool>::type;
 
     template <typename Array>
-    using if_compatible_array = typename std::enable_if<iPrivate::IsCompatibleArray<Array>::value, bool>::type;
+    using if_compatible_array = typename enable_if<iPrivate::IsCompatibleArray<Array>::value, bool>::type;
 
     template <typename Pointer>
-    using if_compatible_pointer = typename std::enable_if<iPrivate::IsCompatiblePointer<Pointer>::value, bool>::type;
+    using if_compatible_pointer = typename enable_if<iPrivate::IsCompatiblePointer<Pointer>::value, bool>::type;
 
     template <typename T>
-    using if_compatible_string = typename std::enable_if<iPrivate::IsCompatibleStdBasicString<T>::value, bool>::type;
+    using if_compatible_string = typename enable_if<iPrivate::IsCompatibleStdBasicString<T>::value, bool>::type;
 
     template <typename T>
-    using if_compatible_qstring_like = typename std::enable_if<std::is_same<T, iString>::value || std::is_same<T, iStringRef>::value, bool>::type;
+    using if_compatible_istring_like = typename enable_if<std::is_same<T, iString>::value || std::is_same<T, iStringRef>::value, bool>::type;
 
     template <typename Char, size_t N>
     static xsizetype lengthHelperArray(const Char (&)[N])
@@ -146,7 +146,7 @@ public:
     iStringView(const Pointer &str)
         : iStringView(str, str ? lengthHelperPointer(str) : 0) {}
 
-    template <typename String, if_compatible_qstring_like<String> = true>
+    template <typename String, if_compatible_istring_like<String> = true>
     iStringView(const String &str)
         : iStringView(str.isNull() ? IX_NULLPTR : str.data(), xsizetype(str.size())) {}
 
@@ -245,7 +245,7 @@ private:
 };
 IX_DECLARE_TYPEINFO(iStringView, IX_PRIMITIVE_TYPE);
 
-template <typename iStringLike, typename std::enable_if<
+template <typename iStringLike, typename enable_if<
     std::is_same<iStringLike, iString>::value || std::is_same<iStringLike, iStringRef>::value,
     bool>::type = true>
 inline iStringView iToStringViewIgnoringNull(const iStringLike &s)

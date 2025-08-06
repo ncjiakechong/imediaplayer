@@ -223,6 +223,12 @@ template<typename T> struct is_convertible<void, T> { enum { value = true }; };
 template<typename T> struct is_convertible<T, void> { enum { value = true }; };
 template<> struct is_convertible<void, void> { enum { value = true }; };
 
+template<bool B, class T = void>
+struct enable_if {};
+
+template<class T>
+struct enable_if<true, T> { typedef T type; };
+
 #if defined(_MSC_VER)
 #define TYPEWRAPPER_DEFAULTVALUE(T) type_wrapper<T>::TYPE()
 #else
