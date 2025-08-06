@@ -26,6 +26,7 @@ QMAKE_LFLAGS += -Wl,-rpath,"'\$$ORIGIN'"
 
 SOURCES += \
     test_ivariant.cpp \
+    test_player.cpp \
     test_thread.cpp \
     test_timer.cpp \
     test_iconvertible.cpp \

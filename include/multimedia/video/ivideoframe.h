@@ -18,6 +18,7 @@
 #include <core/utils/istring.h>
 #include <core/utils/ishareddata.h>
 
+#include <multimedia/imultimediaglobal.h>
 #include <multimedia/video/iabstractvideobuffer.h>
 
 namespace iShell {
@@ -26,7 +27,7 @@ class iSize;
 
 class iVideoFramePrivate;
 
-class iVideoFrame
+class IX_MULTIMEDIA_EXPORT iVideoFrame
 {
 public:
     enum FieldType

@@ -12,13 +12,15 @@
 #define IVIDEOSURFACEFORMAT_H
 
 #include <core/utils/irect.h>
+
+#include <multimedia/imultimediaglobal.h>
 #include <multimedia/video/ivideoframe.h>
 
 namespace iShell {
 
 class iVideoSurfaceFormatPrivate;
 
-class iVideoSurfaceFormat
+class IX_MULTIMEDIA_EXPORT iVideoSurfaceFormat
 {
 public:
     enum Direction

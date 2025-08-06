@@ -37,6 +37,8 @@ public:
     }
 
     void start() {
+        iTimer::singleShot(10, this, &TestTimer::testSingleShot);
+
         xint64 cur = iDeadlineTimer::current().deadline();
         double disCur = cur / 1000.0;
         ilog_debug("TestTimer: [", iThread::currentThreadId(), "]start now:", disCur);
@@ -45,6 +47,12 @@ public:
         m_t3s = startTimer(3000);
         ilog_debug("m_t500: ", m_t500, ", m_t1s: ", m_t1s, ", m_t3s:", m_t3s);
 
+    }
+
+    static void testSingleShot() {
+        static int index = 0;
+        ++index;
+        IX_ASSERT(index <= 1);
     }
 
     virtual bool event(iEvent *e) {
@@ -93,7 +101,6 @@ int test_timer(void)
     iThread* thread = new iThread();
     thread->moveToThread(thread);
     thread->setObjectName("test_timer");
-
 
     TestTimer* timer = new TestTimer();
     timer->startTimer(1000, VeryCoarseTimer);

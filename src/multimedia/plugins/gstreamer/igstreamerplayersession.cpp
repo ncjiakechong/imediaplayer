@@ -9,26 +9,22 @@
 /// @author  anfengce@
 /////////////////////////////////////////////////////////////////
 
-#include <private/qgstreameraudioprobecontrol_p.h>
-#include <private/qgstreamervideoprobecontrol_p.h>
-#include <private/qgstreamervideorendererinterface_p.h>
-#include <private/qvideosurfacegstsink_p.h>
-
 #include <gst/gstvalue.h>
 #include <gst/base/gstbasesrc.h>
 
 #include <core/utils/isize.h>
 #include <core/kernel/itimer.h>
+#include <core/utils/idatetime.h>
+#include <core/io/ilog.h>
 
 #include "igstutils_p.h"
 #include "igstreamerbushelper_p.h"
 #include "igstreamerplayersession_p.h"
+#include "igstreamervideorendererinterface_p.h"
+#include "igstreamervideoprobecontrol_p.h"
+#include "igstreameraudioprobecontrol_p.h"
 
-
-#include <QtMultimedia/qmediametadata.h>
-#include <QtCore/qdatetime.h>
-
-#include <qvideorenderercontrol.h>
+#define ILOG_TAG "ix:media"
 
 //#define DEBUG_PLAYBIN
 //#define DEBUG_VO_BIN_DUMP
@@ -38,14 +34,7 @@ namespace iShell {
 static bool usePlaybinVolume()
 {
     static enum { Yes, No, Unknown } status = Unknown;
-    if (status == Unknown) {
-        iByteArray v = qgetenv("QT_GSTREAMER_USE_PLAYBIN_VOLUME");
-        bool value = !v.isEmpty() && v != "0" && v != "false";
-        if (value)
-            status = Yes;
-        else
-            status = No;
-    }
+
     return status == Yes;
 }
 
@@ -80,13 +69,13 @@ static GstStaticCaps static_RawCaps = GST_STATIC_CAPS(DEFAULT_RAW_CAPS);
 
 iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
     :iObject(parent),
-     m_state(QMediaPlayer::StoppedState),
-     m_pendingState(QMediaPlayer::StoppedState),
+     m_state(iMediaPlayer::StoppedState),
+     m_pendingState(iMediaPlayer::StoppedState),
      m_busHelper(IX_NULLPTR),
      m_videoSink(IX_NULLPTR),
-#if !GST_CHECK_VERSION(1,0,0)
+    #if !GST_CHECK_VERSION(1,0,0)
      m_usingColorspaceElement(false),
-#endif
+    #endif
      m_pendingVideoSink(IX_NULLPTR),
      m_nullVideoSink(IX_NULLPTR),
      m_audioSink(IX_NULLPTR),
@@ -116,18 +105,12 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
         //GST_PLAY_FLAG_NATIVE_VIDEO omits configuration of ffmpegcolorspace and videoscale,
         //since those elements are included in the video output bin when necessary.
         int flags = GST_PLAY_FLAG_VIDEO | GST_PLAY_FLAG_AUDIO;
-        iByteArray envFlags = qgetenv("QT_GSTREAMER_PLAYBIN_FLAGS");
-        if (!envFlags.isEmpty()) {
-            flags |= envFlags.toInt();
-#if !GST_CHECK_VERSION(1,0,0)
-        } else {
-            flags |= GST_PLAY_FLAG_NATIVE_VIDEO;
-#endif
-        }
+        #if !GST_CHECK_VERSION(1,0,0)
+        flags |= GST_PLAY_FLAG_NATIVE_VIDEO;
+        #endif
         g_object_set(G_OBJECT(m_playbin), "flags", flags, IX_NULLPTR);
 
-        const iByteArray envAudioSink = qgetenv("QT_GSTREAMER_PLAYBIN_AUDIOSINK");
-        GstElement *audioSink = gst_element_factory_make(envAudioSink.isEmpty() ? "autoaudiosink" : envAudioSink, "audiosink");
+        GstElement *audioSink = gst_element_factory_make("autoaudiosink", "audiosink");
         if (audioSink) {
             if (usePlaybinVolume()) {
                 m_audioSink = audioSink;
@@ -154,35 +137,42 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
         }
     }
 
-#if GST_CHECK_VERSION(1,0,0)
+    #if GST_CHECK_VERSION(1,0,0)
     m_videoIdentity = gst_element_factory_make("identity", IX_NULLPTR); // floating ref
-#else
+    #else
     m_videoIdentity = GST_ELEMENT(g_object_new(gst_video_connector_get_type(), 0)); // floating ref
     g_signal_connect(G_OBJECT(m_videoIdentity), "connection-failed", G_CALLBACK(insertColorSpaceElement), (gpointer)this);
     m_colorSpace = gst_element_factory_make(IX_GSTREAMER_COLORCONVERSION_ELEMENT_NAME, "ffmpegcolorspace-vo");
 
     // might not get a parent, take ownership to avoid leak
     ix_gst_object_ref_sink(GST_OBJECT(m_colorSpace));
-#endif
+    #endif
+
 
     m_nullVideoSink = gst_element_factory_make("fakesink", IX_NULLPTR);
     g_object_set(G_OBJECT(m_nullVideoSink), "sync", true, IX_NULLPTR);
     gst_object_ref(GST_OBJECT(m_nullVideoSink));
 
+    m_videoSink = gst_element_factory_make("autovideosink", IX_NULLPTR);
+    g_object_set(G_OBJECT(m_videoSink), "sync", true, IX_NULLPTR);
+    gst_object_ref(GST_OBJECT(m_videoSink));
+
     m_videoOutputBin = gst_bin_new("video-output-bin");
     // might not get a parent, take ownership to avoid leak
     ix_gst_object_ref_sink(GST_OBJECT(m_videoOutputBin));
-    gst_bin_add_many(GST_BIN(m_videoOutputBin), m_videoIdentity, m_nullVideoSink, IX_NULLPTR);
-    gst_element_link(m_videoIdentity, m_nullVideoSink);
+//    gst_bin_add_many(GST_BIN(m_videoOutputBin), m_videoIdentity, m_nullVideoSink, IX_NULLPTR);
+//    gst_element_link(m_videoIdentity, m_nullVideoSink);
+    gst_bin_add_many(GST_BIN(m_videoOutputBin), m_videoIdentity, m_videoSink, IX_NULLPTR);
+    gst_element_link(m_videoIdentity, m_videoSink);
 
-    m_videoSink = m_nullVideoSink;
+//    m_videoSink = m_nullVideoSink;
 
     // add ghostpads
     GstPad *pad = gst_element_get_static_pad(m_videoIdentity,"sink");
     gst_element_add_pad(GST_ELEMENT(m_videoOutputBin), gst_ghost_pad_new("sink", pad));
     gst_object_unref(GST_OBJECT(pad));
 
-    if (m_playbin != 0) {
+    if (m_playbin != IX_NULLPTR) {
         // Sort out messages
         m_bus = gst_element_get_bus(m_playbin);
         m_busHelper = new iGstreamerBusHelper(m_bus, this);
@@ -204,9 +194,7 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
         g_signal_connect(G_OBJECT(m_playbin), "audio-changed", G_CALLBACK(handleStreamsChange), this);
         g_signal_connect(G_OBJECT(m_playbin), "text-changed", G_CALLBACK(handleStreamsChange), this);
 
-#if QT_CONFIG(gstreamer_app)
         g_signal_connect(G_OBJECT(m_playbin), "deep-notify::source", G_CALLBACK(configureAppSrcElement), this);
-#endif
 
         m_pipeline = m_playbin;
         gst_object_ref(GST_OBJECT(m_pipeline));
@@ -226,9 +214,9 @@ iGstreamerPlayerSession::~iGstreamerPlayerSession()
         if (m_playbin)
             gst_object_unref(GST_OBJECT(m_playbin));
         gst_object_unref(GST_OBJECT(m_pipeline));
-#if !GST_CHECK_VERSION(1,0,0)
+        #if !GST_CHECK_VERSION(1,0,0)
         gst_object_unref(GST_OBJECT(m_colorSpace));
-#endif
+        #endif
         gst_object_unref(GST_OBJECT(m_nullVideoSink));
         gst_object_unref(GST_OBJECT(m_videoOutputBin));
     }
@@ -239,12 +227,9 @@ GstElement *iGstreamerPlayerSession::playbin() const
     return m_playbin;
 }
 
-#if QT_CONFIG(gstreamer_app)
-void iGstreamerPlayerSession::configureAppSrcElement(GObject* object, GObject *orig, GParamSpec *pspec, iGstreamerPlayerSession* self)
-{
-    IX_GCC_UNUSED(object);
-    IX_GCC_UNUSED(pspec);
 
+void iGstreamerPlayerSession::configureAppSrcElement(GObject*, GObject *orig, GParamSpec *, iGstreamerPlayerSession* self)
+{
     if (!self->appsrc())
         return;
 
@@ -252,19 +237,15 @@ void iGstreamerPlayerSession::configureAppSrcElement(GObject* object, GObject *o
     g_object_get(orig, "source", &appsrc, IX_NULLPTR);
 
     if (!self->appsrc()->setup(appsrc))
-        qWarning()<<"Could not setup appsrc element";
+        ilog_warn("Could not setup appsrc element");
 
     g_object_unref(G_OBJECT(appsrc));
 }
-#endif
 
-void iGstreamerPlayerSession::loadFromStream(const QNetworkRequest &request, QIODevice *appSrcStream)
+void iGstreamerPlayerSession::loadFromStream(const iString& url, iIODevice *appSrcStream)
 {
-#if QT_CONFIG(gstreamer_app)
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO;
-#endif
-    m_request = request;
+    ilog_debug(__FUNCTION__, " url: ", url);
+    m_request = url;
     m_duration = 0;
     m_lastPosition = 0;
 
@@ -274,50 +255,47 @@ void iGstreamerPlayerSession::loadFromStream(const QNetworkRequest &request, QIO
 
     if (m_playbin) {
         m_tags.clear();
-        emit tagsChanged();
+        IEMIT tagsChanged();
 
         g_object_set(G_OBJECT(m_playbin), "uri", "appsrc://", IX_NULLPTR);
 
-        if (!m_streamTypes.isEmpty()) {
+        if (!m_streamTypes.empty()) {
             m_streamProperties.clear();
             m_streamTypes.clear();
 
-            emit streamsChanged();
+            IEMIT streamsChanged();
         }
     }
-#endif
 }
 
-void iGstreamerPlayerSession::loadFromUri(const QNetworkRequest &request)
+void iGstreamerPlayerSession::loadFromUri(const iString& url)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO << request.url();
-#endif
-    m_request = request;
+    ilog_debug(__FUNCTION__, " url: ", url);
+    m_request = url;
     m_duration = 0;
     m_lastPosition = 0;
 
-#if QT_CONFIG(gstreamer_app)
     if (m_appSrc) {
         m_appSrc->deleteLater();
         m_appSrc = 0;
     }
-#endif
 
-    if (m_request.url().scheme() == iLatin1String("gst-pipeline")) {
+    if (url.startsWith(iLatin1String("gst-pipeline"))) {
         // Set current surface to video sink before creating a pipeline.
-        auto renderer = qobject_cast<QVideoRendererControl*>(m_videoOutput);
+        // TODO
+#if 0
+        auto renderer = iobject_cast<iVideoRendererControl*>(m_videoOutput);
         if (renderer)
             QVideoSurfaceGstSink::setSurface(renderer->surface());
+#endif
 
-        iString url = m_request.url().toString(QUrl::RemoveScheme);
-        iString pipeline = QUrl::fromPercentEncoding(url.toLatin1().constData());
-        GError *err = nullptr;
-        GstElement *element = gst_parse_launch(pipeline.toLatin1().constData(), &err);
+        iString pipeline = iString(url).remove(iLatin1String("gst-pipeline://"));
+        GError *err = IX_NULLPTR;
+        GstElement *element = gst_parse_launch(pipeline.toUtf8().constData(), &err);
         if (err) {
             auto errstr = iLatin1String(err->message);
-            qWarning() << "Error:" << pipeline << ":" << errstr;
-            emit error(QMediaPlayer::FormatError, errstr);
+            ilog_warn("Error:", pipeline, ":", errstr);
+            IEMIT error(iMediaPlayer::FormatError, errstr);
             g_clear_error(&err);
         }
 
@@ -327,22 +305,22 @@ void iGstreamerPlayerSession::loadFromUri(const QNetworkRequest &request)
 
     if (m_playbin) {
         m_tags.clear();
-        emit tagsChanged();
+        IEMIT tagsChanged();
 
-        g_object_set(G_OBJECT(m_playbin), "uri", m_request.url().toEncoded().constData(), IX_NULLPTR);
+        g_object_set(G_OBJECT(m_playbin), "uri", url.toUtf8().constData(), IX_NULLPTR);
 
-        if (!m_streamTypes.isEmpty()) {
+        if (!m_streamTypes.empty()) {
             m_streamProperties.clear();
             m_streamTypes.clear();
 
-            emit streamsChanged();
+            IEMIT streamsChanged();
         }
     }
 }
 
 void iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
 {
-    GstBus *bus = pipeline ? gst_element_get_bus(pipeline) : nullptr;
+    GstBus *bus = pipeline ? gst_element_get_bus(pipeline) : IX_NULLPTR;
     if (!bus)
         return;
 
@@ -362,20 +340,20 @@ void iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
         gst_object_unref(GST_OBJECT(m_playbin));
     }
 
-    m_playbin = nullptr;
-    m_volumeElement = nullptr;
-    m_videoIdentity = nullptr;
+    m_playbin = IX_NULLPTR;
+    m_volumeElement = IX_NULLPTR;
+    m_videoIdentity = IX_NULLPTR;
 
     if (m_renderer) {
         auto it = gst_bin_iterate_sinks(GST_BIN(pipeline));
-#if GST_CHECK_VERSION(1,0,0)
+        #if GST_CHECK_VERSION(1,0,0)
         GValue data = { 0, 0 };
         while (gst_iterator_next (it, &data) == GST_ITERATOR_OK) {
             auto child = static_cast<GstElement*>(g_value_get_object(&data));
-#else
-       GstElement *child = nullptr;
-       while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
-#endif
+        #else
+        GstElement *child = IX_NULLPTR;
+        while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
+        #endif
             if (iLatin1String(GST_OBJECT_NAME(child)) == iLatin1String("qtvideosink")) {
                 m_renderer->setVideoSink(child);
                 break;
@@ -384,7 +362,7 @@ void iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
         gst_iterator_free(it);
     }
 
-    emit pipelineChanged();
+    IEMIT pipelineChanged();
 }
 
 xint64 iGstreamerPlayerSession::duration() const
@@ -408,10 +386,8 @@ xreal iGstreamerPlayerSession::playbackRate() const
 
 void iGstreamerPlayerSession::setPlaybackRate(xreal rate)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO << rate;
-#endif
-    if (!qFuzzyCompare(m_playbackRate, rate)) {
+    ilog_debug(__FUNCTION__, " : ", rate);
+    if (!iFuzzyCompare(m_playbackRate, rate)) {
         m_playbackRate = rate;
         if (m_pipeline && m_seekable) {
             gst_element_seek(m_pipeline, rate, GST_FORMAT_TIME,
@@ -419,18 +395,18 @@ void iGstreamerPlayerSession::setPlaybackRate(xreal rate)
                              GST_SEEK_TYPE_NONE,0,
                              GST_SEEK_TYPE_NONE,0 );
         }
-        emit playbackRateChanged(m_playbackRate);
+        IEMIT playbackRateChanged(m_playbackRate);
     }
 }
 
-QMediaTimeRange iGstreamerPlayerSession::availablePlaybackRanges() const
+iMediaTimeRange iGstreamerPlayerSession::availablePlaybackRanges() const
 {
-    QMediaTimeRange ranges;
+    iMediaTimeRange ranges;
 
     if (duration() <= 0)
         return ranges;
 
-#if GST_CHECK_VERSION(0, 10, 31)
+    #if GST_CHECK_VERSION(0, 10, 31)
     //GST_FORMAT_TIME would be more appropriate, but unfortunately it's not supported.
     //with GST_FORMAT_PERCENT media is treated as encoded with constant bitrate.
     GstQuery* query = gst_query_new_buffering(GST_FORMAT_PERCENT);
@@ -449,30 +425,46 @@ QMediaTimeRange iGstreamerPlayerSession::availablePlaybackRanges() const
     }
 
     gst_query_unref(query);
-#endif
+    #endif
 
     if (ranges.isEmpty() && !isLiveSource() && isSeekable())
         ranges.addInterval(0, duration());
 
-#ifdef DEBUG_PLAYBIN
-    qDebug() << ranges;
-#endif
-
     return ranges;
 }
 
-int iGstreamerPlayerSession::activeStream(QMediaStreamsControl::StreamType streamType) const
+std::multimap<iString,iVariant> iGstreamerPlayerSession::streamProperties(int streamNumber) const
+{
+    std::list< std::multimap<iString,iVariant> >::const_iterator it = m_streamProperties.cbegin();
+    std::advance(it, streamNumber);
+    if (it == m_streamProperties.cend())
+        return std::multimap<iString,iVariant>();
+
+    return *it;
+}
+
+iMediaStreamsControl::StreamType iGstreamerPlayerSession::streamType(int streamNumber)
+{
+    std::list<iMediaStreamsControl::StreamType>::const_iterator it = m_streamTypes.cbegin();
+    std::advance(it, streamNumber);
+    if (it == m_streamTypes.cend())
+        return iMediaStreamsControl::UnknownStream;
+
+    return *it;
+}
+
+int iGstreamerPlayerSession::activeStream(iMediaStreamsControl::StreamType streamType) const
 {
     int streamNumber = -1;
     if (m_playbin) {
         switch (streamType) {
-        case QMediaStreamsControl::AudioStream:
+        case iMediaStreamsControl::AudioStream:
             g_object_get(G_OBJECT(m_playbin), "current-audio", &streamNumber, IX_NULLPTR);
             break;
-        case QMediaStreamsControl::VideoStream:
+        case iMediaStreamsControl::VideoStream:
             g_object_get(G_OBJECT(m_playbin), "current-video", &streamNumber, IX_NULLPTR);
             break;
-        case QMediaStreamsControl::SubPictureStream:
+        case iMediaStreamsControl::SubPictureStream:
             g_object_get(G_OBJECT(m_playbin), "current-text", &streamNumber, IX_NULLPTR);
             break;
         default:
@@ -480,30 +472,32 @@ int iGstreamerPlayerSession::activeStream(QMediaStreamsControl::StreamType strea
         }
     }
 
-    if (streamNumber >= 0)
-        streamNumber += m_playbin2StreamOffset.value(streamType,0);
+    if (streamNumber >= 0) {
+        std::multimap<iMediaStreamsControl::StreamType, int>::const_iterator it = m_playbin2StreamOffset.find(streamType);
+        streamNumber += (it != m_playbin2StreamOffset.cend()) ? it->second : 0;
+    }
 
     return streamNumber;
 }
 
-void iGstreamerPlayerSession::setActiveStream(QMediaStreamsControl::StreamType streamType, int streamNumber)
+void iGstreamerPlayerSession::setActiveStream(iMediaStreamsControl::StreamType streamType, int streamNumber)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO << streamType << streamNumber;
-#endif
+    ilog_debug(__FUNCTION__, " : ", streamType, ", ", streamNumber);
 
-    if (streamNumber >= 0)
-        streamNumber -= m_playbin2StreamOffset.value(streamType,0);
+    if (streamNumber >= 0) {
+        std::multimap<iMediaStreamsControl::StreamType, int>::const_iterator it = m_playbin2StreamOffset.find(streamType);
+        streamNumber -= (it != m_playbin2StreamOffset.cend()) ? it->second : 0;
+    }
 
     if (m_playbin) {
         switch (streamType) {
-        case QMediaStreamsControl::AudioStream:
+        case iMediaStreamsControl::AudioStream:
             g_object_set(G_OBJECT(m_playbin), "current-audio", streamNumber, IX_NULLPTR);
             break;
-        case QMediaStreamsControl::VideoStream:
+        case iMediaStreamsControl::VideoStream:
             g_object_set(G_OBJECT(m_playbin), "current-video", streamNumber, IX_NULLPTR);
             break;
-        case QMediaStreamsControl::SubPictureStream:
+        case iMediaStreamsControl::SubPictureStream:
             g_object_set(G_OBJECT(m_playbin), "current-text", streamNumber, IX_NULLPTR);
             break;
         default:
@@ -533,27 +527,20 @@ static GstPadProbeReturn block_pad_cb(GstPad *pad, GstPadProbeInfo *info, gpoint
 static void block_pad_cb(GstPad *pad, gboolean blocked, gpointer user_data)
 #endif
 {
-    IX_GCC_UNUSED(pad);
-#if GST_CHECK_VERSION(1,0,0)
-    IX_GCC_UNUSED(info);
-    IX_GCC_UNUSED(user_data);
+    #if GST_CHECK_VERSION(1,0,0)
     return GST_PAD_PROBE_OK;
-#else
-#ifdef DEBUG_PLAYBIN
-    qDebug() << "block_pad_cb, blocked:" << blocked;
-#endif
+    #else
+    ilog_debug(__FUNCTION__, " blocked:", blocked);
     if (blocked && user_data) {
         iGstreamerPlayerSession *session = reinterpret_cast<iGstreamerPlayerSession*>(user_data);
-        QMetaObject::invokeMethod(session, "finishVideoOutputChange", Qt::QueuedConnection);
+        iObject::invokeMethod(session, "finishVideoOutputChange", QueuedConnection);
     }
-#endif
+    #endif
 }
 
 void iGstreamerPlayerSession::updateVideoRenderer()
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << "Video sink has chaged, reload video output";
-#endif
+    ilog_debug(__FUNCTION__, " : Video sink has chaged, reload video output");
 
     if (m_videoOutput)
         setVideoRenderer(m_videoOutput);
@@ -561,15 +548,15 @@ void iGstreamerPlayerSession::updateVideoRenderer()
 
 void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO;
-#endif
     if (m_videoOutput != videoOutput) {
         if (m_videoOutput) {
-            disconnect(m_videoOutput, SIGNAL(sinkChanged()),
-                       this, SLOT(updateVideoRenderer()));
+            // TODO:
+#if 0
+            disconnect(m_videoOutput, &sinkChanged,
+                       this, &iGstreamerPlayerSession::updateVideoRenderer);
             disconnect(m_videoOutput, SIGNAL(readyChanged(bool)),
                    this, SLOT(updateVideoRenderer()));
+#endif
 
             m_busHelper->removeMessageFilter(m_videoOutput);
         }
@@ -577,29 +564,34 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
         m_videoOutput = videoOutput;
 
         if (m_videoOutput) {
+            // TODO:
+#if 0
             connect(m_videoOutput, SIGNAL(sinkChanged()),
                     this, SLOT(updateVideoRenderer()));
             connect(m_videoOutput, SIGNAL(readyChanged(bool)),
                    this, SLOT(updateVideoRenderer()));
+#endif
 
             m_busHelper->installMessageFilter(m_videoOutput);
         }
     }
 
-    iGstreamerVideoRendererInterface* renderer = qobject_cast<iGstreamerVideoRendererInterface*>(videoOutput);
-
+    // TODO:
+#if 0
+    iGstreamerVideoRendererInterface* renderer = iobject_cast<iGstreamerVideoRendererInterface*>(videoOutput);
+#else
+    iGstreamerVideoRendererInterface* renderer = IX_NULLPTR;
+#endif
     m_renderer = renderer;
-    emit rendererChanged();
+    IEMIT rendererChanged();
 
     // No sense to continue if custom pipeline requested.
     if (!m_playbin)
         return;
 
-#ifdef DEBUG_VO_BIN_DUMP
     gst_debug_bin_to_dot_file_with_ts(GST_BIN(m_playbin),
                                   GstDebugGraphDetails(GST_DEBUG_GRAPH_SHOW_ALL /* GST_DEBUG_GRAPH_SHOW_MEDIA_TYPE | GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS | GST_DEBUG_GRAPH_SHOW_STATES*/),
                                   "playbin_set");
-#endif
 
     GstElement *videoSink = 0;
     if (m_renderer && m_renderer->isReady())
@@ -608,43 +600,36 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
     if (!videoSink)
         videoSink = m_nullVideoSink;
 
-#ifdef DEBUG_PLAYBIN
-    qDebug() << "Set video output:" << videoOutput;
-    qDebug() << "Current sink:" << (m_videoSink ? GST_ELEMENT_NAME(m_videoSink) : "") <<  m_videoSink
-             << "pending:" << (m_pendingVideoSink ? GST_ELEMENT_NAME(m_pendingVideoSink) : "") << m_pendingVideoSink
-             << "new sink:" << (videoSink ? GST_ELEMENT_NAME(videoSink) : "") << videoSink;
-#endif
+    ilog_debug(__FUNCTION__, " : Set video output:", videoOutput);
+    ilog_debug(__FUNCTION__, "Current sink:", (m_videoSink ? GST_ELEMENT_NAME(m_videoSink) : ""), m_videoSink
+             , "pending: ", (m_pendingVideoSink ? GST_ELEMENT_NAME(m_pendingVideoSink) : ""), m_pendingVideoSink
+             , "new sink: ", (videoSink ? GST_ELEMENT_NAME(videoSink) : ""), videoSink);
 
     if (m_pendingVideoSink == videoSink ||
         (m_pendingVideoSink == 0 && m_videoSink == videoSink)) {
-#ifdef DEBUG_PLAYBIN
-        qDebug() << "Video sink has not changed, skip video output reconfiguration";
-#endif
+        ilog_debug(__FUNCTION__, " : Video sink has not changed, skip video output reconfiguration");
         return;
     }
 
-#ifdef DEBUG_PLAYBIN
-    qDebug() << "Reconfigure video output";
-#endif
+    ilog_debug(__FUNCTION__, " : Reconfigure video output");
 
-    if (m_state == QMediaPlayer::StoppedState) {
-#ifdef DEBUG_PLAYBIN
-        qDebug() << "The pipeline has not started yet, pending state:" << m_pendingState;
-#endif
+    if (m_state == iMediaPlayer::StoppedState) {
+        ilog_debug(__FUNCTION__, " : The pipeline has not started yet, pending state: ", m_pendingState);
+
         //the pipeline has not started yet
         flushVideoProbes();
         m_pendingVideoSink = 0;
         gst_element_set_state(m_videoSink, GST_STATE_NULL);
         gst_element_set_state(m_playbin, GST_STATE_NULL);
 
-#if !GST_CHECK_VERSION(1,0,0)
+        #if !GST_CHECK_VERSION(1,0,0)
         if (m_usingColorspaceElement) {
             gst_element_unlink(m_colorSpace, m_videoSink);
             gst_bin_remove(GST_BIN(m_videoOutputBin), m_colorSpace);
         } else {
             gst_element_unlink(m_videoIdentity, m_videoSink);
         }
-#endif
+        #endif
 
         removeVideoBufferProbe();
 
@@ -655,20 +640,20 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
         gst_bin_add(GST_BIN(m_videoOutputBin), m_videoSink);
 
         bool linked = gst_element_link(m_videoIdentity, m_videoSink);
-#if !GST_CHECK_VERSION(1,0,0)
+        #if !GST_CHECK_VERSION(1,0,0)
         m_usingColorspaceElement = false;
         if (!linked) {
             m_usingColorspaceElement = true;
-#ifdef DEBUG_PLAYBIN
-            qDebug() << "Failed to connect video output, inserting the colorspace element.";
-#endif
+        #ifdef DEBUG_PLAYBIN
+            ilog_debug(__FUNCTION__, " Failed to connect video output, inserting the colorspace element.";
+        #endif
             gst_bin_add(GST_BIN(m_videoOutputBin), m_colorSpace);
             linked = gst_element_link_many(m_videoIdentity, m_colorSpace, m_videoSink, IX_NULLPTR);
         }
-#endif
+        #endif
 
         if (!linked)
-            qWarning() << "Linking video output element failed";
+            ilog_warn(__FUNCTION__, " : Linking video output element failed");
 
         if (g_object_class_find_property(G_OBJECT_GET_CLASS(m_videoSink), "show-preroll-frame") != 0) {
             gboolean value = m_displayPrerolledFrame;
@@ -678,10 +663,10 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
         addVideoBufferProbe();
 
         switch (m_pendingState) {
-        case QMediaPlayer::PausedState:
+        case iMediaPlayer::PausedState:
             gst_element_set_state(m_playbin, GST_STATE_PAUSED);
             break;
-        case QMediaPlayer::PlayingState:
+        case iMediaPlayer::PlayingState:
             gst_element_set_state(m_playbin, GST_STATE_PLAYING);
             break;
         default:
@@ -692,35 +677,29 @@ void iGstreamerPlayerSession::setVideoRenderer(iObject *videoOutput)
 
     } else {
         if (m_pendingVideoSink) {
-#ifdef DEBUG_PLAYBIN
-            qDebug() << "already waiting for pad to be blocked, just change the pending sink";
-#endif
+            ilog_debug(__FUNCTION__, " : already waiting for pad to be blocked, just change the pending sink");
             m_pendingVideoSink = videoSink;
             return;
         }
 
         m_pendingVideoSink = videoSink;
 
-#ifdef DEBUG_PLAYBIN
-        qDebug() << "Blocking the video output pad...";
-#endif
+        ilog_debug(__FUNCTION__, " : Blocking the video output pad...");
 
         //block pads, async to avoid locking in paused state
         GstPad *srcPad = gst_element_get_static_pad(m_videoIdentity, "src");
-#if GST_CHECK_VERSION(1,0,0)
+        #if GST_CHECK_VERSION(1,0,0)
         this->pad_probe_id = gst_pad_add_probe(srcPad, (GstPadProbeType)(GST_PAD_PROBE_TYPE_BUFFER | GST_PAD_PROBE_TYPE_BLOCKING), block_pad_cb, this, IX_NULLPTR);
-#else
+        #else
         gst_pad_set_blocked_async(srcPad, true, &block_pad_cb, this);
-#endif
+        #endif
         gst_object_unref(GST_OBJECT(srcPad));
 
         //Unpause the sink to avoid waiting until the buffer is processed
         //while the sink is paused. The pad will be blocked as soon as the current
         //buffer is processed.
-        if (m_state == QMediaPlayer::PausedState) {
-#ifdef DEBUG_PLAYBIN
-            qDebug() << "Starting video output to avoid blocking in paused state...";
-#endif
+        if (m_state == iMediaPlayer::PausedState) {
+            ilog_debug(__FUNCTION__, " : Starting video output to avoid blocking in paused state...");
             gst_element_set_state(m_videoSink, GST_STATE_PLAYING);
         }
     }
@@ -731,15 +710,13 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
     if (!m_playbin || !m_pendingVideoSink)
         return;
 
-#ifdef DEBUG_PLAYBIN
-    qDebug() << "finishVideoOutputChange" << m_pendingVideoSink;
-#endif
+    ilog_debug(__FUNCTION__, " : ", m_pendingVideoSink);
 
     GstPad *srcPad = gst_element_get_static_pad(m_videoIdentity, "src");
 
     if (!gst_pad_is_blocked(srcPad)) {
         //pad is not blocked, it's possible to swap outputs only in the null state
-        qWarning() << "Pad is not blocked yet, could not switch video sink";
+        ilog_warn(__FUNCTION__, " : Pad is not blocked yet, could not switch video sink");
         GstState identityElementState = GST_STATE_NULL;
         gst_element_get_state(m_videoIdentity, &identityElementState, IX_NULLPTR, GST_CLOCK_TIME_NONE);
         if (identityElementState != GST_STATE_NULL) {
@@ -749,22 +726,22 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
     }
 
     if (m_pendingVideoSink == m_videoSink) {
-        qDebug() << "Abort, no change";
+        ilog_debug(__FUNCTION__, " : Abort, no change");
         //video output was change back to the current one,
         //no need to torment the pipeline, just unblock the pad
         if (gst_pad_is_blocked(srcPad))
-#if GST_CHECK_VERSION(1,0,0)
+            #if GST_CHECK_VERSION(1,0,0)
             gst_pad_remove_probe(srcPad, this->pad_probe_id);
-#else
+            #else
             gst_pad_set_blocked_async(srcPad, false, &block_pad_cb, 0);
-#endif
+            #endif
 
         m_pendingVideoSink = 0;
         gst_object_unref(GST_OBJECT(srcPad));
         return;
     }
 
-#if !GST_CHECK_VERSION(1,0,0)
+    #if !GST_CHECK_VERSION(1,0,0)
     if (m_usingColorspaceElement) {
         gst_element_set_state(m_colorSpace, GST_STATE_NULL);
         gst_element_set_state(m_videoSink, GST_STATE_NULL);
@@ -772,9 +749,9 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
         gst_element_unlink(m_colorSpace, m_videoSink);
         gst_bin_remove(GST_BIN(m_videoOutputBin), m_colorSpace);
     } else {
-#else
+    #else
     {
-#endif
+    #endif
         gst_element_set_state(m_videoSink, GST_STATE_NULL);
         gst_element_unlink(m_videoIdentity, m_videoSink);
     }
@@ -791,53 +768,51 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
     addVideoBufferProbe();
 
     bool linked = gst_element_link(m_videoIdentity, m_videoSink);
-#if !GST_CHECK_VERSION(1,0,0)
+    #if !GST_CHECK_VERSION(1,0,0)
     m_usingColorspaceElement = false;
     if (!linked) {
         m_usingColorspaceElement = true;
-#ifdef DEBUG_PLAYBIN
-        qDebug() << "Failed to connect video output, inserting the colorspace element.";
-#endif
+    #ifdef DEBUG_PLAYBIN
+        ilog_debug(__FUNCTION__, " Failed to connect video output, inserting the colorspace element.";
+    #endif
         gst_bin_add(GST_BIN(m_videoOutputBin), m_colorSpace);
         linked = gst_element_link_many(m_videoIdentity, m_colorSpace, m_videoSink, IX_NULLPTR);
     }
-#endif
+    #endif
 
     if (!linked)
-        qWarning() << "Linking video output element failed";
+        ilog_warn(__FUNCTION__, " : Linking video output element failed");
 
-#ifdef DEBUG_PLAYBIN
-    qDebug() << "notify the video connector it has to emit a new segment message...";
-#endif
+    ilog_debug(__FUNCTION__, " : notify the video connector it has to IEMIT a new segment message...");
 
-#if !GST_CHECK_VERSION(1,0,0)
+    #if !GST_CHECK_VERSION(1,0,0)
     //it's necessary to send a new segment event just before
     //the first buffer pushed to the new sink
     g_signal_emit_by_name(m_videoIdentity,
                           "resend-new-segment",
-                          true //emit connection-failed signal
+                          true //IEMIT connection-failed signal
                                //to have a chance to insert colorspace element
                           );
-#endif
+    #endif
 
     GstState state = GST_STATE_VOID_PENDING;
 
     switch (m_pendingState) {
-    case QMediaPlayer::StoppedState:
+    case iMediaPlayer::StoppedState:
         state = GST_STATE_NULL;
         break;
-    case QMediaPlayer::PausedState:
+    case iMediaPlayer::PausedState:
         state = GST_STATE_PAUSED;
         break;
-    case QMediaPlayer::PlayingState:
+    case iMediaPlayer::PlayingState:
         state = GST_STATE_PLAYING;
         break;
     }
 
-#if !GST_CHECK_VERSION(1,0,0)
+    #if !GST_CHECK_VERSION(1,0,0)
     if (m_usingColorspaceElement)
         gst_element_set_state(m_colorSpace, state);
-#endif
+    #endif
 
     gst_element_set_state(m_videoSink, state);
 
@@ -853,44 +828,36 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
 
     //don't have to wait here, it will unblock eventually
     if (gst_pad_is_blocked(srcPad))
-#if GST_CHECK_VERSION(1,0,0)
+            #if GST_CHECK_VERSION(1,0,0)
             gst_pad_remove_probe(srcPad, this->pad_probe_id);
-#else
+            #else
             gst_pad_set_blocked_async(srcPad, false, &block_pad_cb, 0);
-#endif
+            #endif
 
     gst_object_unref(GST_OBJECT(srcPad));
 
-#ifdef DEBUG_VO_BIN_DUMP
     gst_debug_bin_to_dot_file_with_ts(GST_BIN(m_playbin),
                                   GstDebugGraphDetails(GST_DEBUG_GRAPH_SHOW_ALL /* | GST_DEBUG_GRAPH_SHOW_MEDIA_TYPE | GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS | GST_DEBUG_GRAPH_SHOW_STATES */),
                                   "playbin_finish");
-#endif
 }
 
 #if !GST_CHECK_VERSION(1,0,0)
 
 void iGstreamerPlayerSession::insertColorSpaceElement(GstElement *element, gpointer data)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO;
-#endif
-    IX_GCC_UNUSED(element);
     iGstreamerPlayerSession* session = reinterpret_cast<iGstreamerPlayerSession*>(data);
 
     if (session->m_usingColorspaceElement)
         return;
     session->m_usingColorspaceElement = true;
 
-#ifdef DEBUG_PLAYBIN
-    qDebug() << "Failed to connect video output, inserting the colorspace elemnt.";
-    qDebug() << "notify the video connector it has to emit a new segment message...";
-#endif
+    ilog_debug(__FUNCTION__, " : Failed to connect video output, inserting the colorspace elemnt.");
+    ilog_debug(__FUNCTION__, " : notify the video connector it has to IEMIT a new segment message...");
     //it's necessary to send a new segment event just before
     //the first buffer pushed to the new sink
     g_signal_emit_by_name(session->m_videoIdentity,
                           "resend-new-segment",
-                          false // don't emit connection-failed signal
+                          false // don't IEMIT connection-failed signal
                           );
 
     gst_element_unlink(session->m_videoIdentity, session->m_videoSink);
@@ -900,13 +867,13 @@ void iGstreamerPlayerSession::insertColorSpaceElement(GstElement *element, gpoin
     GstState state = GST_STATE_VOID_PENDING;
 
     switch (session->m_pendingState) {
-    case QMediaPlayer::StoppedState:
+    case iMediaPlayer::StoppedState:
         state = GST_STATE_NULL;
         break;
-    case QMediaPlayer::PausedState:
+    case iMediaPlayer::PausedState:
         state = GST_STATE_PAUSED;
         break;
-    case QMediaPlayer::PlayingState:
+    case iMediaPlayer::PlayingState:
         state = GST_STATE_PLAYING;
         break;
     }
@@ -928,17 +895,15 @@ bool iGstreamerPlayerSession::isSeekable() const
 
 bool iGstreamerPlayerSession::play()
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO;
-#endif
+    ilog_verbose(__FUNCTION__);
 
     m_everPlayed = false;
     if (m_pipeline) {
-        m_pendingState = QMediaPlayer::PlayingState;
+        m_pendingState = iMediaPlayer::PlayingState;
         if (gst_element_set_state(m_pipeline, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
-            qWarning() << "GStreamer; Unable to play -" << m_request.url().toString();
-            m_pendingState = m_state = QMediaPlayer::StoppedState;
-            emit stateChanged(m_state);
+            ilog_warn(__FUNCTION__, " : GStreamer; Unable to play -", m_request);
+            m_pendingState = m_state = iMediaPlayer::StoppedState;
+            IEMIT stateChanged(m_state);
         } else {
             resumeVideoProbes();
             return true;
@@ -950,18 +915,17 @@ bool iGstreamerPlayerSession::play()
 
 bool iGstreamerPlayerSession::pause()
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO;
-#endif
+    ilog_verbose(__FUNCTION__);
+
     if (m_pipeline) {
-        m_pendingState = QMediaPlayer::PausedState;
+        m_pendingState = iMediaPlayer::PausedState;
         if (m_pendingVideoSink != 0)
             return true;
 
         if (gst_element_set_state(m_pipeline, GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE) {
-            qWarning() << "GStreamer; Unable to pause -" << m_request.url().toString();
-            m_pendingState = m_state = QMediaPlayer::StoppedState;
-            emit stateChanged(m_state);
+            ilog_warn(__FUNCTION__, " : GStreamer; Unable to pause -", m_request);
+            m_pendingState = m_state = iMediaPlayer::StoppedState;
+            IEMIT stateChanged(m_state);
         } else {
             resumeVideoProbes();
             return true;
@@ -973,9 +937,8 @@ bool iGstreamerPlayerSession::pause()
 
 void iGstreamerPlayerSession::stop()
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO;
-#endif
+    ilog_verbose(__FUNCTION__);
+
     m_everPlayed = false;
     if (m_pipeline) {
 
@@ -986,26 +949,25 @@ void iGstreamerPlayerSession::stop()
         gst_element_set_state(m_pipeline, GST_STATE_NULL);
 
         m_lastPosition = 0;
-        QMediaPlayer::State oldState = m_state;
-        m_pendingState = m_state = QMediaPlayer::StoppedState;
+        iMediaPlayer::State oldState = m_state;
+        m_pendingState = m_state = iMediaPlayer::StoppedState;
 
         finishVideoOutputChange();
 
-        //we have to do it here, since gstreamer will not emit bus messages any more
+        //we have to do it here, since gstreamer will not IEMIT bus messages any more
         setSeekable(false);
         if (oldState != m_state)
-            emit stateChanged(m_state);
+            IEMIT stateChanged(m_state);
     }
 }
 
 bool iGstreamerPlayerSession::seek(xint64 ms)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO << ms;
-#endif
+    ilog_verbose(__FUNCTION__, " : ", ms);
+
     //seek locks when the video output sink is changing and pad is blocked
-    if (m_pipeline && !m_pendingVideoSink && m_state != QMediaPlayer::StoppedState && m_seekable) {
-        ms = qMax(ms,xint64(0));
+    if (m_pipeline && !m_pendingVideoSink && m_state != iMediaPlayer::StoppedState && m_seekable) {
+        ms = std::max(ms, xint64(0));
         gint64  position = ms * 1000000;
         bool isSeeking = gst_element_seek(m_pipeline,
                                           m_playbackRate,
@@ -1026,9 +988,7 @@ bool iGstreamerPlayerSession::seek(xint64 ms)
 
 void iGstreamerPlayerSession::setVolume(int volume)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO << volume;
-#endif
+    ilog_verbose(__FUNCTION__, " : ", volume);
 
     if (m_volume != volume) {
         m_volume = volume;
@@ -1036,35 +996,44 @@ void iGstreamerPlayerSession::setVolume(int volume)
         if (m_volumeElement)
             g_object_set(G_OBJECT(m_volumeElement), "volume", m_volume / 100.0, IX_NULLPTR);
 
-        emit volumeChanged(m_volume);
+        IEMIT volumeChanged(m_volume);
     }
 }
 
 void iGstreamerPlayerSession::setMuted(bool muted)
 {
-#ifdef DEBUG_PLAYBIN
-        qDebug() << Q_FUNC_INFO << muted;
-#endif
+    ilog_verbose(__FUNCTION__, " : ", muted);
+
     if (m_muted != muted) {
         m_muted = muted;
 
         if (m_volumeElement)
             g_object_set(G_OBJECT(m_volumeElement), "mute", m_muted ? TRUE : FALSE, IX_NULLPTR);
 
-        emit mutedStateChanged(m_muted);
+        IEMIT mutedStateChanged(m_muted);
     }
 }
 
 
 void iGstreamerPlayerSession::setSeekable(bool seekable)
 {
-#ifdef DEBUG_PLAYBIN
-        qDebug() << Q_FUNC_INFO << seekable;
-#endif
+    ilog_verbose(__FUNCTION__, " : ", seekable);
+
     if (seekable != m_seekable) {
         m_seekable = seekable;
-        emit seekableChanged(m_seekable);
+        IEMIT seekableChanged(m_seekable);
     }
+}
+
+bool iGstreamerPlayerSession::event(iEvent *e)
+{
+    if (e->type() != iGstreamerMsgEvent::eventType()) {
+        return iObject::event(e);
+    }
+
+    iGstreamerMsgEvent* event = static_cast<iGstreamerMsgEvent*>(e);
+    processBusMessage(event->m_message);
+    return true;
 }
 
 bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message)
@@ -1077,31 +1046,30 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
             gst_message_parse_tag(gm, &tag_list);
 
             std::multimap<iByteArray, iVariant> newTags = iGstUtils::gstTagListToMap(tag_list);
-            std::multimap<iByteArray, iVariant>::const_iterator it = newTags.constBegin();
-            for ( ; it != newTags.constEnd(); ++it)
-                m_tags.insert(it.key(), it.value()); // overwrite existing tags
+            std::multimap<iByteArray, iVariant>::const_iterator it = newTags.cbegin();
+            for ( ; it != newTags.cend(); ++it)
+                m_tags.insert(std::pair<iByteArray, iVariant>(it->first, it->second)); // overwrite existing tags
 
             gst_tag_list_free(tag_list);
 
-            emit tagsChanged();
+            IEMIT tagsChanged();
         } else if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_DURATION) {
             updateDuration();
         }
 
-#ifdef DEBUG_PLAYBIN
+
         if (m_sourceType == MMSSrc && istrcmp(GST_OBJECT_NAME(GST_MESSAGE_SRC(gm)), "source") == 0) {
-            qDebug() << "Message from MMSSrc: " << GST_MESSAGE_TYPE(gm);
+            ilog_verbose(__FUNCTION__, " Message from MMSSrc: ", GST_MESSAGE_TYPE(gm));
         } else if (m_sourceType == RTSPSrc && istrcmp(GST_OBJECT_NAME(GST_MESSAGE_SRC(gm)), "source") == 0) {
-            qDebug() << "Message from RTSPSrc: " << GST_MESSAGE_TYPE(gm);
+            ilog_verbose(__FUNCTION__, " Message from RTSPSrc: ", GST_MESSAGE_TYPE(gm));
         } else {
-            qDebug() << "Message from " << GST_OBJECT_NAME(GST_MESSAGE_SRC(gm)) << ":" << GST_MESSAGE_TYPE(gm);
+            ilog_verbose(__FUNCTION__, " Message from ", GST_OBJECT_NAME(GST_MESSAGE_SRC(gm)), ":", GST_MESSAGE_TYPE(gm));
         }
-#endif
 
         if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_BUFFERING) {
             int progress = 0;
             gst_message_parse_buffering(gm, &progress);
-            emit bufferingProgressChanged(progress);
+            IEMIT bufferingProgressChanged(progress);
         }
 
         bool handlePlaybin2 = false;
@@ -1115,33 +1083,25 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
 
                     gst_message_parse_state_changed(gm, &oldState, &newState, &pending);
 
-#ifdef DEBUG_PLAYBIN
-                    std::list<iString> states;
-                    states << "GST_STATE_VOID_PENDING" <<  "GST_STATE_NULL" << "GST_STATE_READY" << "GST_STATE_PAUSED" << "GST_STATE_PLAYING";
-
-                    qDebug() << iString("state changed: old: %1  new: %2  pending: %3") \
-                            .arg(states[oldState]) \
-                            .arg(states[newState]) \
-                            .arg(states[pending]);
-#endif
+                    ilog_verbose(__FUNCTION__, " state changed: old: ", oldState, " new: ", newState, " pending: ", pending);
 
                     switch (newState) {
                     case GST_STATE_VOID_PENDING:
                     case GST_STATE_NULL:
                         setSeekable(false);
                         finishVideoOutputChange();
-                        if (m_state != QMediaPlayer::StoppedState)
-                            emit stateChanged(m_state = QMediaPlayer::StoppedState);
+                        if (m_state != iMediaPlayer::StoppedState)
+                            IEMIT stateChanged(m_state = iMediaPlayer::StoppedState);
                         break;
                     case GST_STATE_READY:
                         setSeekable(false);
-                        if (m_state != QMediaPlayer::StoppedState)
-                            emit stateChanged(m_state = QMediaPlayer::StoppedState);
+                        if (m_state != iMediaPlayer::StoppedState)
+                            IEMIT stateChanged(m_state = iMediaPlayer::StoppedState);
                         break;
                     case GST_STATE_PAUSED:
                     {
-                        QMediaPlayer::State prevState = m_state;
-                        m_state = QMediaPlayer::PausedState;
+                        iMediaPlayer::State prevState = m_state;
+                        m_state = iMediaPlayer::PausedState;
 
                         //check for seekable
                         if (oldState == GST_STATE_READY) {
@@ -1160,7 +1120,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                             // This should also update the seekable flag.
                             updateDuration();
 
-                            if (!qFuzzyCompare(m_playbackRate, xreal(1.0))) {
+                            if (!iFuzzyCompare(m_playbackRate, xreal(1.0))) {
                                 xreal rate = m_playbackRate;
                                 m_playbackRate = 1.0;
                                 setPlaybackRate(rate);
@@ -1168,14 +1128,14 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                         }
 
                         if (m_state != prevState)
-                            emit stateChanged(m_state);
+                            IEMIT stateChanged(m_state);
 
                         break;
                     }
                     case GST_STATE_PLAYING:
                         m_everPlayed = true;
-                        if (m_state != QMediaPlayer::PlayingState) {
-                            emit stateChanged(m_state = QMediaPlayer::PlayingState);
+                        if (m_state != iMediaPlayer::PlayingState) {
+                            IEMIT stateChanged(m_state = iMediaPlayer::PlayingState);
 
                             // For rtsp streams duration information might not be available
                             // until playback starts.
@@ -1191,7 +1151,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                 break;
 
             case GST_MESSAGE_EOS:
-                emit playbackFinished();
+                IEMIT playbackFinished();
                 break;
 
             case GST_MESSAGE_TAG:
@@ -1203,10 +1163,10 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     gchar *debug;
                     gst_message_parse_error(gm, &err, &debug);
                     if (err->domain == GST_STREAM_ERROR && err->code == GST_STREAM_ERROR_CODEC_NOT_FOUND)
-                        processInvalidMedia(QMediaPlayer::FormatError, tr("Cannot play stream of type: <unknown>"));
+                        processInvalidMedia(iMediaPlayer::FormatError, "Cannot play stream of type: <unknown>");
                     else
-                        processInvalidMedia(QMediaPlayer::ResourceError, iString::fromUtf8(err->message));
-                    qWarning() << "Error:" << iString::fromUtf8(err->message);
+                        processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(err->message));
+                    ilog_warn(__FUNCTION__, " Error:", iString::fromUtf8(err->message));
                     g_error_free(err);
                     g_free(debug);
                 }
@@ -1216,22 +1176,21 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     GError *err;
                     gchar *debug;
                     gst_message_parse_warning (gm, &err, &debug);
-                    qWarning() << "Warning:" << iString::fromUtf8(err->message);
+                    ilog_warn(__FUNCTION__, " Warning:", iString::fromUtf8(err->message));
                     g_error_free (err);
                     g_free (debug);
                 }
                 break;
             case GST_MESSAGE_INFO:
-#ifdef DEBUG_PLAYBIN
                 {
                     GError *err;
                     gchar *debug;
                     gst_message_parse_info (gm, &err, &debug);
-                    qDebug() << "Info:" << iString::fromUtf8(err->message);
+                    ilog_debug(__FUNCTION__, " Info:", iString::fromUtf8(err->message));
                     g_error_free (err);
                     g_free (debug);
                 }
-#endif
+
                 break;
             case GST_MESSAGE_BUFFERING:
             case GST_MESSAGE_STATE_DIRTY:
@@ -1249,13 +1208,13 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     xint64 position = g_value_get_int64(gst_structure_get_value(structure, "position"));
                     position /= 1000000;
                     m_lastPosition = position;
-                    emit positionChanged(position);
+                    IEMIT positionChanged(position);
                 }
                 break;
             case GST_MESSAGE_SEGMENT_DONE:
                 break;
             case GST_MESSAGE_LATENCY:
-#if GST_CHECK_VERSION(0,10,13)
+            #if GST_CHECK_VERSION(0,10,13)
             case GST_MESSAGE_ASYNC_START:
                 break;
             case GST_MESSAGE_ASYNC_DONE:
@@ -1264,14 +1223,14 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                 if (ix_gst_element_query_position(m_pipeline, GST_FORMAT_TIME, &position)) {
                     position /= 1000000;
                     m_lastPosition = position;
-                    emit positionChanged(position);
+                    IEMIT positionChanged(position);
                 }
                 break;
             }
-#if GST_CHECK_VERSION(0,10,23)
+            #if GST_CHECK_VERSION(0,10,23)
             case GST_MESSAGE_REQUEST_STATE:
-#endif
-#endif
+            #endif
+            #endif
             case GST_MESSAGE_ANY:
                 break;
             default:
@@ -1285,7 +1244,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
             if (istrcmp(GST_OBJECT_NAME(GST_MESSAGE_SRC(gm)), "source") == 0) {
                 bool everPlayed = m_everPlayed;
                 // Try and differentiate network related resource errors from the others
-                if (!m_request.url().isRelative() && m_request.url().scheme().compare(iLatin1String("file"), Qt::CaseInsensitive) != 0 ) {
+                if (m_request.startsWith(iLatin1String("file"), CaseInsensitive) != 0 ) {
                     if (everPlayed ||
                         (err->domain == GST_RESOURCE_ERROR && (
                          err->code == GST_RESOURCE_ERROR_BUSY ||
@@ -1293,21 +1252,21 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                          err->code == GST_RESOURCE_ERROR_READ ||
                          err->code == GST_RESOURCE_ERROR_SEEK ||
                          err->code == GST_RESOURCE_ERROR_SYNC))) {
-                        processInvalidMedia(QMediaPlayer::NetworkError, iString::fromUtf8(err->message));
+                        processInvalidMedia(iMediaPlayer::NetworkError, iString::fromUtf8(err->message));
                     } else {
-                        processInvalidMedia(QMediaPlayer::ResourceError, iString::fromUtf8(err->message));
+                        processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(err->message));
                     }
                 }
                 else
-                    processInvalidMedia(QMediaPlayer::ResourceError, iString::fromUtf8(err->message));
+                    processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(err->message));
             } else if (err->domain == GST_STREAM_ERROR
                        && (err->code == GST_STREAM_ERROR_DECRYPT || err->code == GST_STREAM_ERROR_DECRYPT_NOKEY)) {
-                processInvalidMedia(QMediaPlayer::AccessDeniedError, iString::fromUtf8(err->message));
+                processInvalidMedia(iMediaPlayer::AccessDeniedError, iString::fromUtf8(err->message));
             } else {
                 handlePlaybin2 = true;
             }
             if (!handlePlaybin2)
-                qWarning() << "Error:" << iString::fromUtf8(err->message);
+                ilog_warn(__FUNCTION__, " Error:", iString::fromUtf8(err->message));
             g_error_free(err);
             g_free(debug);
         } else if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_ELEMENT
@@ -1316,8 +1275,8 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                    && gst_structure_has_name(gst_message_get_structure(gm), "GstUDPSrcTimeout")) {
             //since udpsrc will not generate an error for the timeout event,
             //we need to process its element message here and treat it as an error.
-            processInvalidMedia(m_everPlayed ? QMediaPlayer::NetworkError : QMediaPlayer::ResourceError,
-                                tr("UDP source timeout"));
+            processInvalidMedia(m_everPlayed ? iMediaPlayer::NetworkError : iMediaPlayer::ResourceError,
+                                ("UDP source timeout"));
         } else {
             handlePlaybin2 = true;
         }
@@ -1328,10 +1287,10 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                 gchar *debug;
                 gst_message_parse_warning(gm, &err, &debug);
                 if (err->domain == GST_STREAM_ERROR && err->code == GST_STREAM_ERROR_CODEC_NOT_FOUND)
-                    emit error(int(QMediaPlayer::FormatError), tr("Cannot play stream of type: <unknown>"));
+                    IEMIT error(int(iMediaPlayer::FormatError), "Cannot play stream of type: <unknown>");
                 // GStreamer shows warning for HTTP playlists
                 if (err && err->message)
-                    qWarning() << "Warning:" << iString::fromUtf8(err->message);
+                    ilog_warn(__FUNCTION__, " Warning:", iString::fromUtf8(err->message));
                 g_error_free(err);
                 g_free(debug);
             } else if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_ERROR) {
@@ -1340,15 +1299,15 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                 gst_message_parse_error(gm, &err, &debug);
 
                 // Nearly all errors map to ResourceError
-                QMediaPlayer::Error qerror = QMediaPlayer::ResourceError;
+                iMediaPlayer::Error qerror = iMediaPlayer::ResourceError;
                 if (err->domain == GST_STREAM_ERROR
                            && (err->code == GST_STREAM_ERROR_DECRYPT
                                || err->code == GST_STREAM_ERROR_DECRYPT_NOKEY)) {
-                    qerror = QMediaPlayer::AccessDeniedError;
+                    qerror = iMediaPlayer::AccessDeniedError;
                 }
                 processInvalidMedia(qerror, iString::fromUtf8(err->message));
                 if (err && err->message)
-                    qWarning() << "Error:" << iString::fromUtf8(err->message);
+                    ilog_warn(__FUNCTION__, " Error:", iString::fromUtf8(err->message));
 
                 g_error_free(err);
                 g_free(debug);
@@ -1365,8 +1324,8 @@ void iGstreamerPlayerSession::getStreamsInfo()
         return;
 
     std::list< std::multimap<iString,iVariant> > oldProperties = m_streamProperties;
-    std::list<QMediaStreamsControl::StreamType> oldTypes = m_streamTypes;
-    std::multimap<QMediaStreamsControl::StreamType, int> oldOffset = m_playbin2StreamOffset;
+    std::list<iMediaStreamsControl::StreamType> oldTypes = m_streamTypes;
+    std::multimap<iMediaStreamsControl::StreamType, int> oldOffset = m_playbin2StreamOffset;
 
     //check if video is available:
     bool haveAudio = false;
@@ -1386,54 +1345,63 @@ void iGstreamerPlayerSession::getStreamsInfo()
     haveAudio = audioStreamsCount > 0;
     haveVideo = videoStreamsCount > 0;
 
-    m_playbin2StreamOffset[QMediaStreamsControl::AudioStream] = 0;
-    m_playbin2StreamOffset[QMediaStreamsControl::VideoStream] = audioStreamsCount;
-    m_playbin2StreamOffset[QMediaStreamsControl::SubPictureStream] = audioStreamsCount+videoStreamsCount;
+    m_playbin2StreamOffset.insert(std::pair<iMediaStreamsControl::StreamType, int>(iMediaStreamsControl::AudioStream, 0));
+    m_playbin2StreamOffset.insert(std::pair<iMediaStreamsControl::StreamType, int>(iMediaStreamsControl::VideoStream, audioStreamsCount));
+    m_playbin2StreamOffset.insert(std::pair<iMediaStreamsControl::StreamType, int>(iMediaStreamsControl::AudioStream, audioStreamsCount+videoStreamsCount));
 
     for (int i=0; i<audioStreamsCount; i++)
-        m_streamTypes.append(QMediaStreamsControl::AudioStream);
+        m_streamTypes.push_back(iMediaStreamsControl::AudioStream);
 
     for (int i=0; i<videoStreamsCount; i++)
-        m_streamTypes.append(QMediaStreamsControl::VideoStream);
+        m_streamTypes.push_back(iMediaStreamsControl::VideoStream);
 
     for (int i=0; i<textStreamsCount; i++)
-        m_streamTypes.append(QMediaStreamsControl::SubPictureStream);
+        m_streamTypes.push_back(iMediaStreamsControl::SubPictureStream);
 
-    for (int i=0; i<m_streamTypes.count(); i++) {
-        QMediaStreamsControl::StreamType streamType = m_streamTypes[i];
+    //for (int i=0; i<m_streamTypes.size(); i++) {
+    int idx = 0;
+    std::list<iMediaStreamsControl::StreamType>::const_iterator it = m_streamTypes.cbegin();
+    for (idx = 0, it = m_streamTypes.cbegin(); it != m_streamTypes.cend(); ++it, ++idx) {
+        iMediaStreamsControl::StreamType streamType = *it;
         std::multimap<iString, iVariant> streamProperties;
 
-        int streamIndex = i - m_playbin2StreamOffset[streamType];
+        int streamIndex = idx;
+        std::multimap<iMediaStreamsControl::StreamType, int>::const_iterator offsetIt = m_playbin2StreamOffset.find(streamType);
+        if (offsetIt != m_playbin2StreamOffset.cend())
+            streamIndex = idx - offsetIt->second;
 
-        GstTagList *tags = 0;
+        GstTagList *tags = IX_NULLPTR;
         switch (streamType) {
-        case QMediaStreamsControl::AudioStream:
+        case iMediaStreamsControl::AudioStream:
             g_signal_emit_by_name(G_OBJECT(m_playbin), "get-audio-tags", streamIndex, &tags);
             break;
-        case QMediaStreamsControl::VideoStream:
+        case iMediaStreamsControl::VideoStream:
             g_signal_emit_by_name(G_OBJECT(m_playbin), "get-video-tags", streamIndex, &tags);
             break;
-        case QMediaStreamsControl::SubPictureStream:
+        case iMediaStreamsControl::SubPictureStream:
             g_signal_emit_by_name(G_OBJECT(m_playbin), "get-text-tags", streamIndex, &tags);
             break;
         default:
             break;
         }
-#if GST_CHECK_VERSION(1,0,0)
+        #if GST_CHECK_VERSION(1,0,0)
         if (tags && GST_IS_TAG_LIST(tags)) {
-#else
+        #else
         if (tags && gst_is_tag_list(tags)) {
-#endif
-            gchar *languageCode = 0;
+        #endif
+            gchar *languageCode = IX_NULLPTR;
+            // TODO
+#if 0
             if (gst_tag_list_get_string(tags, GST_TAG_LANGUAGE_CODE, &languageCode))
-                streamProperties[QMediaMetaData::Language] = iString::fromUtf8(languageCode);
+                streamProperties["Language"] = iString::fromUtf8(languageCode);
+#endif
 
-            //qDebug() << "language for setream" << i << iString::fromUtf8(languageCode);
+            //ilog_debug(__FUNCTION__, " language for setream", i << iString::fromUtf8(languageCode);
             g_free (languageCode);
             gst_tag_list_free(tags);
         }
 
-        m_streamProperties.append(streamProperties);
+        m_streamProperties.push_back(streamProperties);
     }
 
     bool emitAudioChanged = (haveAudio != m_audioAvailable);
@@ -1443,14 +1411,17 @@ void iGstreamerPlayerSession::getStreamsInfo()
     m_videoAvailable = haveVideo;
 
     if (emitAudioChanged) {
-        emit audioAvailableChanged(m_audioAvailable);
+        IEMIT audioAvailableChanged(m_audioAvailable);
     }
     if (emitVideoChanged) {
-        emit videoAvailableChanged(m_videoAvailable);
+        IEMIT videoAvailableChanged(m_videoAvailable);
     }
 
+    // TODO:
+#if 0
     if (oldProperties != m_streamProperties || oldTypes != m_streamTypes || oldOffset != m_playbin2StreamOffset)
-        emit streamsChanged();
+#endif
+        IEMIT streamsChanged();
 }
 
 void iGstreamerPlayerSession::updateVideoResolutionTag()
@@ -1458,9 +1429,8 @@ void iGstreamerPlayerSession::updateVideoResolutionTag()
     if (!m_videoIdentity)
         return;
 
-#ifdef DEBUG_PLAYBIN
-        qDebug() << Q_FUNC_INFO;
-#endif
+    ilog_verbose(__FUNCTION__);
+
     iSize size;
     iSize aspectRatio;
     GstPad *pad = gst_element_get_static_pad(m_videoIdentity, "src");
@@ -1483,22 +1453,25 @@ void iGstreamerPlayerSession::updateVideoResolutionTag()
 
     gst_object_unref(GST_OBJECT(pad));
 
-    iSize currentSize = m_tags.value("resolution").toSize();
-    iSize currentAspectRatio = m_tags.value("pixel-aspect-ratio").toSize();
+    iSize currentSize = m_tags.find("resolution")->second.value<iSize>();
+    iSize currentAspectRatio = m_tags.find("pixel-aspect-ratio")->second.value<iSize>();
 
     if (currentSize != size || currentAspectRatio != aspectRatio) {
-        if (aspectRatio.isEmpty())
-            m_tags.remove("pixel-aspect-ratio");
-
-        if (size.isEmpty()) {
-            m_tags.remove("resolution");
-        } else {
-            m_tags.insert("resolution", iVariant(size));
-            if (!aspectRatio.isEmpty())
-                m_tags.insert("pixel-aspect-ratio", iVariant(aspectRatio));
+        if (aspectRatio.isEmpty()) {
+           std::multimap<iByteArray, iVariant>::const_iterator it = m_tags.find("pixel-aspect-ratio");
+           m_tags.erase(it);
         }
 
-        emit tagsChanged();
+        if (size.isEmpty()) {
+            std::multimap<iByteArray, iVariant>::const_iterator it = m_tags.find("resolution");
+            m_tags.erase(it);
+        } else {
+            m_tags.insert(std::pair<iByteArray, iVariant>("resolution", iVariant(size)));
+            if (!aspectRatio.isEmpty())
+                m_tags.insert(std::pair<iByteArray, iVariant>("pixel-aspect-ratio", iVariant(aspectRatio)));
+        }
+
+        IEMIT tagsChanged();
     }
 }
 
@@ -1512,7 +1485,7 @@ void iGstreamerPlayerSession::updateDuration()
 
     if (m_duration != duration) {
         m_duration = duration;
-        emit durationChanged(m_duration);
+        IEMIT durationChanged(m_duration);
     }
 
     gboolean seekable = false;
@@ -1528,26 +1501,20 @@ void iGstreamerPlayerSession::updateDuration()
     if (m_durationQueries > 0) {
         //increase delay between duration requests
         int delay = 25 << (5 - m_durationQueries);
-        QTimer::singleShot(delay, this, SLOT(updateDuration()));
+        iTimer::singleShot(delay, this, &iGstreamerPlayerSession::updateDuration);
         m_durationQueries--;
     }
-#ifdef DEBUG_PLAYBIN
-        qDebug() << Q_FUNC_INFO << m_duration;
-#endif
+    ilog_verbose(__FUNCTION__, " : ", m_duration);
 }
 
 void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpointer d)
 {
-    IX_GCC_UNUSED(p);
-
     GstElement *source = 0;
     g_object_get(o, "source", &source, IX_NULLPTR);
     if (source == 0)
         return;
 
-#ifdef DEBUG_PLAYBIN
-    qDebug() << "Playbin source added:" << G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source));
-#endif
+    ilog_debug(__FUNCTION__, " :Playbin source added: ", G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)));
 
     // Set Headers
     const iByteArray userAgentString("User-Agent");
@@ -1556,15 +1523,17 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
 
     // User-Agent - special case, souphhtpsrc will always set something, even if
     // defined in extra-headers
-    if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-agent") != 0) {
+    if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "user-agent") != 0
+        && self->m_request.startsWith(userAgentString)) {
         g_object_set(G_OBJECT(source), "user-agent",
-                     self->m_request.rawHeader(userAgentString).constData(), IX_NULLPTR);
+                     self->m_request.constData(), IX_NULLPTR);
     }
 
     // The rest
     if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "extra-headers") != 0) {
         GstStructure *extras = ix_gst_structure_new_empty("extras");
-
+        // TODO
+#if 0
         const auto rawHeaderList = self->m_request.rawHeaderList();
         for (const iByteArray &rawHeader : rawHeaderList) {
             if (rawHeader == userAgentString) // Filter User-Agent
@@ -1581,6 +1550,7 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
                 gst_structure_set_value(extras, rawHeader.constData(), &headerValue);
             }
         }
+#endif
 
         if (gst_structure_n_fields(extras) > 0)
             g_object_set(G_OBJECT(source), "extra-headers", extras, IX_NULLPTR);
@@ -1591,14 +1561,14 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
     //set timeout property to 30 seconds
     const int timeout = 30;
     if (istrcmp(G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)), "GstUDPSrc") == 0) {
-        quint64 convertedTimeout = timeout;
-#if GST_CHECK_VERSION(1,0,0)
+        xuint64 convertedTimeout = timeout;
+        #if GST_CHECK_VERSION(1,0,0)
         // Gst 1.x -> nanosecond
         convertedTimeout *= 1000000000;
-#else
+        #else
         // Gst 0.10 -> microsecond
         convertedTimeout *= 1000000;
-#endif
+        #endif
         g_object_set(G_OBJECT(source), "timeout", convertedTimeout, IX_NULLPTR);
         self->m_sourceType = UDPSrc;
         //The udpsrc is always a live source.
@@ -1625,12 +1595,10 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
         self->m_isLiveSource = gst_base_src_is_live(GST_BASE_SRC(source));
     }
 
-#ifdef DEBUG_PLAYBIN
     if (self->m_isLiveSource)
-        qDebug() << "Current source is a live source";
+        ilog_debug(__FUNCTION__, " Current source is a live source");
     else
-        qDebug() << "Current source is a non-live source";
-#endif
+        ilog_debug(__FUNCTION__, " Current source is a non-live source");
 
     if (self->m_videoSink)
         g_object_set(G_OBJECT(self->m_videoSink), "sync", !self->m_isLiveSource, IX_NULLPTR);
@@ -1645,10 +1613,8 @@ bool iGstreamerPlayerSession::isLiveSource() const
 
 void iGstreamerPlayerSession::handleVolumeChange(GObject *o, GParamSpec *p, gpointer d)
 {
-    IX_GCC_UNUSED(o);
-    IX_GCC_UNUSED(p);
     iGstreamerPlayerSession *session = reinterpret_cast<iGstreamerPlayerSession *>(d);
-    QMetaObject::invokeMethod(session, "updateVolume", Qt::QueuedConnection);
+    iObject::invokeMethod(session, &iGstreamerPlayerSession::updateVolume, QueuedConnection);
 }
 
 void iGstreamerPlayerSession::updateVolume()
@@ -1658,19 +1624,15 @@ void iGstreamerPlayerSession::updateVolume()
 
     if (m_volume != int(volume*100 + 0.5)) {
         m_volume = int(volume*100 + 0.5);
-#ifdef DEBUG_PLAYBIN
-        qDebug() << Q_FUNC_INFO << m_volume;
-#endif
-        emit volumeChanged(m_volume);
+        ilog_debug(__FUNCTION__, " : ", m_volume);
+        IEMIT volumeChanged(m_volume);
     }
 }
 
 void iGstreamerPlayerSession::handleMutedChange(GObject *o, GParamSpec *p, gpointer d)
 {
-    IX_GCC_UNUSED(o);
-    IX_GCC_UNUSED(p);
     iGstreamerPlayerSession *session = reinterpret_cast<iGstreamerPlayerSession *>(d);
-    QMetaObject::invokeMethod(session, "updateMuted", Qt::QueuedConnection);
+    iObject::invokeMethod(session, &iGstreamerPlayerSession::updateMuted, QueuedConnection);
 }
 
 void iGstreamerPlayerSession::updateMuted()
@@ -1679,10 +1641,8 @@ void iGstreamerPlayerSession::updateMuted()
     g_object_get(G_OBJECT(m_playbin), "mute", &muted, IX_NULLPTR);
     if (m_muted != muted) {
         m_muted = muted;
-#ifdef DEBUG_PLAYBIN
-        qDebug() << Q_FUNC_INFO << m_muted;
-#endif
-        emit mutedStateChanged(muted);
+        ilog_debug(__FUNCTION__, " : ", m_muted);
+        IEMIT mutedStateChanged(muted);
     }
 }
 
@@ -1717,10 +1677,6 @@ static gboolean factory_can_src_any_caps (GstElementFactory *factory, const GstC
 
 GstAutoplugSelectResult iGstreamerPlayerSession::handleAutoplugSelect(GstBin *bin, GstPad *pad, GstCaps *caps, GstElementFactory *factory, iGstreamerPlayerSession *session)
 {
-    IX_GCC_UNUSED(bin);
-    IX_GCC_UNUSED(pad);
-    IX_GCC_UNUSED(caps);
-
     GstAutoplugSelectResult res = GST_AUTOPLUG_SELECT_TRY;
 
     // if VAAPI is available and can be used to decode but the current video sink cannot handle
@@ -1728,17 +1684,17 @@ GstAutoplugSelectResult iGstreamerPlayerSession::handleAutoplugSelect(GstBin *bi
     const gchar *factoryName = gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory));
     if (g_str_has_prefix(factoryName, "vaapi")) {
         GstPad *sinkPad = gst_element_get_static_pad(session->m_videoSink, "sink");
-#if GST_CHECK_VERSION(1,0,0)
+        #if GST_CHECK_VERSION(1,0,0)
         GstCaps *sinkCaps = gst_pad_query_caps(sinkPad, IX_NULLPTR);
-#else
+        #else
         GstCaps *sinkCaps = gst_pad_get_caps(sinkPad);
-#endif
+        #endif
 
-#if !GST_CHECK_VERSION(0, 10, 33)
+        #if !GST_CHECK_VERSION(0, 10, 33)
         if (!factory_can_src_any_caps(factory, sinkCaps))
-#else
+        #else
         if (!gst_element_factory_can_src_any_caps(factory, sinkCaps))
-#endif
+        #endif
             res = GST_AUTOPLUG_SELECT_SKIP;
 
         gst_object_unref(sinkPad);
@@ -1750,7 +1706,6 @@ GstAutoplugSelectResult iGstreamerPlayerSession::handleAutoplugSelect(GstBin *bi
 
 void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *element, iGstreamerPlayerSession *session)
 {
-    IX_GCC_UNUSED(bin);
     //we have to configure queue2 element to enable media downloading
     //and reporting available ranges,
     //but it's added dynamically to playbin2
@@ -1761,9 +1716,9 @@ void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *elemen
         // Disable on-disk buffering.
         g_object_set(G_OBJECT(element), "temp-template", IX_NULLPTR, IX_NULLPTR);
     } else if (g_str_has_prefix(elementName, "uridecodebin") ||
-#if GST_CHECK_VERSION(1,0,0)
+        #if GST_CHECK_VERSION(1,0,0)
         g_str_has_prefix(elementName, "decodebin")) {
-#else
+        #else
         g_str_has_prefix(elementName, "decodebin2")) {
         if (g_str_has_prefix(elementName, "uridecodebin")) {
             // Add video/x-surface (VAAPI) to default raw formats
@@ -1772,7 +1727,7 @@ void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *elemen
             // video sink doesn't support it
             g_signal_connect(element, "autoplug-select", G_CALLBACK(handleAutoplugSelect), session);
         }
-#endif
+        #endif
         //listen for queue2 element added to uridecodebin/decodebin2 as well.
         //Don't touch other bins since they may have unrelated queues
         g_signal_connect(element, "element-added",
@@ -1784,28 +1739,22 @@ void iGstreamerPlayerSession::handleElementAdded(GstBin *bin, GstElement *elemen
 
 void iGstreamerPlayerSession::handleStreamsChange(GstBin *bin, gpointer user_data)
 {
-    IX_GCC_UNUSED(bin);
-
     iGstreamerPlayerSession* session = reinterpret_cast<iGstreamerPlayerSession*>(user_data);
-    QMetaObject::invokeMethod(session, "getStreamsInfo", Qt::QueuedConnection);
+    iObject::invokeMethod(session, &iGstreamerPlayerSession::getStreamsInfo, QueuedConnection);
 }
 
 //doing proper operations when detecting an invalidMedia: change media status before signal the erorr
-void iGstreamerPlayerSession::processInvalidMedia(QMediaPlayer::Error errorCode, const iString& errorString)
+void iGstreamerPlayerSession::processInvalidMedia(iMediaPlayer::Error errorCode, const iString& errorString)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO;
-#endif
-    emit invalidMedia();
+    ilog_verbose(__FUNCTION__);
+    IEMIT invalidMedia();
     stop();
-    emit error(int(errorCode), errorString);
+    IEMIT error(int(errorCode), errorString);
 }
 
 void iGstreamerPlayerSession::showPrerollFrames(bool enabled)
 {
-#ifdef DEBUG_PLAYBIN
-    qDebug() << Q_FUNC_INFO << enabled;
-#endif
+    ilog_verbose(__FUNCTION__, " : ", enabled);
     if (enabled != m_displayPrerolledFrame && m_videoSink &&
             g_object_class_find_property(G_OBJECT_GET_CLASS(m_videoSink), "show-preroll-frame") != 0) {
 
@@ -1815,28 +1764,28 @@ void iGstreamerPlayerSession::showPrerollFrames(bool enabled)
     }
 }
 
-void iGstreamerPlayerSession::addProbe(QGstreamerVideoProbeControl* probe)
+void iGstreamerPlayerSession::addProbe(iGstreamerVideoProbeControl* probe)
 {
     IX_ASSERT(!m_videoProbe);
     m_videoProbe = probe;
     addVideoBufferProbe();
 }
 
-void iGstreamerPlayerSession::removeProbe(QGstreamerVideoProbeControl* probe)
+void iGstreamerPlayerSession::removeProbe(iGstreamerVideoProbeControl* probe)
 {
     IX_ASSERT(m_videoProbe == probe);
     removeVideoBufferProbe();
     m_videoProbe = 0;
 }
 
-void iGstreamerPlayerSession::addProbe(QGstreamerAudioProbeControl* probe)
+void iGstreamerPlayerSession::addProbe(iGstreamerAudioProbeControl* probe)
 {
     IX_ASSERT(!m_audioProbe);
     m_audioProbe = probe;
     addAudioBufferProbe();
 }
 
-void iGstreamerPlayerSession::removeProbe(QGstreamerAudioProbeControl* probe)
+void iGstreamerPlayerSession::removeProbe(iGstreamerAudioProbeControl* probe)
 {
     IX_ASSERT(m_audioProbe == probe);
     removeAudioBufferProbe();
@@ -1854,13 +1803,13 @@ void iGstreamerPlayerSession::endOfMediaReset()
     flushVideoProbes();
     gst_element_set_state(m_pipeline, GST_STATE_NULL);
 
-    QMediaPlayer::State oldState = m_state;
-    m_pendingState = m_state = QMediaPlayer::StoppedState;
+    iMediaPlayer::State oldState = m_state;
+    m_pendingState = m_state = iMediaPlayer::StoppedState;
 
     finishVideoOutputChange();
 
     if (oldState != m_state)
-        emit stateChanged(m_state);
+        IEMIT stateChanged(m_state);
 }
 
 void iGstreamerPlayerSession::removeVideoBufferProbe()

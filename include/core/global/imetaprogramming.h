@@ -195,28 +195,7 @@ struct is_convertible
     enum { value = sizeof(test(dummy())) == sizeof(int) };
 };
 
-template<typename T1, typename T2>
-struct is_convertible<T1, const T2&>
-{
-    static int test(const typename type_wrapper<T2>::TYPE&);
-    static char test(...);
-    static const typename type_wrapper<T1>::TYPE &dummy();
-
-    enum { value = sizeof(test(dummy())) == sizeof(int) };
-};
-
-template<typename T1, typename T2>
-struct is_convertible<const T1&, T2>
-{
-    static int test(const typename type_wrapper<T2>::TYPE&);
-    static char test(...);
-    static const typename type_wrapper<T1>::TYPE &dummy();
-
-    enum { value = sizeof(test(dummy())) == sizeof(int) };
-};
-
 template<typename T1, typename T2> struct is_convertible<T1, T2&> { enum { value = false }; };
-template<typename T1, typename T2> struct is_convertible<T1&, T2> { enum { value = false }; };
 template<typename T> struct is_convertible<T&, T&> { enum { value = true }; };
 // void as a return value
 template<typename T> struct is_convertible<void, T> { enum { value = true }; };

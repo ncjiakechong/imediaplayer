@@ -51,26 +51,23 @@
 // We mean it.
 //
 
-#include <QtCore/qstack.h>
-#include <qmediaplayercontrol.h>
-#include <private/qgsttools_global_p.h>
+#include <multimedia/controls/imediaplayercontrol.h>
 
 namespace iShell {
 
-class QMediaPlayerResourceSetInterface;
 class iGstreamerPlayerSession;
-class QGstreamerPlayerControl : public QMediaPlayerControl
+class iGstreamerPlayerControl : public iMediaPlayerControl
 {
-    Q_OBJECT
+    IX_OBJECT(iGstreamerPlayerControl)
 
 public:
-    QGstreamerPlayerControl(iGstreamerPlayerSession *session, iObject *parent = 0);
-    ~QGstreamerPlayerControl();
+    iGstreamerPlayerControl(iGstreamerPlayerSession *session, iObject *parent = IX_NULLPTR);
+    ~iGstreamerPlayerControl();
 
     iGstreamerPlayerSession *session() { return m_session; }
 
-    QMediaPlayer::State state() const override;
-    QMediaPlayer::MediaStatus mediaStatus() const override;
+    iMediaPlayer::State state() const override;
+    iMediaPlayer::MediaStatus mediaStatus() const override;
 
     xint64 position() const override;
     xint64 duration() const override;
@@ -85,18 +82,16 @@ public:
     void setVideoOutput(iObject *output);
 
     bool isSeekable() const override;
-    QMediaTimeRange availablePlaybackRanges() const override;
+    iMediaTimeRange availablePlaybackRanges() const override;
 
     xreal playbackRate() const override;
     void setPlaybackRate(xreal rate) override;
 
-    QMediaContent media() const override;
-    const QIODevice *mediaStream() const override;
-    void setMedia(const QMediaContent&, QIODevice *) override;
+    iString media() const override;
+    const iIODevice *mediaStream() const override;
+    void setMedia(const iString&, iIODevice *) override;
 
-    QMediaPlayerResourceSetInterface* resources() const;
-
-public Q_SLOTS:
+public: // slot
     void setPosition(xint64 pos) override;
 
     void play() override;
@@ -106,8 +101,8 @@ public Q_SLOTS:
     void setVolume(int volume) override;
     void setMuted(bool muted) override;
 
-private Q_SLOTS:
-    void updateSessionState(QMediaPlayer::State state);
+private: // slot
+    void updateSessionState(iMediaPlayer::State state);
     void updateMediaStatus();
     void processEOS();
     void setBufferProgress(int progress);
@@ -119,25 +114,23 @@ private Q_SLOTS:
     void handleResourcesDenied();
 
 private:
-    void playOrPause(QMediaPlayer::State state);
+    void playOrPause(iMediaPlayer::State state);
 
     void pushState();
     void popAndNotifyState();
 
     iGstreamerPlayerSession *m_session;
-    QMediaPlayer::State m_userRequestedState;
-    QMediaPlayer::State m_currentState;
-    QMediaPlayer::MediaStatus m_mediaStatus;
-    QStack<QMediaPlayer::State> m_stateStack;
-    QStack<QMediaPlayer::MediaStatus> m_mediaStatusStack;
+    iMediaPlayer::State m_userRequestedState;
+    iMediaPlayer::State m_currentState;
+    iMediaPlayer::MediaStatus m_mediaStatus;
+    std::list<iMediaPlayer::State> m_stateStack;
+    std::list<iMediaPlayer::MediaStatus> m_mediaStatusStack;
 
     int m_bufferProgress;
     xint64 m_pendingSeekPosition;
     bool m_setMediaPending;
-    QMediaContent m_currentResource;
-    QIODevice *m_stream;
-
-    QMediaPlayerResourceSetInterface *m_resources;
+    iString m_currentResource;
+    iIODevice *m_stream;
 };
 
 } // namespace iShell

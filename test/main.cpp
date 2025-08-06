@@ -22,6 +22,7 @@ extern int test_object(void);
 extern int test_ivariant(void);
 extern int test_thread(void);
 extern int test_timer(void);
+extern int test_player(void);
 
 using namespace iShell;
 
@@ -41,37 +42,35 @@ public:
 
     void doTestCase(int num) {
         ilog_debug("======", num, "=============================");
-        if (0 == num) {
+        switch (num) {
+        case 0:
             test_iconvertible();
-            IEMIT tstcase_sig(1);
-            return;
-        }
-
-        if (1 == num) {
+            break;
+        case 1:
             test_ivariant();
-            IEMIT tstcase_sig(2);
-            return;
-        }
-
-        if (2 == num) {
+            break;
+        case 2:
             test_object();
-            IEMIT tstcase_sig(3);
-            return;
-        }
-
-        if (3 == num) {
+            break;
+        case 3:
             test_thread();
-            IEMIT tstcase_sig(4);
-            return;
-        }
-
-        if (4 == num) {
+            break;
+        case 4:
             test_timer();
-            IEMIT tstcase_sig(5);
+            break;
+        case 5:
+        {
+            if (0 == test_player())
+                return;
+        }
+            break;
+        default:
+            iCoreApplication::quit();
             return;
+
         }
 
-        iCoreApplication::postEvent(iCoreApplication::instance(), new iEvent(iEvent::Quit));
+        IEMIT tstcase_sig(num + 1);
     }
 
     void tstcase_sig(int c) ISIGNAL(tstcase_sig, c)

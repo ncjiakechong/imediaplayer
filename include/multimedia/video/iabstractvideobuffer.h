@@ -14,14 +14,15 @@
 #include <core/global/iglobal.h>
 #include <core/global/imacro.h>
 
-namespace iShell {
+#include <multimedia/imultimediaglobal.h>
 
+namespace iShell {
 
 class iVariant;
 
 class iAbstractVideoBufferPrivate;
 
-class iAbstractVideoBuffer
+class IX_MULTIMEDIA_EXPORT iAbstractVideoBuffer
 {
 public:
     enum HandleType
@@ -69,7 +70,7 @@ private:
 };
 
 class iAbstractPlanarVideoBufferPrivate;
-class iAbstractPlanarVideoBuffer : public iAbstractVideoBuffer
+class IX_MULTIMEDIA_EXPORT iAbstractPlanarVideoBuffer : public iAbstractVideoBuffer
 {
 public:
     iAbstractPlanarVideoBuffer(HandleType type);

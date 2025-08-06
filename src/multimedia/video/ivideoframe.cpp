@@ -84,7 +84,7 @@ private:
 
     A iVideoFrame encapsulates the pixel data of a video frame, and information about the frame.
 
-    Video frames can come from several places - decoded \l {QMediaPlayer}{media}, a
+    Video frames can come from several places - decoded \l {iMediaPlayer}{media}, a
     \l {QCamera}{camera}, or generated programmatically.  The way pixels are described in these
     frames can vary greatly, and some pixel formats offer greater compression opportunities at
     the expense of ease of use.

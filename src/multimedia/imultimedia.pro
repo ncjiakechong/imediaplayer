@@ -8,12 +8,16 @@ QT         =
 DESTDIR = $${BUILD_TOPDIR}
 
 #CONFIG += c++11
+QMAKE_CXXFLAGS += -DIBUILD_MULTIMEDIA_LIB
 
 QMAKE_USE += glib
 
 CONFIG += link_pkgconfig
 PKGCONFIG += gstreamer-1.0
 PKGCONFIG += gstreamer-app-1.0
+PKGCONFIG += gstreamer-base-1.0
+PKGCONFIG += gstreamer-video-1.0
+PKGCONFIG += gstreamer-audio-1.0
 
 INCLUDEPATH += \
     ../../include
@@ -23,7 +27,17 @@ HEADERS += \
     ../../include/multimedia/video/ivideoframe.h \
     ../../include/multimedia/video/iabstractvideobuffer.h \
     ../../include/multimedia/imultimedia.h \
+    ../../include/multimedia/imultimediaglobal.h \
     ../../include/multimedia/video/ivideosurfaceformat.h \
+    ../../include/multimedia/playback/imediaplayer.h \ \
+    ../../include/multimedia/controls/imediaplayercontrol.h \
+    ../../include/multimedia/controls/imediastreamscontrol.h \
+    ../../include/multimedia/imediatimerange.h \
+    ../../include/multimedia/audio/iaudiobuffer.h \
+    ../../include/multimedia/imediaobject.h \
+    plugins/gstreamer/igstreameraudioprobecontrol_p.h \
+    plugins/gstreamer/igstreamerplayercontrol_p.h \
+    plugins/gstreamer/igstreamervideoprobecontrol_p.h \
     video/iabstractvideobuffer_p.h \
     video/imemoryvideobuffer_p.h \
     plugins/gstreamer/igstappsrc_p.h \
@@ -31,24 +45,24 @@ HEADERS += \
     plugins/gstreamer/igstreamerbufferprobe_p.h \
     plugins/gstreamer/igstreamerbushelper_p.h \
     plugins/gstreamer/igstreamermessage_p.h \
-#    plugins/gstreamer/igstreamerplayersession_p.h \
+    plugins/gstreamer/igstreamerplayersession_p.h \
     plugins/gstreamer/igstreamervideorendererinterface_p.h \
     plugins/gstreamer/igstutils_p.h \
-    plugins/gstreamer/igstvideobuffer_p.h \
-#    plugins/gstreamer/qgstreameraudioprobecontrol_p.h \
-#    plugins/gstreamer/qgstreamermirtexturerenderer_p.h \
-#    plugins/gstreamer/qgstreamerplayercontrol_p.h \
-#    plugins/gstreamer/qgstreamervideooverlay_p.h \
-#    plugins/gstreamer/qgstreamervideoprobecontrol_p.h \
-#    plugins/gstreamer/qgstreamervideorenderer_p.h \
-#    plugins/gstreamer/qgstreamervideowidget_p.h \
-#    plugins/gstreamer/qgstreamervideowindow_p.h \
-#    plugins/gstreamer/qgstvideorendererplugin_p.h \
-#    plugins/gstreamer/qgstvideorenderersink_p.h
+    plugins/gstreamer/igstvideobuffer_p.h
 
 
 SOURCES += \
+    audio/iaudiobuffer.cpp \
     audio/iaudioformat.cpp \
+    control/imediaplayercontrol.cpp \
+    imediaobject.cpp \
+    imediatimerange.cpp \
+    playback/imediaplayer.cpp \
+    plugins/gstreamer/igstreameraudioprobecontrol.cpp \
+    plugins/gstreamer/igstreamerbufferprobe.cpp \
+    plugins/gstreamer/igstreamerplayercontrol.cpp \
+    plugins/gstreamer/igstreamervideoprobecontrol.cpp \
+    plugins/gstreamer/igstvideobuffer.cpp \
     video/iabstractvideobuffer.cpp \
     video/imemoryvideobuffer.cpp \
     video/ivideoframe.cpp \
@@ -56,19 +70,5 @@ SOURCES += \
     plugins/gstreamer/igstappsrc.cpp \
     plugins/gstreamer/igstreamerbushelper.cpp \
     plugins/gstreamer/igstreamermessage.cpp \
-#    plugins/gstreamer/igstreamerplayersession.cpp \
-    plugins/gstreamer/igstutils.cpp \
-#    plugins/gstreamer/qgstcodecsinfo.cpp \
-#    plugins/gstreamer/qgstreameraudioprobecontrol.cpp \
-#    plugins/gstreamer/qgstreamerbufferprobe.cpp \
-#    plugins/gstreamer/qgstreamermirtexturerenderer.cpp \
-#    plugins/gstreamer/qgstreamerplayercontrol.cpp \
-#    plugins/gstreamer/qgstreamervideooverlay.cpp \
-#    plugins/gstreamer/qgstreamervideoprobecontrol.cpp \
-#    plugins/gstreamer/qgstreamervideorenderer.cpp \
-#    plugins/gstreamer/qgstreamervideorendererinterface.cpp \
-#    plugins/gstreamer/qgstreamervideowidget.cpp \
-#    plugins/gstreamer/qgstreamervideowindow.cpp \
-#    plugins/gstreamer/qgstvideobuffer.cpp \
-#    plugins/gstreamer/qgstvideorendererplugin.cpp \
-#    plugins/gstreamer/qgstvideorenderersink.cpp
+    plugins/gstreamer/igstreamerplayersession.cpp \
+    plugins/gstreamer/igstutils.cpp

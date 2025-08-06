@@ -36,7 +36,7 @@ public:
         NewOnly = 0x0040,
         ExistingOnly = 0x0080
     };
-    typedef uint  OpenMode;
+    typedef uint OpenMode;
 
     iIODevice();
     explicit iIODevice(iObject *parent);

@@ -36,6 +36,7 @@ public:
 
     static int exec();
     static void exit(int retCode = 0);
+    static void quit();
 
     static bool sendEvent(iObject *receiver, iEvent *event);
     static void postEvent(iObject *receiver, iEvent *event);
@@ -46,6 +47,8 @@ public:
     static iEventDispatcher* createEventDispatcher();
 
     iEventDispatcher* eventDispatcher() const;
+
+    void aboutToQuit() ISIGNAL(aboutToQuit)
 
 protected:
     iCoreApplication(iCoreApplicationPrivate* priv);
@@ -60,9 +63,11 @@ protected:
 
 private:
     void init();
+    void execCleanup();
 
     static iCoreApplication* self;
 
+    bool m_aboutToQuitEmitted;
     iCoreApplicationPrivate* m_private;
     friend class iEventLoop;
 };

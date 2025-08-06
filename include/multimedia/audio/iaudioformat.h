@@ -14,11 +14,13 @@
 #include <core/utils/istring.h>
 #include <core/utils/ishareddata.h>
 
+#include <multimedia/imultimediaglobal.h>
+
 namespace iShell {
 
 class iAudioFormatPrivate;
 
-class iAudioFormat
+class IX_MULTIMEDIA_EXPORT iAudioFormat
 {
 public:
     enum SampleType { Unknown, SignedInt, UnSignedInt, Float };

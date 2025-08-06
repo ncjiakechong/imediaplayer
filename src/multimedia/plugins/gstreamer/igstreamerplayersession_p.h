@@ -25,14 +25,15 @@
 #include <map>
 #include <gst/gst.h>
 
-#include <core/kernel/iobject.h>
 #include <core/thread/imutex.h>
 #include <core/io/iiodevice.h>
+#include <multimedia/imediatimerange.h>
 #include <multimedia/audio/iaudioformat.h>
+#include <multimedia/playback/imediaplayer.h>
+#include <multimedia/controls/imediastreamscontrol.h>
 
 #include "igstreamerbushelper_p.h"
 #include "igstappsrc_p.h"
-
 
 namespace iShell {
 
@@ -40,8 +41,8 @@ class iGstreamerBusHelper;
 class iGstreamerMessage;
 
 class iGstreamerVideoRendererInterface;
-class QGstreamerVideoProbeControl;
-class QGstreamerAudioProbeControl;
+class iGstreamerVideoProbeControl;
+class iGstreamerAudioProbeControl;
 
 typedef enum {
   GST_AUTOPLUG_SELECT_TRY,
@@ -49,19 +50,19 @@ typedef enum {
   GST_AUTOPLUG_SELECT_SKIP
 } GstAutoplugSelectResult;
 
-class iGstreamerPlayerSession
-    : public iObject
+class iGstreamerPlayerSession : public iObject
 {
+    IX_OBJECT(iGstreamerPlayerSession)
 public:
     iGstreamerPlayerSession(iObject *parent);
-    virtual ~iGstreamerPlayerSession() override;
+    virtual ~iGstreamerPlayerSession();
 
     GstElement *playbin() const;
     GstElement *pipeline() const { return m_pipeline; }
     iGstreamerBusHelper *bus() const { return m_busHelper; }
 
-    QMediaPlayer::State state() const { return m_state; }
-    QMediaPlayer::State pendingState() const { return m_pendingState; }
+    iMediaPlayer::State state() const { return m_state; }
+    iMediaPlayer::State pendingState() const { return m_pendingState; }
 
     xint64 duration() const;
     xint64 position() const;
@@ -80,29 +81,28 @@ public:
     xreal playbackRate() const;
     void setPlaybackRate(xreal rate);
 
-    QMediaTimeRange availablePlaybackRanges() const;
+    iMediaTimeRange availablePlaybackRanges() const;
 
     std::multimap<iByteArray ,iVariant> tags() const { return m_tags; }
-    std::multimap<iString,iVariant> streamProperties(int streamNumber) const { return m_streamProperties[streamNumber]; }
-    int streamCount() const { return m_streamProperties.count(); }
-    QMediaStreamsControl::StreamType streamType(int streamNumber) { return m_streamTypes.value(streamNumber, QMediaStreamsControl::UnknownStream); }
+    std::multimap<iString,iVariant> streamProperties(int streamNumber) const;
+    int streamCount() const { return m_streamProperties.size(); }
+    iMediaStreamsControl::StreamType streamType(int streamNumber);
 
-    int activeStream(QMediaStreamsControl::StreamType streamType) const;
-    void setActiveStream(QMediaStreamsControl::StreamType streamType, int streamNumber);
+    int activeStream(iMediaStreamsControl::StreamType streamType) const;
+    void setActiveStream(iMediaStreamsControl::StreamType streamType, int streamNumber);
 
-    // bool processBusMessage(const iGstreamerMessage &message) override;
+    bool processBusMessage(const iGstreamerMessage &message);
 
     iGstAppSrc *appsrc() const { return m_appSrc; }
     static void configureAppSrcElement(GObject*, GObject*, GParamSpec*,iGstreamerPlayerSession* _this);
 
-
     bool isLiveSource() const;
 
-    void addProbe(QGstreamerVideoProbeControl* probe);
-    void removeProbe(QGstreamerVideoProbeControl* probe);
+    void addProbe(iGstreamerVideoProbeControl* probe);
+    void removeProbe(iGstreamerVideoProbeControl* probe);
 
-    void addProbe(QGstreamerAudioProbeControl* probe);
-    void removeProbe(QGstreamerAudioProbeControl* probe);
+    void addProbe(iGstreamerAudioProbeControl* probe);
+    void removeProbe(iGstreamerAudioProbeControl* probe);
 
     void endOfMediaReset();
 
@@ -121,23 +121,26 @@ public:
     void showPrerollFrames(bool enabled);
 
 public:
-    iSignal<xint64> durationChanged;
-    iSignal<xint64> positionChanged;
-    iSignal<QMediaPlayer::State> stateChanged;
-    iSignal<int> volumeChanged;
-    iSignal<bool> mutedStateChanged;
-    iSignal<bool> audioAvailableChanged;
-    iSignal<bool> videoAvailableChanged;
-    iSignal<int> bufferingProgressChanged;
-    iSignal<> playbackFinished;
-    iSignal<> tagsChanged;
-    iSignal<> streamsChanged;
-    iSignal<> seekableChanged;
-    iSignal<int, const iString &> error;
-    iSignal<> invalidMedia;
-    iSignal<xreal> playbackRateChanged;
-    iSignal<> rendererChanged;
-    iSignal<> pipelineChanged;
+    void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration)
+    void positionChanged(xint64 position) ISIGNAL(positionChanged, position)
+    void stateChanged(iMediaPlayer::State state) ISIGNAL(stateChanged, state)
+    void volumeChanged(int volume) ISIGNAL(volumeChanged, volume)
+    void mutedStateChanged(bool muted) ISIGNAL(mutedStateChanged, muted)
+    void audioAvailableChanged(bool audioAvailable) ISIGNAL(audioAvailableChanged, audioAvailable)
+    void videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable)
+    void bufferingProgressChanged(int percentFilled) ISIGNAL(bufferingProgressChanged, percentFilled)
+    void playbackFinished() ISIGNAL(playbackFinished)
+    void tagsChanged() ISIGNAL(tagsChanged)
+    void streamsChanged() ISIGNAL(streamsChanged)
+    void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable)
+    void error(int errorNum, const iString &errorString) ISIGNAL(error, errorNum, errorString)
+    void invalidMedia() ISIGNAL(invalidMedia)
+    void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate)
+    void rendererChanged() ISIGNAL(rendererChanged)
+    void pipelineChanged() ISIGNAL(pipelineChanged)
+
+protected:
+    bool event(iEvent *e);
 
 private:
     void getStreamsInfo();
@@ -160,7 +163,7 @@ private:
     static void handleStreamsChange(GstBin *bin, gpointer user_data);
     static GstAutoplugSelectResult handleAutoplugSelect(GstBin *bin, GstPad *pad, GstCaps *caps, GstElementFactory *factory, iGstreamerPlayerSession *session);
 
-    void processInvalidMedia(QMediaPlayer::Error errorCode, const iString& errorString);
+    void processInvalidMedia(iMediaPlayer::Error errorCode, const iString& errorString);
 
     void removeVideoBufferProbe();
     void addVideoBufferProbe();
@@ -171,11 +174,11 @@ private:
     void setPipeline(GstElement *pipeline);
 
     iString m_request;
-    QMediaPlayer::State m_state;
-    QMediaPlayer::State m_pendingState;
+    iMediaPlayer::State m_state;
+    iMediaPlayer::State m_pendingState;
     iGstreamerBusHelper* m_busHelper;
-    GstElement *m_playbin = nullptr; // Can be null
-    GstElement *m_pipeline = nullptr; // Never null
+    GstElement *m_playbin = IX_NULLPTR; // Can be null
+    GstElement *m_pipeline = IX_NULLPTR; // Never null
 
     GstElement* m_videoSink;
 
@@ -199,11 +202,11 @@ private:
 
     std::multimap<iByteArray, iVariant> m_tags;
     std::list< std::multimap<iString,iVariant> > m_streamProperties;
-    std::list<QMediaStreamsControl::StreamType> m_streamTypes;
-    std::multimap<QMediaStreamsControl::StreamType, int> m_playbin2StreamOffset;
+    std::list<iMediaStreamsControl::StreamType> m_streamTypes;
+    std::multimap<iMediaStreamsControl::StreamType, int> m_playbin2StreamOffset;
 
-    QGstreamerVideoProbeControl *m_videoProbe;
-    QGstreamerAudioProbeControl *m_audioProbe;
+    iGstreamerVideoProbeControl *m_videoProbe;
+    iGstreamerAudioProbeControl *m_audioProbe;
 
     int m_volume;
     xreal m_playbackRate;
