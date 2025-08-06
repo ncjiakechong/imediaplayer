@@ -20,6 +20,7 @@
 namespace iShell {
 
 typedef iBasicAtomicBitField<4096> iTypeIdContainer;
+typedef std::unordered_map< int, iVariant::iTypeHandler> iMetaTypeHandler;
 typedef std::unordered_map< iLatin1String, int, iKeyHashFunc, iKeyEqualFunc > iTypeIdRegister;
 typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc, iKeyEqualFunc > iMetaTypeConverter;
 
@@ -27,6 +28,7 @@ struct _iMetaType {
     iMutex           _lock;
     iTypeIdContainer _typeIdContainer;
     iTypeIdRegister  _typeIdRegister;
+    iMetaTypeHandler  _metaTypeHandler;
     iMetaTypeConverter _metaTypeConverter;
 
     static void initSystemConvert();
@@ -44,7 +46,7 @@ bool iAbstractConverterFunction::registerTo() const
     return iVariant::registerConverterFunction(this, fromTypeId, toTypeId);
 }
 
-int iVariant::iRegisterMetaType(const char *type, int hint)
+int iVariant::iRegisterMetaType(const char *type, const iTypeHandler& handler, int hint)
 {
     bool needInitSystemConvert = !_iMetaTypeDef.exists();
 
@@ -57,11 +59,13 @@ int iVariant::iRegisterMetaType(const char *type, int hint)
         if ((hint > 0)
             && (hint < iTypeIdContainer::NumBits)
             && _iMetaTypeDef->_typeIdContainer.allocateSpecific(hint)) {
+            _iMetaTypeDef->_metaTypeHandler.insert(std::pair<int, iVariant::iTypeHandler>(hint, handler));
             _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
             break;
         }
 
         hint = _iMetaTypeDef->_typeIdContainer.allocateNext();
+        _iMetaTypeDef->_metaTypeHandler.insert(std::pair<int, iVariant::iTypeHandler>(hint, handler));
         _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
     } while(false);
 
@@ -144,6 +148,24 @@ void iVariant::clear()
 {
     m_typeId = 0;
     m_dataImpl.clear();
+}
+
+bool iVariant::equal(const iVariant &other) const
+{
+    if (other.m_typeId != m_typeId)
+        return false;
+
+    iVariant::iTypeHandler handler;
+    {
+        iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
+        iMetaTypeHandler::iterator it = _iMetaTypeDef->_metaTypeHandler.find(m_typeId);
+        if (_iMetaTypeDef->_metaTypeHandler.end() == it)
+            return false;
+
+        handler = it->second;
+    }
+
+    return handler.equal(m_dataImpl->data, other.m_dataImpl->data);
 }
 
 bool iVariant::canConvert(int targetTypeId) const

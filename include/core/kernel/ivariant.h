@@ -19,6 +19,8 @@
 
 namespace iShell {
 
+class iVariantComparisonHelper;
+
 struct IX_CORE_EXPORT iAbstractConverterFunction
 {
     typedef bool (*Converter)(const iAbstractConverterFunction *, const void *, void*);
@@ -51,6 +53,11 @@ public:
     {}
 
     iVariant& operator=(const iVariant &other);
+
+    inline bool operator==(const iVariant &v) const
+    { return equal(v); }
+    inline bool operator!=(const iVariant &v) const
+    { return !equal(v); }
 
     int type() const { return m_typeId; }
 
@@ -92,9 +99,22 @@ public:
         return value<T>();
     }
 
+    struct iTypeHandler
+    {
+        typedef bool (*EqualFunc)(void* t1, void* t2);
+
+        EqualFunc equal;
+    };
+
     template <typename T>
     static int iMetaTypeId(int hint)
     {
+        struct _HandleHelper {
+            static bool equal(void* t1, void* t2) {
+                return (*static_cast<T*>(t1) == *static_cast<T*>(t2));
+            }
+        };
+
         static int typeId = 0;
         if (0 != typeId)
             return typeId;
@@ -102,7 +122,9 @@ public:
         const char* func_name = IX_FUNC_INFO;
         const size_t header = sizeof("int iShell::iVariant::iMetaTypeId");
 
-        typeId = iRegisterMetaType(func_name + header, hint);
+        iTypeHandler handler;
+        handler.equal = &_HandleHelper::equal;
+        typeId = iRegisterMetaType(func_name + header, handler, hint);
         return typeId;
     }
 
@@ -123,18 +145,44 @@ private:
         T mValue;
     };
 
-    static int iRegisterMetaType(const char* type, int hint);
+    static int iRegisterMetaType(const char* type, const iTypeHandler& handler, int hint);
 
     static bool registerConverterFunction(const iAbstractConverterFunction *f, int from, int to);
     static void unregisterConverterFunction(int from, int to);
 
     bool convert(int t, void *result) const;
+    bool equal(const iVariant &other) const;
 
     int m_typeId;
     iSharedPtr< iAbstractVariantImpl > m_dataImpl;
 
     friend struct iAbstractConverterFunction;
+    friend inline bool operator==(const iVariant &, const iVariantComparisonHelper&);
 };
+
+
+/* Helper class to add one more level of indirection to prevent
+   implicit casts.
+*/
+class iVariantComparisonHelper
+{
+public:
+    inline iVariantComparisonHelper(const iVariant &var)
+        : v(&var) {}
+private:
+    friend inline bool operator==(const iVariant &, const iVariantComparisonHelper &);
+    const iVariant *v;
+};
+
+inline bool operator==(const iVariant &v1, const iVariantComparisonHelper &v2)
+{
+    return v1.equal(*v2.v);
+}
+
+inline bool operator!=(const iVariant &v1, const iVariantComparisonHelper &v2)
+{
+    return !operator==(v1, v2);
+}
 
 template<typename From, typename To>
 struct iConverterMemberFunction : public iAbstractConverterFunction

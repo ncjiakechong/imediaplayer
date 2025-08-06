@@ -20,7 +20,6 @@ enum ConnectionType {
     BlockingQueuedConnection    = 0x1 << 3,
     Connection_PrimaryMask      = 0x0f,
     UniqueConnection            = 0x1 << 4,
-    AgrumentsAdaptor            = 0x1 << 5, // private
 };
 
 enum TimerType {

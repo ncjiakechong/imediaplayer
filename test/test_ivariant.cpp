@@ -35,11 +35,16 @@ int test_ivariant(void)
     ilog_debug("var_int uinit ", var_int.value<const uint>());
     ilog_debug("var_int to long ", var_int.canConvert<long>());
 
+    IX_ASSERT(iVariant(1234) == iVariant(1234));
+    IX_ASSERT(iVariant(1234) != iVariant(5678));
+    IX_ASSERT(iVariant(5.0) != iVariant(6));
+    IX_ASSERT(iVariant("1234") == iVariant("1234"));
+    IX_ASSERT(iVariant(iString("1234")) == iVariant(iString("1234")));
+
     iObject* obj = new iObject;
     iVariant var_obj = iVariant(obj);
     var_obj.value<iObject*>()->setProperty("objectName", iString("var_obj"));
     ilog_debug("var_obj name ", var_obj.value<iObject*>()->objectName());
-
 
     var_int.setValue(obj);
     ilog_debug("var_int int ", var_int.value<iObject*>()->objectName());
