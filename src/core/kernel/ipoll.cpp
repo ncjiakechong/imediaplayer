@@ -171,7 +171,7 @@ xint32 iPoll (iPollFD *fds, xuint32 nfds, xint32 timeout)
     return retval;
 }
 
-#else  /* !IX_OS_WIN */
+#elif defined(IX_OS_MAC) /* MACOS */
 
 /* The following implementation of poll() comes from the GNU C Library.
  * Copyright (C) 1994, 1996, 1997 Free Software Foundation, Inc.
@@ -370,6 +370,13 @@ int iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
     } while (true);
 }
 
-#endif /* !IX_OS_WIN */
+#else /* !IX_OS_WIN && !IX_OS_MAC */
+
+xint32 iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
+{
+    return ::poll(fds, nfds, timeout);
+}
+
+#endif /* !IX_OS_WIN && !IX_OS_MAC */
 
 } // namespace iShell
