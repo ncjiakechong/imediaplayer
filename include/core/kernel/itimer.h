@@ -35,16 +35,16 @@ public:
     inline void setSingleShot(bool singleShot) { m_single = singleShot; }
     inline bool isSingleShot() const { return m_single; }
 
-    static TimerType defaultTypeFor(int msecs)
-    { return msecs >= 2000 ? CoarseTimer : PreciseTimer; }
+    static TimerType defaultTypeFor(int msec)
+    { return msec >= 2000 ? CoarseTimer : PreciseTimer; }
 
     // singleShot to a iObject slot
-    template <typename Duration, typename Func, typename Object>
-    static inline void singleShot(Duration interval, xintptr userdata, const Object *receiver, Func slot)
-    { singleShot(interval, userdata, defaultTypeFor(interval), receiver, slot); }
-    template <typename Duration, typename Func, typename Object>
+    template <typename Func, typename Object>
+    static inline void singleShot(int msec, xintptr userdata, const Object *receiver, Func slot)
+    { singleShot(msec, userdata, defaultTypeFor(msec), receiver, slot); }
+    template <typename Func, typename Object>
     static inline typename enable_if< FunctionPointer<Func, -1>::ArgumentCount >= 0, void>::type
-        singleShot(Duration interval, xintptr userdata, TimerType timerType, const Object *receiver, Func slot) {
+        singleShot(int msec, xintptr userdata, TimerType timerType, const Object *receiver, Func slot) {
         typedef void (iTimer::*SignalFunc)(xintptr userdata);
         typedef FunctionPointer<SignalFunc, -1> SignalType;
         typedef FunctionPointer<Func, -1> SlotType;
@@ -57,11 +57,11 @@ public:
         IX_COMPILER_VERIFY((is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
         _iConnectionHelper<SignalFunc, Func, -1> conn(IX_NULLPTR, &iTimer::timeout, true, receiver, slot, true, DirectConnection);
-        singleShotImpl(interval, userdata, timerType, receiver, conn);
+        singleShotImpl(msec, userdata, timerType, receiver, conn);
     }
-    template <typename Duration, typename Func, typename Object>
+    template <typename Func, typename Object>
     static inline typename enable_if< FunctionPointer<Func, -1>::ArgumentCount == -1 && !is_convertible<Func, const char*>::value, void>::type
-        singleShot(Duration interval, xintptr userdata, TimerType timerType, const Object *receiver, Func slot) {
+        singleShot(int msec, xintptr userdata, TimerType timerType, const Object *receiver, Func slot) {
         typedef void (iTimer::*SignalFunc)(xintptr userdata);
         typedef FunctionPointer<SignalFunc, -1> SignalType;
 
@@ -73,7 +73,7 @@ public:
         // TODO: check Return type convertible
 
         _iConnectionHelper<SignalFunc, Func, FunctorArgumentCount> conn(IX_NULLPTR, &iTimer::timeout, true, receiver, slot, true, DirectConnection);
-        singleShotImpl(interval, userdata, timerType, receiver, conn);
+        singleShotImpl(msec, userdata, timerType, receiver, conn);
     }
 
 public: //slot

@@ -52,11 +52,11 @@ public:
 private:
     void timerInsert(TimerInfo *);
 
-    xint64 currentTime; // millisecond
+    xint64 m_currentTime; // millisecond
 
     // state variables used by activateTimers()
-    TimerInfo *firstTimerInfo;
-    std::list<TimerInfo*> timers;
+    TimerInfo *m_firstTimerInfo;
+    std::list<TimerInfo*> m_timers;
 };
 
 } // namespace iShell
