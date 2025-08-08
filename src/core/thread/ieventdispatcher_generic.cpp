@@ -32,7 +32,7 @@ public:
         , serialNumber(1)
         , lastSerialNumber(0) {}
 
-    virtual bool prepare(int *)
+    virtual bool prepare(xint64 *)
     {
         iThreadData *data = iThreadData::current();
         if (!data)
@@ -63,11 +63,11 @@ class iTimerEventSource : public iEventSource
 public:
     iTimerEventSource(int priority) : iEventSource(priority) {}
 
-    virtual bool prepare(int *timeout)
+    virtual bool prepare(xint64 *timeout)
     {
         xint64 __dummy_timeout = -1;
         if (timerList.timerWait(__dummy_timeout)) {
-            *timeout = (int)__dummy_timeout;
+            *timeout = __dummy_timeout;
         } else {
             *timeout = -1;
         }
@@ -176,7 +176,7 @@ bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flag
     return result;
 }
 
-void iEventDispatcher_generic::reregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
+void iEventDispatcher_generic::reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     if ((timerId < 1) || interval < 0 || !object) {
         ilog_warn("invalid arguments");
@@ -222,7 +222,7 @@ std::list<iEventDispatcher::TimerInfo> iEventDispatcher_generic::registeredTimer
     return m_timerSource->timerList.registeredTimers(object);
 }
 
-int iEventDispatcher_generic::remainingTime(int timerId)
+xint64 iEventDispatcher_generic::remainingTimeNSecs(int timerId)
 {
     if (timerId < 1) {
         ilog_warn("invalid argument");
@@ -333,7 +333,7 @@ int iEventDispatcher_generic::removePoll(iPollFD* fd, iEventSource*)
     return 0;
 }
 
-bool iEventDispatcher_generic::eventPrepare(int* priority, int* timeout)
+bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
 {
     if (m_inCheckOrPrepare) {
         ilog_warn("called recursively from within a source's check() or prepare() member.");
@@ -341,14 +341,14 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, int* timeout)
     }
 
     /* Prepare all sources */
-    int current_timeout = -1;
+    xint64 current_timeout = -1;
     int n_ready = 0;
     int current_priority = std::numeric_limits<int>::max();
 
     std::map<int, std::list<iEventSource*>>::const_iterator mapIt;
     for (mapIt = m_sources.cbegin(); mapIt != m_sources.cend(); ++mapIt) {
         const std::list<iEventSource*>& list = mapIt->second;
-        int sourceTimeout = -1;
+        xint64 sourceTimeout = -1;
 
         bool iterBreak = false;
         std::list<iEventSource*>::const_iterator listIt;
@@ -399,7 +399,7 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, int* timeout)
     return (n_ready > 0);
 }
 
-int iEventDispatcher_generic::eventQuery(int max_priority, int*, iPollFD* fds, int n_fds)
+int iEventDispatcher_generic::eventQuery(int max_priority, xint64*, iPollFD* fds, int n_fds)
 {
     int n_poll;
     iPollRec* lastpollrec;
@@ -539,10 +539,10 @@ void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingD
 
 bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
 {
-    int max_priority = std::numeric_limits<int>::max();
-    int timeout = -1;
     bool some_ready;
+    int max_priority = std::numeric_limits<int>::max();
     int nfds, allocated_nfds;
+    xint64 timeout = -1;
     iPollFD *fds = IX_NULLPTR;
 
     if (!m_cachedPollArray) {

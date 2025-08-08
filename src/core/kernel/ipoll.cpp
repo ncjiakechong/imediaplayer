@@ -40,7 +40,7 @@ static int poll_rest (iPollFD *msg_fd,
            HANDLE  *handles,
            iPollFD *handle_to_fd[],
            int     nhandles,
-           int     timeout)
+           xint64     timeout)
 {
     DWORD ready;
     iPollFD *f;
@@ -114,7 +114,7 @@ static int poll_rest (iPollFD *msg_fd,
     return 0;
 }
 
-xint32 iPoll (iPollFD *fds, xuint32 nfds, xint32 timeout)
+xint32 iPoll (iPollFD *fds, xuint32 nfds, xint64 timeout)
 {
     HANDLE handles[MAXIMUM_WAIT_OBJECTS];
     iPollFD *handle_to_fd[MAXIMUM_WAIT_OBJECTS];
@@ -138,8 +138,12 @@ xint32 iPoll (iPollFD *fds, xuint32 nfds, xint32 timeout)
         f->revents = 0;
     }
 
-    if (timeout == -1)
+    // change ns to ms
+    if (timeout == -1) {
         timeout = INFINITE;
+    } else {
+        timeout = (timeout + 999999LL) / (1000LL * 1000LL);
+    }
 
     /* Polling for several things? */
     if (nhandles > 1 || (nhandles > 0 && msg_fd != IX_NULLPTR)) {
@@ -305,7 +309,7 @@ static inline int ipoll_mark_bad_fds(iPollFD *fds, xuint32 nfds)
    return n_marked;
 }
 
-int iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
+int iPoll(iPollFD *fds, xuint32 nfds, xint64 timeout)
 {
     if (!fds && nfds) {
         ilog_warn("invalid argument");
@@ -317,9 +321,15 @@ int iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
 
     int n_bad_fds = 0;
 
-    if (timeout >= 0) {
+    if (timeout > 0) {
+        // change ns to ms
+        timeout = (timeout + 999999LL) / (1000LL * 1000LL);
         tv.tv_sec = timeout / 1000;
         tv.tv_usec = (timeout % 1000) * 1000;
+        ptv = &tv;
+    } else if (0 == timeout) {
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
         ptv = &tv;
     }
 
@@ -372,9 +382,17 @@ int iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
 
 #else /* !IX_OS_WIN && !IX_OS_MAC */
 
-xint32 iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout)
+xint32 iPoll(iPollFD *fds, xuint32 nfds, xint64 timeout)
 {
-    return ::poll(fds, nfds, timeout);
+    if (timeout < 0) {
+        return ::poll(fds, nfds, -1);
+    }
+
+    struct timespec timeout_ts;
+    timeout_ts.tv_sec = timeout / (1000LL * 1000LL *1000LL);
+    timeout_ts.tv_nsec = timeout % (1000LL * 1000LL *1000LL);
+
+    return ::ppoll(fds, nfds, &timeout_ts, IX_NULLPTR);
 }
 
 #endif /* !IX_OS_WIN && !IX_OS_MAC */

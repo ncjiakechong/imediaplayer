@@ -55,7 +55,7 @@ public:
      * be %IX_NULLPTR, in which case the effect is as if the function always returns
      * %FALSE with a timeout of -1.
      */
-    virtual bool prepare(int *timeout_);
+    virtual bool prepare(xint64 *timeout_);
 
     /**
      * Called after all the file descriptors are polled. The source

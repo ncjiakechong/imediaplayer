@@ -124,7 +124,7 @@ int iEventSource::removePoll(iPollFD* fd)
     return 0;
 }
 
-bool iEventSource::prepare(int*)
+bool iEventSource::prepare(xint64*)
 { return false; }
 
 bool iEventSource::check()

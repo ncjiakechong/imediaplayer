@@ -75,6 +75,7 @@ public:
     iThread* thread() const;
     bool moveToThread(iThread *targetThread);
 
+    int startPreciseTimer(xint64 nsec, xintptr userdata = 0, TimerType timerType = CoarseTimer);
     int startTimer(int msec, xintptr userdata = 0, TimerType timerType = CoarseTimer);
     void killTimer(int id);
 

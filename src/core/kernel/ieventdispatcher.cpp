@@ -84,7 +84,7 @@ iEventDispatcher::iEventDispatcher(iObject *parent)
 iEventDispatcher::~iEventDispatcher()
 {}
 
-int iEventDispatcher::registerTimer(int interval, TimerType timerType, iObject *object, xintptr userdata)
+int iEventDispatcher::registerTimer(xint64 interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     if (interval < 0 || !object) {
         ilog_warn("invalid arguments");

@@ -30,12 +30,12 @@ public:
 
     virtual bool processEvents(iEventLoop::ProcessEventsFlags flags);
 
-    virtual void reregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata);
+    virtual void reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata);
     virtual bool unregisterTimer(int timerId);
     virtual bool unregisterTimers(iObject *object, bool releaseId);
     virtual std::list<TimerInfo> registeredTimers(iObject *object) const;
 
-    virtual int remainingTime(int timerId);
+    virtual xint64 remainingTimeNSecs(int timerId);
 
     virtual void wakeUp();
     virtual void interrupt();

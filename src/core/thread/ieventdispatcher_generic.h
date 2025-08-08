@@ -32,12 +32,12 @@ public:
 
     virtual bool processEvents(iEventLoop::ProcessEventsFlags flags);
 
-    virtual void reregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata);
+    virtual void reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata);
     virtual bool unregisterTimer(int timerId);
     virtual bool unregisterTimers(iObject *object, bool releaseId);
     virtual std::list<TimerInfo> registeredTimers(iObject *object) const;
 
-    virtual int remainingTime(int timerId);
+    virtual xint64 remainingTimeNSecs(int timerId);
 
     virtual void wakeUp();
     virtual void interrupt();
@@ -56,8 +56,8 @@ private:
     };
 
     bool eventIterate(bool block, bool dispatch);
-    bool eventPrepare(int* priority, int* timeout);
-    int  eventQuery(int max_priority, int* timeout, iPollFD* fds, int n_fds);
+    bool eventPrepare(int* priority, xint64* timeout);
+    int  eventQuery(int max_priority, xint64* timeout, iPollFD* fds, int n_fds);
     bool eventCheck(int max_priority, iPollFD* fds, int n_fds, std::list<iEventSource *>* pendingDispatches);
     void eventDispatch(std::list<iEventSource *>* pendingDispatches);
 

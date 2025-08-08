@@ -87,7 +87,7 @@ int iTimer::remainingTime() const
         return -1;
     }
 
-    return iEventDispatcher::instance()->remainingTime(m_id);
+    return (iEventDispatcher::instance()->remainingTimeNSecs(m_id) + 999999LL) / (1000LL * 1000LL); // convert to milliseconds
 }
 
 class iSingleShotTimer : public iObject

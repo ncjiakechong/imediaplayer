@@ -69,7 +69,7 @@ typedef struct pollfd iPollFD;
    an event to occur; if TIMEOUT is -1, block until an event occurs.
    Returns the number of file descriptors with events, zero if timed out,
    or -1 for errors.  */
-IX_CORE_EXPORT xint32 iPoll(iPollFD *fds, xuint32 nfds, xint32 timeout);
+IX_CORE_EXPORT xint32 iPoll(iPollFD *fds, xuint32 nfds, xint64 timeout);
 
 } // namespace iShell
 

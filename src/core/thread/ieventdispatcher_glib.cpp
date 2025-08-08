@@ -34,7 +34,7 @@ static gboolean timerSourcePrepareHelper(GTimerSource *src, gint *timeout)
 {
     xint64 __dummy_timeout = -1;
     if (src->timerList.timerWait(__dummy_timeout)) {
-        *timeout = (int)__dummy_timeout;
+        *timeout = (__dummy_timeout + 999999LL) / (1000LL * 1000LL); // convert to milliseconds
     } else {
         *timeout = -1;
     }
@@ -197,10 +197,10 @@ static gboolean eventSourceWraperPrepare(GSource *s, gint *timeout)
     if (!timeout)
         timeout = &dummy;
 
-    int timeout_wraper = -1;
+    xint64 timeout_wraper = -1;
     iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
     bool ret = source->imp->prepare(&timeout_wraper);
-    *timeout = (gint)timeout_wraper;
+    *timeout = (gint)((timeout_wraper + 999999LL) / (1000LL * 1000LL));
     return ret;
 }
 
@@ -331,7 +331,7 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
     return result;
 }
 
-void iEventDispatcher_Glib::reregisterTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
+void iEventDispatcher_Glib::reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     if (timerId < 1 || interval < 0 || !object) {
         ilog_warn("invalid arguments");
@@ -380,7 +380,7 @@ std::list<iEventDispatcher::TimerInfo> iEventDispatcher_Glib::registeredTimers(i
     return m_timerSource->timerList.registeredTimers(object);
 }
 
-int iEventDispatcher_Glib::remainingTime(int timerId)
+xint64 iEventDispatcher_Glib::remainingTimeNSecs(int timerId)
 {
     if (timerId < 1) {
         ilog_warn("invalid argument");

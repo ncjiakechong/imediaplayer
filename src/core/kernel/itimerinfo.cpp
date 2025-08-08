@@ -21,6 +21,25 @@
 
 namespace iShell {
 
+static xint64 roundToSecs(xint64 interval)
+{
+    // The very coarse timer is based on full second precision, so we want to
+    // round the interval to the closest second, rounding 500ms up to 1s.
+    //
+    // std::chrono::round() wouldn't work with all multiples of 500 because for the
+    // middle point it would round to even:
+    // value  round()  wanted
+    // 500      0        1
+    // 1500     2        2
+    // 2500     2        3
+
+    xint64 secs = interval / (1000LL * 1000LL * 1000LL) * (1000LL * 1000LL * 1000LL); // convert to seconds
+    const xint64 frac = interval - secs;
+    if (frac >= (500LL * 1000LL * 1000LL))
+        secs += (1000LL * 1000LL * 1000LL); // add one second if the fraction is >= 500ms
+    return secs;
+}
+
 iTimerInfoList::iTimerInfoList()
     : m_currentTime(0)
     , m_firstTimerInfo(IX_NULLPTR)
@@ -38,7 +57,7 @@ iTimerInfoList::~iTimerInfoList()
 
 xint64 iTimerInfoList::updateCurrentTime()
 {
-    m_currentTime = iDeadlineTimer::current(PreciseTimer).deadline();
+    m_currentTime = iDeadlineTimer::current(PreciseTimer).deadlineNSecs();
     return m_currentTime;
 }
 
@@ -47,18 +66,19 @@ xint64 iTimerInfoList::updateCurrentTime()
 */
 void iTimerInfoList::timerInsert(TimerInfo *ti)
 {
-    std::list<TimerInfo*>::const_reverse_iterator it = m_timers.crbegin();
-    while (it != m_timers.crend()) {
-        const TimerInfo * const t = *it;
-        if (!(ti->timeout < t->timeout))
-            break;
+    std::list<TimerInfo*>::iterator insert_it = m_timers.begin();
 
-        ++it;
+    while (insert_it != m_timers.end()) {
+        const TimerInfo * const t = *insert_it;
+        if (ti->timeout < t->timeout) {
+            m_timers.insert(insert_it, ti);
+            return;
+        }
+
+        ++insert_it;
     }
 
-    std::list<TimerInfo*>::iterator insert_it = m_timers.begin();
-    std::advance(insert_it, m_timers.size() - std::distance(m_timers.crbegin(), it));
-    m_timers.insert(insert_it, ti);
+    m_timers.push_back(ti);
 }
 
 
@@ -80,13 +100,14 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
     //
     // The objective is to make most timers wake up at the same time, thereby reducing CPU wakeups.
 
-    uint interval = uint(t->interval);
-    uint msec = uint(t->timeout % 1000);
-    uint timeoutInSecs = uint(t->timeout / 1000);
+    xint64 interval = xint64((t->interval + 999999LL) / (1000LL * 1000LL)); // convert to milliseconds
+    xint64 timeout = xint64((t->timeout + 999999LL) / (1000LL * 1000LL)); // convert to milliseconds
+    xint64 msec = xint64(timeout % 1000LL);
+    xint64 timeoutInSecs = xint64(timeout / 1000LL);
     IX_ASSERT(interval >= 20);
 
     // Calculate how much we can round and still keep within 5% error
-    uint absMaxRounding = interval / 20;
+    xint64 absMaxRounding = interval / 20;
 
     if (interval < 100 && interval != 25 && interval != 50 && interval != 75) {
         // special mode for timers of less than 100 ms
@@ -106,8 +127,8 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
             msec <<= 2;
         }
     } else {
-        uint min = std::max<int>(0, msec - absMaxRounding);
-        uint max = std::min(1000u, msec + absMaxRounding);
+        xint64 min = std::max<xint64>(0, msec - absMaxRounding);
+        xint64 max = std::min<xint64>(1000u, msec + absMaxRounding);
 
         // find the boundary that we want, according to the rules above
         // extra rules:
@@ -120,7 +141,7 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
             goto recalculate;
         }
 
-        uint wantedBoundaryMultiple;
+        xint64 wantedBoundaryMultiple;
 
         // 2) if the interval is a multiple of 500 ms and > 5000 ms, we'll always round
         //    towards a round-to-the-second
@@ -135,7 +156,7 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
             }
         } else if ((interval % 50) == 0) {
             // 4) same for multiples of 250, 200, 100, 50
-            uint mult50 = interval / 50;
+            xint64 mult50 = interval / 50;
             if ((mult50 % 4) == 0) {
                 // multiple of 200
                 wantedBoundaryMultiple = 200;
@@ -153,8 +174,8 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
             wantedBoundaryMultiple = 25;
         }
 
-        uint base = msec / wantedBoundaryMultiple * wantedBoundaryMultiple;
-        uint middlepoint = base + wantedBoundaryMultiple / 2;
+        xint64 base = msec / wantedBoundaryMultiple * wantedBoundaryMultiple;
+        xint64 middlepoint = base + wantedBoundaryMultiple / 2;
         if (msec < middlepoint)
             msec = std::max(base, min);
         else
@@ -162,7 +183,7 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
     }
 
 recalculate:
-    t->timeout = timeoutInSecs * 1000 + msec;
+    t->timeout = (timeoutInSecs * 1000LL + msec) * (1000LL * 1000LL); // convert to nanoseconds
     if (t->timeout < currentTime)
         t->timeout += t->interval;
 }
@@ -184,9 +205,9 @@ static void calculateNextTimeout(iTimerInfoList::TimerInfo *t, xint64 currentTim
 
     case VeryCoarseTimer:
         // we don't need to take care of the microsecond component of t->interval
-        t->timeout += t->interval * 1000;
+        t->timeout += t->interval;
         if (t->timeout <= currentTime)
-            t->timeout = currentTime + (t->interval * 1000);
+            t->timeout = roundToSecs(currentTime + t->interval);
 
         return;
     }
@@ -228,7 +249,7 @@ bool iTimerInfoList::timerWait(xint64 &tm)
   null if there is nothing left. If the timer id is not found in the list, the
   returned value will be -1. If the timer is overdue, the returned value will be 0.
 */
-int iTimerInfoList::timerRemainingTime(int timerId)
+xint64 iTimerInfoList::timerRemainingTime(int timerId)
 {
     xint64 currentTime = updateCurrentTime();
     for (std::list<TimerInfo*>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
@@ -236,7 +257,7 @@ int iTimerInfoList::timerRemainingTime(int timerId)
         if (t->id == timerId) {
             if (currentTime < t->timeout) {
                 // time to wait
-                return (int)(t->timeout - currentTime);
+                return t->timeout - currentTime;
             } else {
                 return 0;
             }
@@ -247,7 +268,7 @@ int iTimerInfoList::timerRemainingTime(int timerId)
     return -1;
 }
 
-void iTimerInfoList::registerTimer(int timerId, int interval, TimerType timerType, iObject *object, xintptr userdata)
+void iTimerInfoList::registerTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata)
 {
     // correct the timer type first
     if (timerType == CoarseTimer) {
@@ -255,9 +276,9 @@ void iTimerInfoList::registerTimer(int timerId, int interval, TimerType timerTyp
         // so our boundaries are 20 ms and 20 s
         // below 20 ms, 5% inaccuracy is below 1 ms, so we convert to high precision
         // above 20 s, 5% inaccuracy is above 1 s, so we convert to VeryCoarseTimer
-        if (interval >= 20000)
+        if (interval >= (20 * 1000 * 1000LL * 1000LL)) // 20 seconds in nanoseconds
             timerType = VeryCoarseTimer;
-        else if (interval <= 20)
+        else if (interval <= (20 * 1000LL * 1000LL)) // 20 milliseconds in nanoseconds
             timerType = PreciseTimer;
     }
 
@@ -286,10 +307,8 @@ void iTimerInfoList::registerTimer(int timerId, int interval, TimerType timerTyp
     case VeryCoarseTimer:
         // the very coarse timer is based on full second precision,
         // so we keep the interval in seconds (round to closest second)
-        t->interval /= 500;
-        t->interval += 1;
-        t->interval >>= 1;
-        t->timeout = m_currentTime + (t->interval * 1000);
+        t->interval = roundToSecs(t->interval);
+        t->timeout = roundToSecs(m_currentTime + interval);
         break;
     }
 
@@ -355,9 +374,7 @@ std::list<iEventDispatcher::TimerInfo> iTimerInfoList::registeredTimers(iObject 
     for (std::list<TimerInfo*>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
         TimerInfo *t = *it;
         if (t->obj == object) {
-            iEventDispatcher::TimerInfo insert(t->id,
-                                               (t->timerType == VeryCoarseTimer ? t->interval * 1000 : t->interval),
-                                               t->timerType, t->userdata);
+            iEventDispatcher::TimerInfo insert(t->id, t->interval, t->timerType, t->userdata);
             list.push_back(insert);
         }
     }
