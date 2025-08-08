@@ -271,6 +271,18 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ (int
 }
 
 template <typename T>
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (int count)
+{
+    {
+        iMutex::ScopedLock lock(m_counter.mutex);
+        m_counter.value += count;
+    }
+
+    return *this;
+}
+
+
+template <typename T>
 inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- () // prefix
 {
     ValueType result;
@@ -290,6 +302,17 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- (int
         result = m_counter.value--;
     }
     return result;
+}
+
+template <typename T>
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
+{
+    {
+        iMutex::ScopedLock lock(m_counter.mutex);
+        m_counter.value += count;
+    }
+
+    return *this;
 }
 
 template <typename T>

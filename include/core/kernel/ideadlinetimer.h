@@ -36,9 +36,9 @@ public:
     enum ForeverConstant { Forever };
 
     iDeadlineTimer(TimerType type_ = CoarseTimer)
-        : t1(0), t2(0), type(type_) {}
+        : t1(0), type(type_) {}
     iDeadlineTimer(ForeverConstant, TimerType type_ = CoarseTimer)
-        : t1(std::numeric_limits<xint64>::max()), t2(0), type(type_) {}
+        : t1(std::numeric_limits<xint64>::max()), type(type_) {}
     explicit iDeadlineTimer(xint64 msecs, TimerType type = CoarseTimer);
         /// Constructs a iDeadlineTimer object with an expiry time of \a msecs msecs
         /// from the moment of the creation of this object, if msecs is positive. If \a
@@ -58,7 +58,7 @@ public:
         /// it.
 
     void swap(iDeadlineTimer &other)
-    { std::swap(t1, other.t1); std::swap(t2, other.t2); std::swap(type, other.type); }
+    { std::swap(t1, other.t1); std::swap(type, other.type); }
         /// Swaps this deadline timer with the \a other deadline timer.
 
     bool isForever() const
@@ -148,11 +148,11 @@ public:
         /// The iDeadlineTimer object will be constructed with the specified \a timerType.
 
     friend bool operator==(iDeadlineTimer d1, iDeadlineTimer d2)
-    { return d1.t1 == d2.t1 && d1.t2 == d2.t2; }
+    { return d1.t1 == d2.t1; }
     friend bool operator!=(iDeadlineTimer d1, iDeadlineTimer d2)
     { return !(d1 == d2); }
     friend bool operator<(iDeadlineTimer d1, iDeadlineTimer d2)
-    { return d1.t1 < d2.t1 || (d1.t1 == d2.t1 && d1.t2 < d2.t2); }
+    { return d1.t1 < d2.t1; }
     friend bool operator<=(iDeadlineTimer d1, iDeadlineTimer d2)
     { return d1 == d2 || d1 < d2; }
     friend bool operator>(iDeadlineTimer d1, iDeadlineTimer d2)
@@ -161,13 +161,13 @@ public:
     { return !(d1 < d2); }
 
     friend iDeadlineTimer operator+(iDeadlineTimer dt, xint64 msecs)
-    { return iDeadlineTimer::addNSecs(dt, msecs * 1000 * 1000); }
+    { return iDeadlineTimer::addNSecs(dt, msecs * 1000LL * 1000LL); }
     friend iDeadlineTimer operator+(xint64 msecs, iDeadlineTimer dt)
     { return dt + msecs; }
     friend iDeadlineTimer operator-(iDeadlineTimer dt, xint64 msecs)
     { return dt + (-msecs); }
     friend xint64 operator-(iDeadlineTimer dt1, iDeadlineTimer dt2)
-    { return (dt1.deadlineNSecs() - dt2.deadlineNSecs()) / (1000 * 1000); }
+    { return (dt1.deadlineNSecs() - dt2.deadlineNSecs()) / (1000LL * 1000LL); }
     iDeadlineTimer &operator+=(xint64 msecs)
     { *this = *this + msecs; return *this; }
     iDeadlineTimer &operator-=(xint64 msecs)
@@ -175,7 +175,6 @@ public:
 
 private:
     xint64 t1;
-    xint64 t2;
     unsigned type;
 
     xint64 rawRemainingTimeNSecs() const;
