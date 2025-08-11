@@ -92,16 +92,9 @@ public:
             m_quit.start(100, 100);
         }
 
-        if (m_t1ns == event->timerId()) {
-            m_t100ns = startPreciseTimer(100, 100 + 1);
-            killTimer(m_t1ns);
-            m_t1ns = 0;
-        }
-
-        if (m_t100ns == event->timerId()) {
-            m_t1us = startPreciseTimer(1000, 1000 + 1);
-            killTimer(m_t100ns);
-            m_t100ns = 0;
+        if (m_t10us == event->timerId()) {
+            killTimer(m_t10us);
+            m_t10us = 0;
         }
 
         if (m_t1us == event->timerId()) {
@@ -110,9 +103,16 @@ public:
             m_t1us = 0;
         }
 
-        if (m_t10us == event->timerId()) {
-            killTimer(m_t10us);
-            m_t10us = 0;
+        if (m_t100ns == event->timerId()) {
+            m_t1us = startPreciseTimer(1000, 1000 + 1);
+            killTimer(m_t100ns);
+            m_t100ns = 0;
+        }
+
+        if (m_t1ns == event->timerId()) {
+            m_t100ns = startPreciseTimer(100, 100 + 1);
+            killTimer(m_t1ns);
+            m_t1ns = 0;
         }
 
         return true;

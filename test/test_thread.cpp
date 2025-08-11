@@ -106,7 +106,8 @@ int test_thread(void)
 
     thread1 = new TestThread;
     thread1->moveToThread(thread);
-    signal1->disconnect(signal1, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
+    signal1->disconnect(signal1, IX_NULLPTR, (iObject*)IX_NULLPTR, IX_NULLPTR);
+
     iObject::connect(signal1, &TestThread::tst_sig_int1, signal1, &TestThread::tst_slot_int1, QueuedConnection);
     IX_ASSERT(iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1, ConnectionType(DirectConnection | UniqueConnection)));
     IX_ASSERT(!iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1, ConnectionType(DirectConnection | UniqueConnection)));
