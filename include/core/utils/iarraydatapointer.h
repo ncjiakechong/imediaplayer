@@ -31,11 +31,11 @@ public:
 
     iArrayDataPointer(const iArrayDataPointer &other)
         : d(other.d), ptr(other.ptr), size(other.size)
-    { ref(); }
+    { if (d) d->ref(true); }
 
     iArrayDataPointer(Data *header, T *adata, xsizetype n = 0)
         : d(header), ptr(adata), size(n)
-    {}
+    { if (d) d->ref(true); }
 
     static iArrayDataPointer fromRawData(const T *rawData, xsizetype length, iFreeCb freeCb, void* freeCbData) {
         IX_ASSERT(rawData || !length);
@@ -107,7 +107,8 @@ public:
     void clearOptions(typename Data::ArrayOptions f) { IX_ASSERT(d); d->clearOptions(f); }
     typename Data::ArrayOptions detachOptions() const { return d ? d->detachOptions() : Data::DefaultAllocationFlags; }
 
-    Data *d_ptr() { return d; }
+    Data* d_ptr() { return d; }
+    const Data* d_ptr() const { return d; }
     void setBegin(T *begin) { ptr = begin; }
 
     xsizetype freeSpaceAtBegin() const {

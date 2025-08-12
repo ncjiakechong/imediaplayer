@@ -92,7 +92,6 @@ public:
     };
 
     inline iByteArray();
-    iByteArray(const iMemChunk& chunk);
     iByteArray(const char *, xsizetype size = -1);
     iByteArray(xsizetype size, char c);
     iByteArray(xsizetype size, iShell::Initialization);
@@ -312,6 +311,9 @@ public:
     inline xsizetype count() const { return size(); }
     inline xsizetype length() const { return size(); }
     bool isNull() const;
+
+    inline const DataPointer& data_ptr() const { return d; }
+    inline DataPointer& data_ptr() { return d; }
 
     explicit inline iByteArray(const DataPointer &dd) : d(dd) {}
 

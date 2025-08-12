@@ -98,10 +98,11 @@ public:
             return len;
 
         ilog_info("try to buffer the stream data!!!");
-        char buffer[256];
-        xint64 len2 = ::read(m_fd, buffer, sizeof(buffer));
+        iByteArray buffer(256, Uninitialized);
+        xint64 len2 = ::read(m_fd, buffer.data(), buffer.capacity());
         if (len2 > 0) {
-            m_buffer.append(buffer, len2);
+            buffer.resize(len2);
+            m_buffer.append(buffer);
             m_currPos += len2;
         }
 

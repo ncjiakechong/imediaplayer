@@ -337,27 +337,19 @@ bool iIODevice::iMBQueueRef::isEmpty() const
 
 int iIODevice::iMBQueueRef::getChar() 
 {
-    iMemChunk tchunk;
+    iByteArray tchunk;
     if (!m_buf || (m_buf->peek(tchunk) < 0))
         return -1;
 
-    int ret = 0;
-    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::new4Fixed(IX_NULLPTR, &ret, 1, false));
-    iMemChunk rchunk(block.data(), 0, 1);
-    rchunk.copy(tchunk);
+    int ret = tchunk.front();
     m_buf->drop(1);
-    tchunk.reset(true);
 
     return ret;
 }
 void iIODevice::iMBQueueRef::putChar(char c) 
 { 
     IX_ASSERT(m_buf);
-    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::newOne(IX_NULLPTR, m_buf->getBase()));
-    char* data = (char*)block->data().value();
-    *data = c;
-
-    m_buf->pushAlign(iMemChunk(block.data(), 0, 1));
+    m_buf->pushAlign(iByteArray(1, c));
 }
 
 xint64 iIODevice::iMBQueueRef::size() const 
@@ -376,7 +368,7 @@ struct _IndexOfData {
     xint64 maxLength;
 };
 
-static bool _IndexofFunc(const iMemChunk& chunk, xint64 pos, xint64 distance, void* userdata)
+static bool _IndexofFunc(const iByteArray& chunk, xint64 pos, xint64 distance, void* userdata)
 {
     _IndexOfData* data = static_cast<_IndexOfData*>(userdata);
     if (distance + chunk.length() <= data->offset)
@@ -407,27 +399,25 @@ xint64 iIODevice::iMBQueueRef::read(char *data, xint64 maxLength)
 
     xint64 readSoFar = 0;
     const xint64 bytesToRead = std::min<xint64>(m_buf->getMaxLength(), maxLength);
-    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::new4Fixed(IX_NULLPTR, data, maxLength, false));
+    iByteArray rchunk = iByteArray::fromRawData(data, maxLength, IX_NULLPTR, IX_NULLPTR);
+    rchunk.data_ptr().truncate(0);
     while (readSoFar < bytesToRead) {
-        iMemChunk tchunk;
+        iByteArray tchunk;
         if (m_buf->peek(tchunk) < 0)
             break;
 
         const xint64 bytesToReadFromThisBlock = std::min<xint64>(bytesToRead - readSoFar, tchunk.length());
-        iMemChunk rchunk(block.data(), readSoFar, bytesToReadFromThisBlock);
-        rchunk.copy(tchunk);
-
+        rchunk.data_ptr().insert(rchunk.data_ptr().end(), tchunk.begin(), tchunk.begin() + bytesToReadFromThisBlock);
         readSoFar += bytesToReadFromThisBlock;
         m_buf->drop(bytesToReadFromThisBlock);
-        tchunk.reset(true);
     }
 
     return readSoFar;
 }
 
-iMemChunk iIODevice::iMBQueueRef::read()
+iByteArray iIODevice::iMBQueueRef::read()
 {
-    iMemChunk tchunk;
+    iByteArray tchunk;
     if (!m_buf)
         return tchunk;
 
@@ -440,10 +430,10 @@ struct _PeekMaxData {
     xint64 offset;
     xint64 maxLength;
     xint64 lastDistance;
-    iMemBlock* block;
+    iByteArray chunk;
 };
 
-static bool _PeekMaxFunc(const iMemChunk& chunk, xint64, xint64 distance, void* userdata)
+static bool _PeekMaxFunc(const iByteArray& chunk, xint64, xint64 distance, void* userdata)
 {
     _PeekMaxData* data = static_cast<_PeekMaxData*>(userdata);
     if (distance + chunk.length() <= data->offset)
@@ -452,8 +442,12 @@ static bool _PeekMaxFunc(const iMemChunk& chunk, xint64, xint64 distance, void* 
         return false;
 
     IX_ASSERT(data->lastDistance = distance);
-    iMemChunk rchunk(data->block, (distance < data->offset ? 0 : distance - data->offset), data->maxLength + data->offset - distance);
-    rchunk.copy(chunk, distance < data->offset ? data->offset : 0);
+    if (distance >= data->offset) {
+        data->chunk.data_ptr().insert(data->chunk.data_ptr().end(), 
+                                    (distance < data->offset) ? chunk.begin() + distance - data->offset : chunk.begin(),
+                                    (distance + chunk.length() > data->maxLength + data->offset) ? chunk.begin() + (data->maxLength + data->offset) - distance : chunk.end());
+    }
+
     data->lastDistance = distance + chunk.length();
     return true;
 }
@@ -463,8 +457,10 @@ xint64 iIODevice::iMBQueueRef::peek(char *data, xint64 maxLength, xint64 offset)
     if (!m_buf)
         return 0;
     
-    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::new4Fixed(IX_NULLPTR, data, maxLength, false));
-    _PeekMaxData userdata = {offset, maxLength, 0, block.data()};
+    iByteArray chunk = iByteArray::fromRawData(data, maxLength, IX_NULLPTR, IX_NULLPTR);
+    chunk.data_ptr().truncate(0);
+
+    _PeekMaxData userdata = {offset, maxLength, 0, chunk};
     m_buf->peekIterator(_PeekMaxFunc, &userdata);
 
     return (userdata.lastDistance > offset ? userdata.lastDistance - offset : 0);
@@ -476,17 +472,10 @@ void iIODevice::iMBQueueRef::append(const char *data, xint64 size)
     if (0 == size)
         return;
 
-    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::newOne(IX_NULLPTR, std::max<xint64>(m_buf->getBase(), size)));
-    char* writePointer = (char*)block->data().value();
-    if (size == 1)
-        *writePointer = *data;
-    else
-        ::memcpy(writePointer, data, size);
-
-    m_buf->pushAlign(iMemChunk(block.data(), 0, size));
+    m_buf->pushAlign(iByteArray(data, size));
 }
 
-void iIODevice::iMBQueueRef::append(const iMemChunk& chunk)
+void iIODevice::iMBQueueRef::append(const iByteArray& chunk)
 {
     IX_ASSERT(m_buf);
     m_buf->pushAlign(chunk);
@@ -984,11 +973,12 @@ xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
                             ? xint64(m_readBufferChunkSize)
                             : maxSize;
                     // Try to fill iIODevice buffer by single read
-                    iExplicitlySharedDataPointer<iMemBlock> block(iMemBlock::newOne(IX_NULLPTR, std::max<xint64>(m_readBufferChunkSize, bytesToBuffer)));
-                    readFromDevice = readData((char*)block->data().value(), bytesToBuffer);
+                    iByteArray chunk(std::max<xint64>(m_readBufferChunkSize, bytesToBuffer), Uninitialized);
+                    readFromDevice = readData(chunk.data(), bytesToBuffer);
+                    chunk.resize(readFromDevice);
 
                     deviceAtEof = (readFromDevice != bytesToBuffer);
-                    m_buffer.append(iMemChunk(block.data(), 0, readFromDevice));
+                    m_buffer.append(chunk);
                     if (readFromDevice > 0) {
                         if (!sequential)
                             m_devicePos += readFromDevice;
@@ -1065,15 +1055,12 @@ xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
 
 iByteArray iIODevice::read(xint64 maxSize)
 {
-    iByteArray result;
-
     // Try to prevent the data from being copied, if we have a chunk
     // with the same size in the read buffer.
     if (maxSize == m_buffer.nextDataBlockSize() && !m_transactionStarted
         && (m_openMode & iIODevice::Text) == 0) {
-        iMemChunk chunk = m_buffer.read();
-        result = iByteArray(chunk);
-        chunk.reset(true);
+        iByteArray result = m_buffer.read();
+
         if (!isSequential4Mode())
             m_pos += maxSize;
         if (m_buffer.isEmpty())
@@ -1081,16 +1068,17 @@ iByteArray iIODevice::read(xint64 maxSize)
         return result;
     }
 
+    iByteArray result;
     CHECK_MAXLEN(read, result);
     CHECK_MAXBYTEARRAYSIZE(read);
 
-    result.resize(int(maxSize));
-    xint64 readBytes = read(result.data(), result.size());
+    result.reserve(maxSize);
+    xint64 readBytes = read(result.data(), maxSize);
 
     if (readBytes <= 0)
         result.clear();
     else
-        result.resize(int(readBytes));
+        result.resize(readBytes);
 
     return result;
 }

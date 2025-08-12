@@ -10,58 +10,9 @@
 #ifndef IMEMCHUNK_H
 #define IMEMCHUNK_H
 
-#include <core/io/imemblock.h>
+#include <core/utils/ibytearray.h>
 
 namespace iShell {
-
-/**
- * A memchunk describes a part of a memblock. In contrast to the memblock, a
- * memchunk is not allocated dynamically or reference counted, instead
- * it is usually stored on the stack and copied around 
- */
-class IX_CORE_EXPORT iMemChunk
-{
-public:
-    iMemChunk(iMemBlock* block = IX_NULLPTR, size_t index = 0, size_t length = 0);
-    iMemChunk(const iMemChunk& other);
-
-    ~iMemChunk();
-
-    iMemChunk& operator=(const iMemChunk& other);
-
-    /// Make a memchunk writable, i.e. make sure that the caller may have
-    /// exclusive access to the memblock and it is not read-only. If needed
-    /// the memblock in the structure is replaced by a copy. If min is not
-    /// 0 it is made sure that the returned memblock is at least of the
-    /// specified size, i.e. is enlarged if necessary.
-    iMemChunk& makeWritable(size_t min);
-
-    /// Invalidate a memchunk. This does not free the containing memblock,
-    /// but sets all members to zero.
-    iMemChunk& reset(bool lifecycle = false);
-
-    /// Copy the data in the src memchunk to the dst memchunk
-    iMemChunk& copy(const iMemChunk& src, size_t offset = 0);
-
-    /// indexof for sepcial char
-    xint64 indexOf(unsigned int c, size_t offset = 0) const;
-
-    inline size_t length() const { return m_length; }
-
-    /// Return true if any field is set != 0
-    inline bool isValid() const { return (IX_NULLPTR != m_memblock.block()) || (m_index > 0) || (m_length > 0); }
-
-private:
-    iMemGuard  m_memblock;
-    size_t     m_index;
-    size_t     m_length;
-
-    friend class iMCAlign;
-    friend class iMemBlock;
-    friend class iByteArray;
-    friend class iMemBlockQueue;
-};
-
 
 /* An alignment object, used for aligning memchunks to multiples of
  * the frame size. */
@@ -84,19 +35,19 @@ public:
 
     /// Push a new memchunk into the aligner. The caller of this routine
     /// has to free the memchunk by himself.
-    void push(const iMemChunk& c);
+    void push(const iByteArray& c);
 
     /// Pop a new memchunk from the aligner. Returns 0 when successful,
     /// nonzero otherwise.
-    int pop(iMemChunk& c);
+    int pop(iByteArray& c);
 
     /// Flush what's still stored in the aligner
     void flush();
 
 private:
     size_t    m_base;
-    iMemChunk m_leftover;
-    iMemChunk m_current;
+    iByteArray m_leftover;
+    iByteArray m_current;
 };
 
 } // namespace iShell

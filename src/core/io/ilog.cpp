@@ -178,7 +178,7 @@ bool iLogger::start(const char *tag, iLogLevel level, const char* file, const ch
     m_function = function;
     m_level = level;
     m_line = line;
-    m_buff.reserve(128);
+    m_buff.reserve(256);
     return true;
 }
 

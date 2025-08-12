@@ -24,7 +24,6 @@ namespace iShell {
 
 class iMemPool;
 class iMemBlock;
-class iMemChunk;
 class iShareMem;
 class iMemImport;
 class iMemExport;
@@ -120,7 +119,7 @@ public:
     // Returns true if a detach is necessary before modifying the data
     // This method is intentionally not const: if you want to know whether
     // detaching is necessary, you should be in a non-const function already
-    inline bool needsDetach() const { return count() > 1; }
+    inline bool needsDetach() const { return isReadOnly(); }
 
     inline xsizetype detachCapacity(xsizetype newSize) const {
         if ((m_options & CapacityReserved) && (newSize < allocatedCapacity()))

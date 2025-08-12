@@ -114,7 +114,6 @@ public:
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
         iMemBlock *data = newOne(IX_NULLPTR, capacity, sizeof(T), IX_ALIGNOF(AlignmentDummy), options);
         iTypedArrayData* ret = static_cast<iTypedArrayData *>(data);
-        ret->ref(true);
         return ret;
     }
 
@@ -129,7 +128,6 @@ public:
         iMemBlock* data = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, freeCb, freeCbData, false);
         iTypedArrayData* ret = static_cast<iTypedArrayData *>(data);
         ret->reinterpreted<char>();
-        ret->ref(true);
         return ret;
     }
 };

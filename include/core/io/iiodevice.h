@@ -13,10 +13,10 @@
 #include <memory>
 
 #include <core/kernel/iobject.h>
+#include <core/utils/ibytearray.h>
 
 namespace iShell {
 
-class iByteArray;
 class iMemBlockQueue;
 
 class IX_CORE_EXPORT iIODevice : public iObject
@@ -134,10 +134,10 @@ protected:
         xint64 indexOf(char c) const;
         xint64 indexOf(char c, xint64 maxLength, xint64 offset = 0) const;
         xint64 read(char *data, xint64 maxLength);
-        iMemChunk read();
+        iByteArray read();
         xint64 peek(char *data, xint64 maxLength, xint64 offset = 0) const;
         void append(const char *data, xint64 size);
-        void append(const iMemChunk& chunk);
+        void append(const iByteArray& chunk);
         xint64 skip(xint64 length);
         xint64 readLine(char *data, xint64 maxLength);
         bool canReadLine() const;

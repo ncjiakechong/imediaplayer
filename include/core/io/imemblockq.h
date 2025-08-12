@@ -106,7 +106,7 @@ struct IX_CORE_EXPORT iBufferAttr
 class IX_CORE_EXPORT iMemBlockQueue
 {
 public:
-    typedef bool (*IteratorFunc)(const iMemChunk& chunk, xint64 pos, xint64 distance, void* userdata);
+    typedef bool (*IteratorFunc)(const iByteArray& chunk, xint64 pos, xint64 distance, void* userdata);
 
     /// Parameters:
     /// name:      name for debugging purposes
@@ -126,17 +126,17 @@ public:
     /// maxrewind: how many bytes of history to keep in the queue
     /// silence:   return this memchunk when reading uninitialized data
     iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t maxlength, size_t tlength, size_t base, 
-        size_t prebuf, size_t minreq, size_t maxrewind, iMemChunk *silence);
+        size_t prebuf, size_t minreq, size_t maxrewind, iByteArray *silence);
     
     ~iMemBlockQueue();
 
     /// Push a new memory chunk into the queue.
-    xint64 push(const iMemChunk& chunk);
+    xint64 push(const iByteArray& chunk);
 
     /// Push a new memory chunk into the queue, but filter it through a
     /// pa_mcalign object. Don't mix this with seek() unless
     /// you know what you do.
-    int pushAlign(const iMemChunk& chunk);
+    int pushAlign(const iByteArray& chunk);
 
     /// Manipulate the write pointer
     enum SeekMode {
@@ -160,12 +160,12 @@ public:
     /// memblock was passed at initialization. If the queue is not empty,
     /// but we're currently at a hole in the queue and no silence memblock
     /// was passed we return the length of the hole in chunk->length.
-    int peek(iMemChunk& chunk);
+    int peek(iByteArray& chunk);
 
     /// Much like peek, but guarantees that the returned chunk
     /// will have a length of the block size passed. You must configure a
     /// silence memchunk for this memblockq if you use this call.
-    int peekFixedSize(size_t block_size, iMemChunk& chunk);
+    int peekFixedSize(size_t block_size, iByteArray& chunk);
 
     /// Much like peek, interator each block data in the queue
     int peekIterator(IteratorFunc func, void* userdata);
@@ -239,7 +239,7 @@ public:
     void setMinReq(size_t minreq); /* might modify prebuf, too */
     void setPreBuf(size_t prebuf);
     void setMaxRewind(size_t maxrewind); /* Set the maximum history size */
-    void setSilence(iMemChunk *silence);
+    void setSilence(iByteArray *silence);
 
     /// Apply the data from pa_buffer_attr
     void applyAttr(const iBufferAttr *a);
@@ -281,7 +281,7 @@ private:
     xint64     m_readIndex;
     xint64     m_writeIndex;
     bool       m_inPreBuf;
-    iMemChunk  m_silence;
+    iByteArray  m_silence;
     iMCAlign*  m_mcalign;
     xint64     m_missing;
     xint64     m_requested;

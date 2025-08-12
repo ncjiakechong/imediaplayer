@@ -341,8 +341,8 @@ void iMemBlock::doFree()
 void* iMemBlock::dataStart(iMemBlock* block, size_t alignment)
 {
     // Alignment is a power of two
-    IX_ASSERT((alignment >= IX_ALIGNOF(iMemBlock)) && !(alignment & (alignment - 1)));
-    return reinterpret_cast<void*>((xuintptr(block) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1)); 
+    IX_ASSERT(block && (alignment >= IX_ALIGNOF(iMemBlock)) && !(alignment & (alignment - 1)));
+    return reinterpret_cast<void*>((xuintptr(block->m_data.load()) + alignment - 1) & ~(alignment - 1));
 }
 
 class alignas(std::max_align_t) AlignedMemBlock : public iMemBlock
@@ -550,7 +550,7 @@ void iMemBlock::statRemove()
 /* No lock necessary */
 void* iMemBlock::acquire(size_t offset) 
 {
-    IX_ASSERT((count() > 0) && (offset < m_length));
+    IX_ASSERT((count() >= 0) && (offset < m_length));
 
     m_nAcquired++;
     return (xuint8 *)(m_data.load()) + offset;
@@ -559,7 +559,7 @@ void* iMemBlock::acquire(size_t offset)
 /* No lock necessary, in corner cases locks by its own */
 void iMemBlock::release() 
 {
-    IX_ASSERT(count() > 0);
+    IX_ASSERT(count() >= 0);
 
     int r = m_nAcquired--;
     IX_ASSERT(r >= 1);

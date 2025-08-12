@@ -11,6 +11,7 @@
 #include "core/io/ilog.h"
 #include "core/io/imemblockq.h"
 #include "core/io/imemblock.h"
+#include "core/utils/ibytearray.h"
 
 #define ILOG_TAG "ix_utils"
 
@@ -20,11 +21,11 @@ struct iMBQListItem {
     iMBQListItem* _next;
     iMBQListItem* _prev;
     xint64 index;
-    iMemChunk chunk;
+    iByteArray chunk;
 };
 
 iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t maxlength, size_t tlength, size_t base, 
-    size_t prebuf, size_t minreq, size_t maxrewind, iMemChunk *silence)
+    size_t prebuf, size_t minreq, size_t maxrewind, iByteArray *silence)
     : m_blocks(IX_NULLPTR)
     , m_blocksTail(IX_NULLPTR)
     , m_currentRead(IX_NULLPTR)
@@ -60,7 +61,6 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
 
     if (silence) {
         m_silence = *silence;
-        m_silence.m_memblock.block()->ref();
     }
 
     m_mcalign = new iMCAlign(m_base);
@@ -69,9 +69,6 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
 iMemBlockQueue::~iMemBlockQueue() 
 {
     makeSilence();
-
-    if (m_silence.m_memblock.block())
-        m_silence.m_memblock.block()->deref();
 
     delete m_mcalign;
 }
@@ -95,7 +92,7 @@ void iMemBlockQueue::fixCurrentRead()
     }
 
     /* Scan right */
-    while ((m_currentRead != IX_NULLPTR) && (m_currentRead->index + (xint64) m_currentRead->chunk.m_length <= m_readIndex)) {
+    while ((m_currentRead != IX_NULLPTR) && (m_currentRead->index + (xint64) m_currentRead->chunk.length() <= m_readIndex)) {
         m_currentRead = m_currentRead->_next;
     }
 
@@ -115,7 +112,7 @@ void iMemBlockQueue::fixCurrentWrite()
         m_currentWrite = m_blocksTail;
 
     /* Scan right */
-    while (m_currentWrite->index + (xint64) m_currentWrite->chunk.m_length <= m_writeIndex) {
+    while (m_currentWrite->index + (xint64) m_currentWrite->chunk.length() <= m_writeIndex) {
         if (m_currentWrite->_next)
             m_currentWrite = m_currentWrite->_next;
         else
@@ -156,7 +153,7 @@ void iMemBlockQueue::dropBlock(iMBQListItem *q)
     if (m_currentRead == q)
         m_currentRead = q->_next;
 
-    q->chunk.m_memblock.block()->deref();
+    q->chunk.clear();
     delete q;
 
     m_nBlocks--;
@@ -165,7 +162,7 @@ void iMemBlockQueue::dropBlock(iMBQListItem *q)
 void iMemBlockQueue::dropBacklog() 
 {
     xint64 boundary = m_readIndex - (xint64) m_maxRewind;
-    while (m_blocks && (m_blocks->index + (xint64) m_blocks->chunk.m_length <= boundary))
+    while (m_blocks && (m_blocks->index + (xint64) m_blocks->chunk.length() <= boundary))
         dropBlock(m_blocks);
 }
 
@@ -180,7 +177,7 @@ bool iMemBlockQueue::canPush(size_t l)
             return true;
     }
 
-    xint64 end = m_blocksTail ? m_blocksTail->index + (xint64) m_blocksTail->chunk.m_length : m_writeIndex;
+    xint64 end = m_blocksTail ? m_blocksTail->index + (xint64) m_blocksTail->chunk.length() : m_writeIndex;
 
     /* Make sure that the list doesn't get too long */
     if (m_writeIndex + (xint64) l > end)
@@ -213,19 +210,17 @@ xint64 iMemBlockQueue::readIndexChanged(xint64 oldReadIndex)
     return delta;
 }
 
-xint64 iMemBlockQueue::push(const iMemChunk& uchunk)
+xint64 iMemBlockQueue::push(const iByteArray& uchunk)
 {
-    IX_ASSERT(uchunk.m_memblock.block());
-    IX_ASSERT(uchunk.m_length > 0);
-    IX_ASSERT(uchunk.m_index + uchunk.m_length <= uchunk.m_memblock.block()->length());
-    IX_ASSERT(uchunk.m_length % m_base == 0);
-    IX_ASSERT(uchunk.m_index % m_base == 0);
+    IX_ASSERT(uchunk.length() > 0);
+    IX_ASSERT(uchunk.length() % m_base == 0);
+    IX_ASSERT(uchunk.length() % m_base == 0);
 
-    if (!canPush(uchunk.m_length))
+    if (!canPush(uchunk.length()))
         return -1;
 
     xint64 old = m_writeIndex;
-    iMemChunk chunk = uchunk;
+    iByteArray chunk = uchunk;
 
     fixCurrentWrite();
     iMBQListItem* q = m_currentWrite;
@@ -233,7 +228,7 @@ xint64 iMemBlockQueue::push(const iMemChunk& uchunk)
     /* First we advance the q pointer right of where we want to
      * write to */
     if (q) {
-        while (m_writeIndex + (xint64) chunk.m_length > q->index)
+        while (m_writeIndex + (xint64) chunk.length() > q->index)
             if (q->_next)
                 q = q->_next;
             else
@@ -247,14 +242,14 @@ xint64 iMemBlockQueue::push(const iMemChunk& uchunk)
      * this new entry. Drop data we will overwrite on the way */
 
     while (q) {
-        if (m_writeIndex >= q->index + (xint64) q->chunk.m_length)
+        if (m_writeIndex >= q->index + (xint64) q->chunk.length())
             /* We found the entry where we need to place the new entry immediately after */
             break;
-        else if (m_writeIndex + (xint64) chunk.m_length <= q->index) {
+        else if (m_writeIndex + (xint64) chunk.length() <= q->index) {
             /* This entry isn't touched at all, let's skip it */
             q = q->_prev;
         } else if (m_writeIndex <= q->index &&
-                   m_writeIndex + (xint64) chunk.m_length >= q->index + (xint64) q->chunk.m_length) {
+                   m_writeIndex + (xint64) chunk.length() >= q->index + (xint64) q->chunk.length()) {
 
             /* This entry is fully replaced by the new entry, so let's drop it */
 
@@ -265,20 +260,19 @@ xint64 iMemBlockQueue::push(const iMemChunk& uchunk)
             /* The write index points into this memblock, so let's
              * truncate or split it */
 
-            if (m_writeIndex + (xint64) chunk.m_length < q->index + (xint64) q->chunk.m_length) {
+            if (m_writeIndex + (xint64) chunk.length() < q->index + (xint64) q->chunk.length()) {
 
                 /* We need to save the end of this memchunk */
                 iMBQListItem *p = new iMBQListItem();
                 p->chunk = q->chunk;
-                p->chunk.m_memblock.block()->ref();
 
                 /* Calculate offset */
-                size_t d = (size_t) (m_writeIndex + (xint64) chunk.m_length - q->index);
+                size_t d = (size_t) (m_writeIndex + (xint64) chunk.length() - q->index);
                 IX_ASSERT(d > 0);
 
                 /* Drop it from the new entry */
                 p->index = q->index + (xint64) d;
-                p->chunk.m_length -= d;
+                p->chunk = p->chunk.left(p->chunk.length() - d);
 
                 /* Add it to the list */
                 p->_prev = q;
@@ -292,7 +286,8 @@ xint64 iMemBlockQueue::push(const iMemChunk& uchunk)
             }
 
             /* Truncate the chunk */
-            if (!(q->chunk.m_length = (size_t) (m_writeIndex - q->index))) {
+            q->chunk = q->chunk.left((size_t) (m_writeIndex - q->index));
+            if (q->chunk.isEmpty()) {
                 iMBQListItem *p = q;
                 q = q->_prev;
                 dropBlock(p);
@@ -303,44 +298,42 @@ xint64 iMemBlockQueue::push(const iMemChunk& uchunk)
         } else {
             size_t d;
 
-            IX_ASSERT(m_writeIndex + (xint64)chunk.m_length > q->index &&
-                      m_writeIndex + (xint64)chunk.m_length < q->index + (xint64)q->chunk.m_length &&
+            IX_ASSERT(m_writeIndex + (xint64)chunk.length() > q->index &&
+                      m_writeIndex + (xint64)chunk.length() < q->index + (xint64)q->chunk.length() &&
                       m_writeIndex < q->index);
 
             /* The job overwrites the current entry at the end, so let's drop the beginning of this entry */
 
-            d = (size_t) (m_writeIndex + (xint64) chunk.m_length - q->index);
+            d = (size_t) (m_writeIndex + (xint64) chunk.length() - q->index);
             q->index += (xint64) d;
-            q->chunk.m_index += d;
-            q->chunk.m_length -= d;
+            q->chunk = q->chunk.right(q->chunk.length() - d);
 
             q = q->_prev;
         }
     }
 
     if (q) {
-        IX_ASSERT(m_writeIndex >=  q->index + (xint64)q->chunk.m_length);
-        IX_ASSERT(!q->_next || (m_writeIndex + (xint64)chunk.m_length <= q->_next->index));
+        IX_ASSERT(m_writeIndex >=  q->index + (xint64)q->chunk.length());
+        IX_ASSERT(!q->_next || (m_writeIndex + (xint64)chunk.length() <= q->_next->index));
 
         /* Try to merge memory blocks */
 
-        if (q->chunk.m_memblock.block() == chunk.m_memblock.block() &&
-            q->chunk.m_index + q->chunk.m_length == chunk.m_index &&
-            m_writeIndex == q->index + (xint64) q->chunk.m_length) {
+        if (q->chunk.data_ptr().d_ptr() == chunk.data_ptr().d_ptr() &&
+            q->chunk.end() == chunk.begin() &&
+            m_writeIndex == q->index + (xint64) q->chunk.length()) {
 
-            q->chunk.m_length += chunk.m_length;
-            m_writeIndex += (xint64) chunk.m_length;
+            q->chunk.data_ptr().truncate(q->chunk.length() + chunk.length());
+            m_writeIndex += (xint64) chunk.length();
             return writeIndexChanged(old, true);
         }
     } else {
-        IX_ASSERT(!m_blocks || (m_writeIndex + (xint64)chunk.m_length <= m_blocks->index));
+        IX_ASSERT(!m_blocks || (m_writeIndex + (xint64)chunk.length() <= m_blocks->index));
     }
 
     iMBQListItem* n = new iMBQListItem();
     n->chunk = chunk;
     n->index = m_writeIndex;
-    m_writeIndex += (xint64) n->chunk.m_length;
-    n->chunk.m_memblock.block()->ref();
+    m_writeIndex += (xint64) n->chunk.length();
 
     n->_next = q ? q->_next : m_blocks;
     n->_prev = q;
@@ -387,7 +380,7 @@ bool iMemBlockQueue::updatePreBuf()
 }
 
 /// memchunk should deref after return
-int iMemBlockQueue::peek(iMemChunk& chunk) 
+int iMemBlockQueue::peek(iByteArray& chunk) 
 {
     /* We need to pre-buffer */
     if (updatePreBuf())
@@ -408,12 +401,11 @@ int iMemBlockQueue::peek(iMemChunk& chunk)
             length = 0;
 
         /* We need to return silence, since no data is yet available */
-        if (m_silence.m_memblock.block()) {
+        if (!m_silence.isEmpty()) {
             chunk = m_silence;
-            chunk.m_memblock.block()->ref();
 
-            if (length > 0 && length < chunk.m_length)
-                chunk.m_length = length;
+            if (length > 0 && length < chunk.length())
+                chunk = chunk.left(length);
         } else {
 
             /* If the memblockq is empty, return -1, otherwise return
@@ -421,59 +413,52 @@ int iMemBlockQueue::peek(iMemChunk& chunk)
             if (length <= 0)
                 return -1;
 
-            chunk.m_memblock = iMemGuard();
-            chunk.m_length = length;
+            chunk.data_ptr().truncate(length);
         }
 
-        chunk.m_index = 0;
         return 0;
     }
 
     /* Ok, let's pass real data to the caller */
     chunk = m_currentRead->chunk;
-    chunk.m_memblock.block()->ref();
 
     IX_ASSERT(m_readIndex >= m_currentRead->index);
     xint64 d = m_readIndex - m_currentRead->index;
-    chunk.m_index += (size_t) d;
-    chunk.m_length -= (size_t) d;
+    chunk = chunk.right(chunk.length() - d);
 
     return 0;
 }
 
-int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk& chunk) 
+int iMemBlockQueue::peekFixedSize(size_t block_size, iByteArray& chunk) 
 {
-    IX_ASSERT((block_size > 0) && m_silence.m_memblock.block());
+    IX_ASSERT((block_size > 0) && !m_silence.isEmpty());
 
-    iMemChunk tchunk;
+    iByteArray tchunk;
     if (peek(tchunk) < 0)
         return -1;
 
-    if (tchunk.m_length >= block_size) {
+    if (tchunk.length() >= block_size) {
         chunk = tchunk;
-        chunk.m_length = block_size;
+        chunk.data_ptr().truncate(block_size);
         return 0;
     }
 
-    iMemChunk rchunk(iMemBlock::newOne(tchunk.m_memblock.block()->pool().data(), block_size), 0, tchunk.m_length);
-    rchunk.copy(tchunk);
-    rchunk.m_index += tchunk.m_length;
-    rchunk.m_memblock.block()->ref();
-    tchunk.m_memblock.block()->deref();
+    iByteArray rchunk;
+    rchunk.append(tchunk);
 
     /* We don't need to call fix_current_read() here, since
      * pa_memblock_peek() already did that */
     iMBQListItem* item = m_currentRead;
-    xint64 ri = m_readIndex + tchunk.m_length;
+    xint64 ri = m_readIndex + tchunk.length();
 
-    while (rchunk.m_index < block_size) {
+    while (rchunk.length() < block_size) {
 
         if (!item || item->index > ri) {
             /* Do we need to append silence? */
             tchunk = m_silence;
 
             if (item)
-                tchunk.m_length = std::min<size_t>(tchunk.m_length, (size_t) (item->index - ri));
+                tchunk = tchunk.left(std::min<size_t>(tchunk.length(), (size_t) (item->index - ri)));
 
         } else {
             xint64 d;
@@ -482,22 +467,17 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iMemChunk& chunk)
             tchunk = item->chunk;
 
             d = ri - item->index;
-            tchunk.m_index += (size_t) d;
-            tchunk.m_length -= (size_t) d;
+            tchunk = tchunk.right(tchunk.length() - (size_t) d);
 
             /* Go to _next item for the _next iteration */
             item = item->_next;
         }
 
-        rchunk.m_length = tchunk.m_length = std::min<size_t>(tchunk.m_length, block_size - rchunk.m_index);
-        rchunk.copy(tchunk);
+        tchunk.data_ptr().truncate(std::min<size_t>(tchunk.length(), block_size - rchunk.length()));
+        rchunk.append(tchunk);
 
-        rchunk.m_index += rchunk.m_length;
-        ri += rchunk.m_length;
+        ri += tchunk.length();
     }
-
-    rchunk.m_index = 0;
-    rchunk.m_length = block_size;
 
     chunk = rchunk;
     return 0;
@@ -518,18 +498,17 @@ int iMemBlockQueue::peekIterator(IteratorFunc func, void* userdata)
 
     while (item) {
         /* We can append real data! */
-        iMemChunk tchunk = item->chunk;
+        iByteArray tchunk = item->chunk;
 
         xint64 d = ri - item->index;
-        tchunk.m_index += (size_t) d;
-        tchunk.m_length -= (size_t) d;
+        tchunk = tchunk.right(tchunk.length() - d);
 
         if (!func(tchunk, item->index + d, ri - m_readIndex, userdata))
             break;
 
         /* Go to _next item for the _next iteration */
         item = item->_next;
-        ri += tchunk.m_length;
+        ri += tchunk.length();
     }
 
     return 0;
@@ -554,7 +533,7 @@ xint64 iMemBlockQueue::drop(size_t length)
             /* We go through this piece by piece to make sure we don't
              * drop more than allowed by prebuf */
 
-            p = m_currentRead->index + (xint64) m_currentRead->chunk.m_length;
+            p = m_currentRead->index + (xint64) m_currentRead->chunk.length();
             IX_ASSERT(p >= m_readIndex);
             d = p - m_readIndex;
 
@@ -611,7 +590,7 @@ void iMemBlockQueue::seek(xint64 offset, SeekMode seek, bool account) {
             m_writeIndex = m_readIndex + offset;
             break;
         case SEEK_RELATIVE_END:
-            m_writeIndex = (m_blocksTail ? m_blocksTail->index + (xint64) m_blocksTail->chunk.m_length : m_readIndex) + offset;
+            m_writeIndex = (m_blocksTail ? m_blocksTail->index + (xint64) m_blocksTail->chunk.length() : m_readIndex) + offset;
             break;
         default:
             break;
@@ -643,20 +622,20 @@ void iMemBlockQueue::flushRead()
     readIndexChanged(old);
 }
 
-int iMemBlockQueue::pushAlign(const iMemChunk& chunk) 
+int iMemBlockQueue::pushAlign(const iByteArray& chunk) 
 {
     if (m_base == 1)
         return push(chunk);
 
-    if (!canPush(m_mcalign->csize(chunk.m_length)))
+    if (!canPush(m_mcalign->csize(chunk.length())))
         return -1;
 
     m_mcalign->push(chunk);
 
-    iMemChunk rchunk;
+    iByteArray rchunk;
     while (m_mcalign->pop(rchunk) >= 0) {
         int r = push(rchunk);
-        rchunk.m_memblock.block()->deref();
+        rchunk.clear();
 
         if (r < 0) {
             m_mcalign->flush();
@@ -780,38 +759,32 @@ int iMemBlockQueue::splice(iMemBlockQueue* source)
     preBufDisable();
 
     for (;;) {
-        iMemChunk chunk;
+        iByteArray chunk;
 
         if (source->peek(chunk) < 0)
             return 0;
 
-        IX_ASSERT(chunk.m_length > 0);
+        IX_ASSERT(chunk.length() > 0);
 
-        if (chunk.m_memblock.block()) {
+        if (chunk.data_ptr().d_ptr()) {
             if (pushAlign(chunk) < 0) {
-                chunk.m_memblock.block()->deref();
                 return -1;
             }
 
-            chunk.m_memblock.block()->deref();
         } else {
-            seek((xint64) chunk.m_length, SEEK_RELATIVE, true);
+            seek((xint64) chunk.length(), SEEK_RELATIVE, true);
         }
 
-        drop(chunk.m_length);
+        drop(chunk.length());
     }
 }
 
-void iMemBlockQueue::setSilence(iMemChunk *silence) 
+void iMemBlockQueue::setSilence(iByteArray *silence) 
 {
-    if (m_silence.m_memblock.block())
-        m_silence.m_memblock.block()->deref();
-
     if (silence) {
         m_silence = *silence;
-        m_silence.m_memblock.block()->ref();
     } else {
-        m_silence.reset();
+        m_silence.clear();
     }
 }
 
