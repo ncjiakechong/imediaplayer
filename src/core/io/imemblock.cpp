@@ -105,43 +105,6 @@ iMemDataWraper& iMemDataWraper::operator=(const iMemDataWraper& other)
     return *this;
 }
 
-iMemGuard::iMemGuard()
-    : _d(IX_NULLPTR)
-{}
-
-iMemGuard::iMemGuard(iMemGuard::ExternalData* data)
-    : _d(IX_NULLPTR)
-{
-    if (data && data->_weakreef.ref()) _d = data;
-}
-
-iMemGuard::iMemGuard(const iMemGuard& other)
-    : _d(other._d)
-{
-    if (_d) _d->_weakreef.ref();
-}
-
-iMemGuard::~iMemGuard()
-{
-    if (_d && !_d->_weakreef.deref())
-        delete _d;
-}
-
-iMemGuard& iMemGuard::operator=(const iMemGuard& other)
-{
-    if (&other == this)
-        return *this;
-
-    if (_d && !_d->_weakreef.deref())
-        delete _d;
-    
-    _d = other._d;
-    if (_d) 
-        _d->_weakreef.ref();
-
-    return *this;
-}
-
 /*!
     Returns the memory block size for a container containing \a elementCount
     elements, each of \a elementSize bytes, plus a header of \a headerSize
@@ -244,7 +207,6 @@ iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data
     , m_capacity(capacity)
     , m_pool(pool)
     , m_data(data)
-    , m_guardData(IX_NULLPTR)
     , m_nAcquired(0)
     , m_pleaseSignal(0)
 {
@@ -260,12 +222,6 @@ iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data
 
 iMemBlock::~iMemBlock()
 {
-    iMemGuard::ExternalData* guard = m_guardData.load();
-    if (guard)
-        guard->_block = IX_NULLPTR;
-    if (guard && !guard->_weakreef.deref())
-        delete guard;
-
     if (IX_NULLPTR != m_user.freeCb)
         m_user.freeCb(m_data.load(), m_user.freeCbData);
 
@@ -583,24 +539,6 @@ void iMemBlock::wait()
 
         --m_pleaseSignal;
     }
-}
-
-iMemGuard iMemBlock::guard() const
-{
-    iMemGuard::ExternalData* guard = m_guardData.load();
-    if (guard) {
-        return iMemGuard(guard);
-    }
-
-    // we can create the refcount data because it doesn't exist
-    iMemBlock* that = const_cast<iMemBlock*>(this);
-    guard = new iMemGuard::ExternalData{{iRefCount(1)}, that};
-    if (!that->m_guardData.testAndSet(IX_NULLPTR, guard)) {
-        delete guard;
-        guard = that->m_guardData.load();
-    }
-
-    return guard;
 }
 
 static void* ix_xmemdup(const void* p, size_t l) {

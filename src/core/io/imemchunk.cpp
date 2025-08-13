@@ -40,7 +40,7 @@ void iMCAlign::push(const iByteArray& c)
             m_leftover.data_ptr().end() == c.data_ptr().begin()) {
 
             /* Merge */
-            m_leftover.data_ptr().truncate(m_leftover.length() + c.length());
+            m_leftover.data_ptr().size += c.length();
 
             /* If the new chunk is larger than m_base, move it to current */
             if (m_leftover.length() >= m_base) {
@@ -57,14 +57,16 @@ void iMCAlign::push(const iByteArray& c)
                 l = c.length();
 
             /* Can we use the current block? */
-            m_leftover.append(c.data(), l);
+            m_leftover.append(c.data_ptr().data(), l);
 
             IX_ASSERT(m_leftover.length() <= m_base);
             IX_ASSERT(m_leftover.length() <= m_leftover.data_ptr().allocatedCapacity());
 
             if (c.length() > l) {
                 /* Save the remainder of the memory block */
-                m_current = c.right(c.length() - l);
+                m_current = c;
+                m_current.data_ptr().setBegin(m_current.data_ptr().begin() + l);
+                m_current.data_ptr().size -= l;
             }
         }
     } else {
@@ -116,7 +118,8 @@ int iMCAlign::pop(iByteArray& c)
 
         /* Drop that from the current memory block */
         IX_ASSERT(l <= m_current.length());
-        m_current = m_current.right(m_current.length() - l);
+        m_current.data_ptr().setBegin(m_current.data_ptr().begin() + l);
+        m_current.data_ptr().size -= l;
 
         /* In case the whole block was dropped ... */
         if (0 == m_current.length()) {

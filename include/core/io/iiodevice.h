@@ -70,11 +70,10 @@ public:
     virtual xint64 bytesAvailable() const;
     virtual xint64 bytesToWrite() const;
 
-    xint64 read(char *data, xint64 maxlen);
-    iByteArray read(xint64 maxlen);
+    xint64 read(char* data, xint64 maxlen);
+    iByteArray read(xint64 maxlen, xint64* readErr = IX_NULLPTR);
     iByteArray readAll();
-    xint64 readLine(char *data, xint64 maxlen);
-    iByteArray readLine(xint64 maxlen = 0);
+    iByteArray readLine(xint64 maxlen = 0, xint64* readErr = IX_NULLPTR);
     virtual bool canReadLine() const;
 
     void startTransaction();
@@ -84,11 +83,9 @@ public:
 
     xint64 write(const char *data, xint64 len);
     xint64 write(const char *data);
-    inline xint64 write(const iByteArray &data)
-    { return write(data.constData(), data.size()); }
+    xint64 write(const iByteArray &data);
 
-    virtual xint64 peek(char *data, xint64 maxlen);
-    iByteArray peek(xint64 maxlen);
+    iByteArray peek(xint64 maxlen, xint64* readErr = IX_NULLPTR);
     xint64 skip(xint64 maxSize);
 
     virtual bool waitForReadyRead(int msecs);
@@ -133,19 +130,17 @@ protected:
         void clear();
         xint64 indexOf(char c) const;
         xint64 indexOf(char c, xint64 maxLength, xint64 offset = 0) const;
-        xint64 read(char *data, xint64 maxLength);
-        iByteArray read();
-        xint64 peek(char *data, xint64 maxLength, xint64 offset = 0) const;
-        void append(const char *data, xint64 size);
+        iByteArray read(xint64 maxLength);
+        iByteArray peek(xint64 maxLength, xint64 offset = 0) const;
         void append(const iByteArray& chunk);
         xint64 skip(xint64 length);
-        xint64 readLine(char *data, xint64 maxLength);
+        iByteArray readLine(xint64 maxLength);
         bool canReadLine() const;
     };
 
-    virtual xint64 readData(char *data, xint64 maxlen) = 0;
-    virtual xint64 readLineData(char *data, xint64 maxlen);
-    virtual xint64 writeData(const char *data, xint64 len) = 0;
+    virtual iByteArray readData(xint64 maxlen, xint64* readErr) = 0;
+    virtual iByteArray readLineData(xint64 maxlen, xint64* readErr);
+    virtual xint64 writeData(const iByteArray& data) = 0;
     virtual xint64 skipData(xint64 maxSize);
 
     void setOpenMode(OpenMode openMode);
@@ -166,7 +161,7 @@ protected:
     void setReadChannelCount(int count);
     void setWriteChannelCount(int count);
 
-    xint64 readImpl(char *data, xint64 maxSize, bool peeking = false);
+    iByteArray readImpl(xint64 maxSize, bool peeking = false, xint64* readErr = IX_NULLPTR);
     xint64 skipByReading(xint64 maxSize);
 
 protected:

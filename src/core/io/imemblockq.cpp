@@ -272,7 +272,7 @@ xint64 iMemBlockQueue::push(const iByteArray& uchunk)
 
                 /* Drop it from the new entry */
                 p->index = q->index + (xint64) d;
-                p->chunk = p->chunk.left(p->chunk.length() - d);
+                p->chunk.data_ptr().size -= d;
 
                 /* Add it to the list */
                 p->_prev = q;
@@ -286,7 +286,7 @@ xint64 iMemBlockQueue::push(const iByteArray& uchunk)
             }
 
             /* Truncate the chunk */
-            q->chunk = q->chunk.left((size_t) (m_writeIndex - q->index));
+            q->chunk.data_ptr().size = m_writeIndex - q->index;
             if (q->chunk.isEmpty()) {
                 iMBQListItem *p = q;
                 q = q->_prev;
@@ -306,7 +306,8 @@ xint64 iMemBlockQueue::push(const iByteArray& uchunk)
 
             d = (size_t) (m_writeIndex + (xint64) chunk.length() - q->index);
             q->index += (xint64) d;
-            q->chunk = q->chunk.right(q->chunk.length() - d);
+            q->chunk.data_ptr().setBegin(q->chunk.data_ptr().begin() + d);
+            q->chunk.data_ptr().size -= d;
 
             q = q->_prev;
         }
@@ -319,10 +320,10 @@ xint64 iMemBlockQueue::push(const iByteArray& uchunk)
         /* Try to merge memory blocks */
 
         if (q->chunk.data_ptr().d_ptr() == chunk.data_ptr().d_ptr() &&
-            q->chunk.end() == chunk.begin() &&
+            q->chunk.data_ptr().end() == chunk.data_ptr().begin() &&
             m_writeIndex == q->index + (xint64) q->chunk.length()) {
 
-            q->chunk.data_ptr().truncate(q->chunk.length() + chunk.length());
+            q->chunk.data_ptr().size += chunk.length();
             m_writeIndex += (xint64) chunk.length();
             return writeIndexChanged(old, true);
         }
@@ -405,7 +406,7 @@ int iMemBlockQueue::peek(iByteArray& chunk)
             chunk = m_silence;
 
             if (length > 0 && length < chunk.length())
-                chunk = chunk.left(length);
+                chunk.data_ptr().size = length;
         } else {
 
             /* If the memblockq is empty, return -1, otherwise return
@@ -413,7 +414,7 @@ int iMemBlockQueue::peek(iByteArray& chunk)
             if (length <= 0)
                 return -1;
 
-            chunk.data_ptr().truncate(length);
+            chunk.data_ptr().size = length;
         }
 
         return 0;
@@ -424,7 +425,8 @@ int iMemBlockQueue::peek(iByteArray& chunk)
 
     IX_ASSERT(m_readIndex >= m_currentRead->index);
     xint64 d = m_readIndex - m_currentRead->index;
-    chunk = chunk.right(chunk.length() - d);
+    chunk.data_ptr().setBegin(chunk.data_ptr().begin() + d);
+    chunk.data_ptr().size -= d;
 
     return 0;
 }
@@ -458,7 +460,7 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iByteArray& chunk)
             tchunk = m_silence;
 
             if (item)
-                tchunk = tchunk.left(std::min<size_t>(tchunk.length(), (size_t) (item->index - ri)));
+                tchunk.data_ptr().size = std::min<size_t>(tchunk.length(), item->index - ri);
 
         } else {
             xint64 d;
@@ -467,7 +469,8 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iByteArray& chunk)
             tchunk = item->chunk;
 
             d = ri - item->index;
-            tchunk = tchunk.right(tchunk.length() - (size_t) d);
+            tchunk.data_ptr().setBegin(tchunk.data_ptr().begin() + d);
+            tchunk.data_ptr().size -= d;
 
             /* Go to _next item for the _next iteration */
             item = item->_next;
@@ -501,7 +504,8 @@ int iMemBlockQueue::peekIterator(IteratorFunc func, void* userdata)
         iByteArray tchunk = item->chunk;
 
         xint64 d = ri - item->index;
-        tchunk = tchunk.right(tchunk.length() - d);
+        tchunk.data_ptr().setBegin(tchunk.data_ptr().begin() + d);
+        tchunk.data_ptr().size -= d;
 
         if (!func(tchunk, item->index + d, ri - m_readIndex, userdata))
             break;

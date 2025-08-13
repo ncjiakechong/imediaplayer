@@ -392,36 +392,17 @@ xint64 iIODevice::iMBQueueRef::indexOf(char c, xint64 maxLength, xint64 offset) 
     return userdata.pos;
 }
 
-xint64 iIODevice::iMBQueueRef::read(char *data, xint64 maxLength) 
-{
-    if (!m_buf || maxLength <= 0)
-        return 0;
-
-    xint64 readSoFar = 0;
-    const xint64 bytesToRead = std::min<xint64>(m_buf->getMaxLength(), maxLength);
-    iByteArray rchunk = iByteArray::fromRawData(data, maxLength, IX_NULLPTR, IX_NULLPTR);
-    rchunk.data_ptr().truncate(0);
-    while (readSoFar < bytesToRead) {
-        iByteArray tchunk;
-        if (m_buf->peek(tchunk) < 0)
-            break;
-
-        const xint64 bytesToReadFromThisBlock = std::min<xint64>(bytesToRead - readSoFar, tchunk.length());
-        rchunk.data_ptr().insert(rchunk.data_ptr().end(), tchunk.begin(), tchunk.begin() + bytesToReadFromThisBlock);
-        readSoFar += bytesToReadFromThisBlock;
-        m_buf->drop(bytesToReadFromThisBlock);
-    }
-
-    return readSoFar;
-}
-
-iByteArray iIODevice::iMBQueueRef::read()
+iByteArray iIODevice::iMBQueueRef::read(xint64 maxLength)
 {
     iByteArray tchunk;
     if (!m_buf)
         return tchunk;
 
     m_buf->peek(tchunk);
+    if (maxLength > 0 && maxLength < tchunk.length()) {
+        tchunk.data_ptr().size = maxLength;
+    }
+
     m_buf->drop(tchunk.length());
     return tchunk;
 }
@@ -438,41 +419,31 @@ static bool _PeekMaxFunc(const iByteArray& chunk, xint64, xint64 distance, void*
     _PeekMaxData* data = static_cast<_PeekMaxData*>(userdata);
     if (distance + chunk.length() <= data->offset)
         return true;
-    if (distance >= data->maxLength + data->offset)
+    if ((data->maxLength > 0) && (distance >= data->maxLength + data->offset))
         return false;
 
-    IX_ASSERT(data->lastDistance = distance);
+    int curMax = data->maxLength > 0 ? data->maxLength : chunk.length();
+    IX_ASSERT(data->lastDistance = distance && !chunk.isEmpty());
     if (distance >= data->offset) {
-        data->chunk.data_ptr().insert(data->chunk.data_ptr().end(), 
-                                    (distance < data->offset) ? chunk.begin() + distance - data->offset : chunk.begin(),
-                                    (distance + chunk.length() > data->maxLength + data->offset) ? chunk.begin() + (data->maxLength + data->offset) - distance : chunk.end());
+        xint64 beginOffset = (distance < data->offset) ? data->offset - distance: 0;
+        data->chunk.data_ptr().setBegin(data->chunk.data_ptr().begin() + beginOffset);
+        data->chunk.data_ptr().size = (beginOffset + curMax > chunk.length()) ? chunk.length() - beginOffset : curMax;
     }
 
     data->lastDistance = distance + chunk.length();
-    return true;
+    return false;
 }
 
-xint64 iIODevice::iMBQueueRef::peek(char *data, xint64 maxLength, xint64 offset) const 
+iByteArray iIODevice::iMBQueueRef::peek(xint64 maxLength, xint64 offset) const 
 {
     if (!m_buf)
-        return 0;
-    
-    iByteArray chunk = iByteArray::fromRawData(data, maxLength, IX_NULLPTR, IX_NULLPTR);
-    chunk.data_ptr().truncate(0);
+        return iByteArray();
 
+    iByteArray chunk;
     _PeekMaxData userdata = {offset, maxLength, 0, chunk};
     m_buf->peekIterator(_PeekMaxFunc, &userdata);
 
-    return (userdata.lastDistance > offset ? userdata.lastDistance - offset : 0);
-}
-
-void iIODevice::iMBQueueRef::append(const char *data, xint64 size) 
-{
-    IX_ASSERT(m_buf && size >= 0);
-    if (0 == size)
-        return;
-
-    m_buf->pushAlign(iByteArray(data, size));
+    return chunk;
 }
 
 void iIODevice::iMBQueueRef::append(const iByteArray& chunk)
@@ -484,17 +455,36 @@ void iIODevice::iMBQueueRef::append(const iByteArray& chunk)
 xint64 iIODevice::iMBQueueRef::skip(xint64 length) 
 { return (m_buf ? m_buf->drop(length) : IX_INT64_C(0)); }
 
-xint64 iIODevice::iMBQueueRef::readLine(char *data, xint64 maxLength) 
+iByteArray iIODevice::iMBQueueRef::readLine(xint64 maxLength) 
 {
-    IX_ASSERT(data != IX_NULLPTR && maxLength > 1);
+    IX_ASSERT(maxLength > 1);
 
     --maxLength;
+    iByteArray result;
     xint64 idx = indexOf('\n', maxLength);
-    idx = read(data, idx >= 0 ? (idx + 1) : maxLength);
+    while (true) {
+        iByteArray chunk = read(idx >= 0 ? (idx + 1) : maxLength);
+        if (chunk.isEmpty()) break;
+
+        // to avoid invalid memory copy
+        if (result.data_ptr().d_ptr() == chunk.data_ptr().d_ptr()
+            && result.data_ptr().end() == chunk.data_ptr().begin()) {
+            result.data_ptr().size += chunk.length();
+        }  else if (result.isEmpty()) {
+            result = chunk;
+        } else {
+            result.append(chunk);
+        }
+
+        if (result.length() >= maxLength || result.length() >= idx)
+            break;
+    }
+    
 
     // Terminate it.
-    data[idx] = '\0';
-    return idx;
+    if (result.length() >= idx)
+        result[idx] = '\0';
+    return result;
 }
 
 bool iIODevice::iMBQueueRef::canReadLine() const 
@@ -876,51 +866,9 @@ xint64 iIODevice::bytesToWrite() const
 }
 
 /*!
-    Reads at most \a maxSize bytes from the device into \a data, and
-    returns the number of bytes read. If an error occurs, such as when
-    attempting to read from a device opened in WriteOnly mode, this
-    function returns -1.
-
-    0 is returned when no more data is available for reading. However,
-    reading past the end of the stream is considered an error, so this
-    function returns -1 in those cases (that is, reading on a closed
-    socket or after a process has died).
-
-    \sa readData(), readLine(), write()
-*/
-xint64 iIODevice::read(char *data, xint64 maxSize)
-{
-    const bool sequential = isSequential4Mode();
-
-    // Short-cut for getChar(), unless we need to keep the data in the buffer.
-    if (maxSize == 1 && !(sequential && m_transactionStarted)) {
-        int chint;
-        while ((chint = m_buffer.getChar()) != -1) {
-            if (!sequential)
-                ++m_pos;
-
-            char c = char(uchar(chint));
-            if (c == '\r' && (m_openMode & Text))
-                continue;
-            *data = c;
-
-            if (m_buffer.isEmpty())
-                readData(data, 0);
-            return xint64(1);
-        }
-    }
-
-    CHECK_MAXLEN(read, xint64(-1));
-    CHECK_READABLE(read, xint64(-1));
-
-    const xint64 readBytes = readImpl(data, maxSize);
-    return readBytes;
-}
-
-/*!
     \internal
 */
-xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
+iByteArray iIODevice::readImpl(xint64 maxSize, bool peeking, xint64* readErr)
 {
     const bool buffered = (m_readBufferChunkSize != 0 && (m_openMode & iIODevice::Unbuffered) == 0);
     const bool sequential = isSequential4Mode();
@@ -931,98 +879,71 @@ xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
     xint64 readSoFar = 0;
     bool madeBufferReadsOnly = true;
     bool deviceAtEof = false;
-    char *readPtr = data;
+    iByteArray chunk;
+    xint64 dummy = 0;
     xint64 bufferPos = (sequential && m_transactionStarted) ? m_transactionPos : IX_INT64_C(0);
-    while (true) {
+
+    if (!readErr)
+        readErr = &dummy;
+
+    while (chunk.isEmpty()) {
         // Try reading from the buffer.
-        xint64 bufferReadChunkSize = keepDataInBuffer
-                                     ? m_buffer.peek(data, maxSize, bufferPos)
-                                     : m_buffer.read(data, maxSize);
+        chunk = keepDataInBuffer ? m_buffer.peek(maxSize, bufferPos) : m_buffer.read(maxSize);
+        xint64 bufferReadChunkSize = chunk.length();
+
         if (bufferReadChunkSize > 0) {
             bufferPos += bufferReadChunkSize;
             if (!sequential)
                 m_pos += bufferReadChunkSize;
 
             readSoFar += bufferReadChunkSize;
-            data += bufferReadChunkSize;
             maxSize -= bufferReadChunkSize;
         }
 
         if (maxSize > 0 && !deviceAtEof) {
-            xint64 readFromDevice = 0;
+
             // Make sure the device is positioned correctly.
             if (sequential || m_pos == m_devicePos || seek(m_pos)) {
                 madeBufferReadsOnly = false; // fix readData attempt
-                if ((!buffered || maxSize >= m_readBufferChunkSize) && !keepDataInBuffer) {
+                if ((!buffered || maxSize >= m_readBufferChunkSize) && !keepDataInBuffer && chunk.isEmpty()) {
                     // Read big chunk directly to output buffer
-                    readFromDevice = readData(data, maxSize);
-                    deviceAtEof = (readFromDevice != maxSize);
+                    chunk = readData(maxSize, readErr);
+                    deviceAtEof = (chunk.length() < maxSize);
 
-                    if (readFromDevice > 0) {
-                        readSoFar += readFromDevice;
-                        data += readFromDevice;
-                        maxSize -= readFromDevice;
+                    if (chunk.length() > 0) {
+                        readSoFar += chunk.length();
+                        maxSize -= chunk.length();
                         if (!sequential) {
-                            m_pos += readFromDevice;
-                            m_devicePos += readFromDevice;
+                            m_pos += chunk.length();
+                            m_devicePos += chunk.length();
                         }
                     }
-                } else {
+                } else if (chunk.isEmpty()) {
                     // Do not read more than maxSize on unbuffered devices
                     const xint64 bytesToBuffer = (buffered || m_readBufferChunkSize < maxSize)
                             ? xint64(m_readBufferChunkSize)
                             : maxSize;
                     // Try to fill iIODevice buffer by single read
-                    iByteArray chunk(std::max<xint64>(m_readBufferChunkSize, bytesToBuffer), Uninitialized);
-                    readFromDevice = readData(chunk.data(), bytesToBuffer);
-                    chunk.resize(readFromDevice);
+                    iByteArray tmp = readData(bytesToBuffer, readErr);
+                    deviceAtEof = (tmp.length() < bytesToBuffer);
 
-                    deviceAtEof = (readFromDevice != bytesToBuffer);
-                    m_buffer.append(chunk);
-                    if (readFromDevice > 0) {
+                    if (!tmp.isEmpty()) {
+                        m_buffer.append(tmp);
+
                         if (!sequential)
-                            m_devicePos += readFromDevice;
+                            m_devicePos += tmp.length();
 
                         continue;
                     }
                 }
             } else {
-                readFromDevice = -1;
+                *readErr = -1;
             }
 
-            if (readFromDevice < 0 && readSoFar == 0) {
+            if (*readErr < 0 && readSoFar == 0) {
                 // error and we haven't read anything: return immediately
-                return xint64(-1);
+                return iByteArray();
             }
-        }
-
-        if ((m_openMode & iIODevice::Text) && readPtr < data) {
-            const char *endPtr = data;
-
-            // optimization to avoid initial self-assignment
-            while (*readPtr != '\r') {
-                if (++readPtr == endPtr)
-                    break;
-            }
-
-            char *writePtr = readPtr;
-
-            while (readPtr < endPtr) {
-                char ch = *readPtr++;
-                if (ch != '\r')
-                    *writePtr++ = ch;
-                else {
-                    --readSoFar;
-                    --data;
-                    ++maxSize;
-                }
-            }
-
-            // Make sure we get more data if there is room for more. This
-            // is very important for when someone seeks to the start of a
-            // '\r\n' and reads one character - they should get the '\n'.
-            readPtr = data;
-            continue;
         }
 
         break;
@@ -1039,48 +960,55 @@ xint64 iIODevice::readImpl(char *data, xint64 maxSize, bool peeking)
     }
 
     if (madeBufferReadsOnly && isBufferEmpty())
-        readData(data, 0);
+        readData(0, IX_NULLPTR);
 
-    return readSoFar;
+    return chunk;
+}
+
+xint64 iIODevice::read(char* data, xint64 maxSize)
+{
+    xint64 retErr = 0;
+    iByteArray chunk = read(maxSize, &retErr);
+    if (chunk.isEmpty())
+        return retErr;
+
+    memcpy(data, chunk.data_ptr().data(), chunk.length());
+    return chunk.length();
 }
 
 /*!
     Reads at most \a maxSize bytes from the device, and returns the
     data read as a iByteArray.
 
-    This function has no way of reporting errors; returning an empty
-    iByteArray can mean either that no data was currently available
+    Returning an empty iByteArray can mean either that no data was currently available
     for reading, or that an error occurred.
 */
 
-iByteArray iIODevice::read(xint64 maxSize)
+iByteArray iIODevice::read(xint64 maxSize, xint64* readErr)
 {
+    xint64 dummy = 0;
+    if (!readErr)
+        readErr = &dummy;
+
+    *readErr = -1;
+    CHECK_MAXLEN(read, iByteArray());
+    CHECK_READABLE(read, iByteArray());
+    *readErr = 0;
+
     // Try to prevent the data from being copied, if we have a chunk
     // with the same size in the read buffer.
     if (maxSize == m_buffer.nextDataBlockSize() && !m_transactionStarted
         && (m_openMode & iIODevice::Text) == 0) {
-        iByteArray result = m_buffer.read();
+        iByteArray result = m_buffer.read(maxSize);
 
         if (!isSequential4Mode())
             m_pos += maxSize;
         if (m_buffer.isEmpty())
-            readData(IX_NULLPTR, 0);
+            readData(0, IX_NULLPTR);
         return result;
     }
 
-    iByteArray result;
-    CHECK_MAXLEN(read, result);
-    CHECK_MAXBYTEARRAYSIZE(read);
-
-    result.reserve(maxSize);
-    xint64 readBytes = read(result.data(), maxSize);
-
-    if (readBytes <= 0)
-        result.clear();
-    else
-        result.resize(readBytes);
-
-    return result;
+    return readImpl(maxSize, false, readErr);
 }
 
 /*!
@@ -1095,38 +1023,35 @@ iByteArray iIODevice::readAll()
 {
     iByteArray result;
     xint64 readBytes = (isSequential4Mode() ? IX_INT64_C(0) : size());
-    if (readBytes == 0) {
-        // Size is unknown, read incrementally.
-        xint64 readChunkSize = std::max(xint64(m_readBufferChunkSize),
-                                    isSequential4Mode() ? (m_buffer.size() - m_transactionPos)
-                                                      : m_buffer.size());
-        xint64 readResult;
-        do {
-            if (readBytes + readChunkSize >= MaxByteArraySize) {
-                // If resize would fail, don't read more, return what we have.
-                break;
-            }
-            result.resize(readBytes + readChunkSize);
-            readResult = read(result.data() + readBytes, readChunkSize);
-            if (readResult > 0 || readBytes == 0) {
-                readBytes += readResult;
-                readChunkSize = m_readBufferChunkSize;
-            }
-        } while (readResult > 0);
-    } else {
-        // Read it all in one go.
-        // If resize fails, don't read anything.
-        readBytes -= m_pos;
-        if (readBytes >= MaxByteArraySize)
-            return iByteArray();
-        result.resize(readBytes);
-        readBytes = read(result.data(), readBytes);
-    }
 
-    if (readBytes <= 0)
-        result.clear();
-    else
-        result.resize(int(readBytes));
+    // Size is unknown, read incrementally.
+    xint64 readChunkSize = std::max(xint64(m_readBufferChunkSize),
+                                isSequential4Mode() ? (m_buffer.size() - m_transactionPos) : m_buffer.size());
+    xint64 readResult = 0;
+    do {
+        if (readBytes + readChunkSize >= MaxByteArraySize) {
+            // If resize would fail, don't read more, return what we have.
+            break;
+        }
+
+        iByteArray chunk = read(readChunkSize);
+        readResult = chunk.length();
+
+        // to avoid invalid memory copy
+        if (result.data_ptr().d_ptr() == chunk.data_ptr().d_ptr()
+            && result.data_ptr().end() == chunk.data_ptr().begin()) {
+            result.data_ptr().size += chunk.length();
+        } else if (result.isEmpty()) {
+            result = chunk;
+        } else {
+            result.append(chunk);
+        }
+
+        if (readResult > 0 || readBytes == 0) {
+            readBytes += readResult;
+            readChunkSize = m_readBufferChunkSize;
+        }
+    } while (readResult > 0);
 
     return result;
 }
@@ -1167,11 +1092,11 @@ iByteArray iIODevice::readAll()
 
     \sa getChar(), read(), write()
 */
-xint64 iIODevice::readLine(char *data, xint64 maxSize)
+iByteArray iIODevice::readLine(xint64 maxSize, xint64* readErr)
 {
     if (maxSize < 2) {
         ilog_warn(this, ": Called with maxSize < 2");
-        return xint64(-1);
+        return iByteArray();
     }
 
     // Leave room for a '\0'
@@ -1180,115 +1105,83 @@ xint64 iIODevice::readLine(char *data, xint64 maxSize)
     const bool sequential = isSequential4Mode();
     const bool keepDataInBuffer = sequential && m_transactionStarted;
 
-    xint64 readSoFar = 0;
+    xint64 dummy = 0;
+    iByteArray chunk;
+    if (!readErr)
+        readErr = &dummy;
+
     if (keepDataInBuffer) {
         if (m_transactionPos < m_buffer.size()) {
             // Peek line from the specified position
             const xint64 i = m_buffer.indexOf('\n', maxSize, m_transactionPos);
-            readSoFar = m_buffer.peek(data, i >= 0 ? (i - m_transactionPos + 1) : maxSize,
-                                       m_transactionPos);
-            m_transactionPos += readSoFar;
+            chunk = m_buffer.peek(i >= 0 ? (i - m_transactionPos + 1) : maxSize, m_transactionPos);
+            m_transactionPos += chunk.length();
             if (m_transactionPos == m_buffer.size())
-                readData(data, 0);
+                readData(0, IX_NULLPTR);
         }
     } else if (!m_buffer.isEmpty()) {
         // readLine() terminates the line with '\0'
-        readSoFar = m_buffer.readLine(data, maxSize + 1);
+        chunk = m_buffer.readLine(maxSize + 1);
         if (m_buffer.isEmpty())
-            readData(data,0);
+            readData(0, IX_NULLPTR);
         if (!sequential)
-            m_pos += readSoFar;
+            m_pos += chunk.length();
     }
 
-    if (readSoFar) {
-        if (data[readSoFar - 1] == '\n') {
+    if (!chunk.isEmpty()) {
+        if (chunk[chunk.length() - 1] == '\n') {
             if (m_openMode & Text) {
                 // readLine() isn't Text aware.
-                if (readSoFar > 1 && data[readSoFar - 2] == '\r') {
-                    --readSoFar;
-                    data[readSoFar - 1] = '\n';
+                if (chunk.length() > 1 && chunk[chunk.length() - 2] == '\r') {
+                    chunk[chunk.length() - 1] = '\n';
                 }
             }
-            data[readSoFar] = '\0';
-            return readSoFar;
+            chunk[chunk.length()] = '\0';
+            return chunk;
         }
     }
 
-    if (m_pos != m_devicePos && !sequential && !seek(m_pos))
-        return xint64(-1);
+    if (m_pos != m_devicePos && !sequential && !seek(m_pos)) {
+        *readErr = -1;
+        return iByteArray();
+    }
     m_baseReadLineDataCalled = false;
     // Force base implementation for transaction on sequential device
     // as it stores the data in internal buffer automatically.
-    xint64 readBytes = keepDataInBuffer
-                       ? iIODevice::readLineData(data + readSoFar, maxSize - readSoFar)
-                       : readLineData(data + readSoFar, maxSize - readSoFar);
+    iByteArray otherChunk = readLineData(maxSize - chunk.length(), readErr);
+    xint64 readBytes = otherChunk.length();
 
     if (readBytes < 0) {
-        data[readSoFar] = '\0';
-        return readSoFar ? readSoFar : -1;
+        chunk[chunk.length()] = '\0';
+        return chunk;
     }
-    readSoFar += readBytes;
+
+    // to avoid invalid memory copy
+    if (chunk.data_ptr().d_ptr() == otherChunk.data_ptr().d_ptr()
+        && chunk.data_ptr().end() == otherChunk.data_ptr().begin()) {
+        chunk.data_ptr().size += otherChunk.length();
+    } else if (chunk.isEmpty()) {
+        chunk = otherChunk;
+    } else {
+        chunk.append(otherChunk);
+    }
+
     if (!m_baseReadLineDataCalled && !sequential) {
         m_pos += readBytes;
         // If the base implementation was not called, then we must
         // assume the device position is invalid and force a seek.
         m_devicePos = xint64(-1);
     }
-    data[readSoFar] = '\0';
+    chunk[chunk.length()] = '\0';
 
     if (m_openMode & Text) {
-        if (readSoFar > 1 && data[readSoFar - 1] == '\n' && data[readSoFar - 2] == '\r') {
-            data[readSoFar - 2] = '\n';
-            data[readSoFar - 1] = '\0';
-            --readSoFar;
+        if (chunk.length() > 1 && chunk[chunk.length() - 1] == '\n' && chunk[chunk.length() - 2] == '\r') {
+            chunk[chunk.length() - 2] = '\n';
+            chunk[chunk.length() - 1] = '\0';
         }
     }
 
-    return readSoFar;
-}
-
-/*!
-    Reads a line from the device, but no more than \a maxSize characters,
-    and returns the result as a byte array.
-
-    This function has no way of reporting errors; returning an empty
-    iByteArray can mean either that no data was currently available
-    for reading, or that an error occurred.
-*/
-iByteArray iIODevice::readLine(xint64 maxSize)
-{
-    iByteArray result;
-
-    CHECK_MAXLEN(readLine, result);
-    CHECK_MAXBYTEARRAYSIZE(readLine);
-
-    result.resize(int(maxSize));
-    xint64 readBytes = 0;
-    if (!result.size()) {
-        // If resize fails or maxSize == 0, read incrementally
-        if (maxSize == 0)
-            maxSize = MaxByteArraySize - 1;
-
-        // The first iteration needs to leave an extra byte for the terminating null
-        result.resize(1);
-
-        xint64 readResult;
-        do {
-            result.resize(int(std::min(maxSize, xint64(result.size() + m_readBufferChunkSize))));
-            readResult = readLine(result.data() + readBytes, result.size() - readBytes);
-            if (readResult > 0 || readBytes == 0)
-                readBytes += readResult;
-        } while (readResult == m_readBufferChunkSize
-                && result[int(readBytes - 1)] != '\n');
-    } else
-        readBytes = readLine(result.data(), result.size());
-
-    if (readBytes <= 0)
-        result.clear();
-    else
-        result.resize(readBytes);
-
-    return result;
+    return chunk;
 }
 
 /*!
@@ -1308,23 +1201,34 @@ iByteArray iIODevice::readLine(xint64 maxSize)
     read at this point. If an error occurs, it should return -1 if and
     only if no bytes were read. Reading past EOF is considered an error.
 */
-xint64 iIODevice::readLineData(char *data, xint64 maxSize)
+iByteArray iIODevice::readLineData(xint64 maxSize, xint64* readErr)
 {
+    iByteArray result;
     xint64 readSoFar = 0;
-    char c;
-    int lastReadReturn = 0;
     m_baseReadLineDataCalled = true;
 
-    while (readSoFar < maxSize && (lastReadReturn = read(&c, 1)) == 1) {
-        *data++ = c;
+    while (readSoFar < maxSize) {
+        iByteArray chunk = read(1, readErr);
+        if (chunk.isEmpty())
+            break;
+
+        // to avoid invalid memory copy
+        if (result.data_ptr().d_ptr() == chunk.data_ptr().d_ptr()
+            && result.data_ptr().end() == chunk.data_ptr().begin()) {
+            result.data_ptr().size += chunk.length();
+        }  else if (result.isEmpty()) {
+            result = chunk;
+        } else {
+            result.append(chunk);
+        }
+
+        char c = chunk.front();
         ++readSoFar;
         if (c == '\n')
             break;
     }
 
-    if (lastReadReturn != 1 && readSoFar == 0)
-        return isSequential() ? lastReadReturn : -1;
-    return readSoFar;
+    return result;
 }
 
 /*!
@@ -1424,6 +1328,24 @@ bool iIODevice::isTransactionStarted() const
     return m_transactionStarted;
 }
 
+xint64 iIODevice::write(const iByteArray &data)
+{
+    CHECK_WRITABLE(write, xint64(-1));
+
+    const bool sequential = isSequential4Mode();
+    // Make sure the device is positioned correctly.
+    if (m_pos != m_devicePos && !sequential && !seek(m_pos))
+        return xint64(-1);
+
+    xint64 written = writeData(data);
+    if (!sequential && written > 0) {
+        m_pos += written;
+        m_devicePos += written;
+        m_buffer.skip(written);
+    }
+    return written;
+}
+
 /*!
     Writes at most \a maxSize bytes of data from \a data to the
     device. Returns the number of bytes that were actually written, or
@@ -1433,21 +1355,7 @@ bool iIODevice::isTransactionStarted() const
 */
 xint64 iIODevice::write(const char *data, xint64 maxSize)
 {
-    CHECK_WRITABLE(write, xint64(-1));
-    CHECK_MAXLEN(write, xint64(-1));
-
-    const bool sequential = isSequential4Mode();
-    // Make sure the device is positioned correctly.
-    if (m_pos != m_devicePos && !sequential && !seek(m_pos))
-        return xint64(-1);
-
-    xint64 written = writeData(data, maxSize);
-    if (!sequential && written > 0) {
-        m_pos += written;
-        m_devicePos += written;
-        m_buffer.skip(written);
-    }
-    return written;
+    return write(iByteArray::fromRawData(data, maxSize));
 }
 
 /*!
@@ -1505,29 +1413,6 @@ bool iIODevice::getChar(char *c)
 }
 
 /*!
-    Reads at most \a maxSize bytes from the device into \a data, without side
-    effects (i.e., if you call read() after peek(), you will get the same
-    data).  Returns the number of bytes read. If an error occurs, such as
-    when attempting to peek a device opened in WriteOnly mode, this function
-    returns -1.
-
-    0 is returned when no more data is available for reading.
-
-    Example:
-
-    \snippet code/src_corelib_io_qiodevice.cpp 4
-
-    \sa read()
-*/
-xint64 iIODevice::peek(char *data, xint64 maxSize)
-{
-    CHECK_MAXLEN(peek, xint64(-1));
-    CHECK_READABLE(peek, xint64(-1));
-
-    return readImpl(data, maxSize, true);
-}
-
-/*!
     Peeks at most \a maxSize bytes from the device, returning the data peeked
     as a iByteArray.
 
@@ -1541,24 +1426,13 @@ xint64 iIODevice::peek(char *data, xint64 maxSize)
 
     \sa read()
 */
-iByteArray iIODevice::peek(xint64 maxSize)
+iByteArray iIODevice::peek(xint64 maxSize, xint64* readErr)
 {
     CHECK_MAXLEN(peek, iByteArray());
     CHECK_MAXBYTEARRAYSIZE(peek);
     CHECK_READABLE(peek, iByteArray());
 
-    iByteArray result(maxSize, iShell::Uninitialized);
-
-    const xint64 readBytes = peek(result.data(), maxSize);
-
-    if (readBytes < maxSize) {
-        if (readBytes <= 0)
-            result.clear();
-        else
-            result.resize(readBytes);
-    }
-
-    return result;
+    return readImpl(maxSize, true, readErr);
 }
 
 /*!
@@ -1598,7 +1472,7 @@ xint64 iIODevice::skip(xint64 maxSize)
         if (!sequential)
             m_pos += skippedSoFar;
         if (m_buffer.isEmpty())
-            readData(IX_NULLPTR, 0);
+            readData(0, IX_NULLPTR);
         if (skippedSoFar == maxSize)
             return skippedSoFar;
 

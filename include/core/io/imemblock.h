@@ -45,27 +45,6 @@ public:
     inline void* value() const { return _data; }
 };
 
-class IX_CORE_EXPORT iMemGuard
-{
-    friend class iMemBlock;
-    struct ExternalData
-    {
-        iRefCount  _weakreef;
-        iMemBlock* _block;
-    } *_d;
-
-    iMemGuard(ExternalData* data);
-public:
-    iMemGuard();
-    iMemGuard(const iMemGuard& other);
-    ~iMemGuard();
-
-    iMemGuard& operator=(const iMemGuard& other);
-
-    // TODO: noted is not thread-safe
-    inline iMemBlock* block() const { return (IX_NULLPTR == _d) ? IX_NULLPTR : _d->_block; }
-};
-
 /**
  * A memblock is a reference counted memory block. PulseAudio
  * passes references to memblocks around instead of copying
@@ -111,7 +90,6 @@ public:
     inline void clearOptions(ArrayOptions o) { m_options &= ~o; }
     void setIsSilence(bool v);
 
-    iMemGuard guard() const;
     inline iExplicitlySharedDataPointer<iMemPool> pool() const { return m_pool; }
 
     inline iMemDataWraper data() const { return iMemDataWraper(this, 0); }
@@ -178,15 +156,14 @@ private:
     iExplicitlySharedDataPointer<iMemPool> m_pool;
 
     iAtomicPointer<void> m_data;
-    iAtomicPointer<iMemGuard::ExternalData> m_guardData;
 
     iAtomicCounter<int> m_nAcquired;
     iAtomicCounter<int> m_pleaseSignal;
 
     struct {
-        /* If type == PA_MEMBLOCK_USER this points to a function for freeing this memory block */
+        /* If type == MEMBLOCK_USER this points to a function for freeing this memory block */
         iFreeCb freeCb;
-        /* If type == PA_MEMBLOCK_USER this is passed as freeCb argument */
+        /* If type == MEMBLOCK_USER this is passed as freeCb argument */
         void* freeCbData;
     } m_user;
 

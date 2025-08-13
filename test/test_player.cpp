@@ -31,6 +31,8 @@ public:
     iString m_filePath;
     int m_fd;
     xint64 m_currPos;
+    // to verify zero copy in iIODevice
+    std::unordered_map<const iMemBlock*, xint64> m_createdBuffer;
 
     TestStreamDevice(const iString& path, iObject *parent = IX_NULLPTR) : iIODevice(parent), m_filePath(path), m_fd(0), m_currPos(0) {}
     virtual ~TestStreamDevice() 
@@ -45,7 +47,7 @@ public:
 
     virtual bool open(OpenMode mode)
     {
-        if (mode != ReadOnly)
+        if (mode != ReadOnly && mode != ReadWrite)
             return false;
         
         iIODevice::open(mode);
@@ -64,6 +66,8 @@ public:
         ::close(m_fd);
         m_fd = -1;
 
+
+        setWriteChannelCount(0);
         iIODevice::close();
     }
 
@@ -88,28 +92,42 @@ public:
         return remainSize;
     }
 
-    virtual xint64 readData(char *data, xint64 maxlen)
+    virtual iByteArray readData(xint64 maxlen, xint64* readLen)
     {
-        xint64 len = ::read(m_fd, data, maxlen);
-        if (len > 0)
-            m_currPos += len;
+        xint64 dummy = 0;
+        iByteArray buffer;
+        if (!readLen) readLen = &dummy;
 
-        if (maxlen > 0)
-            return len;
+        buffer.reserve(std::max<xint64>(maxlen, 256));
+        *readLen = ::read(m_fd, buffer.data(), buffer.capacity());
+        m_createdBuffer.insert({buffer.data_ptr().d_ptr(), *readLen});
 
-        ilog_info("try to buffer the stream data!!!");
-        iByteArray buffer(256, Uninitialized);
-        xint64 len2 = ::read(m_fd, buffer.data(), buffer.capacity());
-        if (len2 > 0) {
-            buffer.resize(len2);
-            m_buffer.append(buffer);
-            m_currPos += len2;
+        if (*readLen > 0) {
+            m_currPos += *readLen;
+            buffer.resize(*readLen);
         }
 
-        return 0;
+        if (maxlen > 0)
+            return buffer;
+
+        ilog_info("try to ", *readLen, " buffer the stream data!!!");
+        if (*readLen > 0 && 0 >= maxlen) {
+            m_buffer.append(buffer);
+        }
+
+        return iByteArray();
     }
-    virtual xint64 writeData(const char *data, xint64 len)
-    { return 0; }
+    virtual xint64 writeData(const iByteArray& data)
+    {
+        IX_ASSERT(m_createdBuffer.size() > 0);
+        std::unordered_map<const iMemBlock*, xint64>::iterator it = m_createdBuffer.find(data.data_ptr().d_ptr());
+        IX_ASSERT(it != m_createdBuffer.end());
+        it->second -= data.length();
+        if (it->second <= 0)
+            m_createdBuffer.erase(it);
+
+        return data.length();
+    }
 
     void noMoreData() const ISIGNAL(noMoreData);
 };
@@ -121,6 +139,10 @@ public:
     TestPlayer(iObject* parent = IX_NULLPTR)
     : iObject(parent)
     , m_loopTime(0)
+    , m_ioTimer(0)
+    , m_fileSize(0)
+    , varifyIO(IX_NULLPTR)
+    , streamDevice(IX_NULLPTR)
     {
         player = new iMediaPlayer(this);
         player->observeProperty("state", this, &TestPlayer::stateChanged);
@@ -132,6 +154,28 @@ public:
     {
     }
 
+    virtual bool event(iEvent *e) {
+        if (e->type() != iEvent::Timer) {
+            return iObject::event(e);
+        }
+
+        iTimerEvent* event = static_cast<iTimerEvent*>(e);
+        if (m_ioTimer != event->timerId())
+            return true;
+
+        iByteArray data = varifyIO->read(1024);
+        m_fileSize += data.length();
+        if (data.isEmpty()) {
+            ilog_info("player varifyIO filesize: ", m_fileSize);
+            killTimer(m_ioTimer);
+            varifyIO->close();
+            m_ioTimer = 0;
+            return true;
+        }
+
+        varifyIO->write(data);
+        return true;
+    }
     void errorEvent(iMediaPlayer::Error errorNum)
     {
         ilog_warn(": ", errorNum);
@@ -160,6 +204,11 @@ public:
     }
 
     int play(const iString& path) {
+        varifyIO = new TestStreamDevice(path, this);
+        varifyIO->open(iIODevice::ReadWrite);
+        m_ioTimer = startTimer(10);
+        m_fileSize = 0;
+
         streamDevice = new TestStreamDevice(path, this);
         streamDevice->open(iIODevice::ReadOnly);
         iObject::connect(streamDevice, &TestStreamDevice::noMoreData, player, &iMediaPlayer::stop);
@@ -187,7 +236,10 @@ public:
     }
 
     int m_loopTime;
+    int m_ioTimer;
+    int m_fileSize;
 
+    TestStreamDevice* varifyIO;
     TestStreamDevice* streamDevice;
     iMediaPlayer* player;
 };
