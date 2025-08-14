@@ -11,7 +11,7 @@
 #ifndef IINCOPERATION_H
 #define IINCOPERATION_H
 
-#include <inc/iincglobal.h>
+#include <inc/kernel/iincglobal.h>
 #include <core/kernel/iobject.h>
 
 namespace iShell {

@@ -13,7 +13,7 @@
 
 #include <unordered_set>
 
-#include <inc/iincengine.h>
+#include <inc/kernel/iincengine.h>
 
 namespace iShell {
 
@@ -77,7 +77,7 @@ public:
         STATE_TERMINATED      /**< The connection was terminated cleanly */
     };
 
-    iINCContext(iStringView name, iINCEngine *engine, iObject *parent = IX_NULLPTR);
+    iINCContext(const iStringView& name, iINCEngine *engine, iObject *parent = IX_NULLPTR);
 
     /** Return the current context status */
     State getState() const;
@@ -88,7 +88,7 @@ public:
      * be notified when the connection is established. 
      * Returns negative on certain errors such as invalid state
      * or parameters. */
-    int connect(iStringView server);
+    int connect(const iStringView& url);
 
     /** Terminate the context connection immediately */
     void disconnect();

@@ -11,7 +11,7 @@
 #ifndef IINCENGINE_H
 #define IINCENGINE_H
 
-#include <inc/iincglobal.h>
+#include <inc/kernel/iincglobal.h>
 #include <core/io/iiodevice.h>
 
 namespace iShell {
@@ -22,7 +22,7 @@ class IX_INC_EXPORT iINCEngine : public iObject
 public:
     virtual ~iINCEngine();
 
-    virtual iIODevice* connectTo(iStringView server) = 0;
+    virtual iIODevice* connectTo(const iStringView& url) = 0;
 
 private:
     IX_DISABLE_COPY(iINCEngine)

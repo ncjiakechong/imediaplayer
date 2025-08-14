@@ -12,7 +12,7 @@
 #define IINCSTREAM_H
 
 #include <core/kernel/iobject.h>
-#include <inc/iincglobal.h>
+#include <inc/kernel/iincglobal.h>
 
 namespace iShell {
 
@@ -25,14 +25,13 @@ class IX_INC_EXPORT iINCStream : public iObject
 public:
     iINCStream(iINCContext* context);
 
-public: // signal
-
 protected:
     virtual ~iINCStream();
 
 private:
 
     friend class iINCOperation;
+    IX_DISABLE_COPY(iINCStream)
 };
 
 } // namespace iShell

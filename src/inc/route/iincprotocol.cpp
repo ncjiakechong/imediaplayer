@@ -2,18 +2,22 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iincengine.cpp
-/// @brief   engine of INC(Inter Node Communication)
+/// @file    iincprotocol.cpp
+/// @brief   protocol of router
 /// @details description.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <inc/iincengine.h>
+#include <inc/route/iincprotocol.h>
 
 namespace iShell {
 
-iINCEngine::~iINCEngine()
+iINCProtocal::iINCProtocal(const iStringView& name, iINCEngine *engine, iObject *parent)
+    : iObject(parent)
+{}
+
+iINCProtocal::~iINCProtocal()
 {}
 
 } // namespace iShell

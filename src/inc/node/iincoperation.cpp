@@ -9,9 +9,9 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <inc/iinccontext.h>
-#include <inc/iincstream.h>
-#include <inc/iincoperation.h>
+#include <inc/node/iinccontext.h>
+#include <inc/node/iincstream.h>
+#include <inc/node/iincoperation.h>
 
 namespace iShell {
 
@@ -55,9 +55,11 @@ void iINCOperation::setState(State now)
 
     State pre = m_state;
     m_state = now;
+
+    iWeakPtr<iINCOperation> guard(this);
     IEMIT stateChanged(now, pre);
 
-    if (STATE_RUNNING != m_state)
+    if (!guard.isNull() && STATE_RUNNING != m_state)
         unlink();
 }
 

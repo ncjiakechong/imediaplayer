@@ -3,10 +3,11 @@ project (iinc)
 add_definitions(-DIBUILD_INC_LIB)
 
 set (ComSource
-	iincengine.cpp
-	iinccontext.cpp
-	iincoperation.cpp
-	iincstream.cpp)
+	kernel/iincengine.cpp
+	node/iincoperation.cpp
+	node/iinccontext.cpp
+	node/iincstream.cpp
+	route/iincprotocol.cpp)
 
 find_package(PkgConfig)
 

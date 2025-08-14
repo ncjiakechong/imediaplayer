@@ -9,8 +9,8 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <inc/iincstream.h>
-#include <inc/iinccontext.h>
+#include <inc/node/iincstream.h>
+#include <inc/node/iinccontext.h>
 
 namespace iShell {
 

@@ -9,11 +9,11 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <inc/iinccontext.h>
+#include <inc/node/iinccontext.h>
 
 namespace iShell {
 
-iINCContext::iINCContext(iStringView name, iINCEngine *engine, iObject *parent)
+iINCContext::iINCContext(const iStringView& name, iINCEngine *engine, iObject *parent)
     : iObject(parent) 
     , m_engine(engine)
 {
