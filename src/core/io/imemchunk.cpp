@@ -37,7 +37,7 @@ void iMCAlign::push(const iByteArray& c)
 
         /* Try to merge */
         if (m_leftover.data_ptr().d_ptr() == c.data_ptr().d_ptr() &&
-            m_leftover.data_ptr().end() == c.data_ptr().begin()) {
+            m_leftover.data_ptr().constEnd() == c.data_ptr().constBegin()) {
 
             /* Merge */
             m_leftover.data_ptr().size += c.length();
@@ -57,7 +57,7 @@ void iMCAlign::push(const iByteArray& c)
                 l = c.length();
 
             /* Can we use the current block? */
-            m_leftover.append(c.data_ptr().data(), l);
+            m_leftover.append(c.constData(), l);
 
             IX_ASSERT(m_leftover.length() <= m_base);
             IX_ASSERT(m_leftover.length() <= m_leftover.data_ptr().allocatedCapacity());

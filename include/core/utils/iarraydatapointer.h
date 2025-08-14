@@ -63,12 +63,12 @@ public:
     T *data() { return ptr; }
     const T *data() const { return ptr; }
 
-    iterator begin(iterator = iterator()) { return data(); }
-    iterator end(iterator = iterator()) { return data() + size; }
-    const_iterator begin(const_iterator = const_iterator()) const { return data(); }
-    const_iterator end(const_iterator = const_iterator()) const { return data() + size; }
-    const_iterator constBegin(const_iterator = const_iterator()) const { return data(); }
-    const_iterator constEnd(const_iterator = const_iterator()) const { return data() + size; }
+    iterator begin() { return data(); }
+    iterator end() { return data() + size; }
+    const_iterator begin() const { return data(); }
+    const_iterator end() const { return data() + size; }
+    const_iterator constBegin() const { return data(); }
+    const_iterator constEnd() const { return data() + size; }
 
     void swap(iArrayDataPointer &other) {
         std::swap(d, other.d);

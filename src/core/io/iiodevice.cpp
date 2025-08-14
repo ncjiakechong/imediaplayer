@@ -468,7 +468,7 @@ iByteArray iIODevice::iMBQueueRef::readLine(xint64 maxLength)
 
         // to avoid invalid memory copy
         if (result.data_ptr().d_ptr() == chunk.data_ptr().d_ptr()
-            && result.data_ptr().end() == chunk.data_ptr().begin()) {
+            && result.data_ptr().constEnd() == chunk.data_ptr().constBegin()) {
             result.data_ptr().size += chunk.length();
         }  else if (result.isEmpty()) {
             result = chunk;
@@ -972,7 +972,7 @@ xint64 iIODevice::read(char* data, xint64 maxSize)
     if (chunk.isEmpty())
         return retErr;
 
-    memcpy(data, chunk.data_ptr().data(), chunk.length());
+    memcpy(data, chunk.constData(), chunk.length());
     return chunk.length();
 }
 
@@ -1039,7 +1039,7 @@ iByteArray iIODevice::readAll()
 
         // to avoid invalid memory copy
         if (result.data_ptr().d_ptr() == chunk.data_ptr().d_ptr()
-            && result.data_ptr().end() == chunk.data_ptr().begin()) {
+            && result.data_ptr().constEnd() == chunk.data_ptr().constBegin()) {
             result.data_ptr().size += chunk.length();
         } else if (result.isEmpty()) {
             result = chunk;
@@ -1158,7 +1158,7 @@ iByteArray iIODevice::readLine(xint64 maxSize, xint64* readErr)
 
     // to avoid invalid memory copy
     if (chunk.data_ptr().d_ptr() == otherChunk.data_ptr().d_ptr()
-        && chunk.data_ptr().end() == otherChunk.data_ptr().begin()) {
+        && chunk.data_ptr().constEnd() == otherChunk.data_ptr().constBegin()) {
         chunk.data_ptr().size += otherChunk.length();
     } else if (chunk.isEmpty()) {
         chunk = otherChunk;
@@ -1214,7 +1214,7 @@ iByteArray iIODevice::readLineData(xint64 maxSize, xint64* readErr)
 
         // to avoid invalid memory copy
         if (result.data_ptr().d_ptr() == chunk.data_ptr().d_ptr()
-            && result.data_ptr().end() == chunk.data_ptr().begin()) {
+            && result.data_ptr().constEnd() == chunk.data_ptr().constBegin()) {
             result.data_ptr().size += chunk.length();
         }  else if (result.isEmpty()) {
             result = chunk;

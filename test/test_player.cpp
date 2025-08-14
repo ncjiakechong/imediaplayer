@@ -28,16 +28,25 @@ class TestStreamDevice : public iIODevice
 {
     IX_OBJECT(TestStreamDevice)
 public:
-    iString m_filePath;
+    bool m_trackIOMem;
     int m_fd;
     xint64 m_currPos;
+    iString m_filePath;
     // to verify zero copy in iIODevice
     std::unordered_map<const iMemBlock*, xint64> m_createdBuffer;
 
-    TestStreamDevice(const iString& path, iObject *parent = IX_NULLPTR) : iIODevice(parent), m_filePath(path), m_fd(0), m_currPos(0) {}
+    TestStreamDevice(const iString& path, iObject *parent = IX_NULLPTR)
+        : iIODevice(parent), m_trackIOMem(false), m_fd(0), m_currPos(0), m_filePath(path)
+    {}
+
     virtual ~TestStreamDevice() 
     {
         close();
+    }
+
+    void setTrackIOMem(bool track)
+    {
+        m_trackIOMem = track;
     }
 
     virtual bool isSequential() const
@@ -100,7 +109,9 @@ public:
 
         buffer.reserve(std::max<xint64>(maxlen, 256));
         *readLen = ::read(m_fd, buffer.data(), buffer.capacity());
-        m_createdBuffer.insert({buffer.data_ptr().d_ptr(), *readLen});
+
+        if (m_trackIOMem)
+            m_createdBuffer.insert({buffer.data_ptr().d_ptr(), *readLen});
 
         if (*readLen > 0) {
             m_currPos += *readLen;
@@ -110,7 +121,7 @@ public:
         if (maxlen > 0)
             return buffer;
 
-        ilog_info("try to ", *readLen, " buffer the stream data!!!");
+        ilog_debug("try to ", *readLen, " buffer the stream data!!!");
         if (*readLen > 0 && 0 >= maxlen) {
             m_buffer.append(buffer);
         }
@@ -163,10 +174,10 @@ public:
         if (m_ioTimer != event->timerId())
             return true;
 
-        iByteArray data = varifyIO->read(1024);
+        iByteArray data = varifyIO->read(2048);
         m_fileSize += data.length();
         if (data.isEmpty()) {
-            ilog_info("player varifyIO filesize: ", m_fileSize);
+            ilog_debug("player varifyIO filesize: ", m_fileSize);
             killTimer(m_ioTimer);
             varifyIO->close();
             m_ioTimer = 0;
@@ -205,6 +216,7 @@ public:
 
     int play(const iString& path) {
         varifyIO = new TestStreamDevice(path, this);
+        varifyIO->setTrackIOMem(true);
         varifyIO->open(iIODevice::ReadWrite);
         m_ioTimer = startTimer(10);
         m_fileSize = 0;

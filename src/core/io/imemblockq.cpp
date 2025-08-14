@@ -320,7 +320,7 @@ xint64 iMemBlockQueue::push(const iByteArray& uchunk)
         /* Try to merge memory blocks */
 
         if (q->chunk.data_ptr().d_ptr() == chunk.data_ptr().d_ptr() &&
-            q->chunk.data_ptr().end() == chunk.data_ptr().begin() &&
+            q->chunk.data_ptr().constEnd() == chunk.data_ptr().constBegin() &&
             m_writeIndex == q->index + (xint64) q->chunk.length()) {
 
             q->chunk.data_ptr().size += chunk.length();
