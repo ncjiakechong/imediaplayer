@@ -80,9 +80,9 @@ class IX_CORE_EXPORT iLogger {
     static iLogTarget setDefaultTarget(const iLogTarget& target);
     static void setThreshold(const char* patterns, bool reset);
 
-    static void asprintf(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+    static void asprintf(const char* tag, iLogLevel level, const char* file, const char* function, int line,
                          const char *format, ...) IX_GCC_PRINTF_ATTR(6, 7);
-    static void binaryData(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+    static void binaryData(const char* tag, iLogLevel level, const char* file, const char* function, int line,
                            const void* data, int size);
 
     iLogger();
@@ -151,6 +151,9 @@ class IX_CORE_EXPORT iLogger {
     // for iStringView
     void append(const iStringView& value);
 
+    // for iLatin1StringView
+    void append(const iLatin1StringView& value);
+
     // for string
     void append(const char* value);
 
@@ -192,6 +195,7 @@ IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::string&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::wstring&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iString&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iStringView&);
+IX_CORE_EXPORT iLogger& operator<<(iLogger&, const iLatin1StringView&);
 IX_CORE_EXPORT iLogger& operator<<(iLogger&, const void*);
 
 #ifdef IX_HAVE_CXX11
@@ -204,9 +208,9 @@ IX_CORE_EXPORT iLogger& operator<<(iLogger&, const std::u32string&);
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,
          typename T13, typename T14, typename T15, typename T16, typename T17, typename T18>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
-              T9 value9, T10 value10, T11 value11, T12 value12, T13 value13, T14 value14, T15 value15, 
+              T9 value9, T10 value10, T11 value11, T12 value12, T13 value13, T14 value14, T15 value15,
               T16 value16, T17 value17, T18 value18) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))
@@ -220,7 +224,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,
          typename T13, typename T14, typename T15, typename T16, typename T17>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
               T9 value9, T10 value10, T11 value11, T12 value12, T13 value13, T14 value14, T15 value15,
               T16 value16, T17 value17) {
@@ -236,9 +240,9 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,
          typename T13, typename T14, typename T15, typename T16>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
-              T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8, 
-              T9 value9, T10 value10, T11 value11, T12 value12, T13 value13, T14 value14, T15 value15, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
+              T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
+              T9 value9, T10 value10, T11 value11, T12 value12, T13 value13, T14 value14, T15 value15,
               T16 value16) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))
@@ -252,7 +256,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,
          typename T13, typename T14, typename T15>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
               T9 value9, T10 value10, T11 value11, T12 value12, T13 value13, T14 value14, T15 value15) {
     iLogger logger;
@@ -267,7 +271,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,
          typename T13, typename T14>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
               T9 value9, T10 value10, T11 value11, T12 value12, T13 value13, T14 value14) {
     iLogger logger;
@@ -282,7 +286,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12,
          typename T13>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
               T9 value9, T10 value10, T11 value11, T12 value12, T13 value13) {
     iLogger logger;
@@ -296,7 +300,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11, typename T12>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
               T9 value9, T10 value10, T11 value11, T12 value12) {
     iLogger logger;
@@ -310,7 +314,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10, typename T11>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
               T9 value9, T10 value10, T11 value11) {
     iLogger logger;
@@ -324,7 +328,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9, typename T10>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
               T9 value9, T10 value10) {
     iLogger logger;
@@ -337,7 +341,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8, typename T9>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8,
               T9 value9) {
     iLogger logger;
@@ -350,7 +354,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7, typename T8>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7, T8 value8) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))
@@ -362,7 +366,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6,
          typename T7>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6, T7 value7) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))
@@ -373,7 +377,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 }
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5, T6 value6) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))
@@ -384,7 +388,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 }
 
 template<typename T1, typename T2, typename T3, typename T4, typename T5>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4, T5 value5) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))
@@ -395,7 +399,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 }
 
 template<typename T1, typename T2, typename T3, typename T4>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3, T4 value4) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))
@@ -406,7 +410,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 }
 
 template<typename T1, typename T2, typename T3>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2, T3 value3) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))
@@ -417,7 +421,7 @@ void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* fu
 }
 
 template<typename T1, typename T2>
-void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line, 
+void iLogMeta(const char* tag, iLogLevel level, const char* file, const char* function, int line,
               T1 value1, T2 value2) {
     iLogger logger;
     if (!logger.start(tag, level, file, function, line))

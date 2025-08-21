@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iregularexpression.h
-/// @brief   provide a comprehensive set of tools for working with regular expressions, 
+/// @brief   provide a comprehensive set of tools for working with regular expressions,
 ///          allowing for pattern matching, searching, and manipulation of strings
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -18,7 +18,7 @@
 
 namespace iShell {
 
-class iLatin1String;
+class iLatin1StringView;
 
 class iRegularExpressionMatch;
 class iRegularExpressionMatchIterator;

@@ -498,7 +498,7 @@ static gchar * _gst_debug_print_object (GObject* object)
 }
 
 static void _printf_extension_log_func (GstDebugCategory* category,
-            GstDebugLevel level, const gchar* file, const gchar* function, gint line, 
+            GstDebugLevel level, const gchar* file, const gchar* function, gint line,
             GObject* object, GstDebugMessage* message, gpointer unused)
 {
     const gchar *dbg_msg;
@@ -553,16 +553,16 @@ void iGstUtils::deinitGst()
 namespace {
     const char* getCodecAlias(const iString &codec)
     {
-        if (codec.startsWith(iLatin1String("avc1.")))
+        if (codec.startsWith(iLatin1StringView("avc1.")))
             return "video/x-h264";
 
-        if (codec.startsWith(iLatin1String("mp4a.")))
+        if (codec.startsWith(iLatin1StringView("mp4a.")))
             return "audio/mpeg4";
 
-        if (codec.startsWith(iLatin1String("mp4v.20.")))
+        if (codec.startsWith(iLatin1StringView("mp4v.20.")))
             return "video/mpeg4";
 
-        if (codec == iLatin1String("samr"))
+        if (codec == iLatin1StringView("samr"))
             return "audio/amr";
 
         return IX_NULLPTR;
@@ -570,14 +570,14 @@ namespace {
 
     const char* getMimeTypeAlias(const iString &mimeType)
     {
-        if (mimeType == iLatin1String("video/mp4"))
+        if (mimeType == iLatin1StringView("video/mp4"))
             return "video/mpeg4";
 
-        if (mimeType == iLatin1String("audio/mp4"))
+        if (mimeType == iLatin1StringView("audio/mp4"))
             return "audio/mpeg4";
 
-        if (mimeType == iLatin1String("video/ogg")
-            || mimeType == iLatin1String("audio/ogg"))
+        if (mimeType == iLatin1StringView("video/ogg")
+            || mimeType == iLatin1StringView("audio/ogg"))
             return "application/ogg";
 
         return IX_NULLPTR;
@@ -595,12 +595,12 @@ iMultimedia::SupportEstimate iGstUtils::hasSupport(const iString &mimeType,
     bool containsMimeType = (supportedMimeTypeSet.find(mimeTypeLowcase) != supportedMimeTypeSet.cend());
     if (!containsMimeType) {
         const char* mimeTypeAlias = getMimeTypeAlias(mimeTypeLowcase);
-        containsMimeType = (supportedMimeTypeSet.find(iLatin1String(mimeTypeAlias)) != supportedMimeTypeSet.cend());
+        containsMimeType = (supportedMimeTypeSet.find(iLatin1StringView(mimeTypeAlias)) != supportedMimeTypeSet.cend());
         if (!containsMimeType) {
-            containsMimeType = (supportedMimeTypeSet.find(iLatin1String("video/") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
-                               || (supportedMimeTypeSet.find(iLatin1String("video/x-") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
-                               || (supportedMimeTypeSet.find(iLatin1String("audio/") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
-                               || (supportedMimeTypeSet.find(iLatin1String("audio/x-") + mimeTypeLowcase) != supportedMimeTypeSet.cend());
+            containsMimeType = (supportedMimeTypeSet.find(iLatin1StringView("video/") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
+                               || (supportedMimeTypeSet.find(iLatin1StringView("video/x-") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
+                               || (supportedMimeTypeSet.find(iLatin1StringView("audio/") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
+                               || (supportedMimeTypeSet.find(iLatin1StringView("audio/x-") + mimeTypeLowcase) != supportedMimeTypeSet.cend());
         }
     }
 
@@ -609,12 +609,12 @@ iMultimedia::SupportEstimate iGstUtils::hasSupport(const iString &mimeType,
         iString codecLowcase = codec.toLower();
         const char* codecAlias = getCodecAlias(codecLowcase);
         if (codecAlias) {
-            if (supportedMimeTypeSet.find(iLatin1String(codecAlias)) != supportedMimeTypeSet.cend())
+            if (supportedMimeTypeSet.find(iLatin1StringView(codecAlias)) != supportedMimeTypeSet.cend())
                 supportedCodecCount++;
-        } else if ((supportedMimeTypeSet.find(iLatin1String("video/") + codecLowcase) != supportedMimeTypeSet.cend())
-                   || (supportedMimeTypeSet.find(iLatin1String("video/x-") + codecLowcase) != supportedMimeTypeSet.cend())
-                   || (supportedMimeTypeSet.find(iLatin1String("audio/") + codecLowcase) != supportedMimeTypeSet.cend())
-                   || (supportedMimeTypeSet.find(iLatin1String("audio/x-") + codecLowcase) != supportedMimeTypeSet.cend())) {
+        } else if ((supportedMimeTypeSet.find(iLatin1StringView("video/") + codecLowcase) != supportedMimeTypeSet.cend())
+                   || (supportedMimeTypeSet.find(iLatin1StringView("video/x-") + codecLowcase) != supportedMimeTypeSet.cend())
+                   || (supportedMimeTypeSet.find(iLatin1StringView("audio/") + codecLowcase) != supportedMimeTypeSet.cend())
+                   || (supportedMimeTypeSet.find(iLatin1StringView("audio/x-") + codecLowcase) != supportedMimeTypeSet.cend())) {
             supportedCodecCount++;
         }
     }
@@ -662,7 +662,7 @@ std::unordered_set<iString, iKeyHashFunc> iGstUtils::supportedMimeTypes(bool (*i
             GstElementFactory *factory;
 
             if (GST_IS_TYPE_FIND_FACTORY(feature)) {
-                iString name(iLatin1String(gst_plugin_feature_get_name(feature)));
+                iString name(iLatin1StringView(gst_plugin_feature_get_name(feature)));
                 if (name.contains(iLatin1Char('/'))) //filter out any string without '/' which is obviously not a mime type
                     supportedMimeTypes.insert(name.toLower());
                 continue;
@@ -684,15 +684,15 @@ std::unordered_set<iString, iKeyHashFunc> iGstUtils::supportedMimeTypes(bool (*i
                         iString nameLowcase = iString::fromLatin1(gst_structure_get_name(structure)).toLower();
 
                         supportedMimeTypes.insert(nameLowcase);
-                        if (nameLowcase.contains(iLatin1String("mpeg"))) {
+                        if (nameLowcase.contains(iLatin1StringView("mpeg"))) {
                             //Because mpeg version number is only included in the detail
                             //description,  it is necessary to manually extract this information
                             //in order to match the mime type of mpeg4.
                             const GValue *value = gst_structure_get_value(structure, "mpegversion");
                             if (value) {
                                 gchar *str = gst_value_serialize(value);
-                                iString versions = iLatin1String(str);
-                                const std::list<iString> elements = versions.split(iRegularExpression(iLatin1String("\\D+")), iShell::SkipEmptyParts);
+                                iString versions = iLatin1StringView(str);
+                                const std::list<iString> elements = versions.split(iRegularExpression(iLatin1StringView("\\D+")), iShell::SkipEmptyParts);
                                 for (const iString &e : elements)
                                     supportedMimeTypes.insert(nameLowcase + e);
                                 g_free(str);
@@ -1184,13 +1184,13 @@ iString iGstUtils::fileExtensionForMimeType(const iString &mimeType)
 {
     if (fileExtensionMap->empty()) {
         //extension for containers hard to guess from mimetype
-        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("video/x-matroska"), iLatin1String("mkv")));
-        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("video/quicktime"), iLatin1String("mov")));
-        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("video/x-msvideo"), iLatin1String("avi")));
-        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("video/msvideo"), iLatin1String("avi")));
-        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("audio/mpeg"), iLatin1String("mp3")));
-        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("application/x-shockwave-flash"), iLatin1String("swf")));
-        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("application/x-pn-realmedia"), iLatin1String("rm")));
+        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("video/x-matroska"), iLatin1StringView("mkv")));
+        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("video/quicktime"), iLatin1StringView("mov")));
+        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("video/x-msvideo"), iLatin1StringView("avi")));
+        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("video/msvideo"), iLatin1StringView("avi")));
+        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("audio/mpeg"), iLatin1StringView("mp3")));
+        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("application/x-shockwave-flash"), iLatin1StringView("swf")));
+        fileExtensionMap->insert(std::pair<iString, iString>(iStringLiteral("application/x-pn-realmedia"), iLatin1StringView("rm")));
     }
 
     //for container names like avi instead of video/x-msvideo, use it as extension

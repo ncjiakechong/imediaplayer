@@ -9,7 +9,7 @@
 /////////////////////////////////////////////////////////////////
 
 #include <core/io/iurl.h>
-#include "codecs/iutfcodec_p.h"
+#include "utils/istringconverter_p.h"
 #include "utils/itools_p.h"
 
 namespace iShell {

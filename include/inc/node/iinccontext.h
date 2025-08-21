@@ -85,7 +85,7 @@ public:
     /** Connect the context to the specified server. If server is NULL,
      * connect to the default server. This routine may but will not always
      * return synchronously on error. Use stateChanged() to
-     * be notified when the connection is established. 
+     * be notified when the connection is established.
      * Returns negative on certain errors such as invalid state
      * or parameters. */
     int connect(const iStringView& url);

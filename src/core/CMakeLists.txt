@@ -3,8 +3,6 @@ project (icore)
 add_definitions(-DIBUILD_CORE_LIB)
 
 set (ComSource
-	codecs/iunicodetables_data.cpp
-	codecs/iutfcodec.cpp
 	global/iglobal.cpp
 	global/iendian.cpp
 	global/inumeric.cpp
@@ -50,6 +48,9 @@ set (ComSource
 	utils/ilocale_tools_p.cpp
 	utils/ilocale.cpp
 	utils/irect.cpp
+	utils/iunicodetables_data.cpp
+	utils/istringconverter.cpp
+	utils/ilatin1stringmatcher.cpp
 	utils/iregularexpression.cpp
 	utils/ishareddata.cpp
 	utils/isharedptr.cpp

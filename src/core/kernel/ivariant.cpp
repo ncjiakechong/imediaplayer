@@ -22,7 +22,7 @@ namespace iShell {
 
 typedef iBasicAtomicBitField<4096> iTypeIdContainer;
 typedef std::unordered_map< int, iVariant::iTypeHandler> iMetaTypeHandler;
-typedef std::unordered_map< iLatin1String, int, iKeyHashFunc > iTypeIdRegister;
+typedef std::unordered_map< iLatin1StringView, int, iKeyHashFunc > iTypeIdRegister;
 typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc > iMetaTypeConverter;
 
 struct _iMetaType {
@@ -53,7 +53,7 @@ int iVariant::iRegisterMetaType(const char *type, const iTypeHandler& handler, i
 
     do {
         iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
-        iTypeIdRegister::iterator it = _iMetaTypeDef->_typeIdRegister.find(iLatin1String(type));
+        iTypeIdRegister::iterator it = _iMetaTypeDef->_typeIdRegister.find(iLatin1StringView(type));
         if (it != _iMetaTypeDef->_typeIdRegister.end())
             return it->second;
 
@@ -61,13 +61,13 @@ int iVariant::iRegisterMetaType(const char *type, const iTypeHandler& handler, i
             && (hint < iTypeIdContainer::NumBits)
             && _iMetaTypeDef->_typeIdContainer.allocateSpecific(hint)) {
             _iMetaTypeDef->_metaTypeHandler.insert(std::pair<int, iVariant::iTypeHandler>(hint, handler));
-            _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
+            _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1StringView, int >(iLatin1StringView(type), hint));
             break;
         }
 
         hint = _iMetaTypeDef->_typeIdContainer.allocateNext();
         _iMetaTypeDef->_metaTypeHandler.insert(std::pair<int, iVariant::iTypeHandler>(hint, handler));
-        _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1String, int >(iLatin1String(type), hint));
+        _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1StringView, int >(iLatin1StringView(type), hint));
     } while(false);
 
     if (needInitSystemConvert)

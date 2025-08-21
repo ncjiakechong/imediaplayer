@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ihashfunctions.h
-/// @brief   defines hash functions for various classes, 
+/// @brief   defines hash functions for various classes,
 ///          enabling their use as keys in hash tables
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -23,7 +23,7 @@ class iByteArray;
 class iString;
 class iStringView;
 class iBitArray;
-class iLatin1String;
+class iLatin1StringView;
 
 struct IX_CORE_EXPORT iKeyHashFunc
 {
@@ -31,7 +31,7 @@ struct IX_CORE_EXPORT iKeyHashFunc
     size_t operator()(const iByteArray& key) const;
     size_t operator()(const iString& key) const;
     size_t operator()(const iStringView& key) const;
-    size_t operator()(const iLatin1String& key) const;
+    size_t operator()(const iLatin1StringView& key) const;
     size_t operator()(const std::pair<int, int>& key) const;
 };
 

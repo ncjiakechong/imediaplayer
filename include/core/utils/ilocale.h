@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ilocale.h
-/// @brief   provides a comprehensive set of tools for handling locale-specific data, 
+/// @brief   provides a comprehensive set of tools for handling locale-specific data,
 ///          such as language, country, script, number formatting, date and time formatting,
 ///          currency formatting, and text direction.
 /// @version 1.0

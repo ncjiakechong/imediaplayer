@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iarraydata.cpp
-/// @brief   provides a typed array data structure, allowing it to 
+/// @brief   provides a typed array data structure, allowing it to
 ///          manage a contiguous block of memory as an array of elements of type T
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

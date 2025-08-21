@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iaudiobuffer.cpp
-/// @brief   designed to hold audio data, providing methods for 
+/// @brief   designed to hold audio data, providing methods for
 ///          accessing, modifying, and querying the audio content
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -407,12 +407,6 @@ const void* iAudioBuffer::data() const
         return IX_NULLPTR;
     return d->mProvider->constData();
 }
-
-
-/*
-    Template data/constData functions caused override problems with qdoc,
-    so moved their docs into the non template versions.
-*/
 
 /*!
     Returns a pointer to this buffer's data.  You can modify the

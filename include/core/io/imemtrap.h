@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imemtrap.h
-/// @brief   This class provides a mechanism to handle SIGBUS signals that can occur 
-///          when accessing memory regions, particularly memory-mapped regions 
+/// @brief   This class provides a mechanism to handle SIGBUS signals that can occur
+///          when accessing memory regions, particularly memory-mapped regions
 ///          controlled by external processes or hardware resources
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -26,7 +26,7 @@ namespace iShell {
  *
  * Intended usage is to handle memory mapped in which is controlled by
  * other processes that might execute ftruncate() or when mapping inb
- * hardware resources that might get invalidated when unplugged. 
+ * hardware resources that might get invalidated when unplugged.
  */
 class IX_CORE_EXPORT iMemTrap
 {

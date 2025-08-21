@@ -24,7 +24,7 @@ struct iMBQListItem {
     iByteArray chunk;
 };
 
-iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t maxlength, size_t tlength, size_t base, 
+iMemBlockQueue::iMemBlockQueue(const iLatin1StringView& name, xint64 idx, size_t maxlength, size_t tlength, size_t base,
     size_t prebuf, size_t minreq, size_t maxrewind, iByteArray *silence)
     : m_blocks(IX_NULLPTR)
     , m_blocksTail(IX_NULLPTR)
@@ -45,8 +45,8 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
     , m_requested(0)
     , m_name(name)
 {
-    ilog_debug("memblockq[", m_name, "] requested: maxlength=", maxlength, 
-                ", tlength=", tlength, ", base=", base, ", prebuf=", prebuf, 
+    ilog_debug("memblockq[", m_name, "] requested: maxlength=", maxlength,
+                ", tlength=", tlength, ", base=", base, ", prebuf=", prebuf,
                 ", minreq=", minreq, " maxrewind=", maxrewind);
 
     setMaxLength(maxlength);
@@ -55,8 +55,8 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
     setPreBuf(prebuf);
     setMaxRewind(maxrewind);
 
-    ilog_debug("memblockq[", m_name, "] sanitized: maxlength=", m_maxLength, 
-                ", tlength=", m_tLength, ", base=", m_base, ", prebuf=", m_preBuf, 
+    ilog_debug("memblockq[", m_name, "] sanitized: maxlength=", m_maxLength,
+                ", tlength=", m_tLength, ", base=", m_base, ", prebuf=", m_preBuf,
                 ", minreq=", m_minReq, " maxrewind=", m_maxRewind);
 
     if (silence) {
@@ -66,14 +66,14 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t max
     m_mcalign = new iMCAlign(m_base);
 }
 
-iMemBlockQueue::~iMemBlockQueue() 
+iMemBlockQueue::~iMemBlockQueue()
 {
     makeSilence();
 
     delete m_mcalign;
 }
 
-void iMemBlockQueue::fixCurrentRead() 
+void iMemBlockQueue::fixCurrentRead()
 {
     if (!m_blocks) {
         m_currentRead = IX_NULLPTR;
@@ -101,7 +101,7 @@ void iMemBlockQueue::fixCurrentRead()
        the queue was already played */
 }
 
-void iMemBlockQueue::fixCurrentWrite() 
+void iMemBlockQueue::fixCurrentWrite()
 {
     if (!m_blocks) {
         m_currentWrite = IX_NULLPTR;
@@ -129,7 +129,7 @@ void iMemBlockQueue::fixCurrentWrite()
        everything in the queue is still to be played */
 }
 
-void iMemBlockQueue::dropBlock(iMBQListItem *q) 
+void iMemBlockQueue::dropBlock(iMBQListItem *q)
 {
     IX_ASSERT(q && m_nBlocks >= 1);
 
@@ -159,14 +159,14 @@ void iMemBlockQueue::dropBlock(iMBQListItem *q)
     m_nBlocks--;
 }
 
-void iMemBlockQueue::dropBacklog() 
+void iMemBlockQueue::dropBacklog()
 {
     xint64 boundary = m_readIndex - (xint64) m_maxRewind;
     while (m_blocks && (m_blocks->index + (xint64) m_blocks->chunk.length() <= boundary))
         dropBlock(m_blocks);
 }
 
-bool iMemBlockQueue::canPush(size_t l) 
+bool iMemBlockQueue::canPush(size_t l)
 {
     if (m_readIndex > m_writeIndex) {
         xint64 d = m_readIndex - m_writeIndex;
@@ -196,7 +196,7 @@ xint64 iMemBlockQueue::writeIndexChanged(xint64 oldWriteIndex, bool account)
     else
         m_missing -= delta;
 
-     ilog_verbose("memblockq[", m_name, "] pushed/seeked ", delta, 
+     ilog_verbose("memblockq[", m_name, "] pushed/seeked ", delta,
                   ": requested counter at ", m_requested, ", account=", account);
      return delta;
 }
@@ -362,7 +362,7 @@ bool iMemBlockQueue::preBufActive() const
         return m_preBuf > 0 && m_readIndex >= m_writeIndex;
 }
 
-bool iMemBlockQueue::updatePreBuf() 
+bool iMemBlockQueue::updatePreBuf()
 {
     if (m_inPreBuf) {
         if (length() < m_preBuf)
@@ -371,7 +371,7 @@ bool iMemBlockQueue::updatePreBuf()
         m_inPreBuf = false;
         return false;
     }
-    
+
     if (m_preBuf > 0 && m_readIndex >= m_writeIndex) {
         m_inPreBuf = true;
         return true;
@@ -381,7 +381,7 @@ bool iMemBlockQueue::updatePreBuf()
 }
 
 /// memchunk should deref after return
-int iMemBlockQueue::peek(iByteArray& chunk) 
+int iMemBlockQueue::peek(iByteArray& chunk)
 {
     /* We need to pre-buffer */
     if (updatePreBuf())
@@ -431,7 +431,7 @@ int iMemBlockQueue::peek(iByteArray& chunk)
     return 0;
 }
 
-int iMemBlockQueue::peekFixedSize(size_t block_size, iByteArray& chunk) 
+int iMemBlockQueue::peekFixedSize(size_t block_size, iByteArray& chunk)
 {
     IX_ASSERT((block_size > 0) && !m_silence.isEmpty());
 
@@ -570,7 +570,7 @@ xint64 iMemBlockQueue::rewind(size_t length)
     return readIndexChanged(old);
 }
 
-bool iMemBlockQueue::isReadable() const 
+bool iMemBlockQueue::isReadable() const
 {
     if (preBufActive())
         return false;
@@ -604,7 +604,7 @@ void iMemBlockQueue::seek(xint64 offset, SeekMode seek, bool account) {
     writeIndexChanged(old, account);
 }
 
-void iMemBlockQueue::flushWrite(bool account) 
+void iMemBlockQueue::flushWrite(bool account)
 {
     makeSilence();
 
@@ -615,7 +615,7 @@ void iMemBlockQueue::flushWrite(bool account)
     writeIndexChanged(old, account);
 }
 
-void iMemBlockQueue::flushRead() 
+void iMemBlockQueue::flushRead()
 {
     makeSilence();
 
@@ -626,7 +626,7 @@ void iMemBlockQueue::flushRead()
     readIndexChanged(old);
 }
 
-int iMemBlockQueue::pushAlign(const iByteArray& chunk) 
+int iMemBlockQueue::pushAlign(const iByteArray& chunk)
 {
     if (m_base == 1)
         return push(chunk);
@@ -650,7 +650,7 @@ int iMemBlockQueue::pushAlign(const iByteArray& chunk)
     return 0;
 }
 
-size_t iMemBlockQueue::popMissing() 
+size_t iMemBlockQueue::popMissing()
 {
     ilog_verbose("memblockq[", m_name, "] pop: ", m_missing);
 
@@ -670,7 +670,7 @@ size_t iMemBlockQueue::popMissing()
     return l;
 }
 
-void iMemBlockQueue::setMaxLength(size_t maxlength) 
+void iMemBlockQueue::setMaxLength(size_t maxlength)
 {
     m_maxLength = ((maxlength + m_base - 1) / m_base) * m_base;
 
@@ -681,7 +681,7 @@ void iMemBlockQueue::setMaxLength(size_t maxlength)
         setTLength(m_maxLength);
 }
 
-void iMemBlockQueue::setTLength(size_t tlength) 
+void iMemBlockQueue::setTLength(size_t tlength)
 {
     if (tlength <= 0 || tlength == (size_t) -1)
         tlength = m_maxLength;
@@ -701,7 +701,7 @@ void iMemBlockQueue::setTLength(size_t tlength)
     m_missing += (xint64) m_tLength - (xint64) old_tlength;
 }
 
-void iMemBlockQueue::setMinReq(size_t minreq) 
+void iMemBlockQueue::setMinReq(size_t minreq)
 {
     m_minReq = (minreq/m_base)*m_base;
 
@@ -715,7 +715,7 @@ void iMemBlockQueue::setMinReq(size_t minreq)
         setPreBuf(m_tLength + m_base - m_minReq);
 }
 
-void iMemBlockQueue::setPreBuf(size_t prebuf) 
+void iMemBlockQueue::setPreBuf(size_t prebuf)
 {
     if ((size_t)-1 == prebuf)
         prebuf = m_tLength + m_base - m_minReq;
@@ -732,12 +732,12 @@ void iMemBlockQueue::setPreBuf(size_t prebuf)
         m_inPreBuf = false;
 }
 
-void iMemBlockQueue::setMaxRewind(size_t maxrewind) 
+void iMemBlockQueue::setMaxRewind(size_t maxrewind)
 {
     m_maxRewind = (maxrewind / m_base) * m_base;
 }
 
-void iMemBlockQueue::applyAttr(const iBufferAttr *a) 
+void iMemBlockQueue::applyAttr(const iBufferAttr *a)
 {
     IX_ASSERT(a);
     setMaxLength(a->maxlength);
@@ -757,7 +757,7 @@ iBufferAttr iMemBlockQueue::getAttr() const
     return a;
 }
 
-int iMemBlockQueue::splice(iMemBlockQueue* source) 
+int iMemBlockQueue::splice(iMemBlockQueue* source)
 {
     IX_ASSERT(source);
     preBufDisable();
@@ -783,7 +783,7 @@ int iMemBlockQueue::splice(iMemBlockQueue* source)
     }
 }
 
-void iMemBlockQueue::setSilence(iByteArray *silence) 
+void iMemBlockQueue::setSilence(iByteArray *silence)
 {
     if (silence) {
         m_silence = *silence;
@@ -792,7 +792,7 @@ void iMemBlockQueue::setSilence(iByteArray *silence)
     }
 }
 
-void iMemBlockQueue::makeSilence() 
+void iMemBlockQueue::makeSilence()
 {
     while (m_blocks)
         dropBlock(m_blocks);

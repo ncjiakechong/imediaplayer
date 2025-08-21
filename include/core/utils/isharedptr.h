@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    isharedptr.h
-/// @brief   provide smart pointers with reference counting, 
-///          similar to std::shared_ptr and std::weak_ptr in C++11, 
+/// @brief   provide smart pointers with reference counting,
+///          similar to std::shared_ptr and std::weak_ptr in C++11,
 ///          for managing the lifetime of dynamically allocated objects.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -195,7 +195,7 @@ public:
     ~iSharedPtr() { deref(d); }
 
     template <class X>
-    inline explicit iSharedPtr(X *ptr) : value(ptr) // noexcept
+    inline explicit iSharedPtr(X *ptr) : value(ptr)
     { internalConstruct(ptr, isharedpointer::NormalDeleter()); }
 
     template <class X, typename Deleter>

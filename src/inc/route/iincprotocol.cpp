@@ -15,7 +15,10 @@ namespace iShell {
 
 iINCProtocal::iINCProtocal(const iStringView& name, iINCEngine *engine, iObject *parent)
     : iObject(parent)
-{}
+{
+    IX_ASSERT(IX_NULLPTR != engine);
+    setObjectName(name.toString());
+}
 
 iINCProtocal::~iINCProtocal()
 {}

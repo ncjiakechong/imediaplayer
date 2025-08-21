@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    idatetime.cpp
-/// @brief   provide a comprehensive set of tools for working with dates, times, 
+/// @brief   provide a comprehensive set of tools for working with dates, times,
 ///          and date-time combinations
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -2189,9 +2189,9 @@ iString iDateTime::timeZoneAbbreviation() const
 {
     switch (getSpec(d)) {
     case iShell::UTC:
-        return iLatin1String("UTC");
+        return iLatin1StringView("UTC");
     case iShell::OffsetFromUTC:
-        return iLatin1String("UTC") + toOffsetString(iShell::ISODate, d->m_offsetFromUtc);
+        return iLatin1StringView("UTC") + toOffsetString(iShell::ISODate, d->m_offsetFromUtc);
     case iShell::TimeZone:
         break;
     case iShell::LocalTime:  {

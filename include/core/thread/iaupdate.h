@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iaupdate.h
-/// @brief   provides a mechanism for lock-free updates of arbitrary data structures, 
+/// @brief   provides a mechanism for lock-free updates of arbitrary data structures,
 ///          similar to Read-Copy-Update (RCU)
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -88,7 +88,7 @@ public:
 
     /* Will return 0, or 1, depending which copy of the data the caller
     * should modify. Each time called this will return the opposite of
-    * the previous writeBegin() / writeSwap() call. 
+    * the previous writeBegin() / writeSwap() call.
     * Should only be called between writeBegin() and writeEnd() */
     uint writeSwap();
 

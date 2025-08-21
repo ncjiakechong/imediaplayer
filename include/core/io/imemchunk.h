@@ -22,7 +22,7 @@ namespace iShell {
  * granularity. After that they may call push() for an input
  * memchunk. After exactly one memchunk the user has to call
  * pop() until it returns -1. If pop() returns
- * 0, the memchunk *c is valid and aligned to the granularity. 
+ * 0, the memchunk *c is valid and aligned to the granularity.
  */
 class IX_CORE_EXPORT iMCAlign
 {

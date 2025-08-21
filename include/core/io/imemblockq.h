@@ -101,7 +101,7 @@ struct IX_CORE_EXPORT iBufferAttr
  * perfect). It is similar to the ring buffers.
  * In contrast to a ring buffer this memblockqueue data
  * type doesn't need to copy any data around, it just maintains
- * references to reference counted memory blocks. 
+ * references to reference counted memory blocks.
 */
 class IX_CORE_EXPORT iMemBlockQueue
 {
@@ -125,9 +125,9 @@ public:
     ///            than this value. Pass 0 for the default.
     /// maxrewind: how many bytes of history to keep in the queue
     /// silence:   return this memchunk when reading uninitialized data
-    iMemBlockQueue(const iLatin1String& name, xint64 idx, size_t maxlength, size_t tlength, size_t base, 
+    iMemBlockQueue(const iLatin1StringView& name, xint64 idx, size_t maxlength, size_t tlength, size_t base,
         size_t prebuf, size_t minreq, size_t maxrewind, iByteArray *silence);
-    
+
     ~iMemBlockQueue();
 
     /// Push a new memory chunk into the queue.
@@ -286,7 +286,7 @@ private:
     xint64     m_missing;
     xint64     m_requested;
 
-    iLatin1String m_name;
+    iLatin1StringView m_name;
 
     IX_DISABLE_COPY(iMemBlockQueue)
 };

@@ -313,7 +313,7 @@ void iGstreamerPlayerSession::loadFromUri(const iUrl& url)
 
 bool iGstreamerPlayerSession::parsePipeline()
 {
-    if (m_request.scheme() != iLatin1String("gst-pipeline")) {
+    if (m_request.scheme() != iLatin1StringView("gst-pipeline")) {
         if (!m_playbin) {
             resetElements();
             initPlaybin();
@@ -328,7 +328,7 @@ bool iGstreamerPlayerSession::parsePipeline()
     GError *err = IX_NULLPTR;
     GstElement *pipeline = gst_parse_launch(desc.toLatin1().constData(), &err);
     if (err) {
-        auto errstr = iLatin1String(err->message);
+        auto errstr = iLatin1StringView(err->message);
         ilog_warn("Error:", desc, ":", errstr);
         IEMIT error(iMediaPlayer::FormatError, errstr);
         g_clear_error(&err);
@@ -360,7 +360,7 @@ bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
         GstElement *child = IX_NULLPTR;
         while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
         #endif
-            if (iLatin1String(GST_OBJECT_NAME(child)) == iLatin1String("ixvideosink")) {
+            if (iLatin1StringView(GST_OBJECT_NAME(child)) == iLatin1StringView("ixvideosink")) {
                 m_renderer->setVideoSink(child);
                 break;
             }
@@ -381,7 +381,7 @@ bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
         GstElement *child = IX_NULLPTR;
         while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
         #endif
-            if (iLatin1String(ix_gst_element_get_factory_name(child)) == iLatin1String("appsrc")) {
+            if (iLatin1StringView(ix_gst_element_get_factory_name(child)) == iLatin1StringView("appsrc")) {
                 m_appSrc->setup(child);
                 break;
             }
@@ -1277,7 +1277,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
             if (istrcmp(GST_OBJECT_NAME(GST_MESSAGE_SRC(gm)), "source") == 0) {
                 bool everPlayed = m_everPlayed;
                 // Try and differentiate network related resource errors from the others
-                if (!m_request.isRelative() && m_request.scheme().compare(iLatin1String("file"), CaseInsensitive) != 0 ) {
+                if (!m_request.isRelative() && m_request.scheme().compare(iLatin1StringView("file"), CaseInsensitive) != 0 ) {
                     if (everPlayed ||
                         (err->domain == GST_RESOURCE_ERROR && (
                          err->code == GST_RESOURCE_ERROR_BUSY ||
@@ -1618,7 +1618,7 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
         self->m_sourceType = RTSPSrc;
         self->m_isLiveSource = true;
         g_object_set(G_OBJECT(source), "buffer-mode", 1, IX_NULLPTR);
-    } else if (istrcmp(G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)), "GstAppSrc") == 0 
+    } else if (istrcmp(G_OBJECT_CLASS_NAME(G_OBJECT_GET_CLASS(source)), "GstAppSrc") == 0
                 && self->m_appSrc != IX_NULLPTR
                 && self->m_appSrc->stream() != IX_NULLPTR) {
         self->m_sourceType = APPSrc;

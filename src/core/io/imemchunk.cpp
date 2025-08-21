@@ -27,7 +27,7 @@ iMCAlign::~iMCAlign()
 {
 }
 
-void iMCAlign::push(const iByteArray& c) 
+void iMCAlign::push(const iByteArray& c)
 {
     IX_ASSERT(c.data_ptr().d_ptr() && c.length() > 0);
     IX_ASSERT(!m_current.data_ptr().d_ptr());
@@ -78,7 +78,7 @@ void iMCAlign::push(const iByteArray& c)
     }
 }
 
-int iMCAlign::pop(iByteArray& c) 
+int iMCAlign::pop(iByteArray& c)
 {
     /* First test if there's a leftover memory block available */
     if (m_leftover.data_ptr().d_ptr()) {
@@ -138,7 +138,7 @@ int iMCAlign::pop(iByteArray& c)
     return -1;
 }
 
-size_t iMCAlign::csize(size_t l) const 
+size_t iMCAlign::csize(size_t l) const
 {
     IX_ASSERT(l > 0);
     IX_ASSERT(!m_current.data_ptr().d_ptr());
@@ -149,7 +149,7 @@ size_t iMCAlign::csize(size_t l) const
     return (l / m_base) * m_base;
 }
 
-void iMCAlign::flush() 
+void iMCAlign::flush()
 {
     iByteArray chunk;
     while (pop(chunk) >= 0) {

@@ -70,7 +70,7 @@ public:
 
     ValueType operator -- (int); // postfix
         /// Decrements the counter and returns the previous value.
-    
+
     iAtomicCounter& operator -= (int); // postfix
         /// Decrements the counter and returns the previous value.
 

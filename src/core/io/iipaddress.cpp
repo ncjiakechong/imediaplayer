@@ -221,7 +221,7 @@ const iChar *parseIp6(IPv6Address &address, const iChar *begin, const iChar *end
 
 static inline iChar toHex(uchar c)
 {
-    return iMiscUtils::toHexLower(c);
+    return iChar::fromLatin1(iMiscUtils::toHexLower(c));
 }
 
 void toString(iString &appendTo, IPv6Address address)
@@ -250,7 +250,7 @@ void toString(iString &appendTo, IPv6Address address)
             if (address[12] != 0 || address[13] != 0 || address[14] != 0) {
                 embeddedIp4 = true;
             } else if (address[15] == 0) {
-                appendTo.append(iLatin1String("::"));
+                appendTo.append("::");
                 return;
             }
         }

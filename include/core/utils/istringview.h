@@ -117,8 +117,6 @@ private:
 public:
     iStringView()
         : m_size(0), m_data(IX_NULLPTR) {}
-    iStringView(std::nullptr_t)
-        : m_size(0), m_data(IX_NULLPTR) {}
 
     template <typename Char, if_compatible_char<Char> = true>
     iStringView(const Char *str, xsizetype len)
@@ -148,6 +146,7 @@ public:
 
     xsizetype size() const { return m_size; }
     const_pointer data() const { return reinterpret_cast<const_pointer>(m_data); }
+    const_pointer constData() const { return data(); }
     const storage_type *utf16() const { return m_data; }
 
     iChar operator[](xsizetype n) const
@@ -193,9 +192,11 @@ public:
     int compare(iStringView other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::compareStrings(*this, other, cs); }
 
+    inline int localeAwareCompare(iStringView other) const;
+
     bool startsWith(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::startsWith(*this, s, cs); }
-    inline bool startsWith(iLatin1String s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
+    inline bool startsWith(iLatin1StringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     bool startsWith(iChar c) const
     { return !empty() && front() == c; }
     bool startsWith(iChar c, iShell::CaseSensitivity cs) const
@@ -203,34 +204,34 @@ public:
 
     bool endsWith(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::endsWith(*this, s, cs); }
-    inline bool endsWith(iLatin1String s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
+    inline bool endsWith(iLatin1StringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     bool endsWith(iChar c) const
     { return !empty() && back() == c; }
     bool endsWith(iChar c, iShell::CaseSensitivity cs) const
     { return iPrivate::endsWith(*this, iStringView(&c, 1), cs); }
 
-    xsizetype indexOf(iChar c, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    xsizetype indexOf(iChar c, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::findString(*this, from, iStringView(&c, 1), cs); }
-    xsizetype indexOf(iStringView s, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    xsizetype indexOf(iStringView s, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::findString(*this, from, s, cs); }
-    inline xsizetype indexOf(iLatin1String s, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept;
+    inline xsizetype indexOf(iLatin1StringView s, xsizetype from = 0, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
-    bool contains(iChar c, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    bool contains(iChar c, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return indexOf(iStringView(&c, 1), 0, cs) != xsizetype(-1); }
-    bool contains(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    bool contains(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return indexOf(s, 0, cs) != xsizetype(-1); }
-    inline bool contains(iLatin1String s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept;
+    inline bool contains(iLatin1StringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
-    xsizetype count(iChar c, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    xsizetype count(iChar c, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::count(*this, c, cs); }
-    xsizetype count(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    xsizetype count(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::count(*this, s, cs); }
 
-    xsizetype lastIndexOf(iChar c, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    xsizetype lastIndexOf(iChar c, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::lastIndexOf(*this, from, iStringView(&c, 1), cs); }
-    xsizetype lastIndexOf(iStringView s, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept
+    xsizetype lastIndexOf(iStringView s, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
     { return iPrivate::lastIndexOf(*this, from, s, cs); }
-    inline xsizetype lastIndexOf(iLatin1String s, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const noexcept;
+    inline xsizetype lastIndexOf(iLatin1StringView s, xsizetype from = -1, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
     std::list<iStringView> split(iStringView sep,
                              iShell::SplitBehavior behavior = iShell::KeepEmptyParts,
@@ -240,7 +241,17 @@ public:
 
     bool isRightToLeft() const
     { return iPrivate::isRightToLeft(*this); }
+    bool isValidUtf16() const
+    { return iPrivate::isValidUtf16(*this); }
 
+    inline short toShort(bool *ok = IX_NULLPTR, int base = 10) const;
+    inline ushort toUShort(bool *ok = IX_NULLPTR, int base = 10) const;
+    inline int  toInt(bool *ok = IX_NULLPTR, int base = 10) const;
+    inline uint toUInt(bool *ok = IX_NULLPTR, int base = 10) const;
+    inline xint64 toLongLong(bool *ok = IX_NULLPTR, int base = 10) const;
+    inline xuint64 toULongLong(bool *ok = IX_NULLPTR, int base = 10) const;
+
+    inline xsizetype toWCharArray(wchar_t *array) const;
     //
     // STL compatibility API:
     //
@@ -257,9 +268,6 @@ public:
     iChar front() const { IX_ASSERT(!empty()); return iChar(m_data[0]); }
     iChar back()  const { IX_ASSERT(!empty()); return iChar(m_data[m_size - 1]); }
 
-    //
-    // iShell compatibility API:
-    //
     bool isNull() const { return !m_data; }
     bool isEmpty() const { return empty(); }
     int length() const /* not nothrow! */

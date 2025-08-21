@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    icache.h
-/// @brief   implements a generic cache with a maximum cost limit, 
+/// @brief   implements a generic cache with a maximum cost limit,
 ///          using a least-recently-used (LRU) eviction policy
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

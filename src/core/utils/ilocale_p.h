@@ -227,7 +227,7 @@ public:
     static iLocalePrivate *get(iLocale &l) { return l.d.data(); }
     static const iLocalePrivate *get(const iLocale &l) { return l.d.data(); }
 
-    iLocalePrivate(const iLocaleData *data, iLocale::NumberOptions numberOptions) 
+    iLocalePrivate(const iLocaleData *data, iLocale::NumberOptions numberOptions)
         : m_data(data), m_numberOptions(numberOptions) {}
 
     iChar decimal() const { return iChar(m_data->m_decimal); }
@@ -244,13 +244,13 @@ public:
 
     iByteArray bcp47Name(char separator = '-') const;
 
-    inline iLatin1String languageCode() const { return iLocalePrivate::languageToCode(iLocale::Language(m_data->m_language_id)); }
-    inline iLatin1String scriptCode() const { return iLocalePrivate::scriptToCode(iLocale::Script(m_data->m_script_id)); }
-    inline iLatin1String countryCode() const { return iLocalePrivate::countryToCode(iLocale::Country(m_data->m_country_id)); }
+    inline iLatin1StringView languageCode() const { return iLocalePrivate::languageToCode(iLocale::Language(m_data->m_language_id)); }
+    inline iLatin1StringView scriptCode() const { return iLocalePrivate::scriptToCode(iLocale::Script(m_data->m_script_id)); }
+    inline iLatin1StringView countryCode() const { return iLocalePrivate::countryToCode(iLocale::Country(m_data->m_country_id)); }
 
-    static iLatin1String languageToCode(iLocale::Language language);
-    static iLatin1String scriptToCode(iLocale::Script script);
-    static iLatin1String countryToCode(iLocale::Country country);
+    static iLatin1StringView languageToCode(iLocale::Language language);
+    static iLatin1StringView scriptToCode(iLocale::Script script);
+    static iLatin1StringView countryToCode(iLocale::Country country);
     static iLocale::Language codeToLanguage(iStringView code);
     static iLocale::Script codeToScript(iStringView code);
     static iLocale::Country codeToCountry(iStringView code);
@@ -285,7 +285,7 @@ inline char iLocaleData::digitToCLocale(iChar in) const
     if (in == m_group)
         return ',';
 
-    if (in == m_exponential || in == iChar::toUpper(m_exponential))
+    if (in == m_exponential || in == iChar(iChar::toUpper(m_exponential)))
         return 'e';
 
     // In several languages group() is a non-breaking space (U+00A0) or its thin

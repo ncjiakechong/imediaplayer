@@ -17,7 +17,7 @@
 #include "core/thread/ithread.h"
 
 #define ILOG_TAG "test"
- 
+
 extern int test_iconvertible(void);
 extern int test_object(void);
 extern int test_ivariant(void);
@@ -78,7 +78,7 @@ public:
             // test invokeMethod
             invokeMethod(this, &TestCase::setParent, (iObject*)IX_NULLPTR);
             invokeMethod(this, &iObject::setParent, (iObject*)IX_NULLPTR);
-            
+
             ilog_warn("all test completed!!!");
             iShell::iCoreApplication::quit();
             return;

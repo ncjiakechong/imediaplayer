@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    imemtrap.cpp
-/// @brief   This class provides a mechanism to handle SIGBUS signals that can occur 
-///          when accessing memory regions, particularly memory-mapped regions 
+/// @brief   This class provides a mechanism to handle SIGBUS signals that can occur
+///          when accessing memory regions, particularly memory-mapped regions
 ///          controlled by external processes or hardware resources
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -113,7 +113,7 @@ iMemTrap::~iMemTrap()
     s_mutex.unlock();
 }
 
-void iMemTrap::update(const void *start, size_t size) 
+void iMemTrap::update(const void *start, size_t size)
 {
     IX_ASSERT(start && (size > 0));
 
@@ -167,7 +167,7 @@ void iMemTrap::unlink(uint idx)
     }
 }
 
-void iMemTrap::install() 
+void iMemTrap::install()
 {
     #ifdef IX_HAVE_SIGACTION
     struct sigaction sa;

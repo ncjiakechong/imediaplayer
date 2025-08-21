@@ -4,8 +4,8 @@
 /////////////////////////////////////////////////////////////////
 /// @file    iobject.h
 /// @brief   serves as the base class for all objects
-/// @details provides fundamental functionalities such as object naming, 
-///          parent-child relationships, threading, property management, 
+/// @details provides fundamental functionalities such as object naming,
+///          parent-child relationships, threading, property management,
 ///          and a signal/slot mechanism for inter-object communication.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -196,7 +196,7 @@ public:
         return disconnectImpl(conn);
     }
 
-    /// Invokes the member on the object obj. 
+    /// Invokes the member on the object obj.
     /// Returns true if the member could be invoked.
     /// Returns false if there is no such member or the parameters did not match.
     /// The invocation can be either synchronous or asynchronous, depending on type:

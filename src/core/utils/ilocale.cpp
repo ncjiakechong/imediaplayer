@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ilocale.cpp
-/// @brief   provides a comprehensive set of tools for handling locale-specific data, 
+/// @brief   provides a comprehensive set of tools for handling locale-specific data,
 ///          such as language, country, script, number formatting, date and time formatting,
 ///          currency formatting, and text direction.
 /// @version 1.0
@@ -107,33 +107,33 @@ iLocale::Country iLocalePrivate::codeToCountry(iStringView code)
     return iLocale::AnyCountry;
 }
 
-iLatin1String iLocalePrivate::languageToCode(iLocale::Language language)
+iLatin1StringView iLocalePrivate::languageToCode(iLocale::Language language)
 {
     if (language == iLocale::AnyLanguage)
-        return iLatin1String();
+        return iLatin1StringView();
     if (language == iLocale::C)
-        return iLatin1String("C");
+        return iLatin1StringView("C");
 
     const unsigned char *c = language_code_list + 3*(uint(language));
 
-    return iLatin1String(reinterpret_cast<const char*>(c), c[2] == 0 ? 2 : 3);
+    return iLatin1StringView(reinterpret_cast<const char*>(c), c[2] == 0 ? 2 : 3);
 }
 
-iLatin1String iLocalePrivate::scriptToCode(iLocale::Script script)
+iLatin1StringView iLocalePrivate::scriptToCode(iLocale::Script script)
 {
     if (script == iLocale::AnyScript || script > iLocale::LastScript)
-        return iLatin1String();
+        return iLatin1StringView();
     const unsigned char *c = script_code_list + 4*(uint(script));
-    return iLatin1String(reinterpret_cast<const char *>(c), 4);
+    return iLatin1StringView(reinterpret_cast<const char *>(c), 4);
 }
 
-iLatin1String iLocalePrivate::countryToCode(iLocale::Country country)
+iLatin1StringView iLocalePrivate::countryToCode(iLocale::Country country)
 {
     if (country == iLocale::AnyCountry)
-        return iLatin1String();
+        return iLatin1StringView();
 
     const unsigned char *c = country_code_list + 3*(uint(country));
-    return iLatin1String(reinterpret_cast<const char*>(c), c[2] == 0 ? 2 : 3);
+    return iLatin1StringView(reinterpret_cast<const char*>(c), c[2] == 0 ? 2 : 3);
 }
 
 // http://www.unicode.org/reports/tr35/#Likely_Subtags
@@ -481,7 +481,7 @@ iString ix_readEscapedFormatString(iStringView format, int *idx)
         return iString();
     if (format.at(i).unicode() == '\'') { // "''" outside of a quoted stirng
         ++i;
-        return iLatin1String("'");
+        return iLatin1StringView("'");
     }
 
     iString result;
@@ -584,7 +584,7 @@ IX_GLOBAL_STATIC_WITH_ARGS(iExplicitlySharedDataPointer<iLocalePrivate>, systemL
 
 static iLocalePrivate *localePrivateByName(const iString &name)
 {
-    if (name == iLatin1String("C"))
+    if (name == iLatin1StringView("C"))
         return c_private();
     const iLocaleData *data = findLocaleData(name);
     return iLocalePrivate::create(data, data->m_language_id == iLocale::C ?
@@ -915,8 +915,8 @@ iString iLocale::bcp47Name() const
 iString iLocale::languageToString(Language language)
 {
     if (uint(language) > uint(iLocale::LastLanguage))
-        return iLatin1String("Unknown");
-    return iLatin1String(language_name_list + language_name_index[language]);
+        return iLatin1StringView("Unknown");
+    return iLatin1StringView(language_name_list + language_name_index[language]);
 }
 
 /*!
@@ -927,8 +927,8 @@ iString iLocale::languageToString(Language language)
 iString iLocale::countryToString(Country country)
 {
     if (uint(country) > uint(iLocale::LastCountry))
-        return iLatin1String("Unknown");
-    return iLatin1String(country_name_list + country_name_index[country]);
+        return iLatin1StringView("Unknown");
+    return iLatin1StringView(country_name_list + country_name_index[country]);
 }
 
 /*!
@@ -939,8 +939,8 @@ iString iLocale::countryToString(Country country)
 iString iLocale::scriptToString(iLocale::Script script)
 {
     if (uint(script) > uint(iLocale::LastScript))
-        return iLatin1String("Unknown");
-    return iLatin1String(script_name_list + script_name_index[script]);
+        return iLatin1StringView("Unknown");
+    return iLatin1StringView(script_name_list + script_name_index[script]);
 }
 
 /*!
@@ -1916,9 +1916,9 @@ iString iLocaleData::longLongToString(const iChar zero, const iChar group,
         num_str = num_str.toUpper();
 
     if (base == 16 && (flags & ShowBase))
-        num_str.prepend(iLatin1String(flags & UppercaseBase ? "0X" : "0x"));
+        num_str.prepend(iLatin1StringView(flags & UppercaseBase ? "0X" : "0x"));
     if (base == 2 && (flags & ShowBase))
-        num_str.prepend(iLatin1String(flags & UppercaseBase ? "0B" : "0b"));
+        num_str.prepend(iLatin1StringView(flags & UppercaseBase ? "0B" : "0b"));
 
     // add sign
     if (negative)
@@ -1995,9 +1995,9 @@ iString iLocaleData::unsLongLongToString(const iChar zero, const iChar group,
         num_str = num_str.toUpper();
 
     if (base == 16 && flags & ShowBase)
-        num_str.prepend(iLatin1String(flags & UppercaseBase ? "0X" : "0x"));
+        num_str.prepend(iLatin1StringView(flags & UppercaseBase ? "0X" : "0x"));
     else if (base == 2 && flags & ShowBase)
-        num_str.prepend(iLatin1String(flags & UppercaseBase ? "0B" : "0b"));
+        num_str.prepend(iLatin1StringView(flags & UppercaseBase ? "0B" : "0b"));
 
     // add sign
     if (flags & AlwaysShowSign)

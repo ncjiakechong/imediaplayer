@@ -122,7 +122,7 @@ iAudioFormat& iAudioFormat::operator=(const iAudioFormat &other)
     m_sampleRate = other.m_sampleRate;
     m_channels = other.m_channels;
     m_sampleSize = other.m_sampleSize;
-    
+
     return *this;
 }
 

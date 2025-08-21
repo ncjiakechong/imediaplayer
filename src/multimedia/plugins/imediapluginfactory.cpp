@@ -40,7 +40,7 @@ iMediaPluginFactory* iMediaPluginFactory::instance()
             s_instance = IX_NULLPTR;
             ilog_info("cleanup iMediaPluginFactory");
         }
-    } cleanup; 
+    } cleanup;
 
     if (IX_NULLPTR == s_instance)
         s_instance = new iMediaPluginFactory();

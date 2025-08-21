@@ -281,9 +281,7 @@ xsizetype iStringMatcher::indexIn(iStringView str, xsizetype from) const
     \internal
 */
 
-xsizetype iFindStringBoyerMoore(
-    iStringView haystack, xsizetype haystackOffset,
-    iStringView needle, iShell::CaseSensitivity cs)
+xsizetype iFindStringBoyerMoore(iStringView haystack, xsizetype haystackOffset, iStringView needle, CaseSensitivity cs)
 {
     uchar skiptable[256];
     bm_init_skiptable(needle, skiptable, cs);

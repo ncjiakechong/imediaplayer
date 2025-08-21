@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iaudiobuffer.h
-/// @brief   designed to hold audio data, providing methods for 
+/// @brief   designed to hold audio data, providing methods for
 ///          accessing, modifying, and querying the audio content
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

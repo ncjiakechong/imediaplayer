@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamerplayercontrol_p.h
-/// @brief   provides an implementation of the iMediaPlayerControl interface, 
+/// @brief   provides an implementation of the iMediaPlayerControl interface,
 ///          using GStreamer as the underlying media playback engine
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

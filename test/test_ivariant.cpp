@@ -194,6 +194,32 @@ int test_ivariant(void)
     r = iString(str1).replace(rx, "\\1");
     IX_ASSERT_X(r == iString("eaeaae"), "iString replace2 error");
 
+    str1 = iString("abcabcabc");
+    auto str1_ptr = str1.constData();
+    IX_ASSERT_X(iString(str1).replace(iString(u"ab"), iString(u"xy")) == iString("xycxycxyc"), "iString replace error");
+    IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
+    IX_ASSERT_X(iString(str1).replace(iLatin1StringView("ab"), iLatin1StringView("xy")) == iString("xycxycxyc"), "iString replace error");
+    IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
+    IX_ASSERT_X(iString(str1).insert(2, iStringView(u"xy")) == iString("abxycabcabc"), "iString insert error");
+    IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
+    IX_ASSERT_X(iString(str1).insert(2, iLatin1StringView("xy")) == iString("abxycabcabc"), "iString insert error");
+    IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
+    IX_ASSERT_X((str1.indexOf(iStringView(u"bc")) == 1 && str1.lastIndexOf(iStringView(u"ab")) == 6), "iString indexof error");
+    IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
+    IX_ASSERT_X((str1.count(iStringView(u"bc")) == 3 && str1.isLower()), "iString utils function error");
+    IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
+
+    iByteArray tmp1("abcabcabc");
+    auto tmp1_ptr = tmp1.constData();
+    IX_ASSERT_X(iByteArray(tmp1).replace(iByteArrayView("ab"), iByteArrayView("xy")) == iByteArray("xycxycxyc"), "iByteArray replace error");
+    IX_ASSERT(tmp1.constData() == tmp1_ptr); // make sure str1 is not changed
+    IX_ASSERT_X(iByteArray(tmp1).insert(2, iByteArrayView("xy")) == iByteArray("abxycabcabc"), "iByteArray insert error");
+    IX_ASSERT(tmp1.constData() == tmp1_ptr); // make sure str1 is not changed
+    IX_ASSERT_X((tmp1.indexOf(iByteArrayView("bc")) == 1 && tmp1.lastIndexOf(iByteArrayView("ab")) == 6), "iByteArray indexof error");
+    IX_ASSERT(tmp1.constData() == tmp1_ptr); // make sure str1 is not changed
+    IX_ASSERT_X((tmp1.count(iByteArrayView("bc")) == 3 && tmp1.isLower()), "iByteArray utils function error");
+    IX_ASSERT(tmp1.constData() == tmp1_ptr); // make sure str1 is not changed
+
     iString var1("test124");
     iString refVar1 = var1;
     iString refVar2 = var1;

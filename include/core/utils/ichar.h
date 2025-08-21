@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ichar.h
-/// @brief   provides a representation of a Unicode character, offering 
+/// @brief   provides a representation of a Unicode character, offering
 ///          functionalities for character manipulation, classification, and conversion
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -19,7 +19,7 @@ namespace iShell {
 
 class iString;
 
-struct iLatin1Char
+struct IX_CORE_EXPORT iLatin1Char
 {
 public:
     inline explicit iLatin1Char(char c) : ch(c) {}
@@ -36,6 +36,7 @@ public:
         Null = 0x0000,
         Tabulation = 0x0009,
         LineFeed = 0x000a,
+        FormFeed = 0x000c,
         CarriageReturn = 0x000d,
         Space = 0x0020,
         Nbsp = 0x00a0,
@@ -46,21 +47,22 @@ public:
         ByteOrderSwapped = 0xfffe,
         ParagraphSeparator = 0x2029,
         LineSeparator = 0x2028,
+        VisualTabCharacter = 0x2192,
         LastValidCodePoint = 0x10ffff
     };
 
     iChar() : ucs(0) {}
-    iChar(xuint16 rc) : ucs(rc) {} // implicit
-    iChar(uchar c, uchar r) : ucs(xuint16((r << 8) | c)) {}
-    iChar(xint16 rc) : ucs(xuint16(rc)) {} // implicit
-    iChar(xuint32 rc) : ucs(xuint16(rc & 0xffff)) {}
-    iChar(xint32 rc) : ucs(xuint16(rc & 0xffff)) {}
-    iChar(SpecialCharacter s) : ucs(xuint16(s)) {} // implicit
-    iChar(iLatin1Char ch) : ucs(ch.unicode()) {} // implicit
-    iChar(char16_t ch) : ucs(xuint16(ch)) {} // implicit
 
-    explicit iChar(char c) : ucs(uchar(c)) {}
-    explicit iChar(uchar c) : ucs(c) {}
+    explicit iChar(uchar c, uchar r) : ucs(xuint16((r << 8) | c)) {}
+    iChar(xuint16 rc) : ucs(rc) {}
+    explicit iChar(uint rc) : ucs((IX_ASSERT(rc <= 0xffff), xuint16(rc))) {}
+    explicit iChar(int rc) : iChar(uint(rc)) {}
+    iChar(SpecialCharacter s) : ucs(xuint16(s)) {}
+    iChar(iLatin1Char ch) : ucs(ch.unicode()) {}
+    iChar(char16_t ch) : ucs(xuint16(ch)) {}
+
+    static iChar fromUcs2(xuint16 c) { return iChar{c}; }
+    static iString fromUcs4(xuint32 ucs4);
 
     // Unicode information
     enum Category
@@ -290,6 +292,26 @@ public:
         Script_KhitanSmallScript,
         Script_Yezidi,
 
+        // Unicode 14.0 additions
+        Script_CyproMinoan,
+        Script_OldUyghur,
+        Script_Tangsa,
+        Script_Toto,
+        Script_Vithkuqi,
+
+        // Unicode 15.0 additions
+        Script_Kawi,
+        Script_NagMundari,
+
+        // Unicode 16.0 additions
+        Script_Garay,
+        Script_GurungKhema,
+        Script_KiratRai,
+        Script_OlOnal,
+        Script_Sunuwar,
+        Script_Todhri,
+        Script_TuluTigalari,
+
         ScriptCount
     };
 
@@ -380,7 +402,11 @@ public:
         Unicode_11_0,
         Unicode_12_0,
         Unicode_12_1,
-        Unicode_13_0
+        Unicode_13_0,
+        Unicode_14_0,
+        Unicode_15_0,
+        Unicode_15_1,
+        Unicode_16_0,
     };
 
     inline Category category() const { return iChar::category(ucs); }
@@ -388,17 +414,17 @@ public:
     inline JoiningType joiningType() const { return iChar::joiningType(ucs); }
     inline unsigned char combiningClass() const { return iChar::combiningClass(ucs); }
 
-    inline iChar mirroredChar() const { return iChar::mirroredChar(ucs); }
+    inline iChar mirroredChar() const { return iChar(iChar::mirroredChar(ucs)); }
     inline bool hasMirrored() const { return iChar::hasMirrored(ucs); }
 
     iString decomposition() const;
     inline Decomposition decompositionTag() const { return iChar::decompositionTag(ucs); }
 
     inline int digitValue() const { return iChar::digitValue(ucs); }
-    inline iChar toLower() const { return iChar::toLower(ucs); }
-    inline iChar toUpper() const { return iChar::toUpper(ucs); }
-    inline iChar toTitleCase() const { return iChar::toTitleCase(ucs); }
-    inline iChar toCaseFolded() const { return iChar::toCaseFolded(ucs); }
+    inline iChar toLower() const { return iChar(iChar::toLower(ucs)); }
+    inline iChar toUpper() const { return iChar(iChar::toUpper(ucs)); }
+    inline iChar toTitleCase() const { return iChar(iChar::toTitleCase(ucs)); }
+    inline iChar toCaseFolded() const { return iChar(iChar::toCaseFolded(ucs)); }
 
     inline Script script() const { return iChar::script(ucs); }
 
@@ -408,7 +434,7 @@ public:
     inline xuint16 unicode() const { return ucs; }
     inline xuint16 &unicode() { return ucs; }
 
-    static inline iChar fromLatin1(char c) { return iChar(xuint16(uchar(c))); }
+    static iChar fromLatin1(char c) { return iLatin1Char(c); }
 
     inline bool isNull() const { return ucs == 0; }
 
@@ -438,13 +464,16 @@ public:
     static inline bool isNonCharacter(xuint32 ucs4)
     { return ucs4 >= 0xfdd0 && (ucs4 <= 0xfdef || (ucs4 & 0xfffe) == 0xfffe); }
     static inline bool isHighSurrogate(xuint32 ucs4)
-    { return ((ucs4 & 0xfffffc00) == 0xd800); }
+    { return (ucs4 & 0xfffffc00) == 0xd800; } // 0xd800 + up to 1023 (0x3ff)
     static inline bool isLowSurrogate(xuint32 ucs4)
-    { return ((ucs4 & 0xfffffc00) == 0xdc00); }
+    { return (ucs4 & 0xfffffc00) == 0xdc00; } // 0xdc00 + up to 1023 (0x3ff)
     static inline bool isSurrogate(xuint32 ucs4)
     { return (ucs4 - 0xd800u < 2048u); }
     static inline bool requiresSurrogates(xuint32 ucs4)
     { return (ucs4 >= 0x10000); }
+
+    // 0x010000 through 0x10ffff, provided params are actual high, low surrogates.
+    // 0x010000 + ((high - 0xd800) << 10) + (low - 0xdc00), optimized:
     static inline xuint32 surrogateToUcs4(xuint16 high, xuint16 low)
     { return (xuint32(high)<<10) + low - 0x35fdc00; }
     static inline xuint32 surrogateToUcs4(iChar high, iChar low)
@@ -512,15 +541,15 @@ private:
     static bool isNumber_helper(xuint32 ucs4);
     static bool isLetterOrNumber_helper(xuint32 ucs4);
 
-    friend bool operator==(iChar, iChar);
-    friend bool operator< (iChar, iChar);
+    static int compare_helper(iChar lhs, const char *rhs);
+
     xuint16 ucs;
 };
 
 IX_DECLARE_TYPEINFO(iChar, IX_MOVABLE_TYPE);
 
-inline bool operator==(iChar c1, iChar c2) { return c1.ucs == c2.ucs; }
-inline bool operator< (iChar c1, iChar c2) { return c1.ucs <  c2.ucs; }
+inline bool operator==(iChar c1, iChar c2) { return c1.unicode() == c2.unicode(); }
+inline bool operator< (iChar c1, iChar c2) { return c1.unicode() <  c2.unicode(); }
 
 inline bool operator!=(iChar c1, iChar c2) { return !operator==(c1, c2); }
 inline bool operator>=(iChar c1, iChar c2) { return !operator< (c1, c2); }

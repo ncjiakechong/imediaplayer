@@ -39,7 +39,7 @@ public:
         : iIODevice(parent), m_trackIOMem(false), m_fd(0), m_currPos(0), m_filePath(path)
     {}
 
-    virtual ~TestStreamDevice() 
+    virtual ~TestStreamDevice()
     {
         close();
     }
@@ -58,7 +58,7 @@ public:
     {
         if (mode != ReadOnly && mode != ReadWrite)
             return false;
-        
+
         iIODevice::open(mode);
         iUrl filename(m_filePath);
         m_currPos = 0;
@@ -71,7 +71,7 @@ public:
     {
         if (-1 == m_fd)
             return;
-        
+
         ::close(m_fd);
         m_fd = -1;
 

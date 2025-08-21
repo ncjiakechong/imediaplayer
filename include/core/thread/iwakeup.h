@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iwakeup.h
-/// @brief   provides a mechanism for signaling and waking up threads 
+/// @brief   provides a mechanism for signaling and waking up threads
 ///          that are waiting for an event to occur
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

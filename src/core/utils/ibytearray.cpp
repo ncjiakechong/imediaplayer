@@ -21,8 +21,6 @@
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
 
-#define IS_RAW_DATA(d) ((d)->offset != sizeof(iByteArrayData))
-
 #define ILOG_TAG "ix_utils"
 
 namespace iShell {
@@ -43,13 +41,9 @@ namespace iShell {
  * and will surely cause a IX_NULLPTR return (there's no way you can allocate a
  * memory block the size of your entire VM space).
  */
-template <typename T, typename Cmp = std::less<const T *>>
-static bool points_into_range(const T *p, const T *b, const T *e, Cmp less = {})
-{ return !less(p, b) && less(p, e); }
-
 const char iByteArray::_empty = '\0';
 
-// ASCII case system, used by iByteArray::to{Upper,Lower}() and qstr(n)icmp():
+// ASCII case system, used by iByteArray::to{Upper,Lower}() and istr(n)icmp():
 static inline uchar asciiUpper(uchar c)
 { return c >= 'a' && c <= 'z' ? c & ~0x20 : c; }
 
@@ -175,6 +169,49 @@ char *istrncpy(char *dst, const char *src, size_t len)
 */
 int istrcmp(const char *str1, const char *str2)
 { return (str1 && str2) ? strcmp(str1, str2) : (str1 ? 1 : (str2 ? -1 : 0)); }
+
+int istrncmp(const char *str1, xsizetype len1, const char *str2, xsizetype len2)
+{
+    IX_ASSERT(str1);
+    IX_ASSERT(len1 >= 0);
+    IX_ASSERT(len2 >= -1);
+    const uchar *s1 = reinterpret_cast<const uchar *>(str1);
+    const uchar *s2 = reinterpret_cast<const uchar *>(str2);
+    if (!s1 || !len1) {
+        if (len2 == 0)
+            return 0;
+        if (len2 == -1)
+            return (!s2 || !*s2) ? 0 : -1;
+        IX_ASSERT(s2);
+        return -1;
+    }
+    if (!s2)
+        return len1 == 0 ? 0 : 1;
+
+    if (len2 == -1) {
+        // null-terminated str2
+        xsizetype i;
+        for (i = 0; i < len1; ++i) {
+            const uchar c = s2[i];
+            if (!c)
+                return 1;
+
+            if (int res = s1[i] - c)
+                return res;
+        }
+        return s2[i] ? -1 : 0;
+    } else {
+        // not null-terminated
+        const xsizetype len = std::min(len1, len2);
+        for (xsizetype i = 0; i < len; ++i) {
+            if (int res = s1[i] - s2[i])
+                return res;
+        }
+        if (len1 == len2)
+            return 0;
+        return len1 < len2 ? -1 : 1;
+    }
+}
 
 /*! \fn int istrncmp(const char *str1, const char *str2, uint len);
 
@@ -1199,7 +1236,7 @@ void iByteArray::chop(xsizetype n)
     \sa append(), prepend()
 */
 
-/*! \fn QByteArray &QByteArray::operator+=(const char *str)
+/*! \fn iByteArray &iByteArray::operator+=(const char *str)
 
     \overload
 
@@ -1531,19 +1568,6 @@ iByteArray iByteArray::nulTerminated() const
     Appends the character \a ch to this byte array.
 */
 
-/*!
-    Inserts the byte array \a ba at index position \a i and returns a
-    reference to this byte array.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 17
-
-    \sa append(), prepend(), replace(), remove()
-*/
-iByteArray &iByteArray::insert(xsizetype i, const iByteArray &ba)
-{
-    return insert(i, ba.d.data(), ba.d.size);
-}
 
 /*!
     \fn iByteArray &iByteArray::insert(int i, const iString &str)
@@ -1564,17 +1588,6 @@ iByteArray &iByteArray::insert(xsizetype i, const iByteArray &ba)
 */
 
 /*!
-    Inserts the string \a str at position \a i in the byte array.
-
-    If \a i is greater than size(), the array is first extended using
-    resize().
-*/
-iByteArray &iByteArray::insert(xsizetype i, const char *str)
-{
-    return insert(i, str, istrlen(str));
-}
-
-/*!
     \overload
 
 
@@ -1584,47 +1597,45 @@ iByteArray &iByteArray::insert(xsizetype i, const char *str)
     If \a i is greater than size(), the array is first extended using
     resize().
 */
-iByteArray &iByteArray::insert(xsizetype i, const char *str, xsizetype len)
+iByteArray &iByteArray::insert(xsizetype i, iByteArrayView data)
 {
-    if (i < 0 || str == IX_NULLPTR || len <= 0)
+    const char *str = data.data();
+    xsizetype size = data.size();
+    if (i < 0 || size <= 0)
         return *this;
 
-    if (points_into_range<char>(str, d.data(), d.data() + d.size)) {
-        iVarLengthArray<char> a(len);
-        memcpy(a.data(), str, len);
-        return insert(i, a.data(), len);
+    // handle this specially, as insert() doesn't handle out of
+    // bounds positions
+    if (i >= d.size) {
+        // In case when data points into the range or is == *this, we need to
+        // defer a call to free() so that it comes after we copied the data from
+        // the old memory:
+        DataPointer detached{};  // construction is free
+        d.detachAndGrow(Data::GrowsForward, (i - d.size) + size, &str, &detached);
+        IX_CHECK_PTR(d.data());
+        d.copyAppend(i - d.size, ' ');
+        d.copyAppend(str, str + size);
+        d.data()[d.size] = '\0';
+        return *this;
     }
 
-    xsizetype oldSize = d.size;
-    const xsizetype newSize = std::max(i, oldSize) + len;
-    const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), len);
-
-    // ### optimize me
-    if (d.needsDetach() || newSize > capacity() || shouldGrow) {
-        Data::ArrayOptions flags = d.detachOptions() | Data::GrowsForward;
-        if (oldSize != 0 && i <= oldSize / 4)  // using QList's policy
-            flags |= Data::GrowsBackwards;
-        reallocGrowData(newSize, flags);
+    if (!d.needsDetach() && ix_points_into_range(str, d.constBegin(), d.constEnd())) {
+        iVarLengthArray<char> a(size);
+        memcpy(a.data(), str, size);
+        return insert(i, a.data(), size);
     }
 
-    if (i > oldSize)  // set spaces in the uninitialized gap
-        d.copyAppend(i - oldSize, 0x20);
+    const bool growsAtBegin = d.size != 0 && i == 0;
+    const auto pos = growsAtBegin ? Data::GrowsBackwards : Data::GrowsForward;
 
-    d.insert(d.begin() + i, str, str + len);
+    DataPointer detached{};
+    d.detachAndGrow(pos, size, &str, &detached);
+    IX_ASSERT((pos == Data::GrowsBackwards && d.freeSpaceAtBegin() >= size) ||
+                 (pos == Data::GrowsForward && d.freeSpaceAtEnd() >= size));
+
+    d.insert(d.begin() + i, str, str + size);
     d.data()[d.size] = '\0';
     return *this;
-}
-
-/*!
-    \overload
-
-    Inserts character \a ch at index position \a i in the byte array.
-    If \a i is greater than size(), the array is first extended using
-    resize().
-*/
-iByteArray &iByteArray::insert(xsizetype i, char ch)
-{
-    return insert(i, &ch, 1);
 }
 
 /*! \fn iByteArray &iByteArray::insert(int i, int count, char ch)
@@ -1642,20 +1653,22 @@ iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
     if (i < 0 || count <= 0)
         return *this;
 
-    const xsizetype oldSize = size();
-    const xsizetype newSize = std::max(i, oldSize) + count;
-    const bool shouldGrow = d.shouldGrowBeforeInsert(d.constBegin() + std::min(i, oldSize), count);
-
-    // ### optimize me
-    if (d.needsDetach() || newSize > capacity() || shouldGrow) {
-        Data::ArrayOptions flags = d.detachOptions() | Data::GrowsForward;
-        if (oldSize != 0 && i <= oldSize / 4)  // using std::list's policy
-            flags |= Data::GrowsBackwards;
-        reallocGrowData(newSize, flags);
+    if (i >= d.size) {
+        // handle this specially, as insert() doesn't handle out of bounds positions
+        d.detachAndGrow(Data::GrowsForward, (i - d.size) + count, IX_NULLPTR, IX_NULLPTR);
+        IX_CHECK_PTR(d.data());
+        d.copyAppend(i - d.size, ' ');
+        d.copyAppend(count, ch);
+        d.data()[d.size] = '\0';
+        return *this;
     }
 
-    if (i > oldSize)  // set spaces in the uninitialized gap
-        d.copyAppend(i - oldSize, 0x20);
+    const bool growsAtBegin = d.size != 0 && i == 0;
+    const auto pos = growsAtBegin ? Data::GrowsBackwards : Data::GrowsForward;
+
+    d.detachAndGrow(pos, count, IX_NULLPTR, IX_NULLPTR);
+    IX_ASSERT((pos == Data::GrowsBackwards && d.freeSpaceAtBegin() >= count) ||
+                 (pos == Data::GrowsForward && d.freeSpaceAtEnd() >= count));
 
     d.insert(d.begin() + i, count, ch);
     d.data()[d.size] = '\0';
@@ -1694,56 +1707,30 @@ iByteArray &iByteArray::remove(xsizetype pos, xsizetype len)
 
     \sa insert(), remove()
 */
-iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const iByteArray &after)
+iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, iByteArrayView after)
 {
-    if (points_into_range<char>(after.data(), d.data(), d.data() + d.size)) {
+    if (pos > this->size())
+        return *this;
+    if (len > this->size() - pos)
+        len = this->size() - pos;
+
+    if (ix_points_into_range<char>(after.data(), d.data(), d.data() + d.size)) {
         iVarLengthArray<char> copy(after.size());
         memcpy(copy.data(), after.data(), after.size());
         return replace(pos, len, copy.data(),copy.size());
     }
-    if (len == after.size() && (pos + len <= size())) {
-        detach();
-        memmove(d.data() + pos, after.data(), len*sizeof(char));
+
+    if (len == after.size()) {
+        // same size: in-place replacement possible
+        if (len > 0) {
+            detach();
+            memcpy(d.data() + pos, after.data(), len*sizeof(char));
+        }
         return *this;
     } else {
         // ### optimize me
         remove(pos, len);
         return insert(pos, after);
-    }
-}
-
-/*! \fn iByteArray &iByteArray::replace(int pos, int len, const char *after)
-
-    \overload
-
-    Replaces \a len bytes from index position \a pos with the
-    '\\0'-terminated string \a after.
-
-    Notice: this can change the length of the byte array.
-*/
-iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const char *after)
-{
-    return replace(pos,len,after,istrlen(after));
-}
-
-/*! \fn iByteArray &iByteArray::replace(int pos, int len, const char *after, int alen)
-
-    \overload
-
-    Replaces \a len bytes from index position \a pos with \a alen bytes
-    from the string \a after. \a after is allowed to have '\\0' characters.
-
-
-*/
-iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const char *after, xsizetype alen)
-{
-    if (len == alen && (pos + len <= d.size)) {
-        detach();
-        memcpy(d.data() + pos, after, len*sizeof(char));
-        return *this;
-    } else {
-        remove(pos, len);
-        return insert(pos, after, alen);
     }
 }
 
@@ -1757,60 +1744,27 @@ iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, const char *after,
     Example:
     \snippet code/src_corelib_tools_iByteArray.cpp 20
 */
-iByteArray &iByteArray::replace(const iByteArray &before, const iByteArray &after)
+iByteArray &iByteArray::replace(iByteArrayView before, iByteArrayView after)
 {
-    if (isNull() || before.d == after.d)
-        return *this;
-
-    iByteArray aft = after;
-    if (after.d == d)
-        aft.detach();
-
-    return replace(before.constData(), before.size(), aft.constData(), aft.size());
-}
-
-/*!
-    \fn iByteArray &iByteArray::replace(const char *before, const iByteArray &after)
-    \overload
-
-    Replaces every occurrence of the string \a before with the
-    byte array \a after.
-*/
-iByteArray &iByteArray::replace(const char *c, const iByteArray &after)
-{
-    iByteArray aft = after;
-    if (after.d == d)
-        aft.detach();
-
-    return replace(c, istrlen(c), aft.constData(), aft.size());
-}
-
-/*!
-    \fn iByteArray &iByteArray::replace(const char *before, int bsize, const char *after, int asize)
-    \overload
-
-    Replaces every occurrence of the string \a before with the string \a after.
-    Since the sizes of the strings are given by \a bsize and \a asize, they
-    may contain zero characters and do not need to be '\\0'-terminated.
-*/
-iByteArray &iByteArray::replace(const char *before, int bsize, const char *after, xsizetype asize)
-{
-    if (isNull() || (before == after && bsize == asize))
+    if (isNull() || (before == after))
         return *this;
 
     // protect against before or after being part of this
-    const char *a = after;
-    const char *b = before;
-    if (points_into_range<char>(after, d.data(), d.data() + d.size)) {
+    const char *a = after.constData();
+    const char *b = before.constData();
+    xsizetype asize = after.size();
+    xsizetype bsize = before.size();
+
+    if (ix_points_into_range(a, d.constBegin(), d.constEnd())) {
         char *copy = (char *)malloc(asize);
         IX_CHECK_PTR(copy);
-        memcpy(copy, after, asize);
+        memcpy(copy, a, asize);
         a = copy;
     }
-    if (points_into_range<char>(before, d.data(), d.data() + d.size)) {
+    if (ix_points_into_range(b, d.constBegin(), d.constEnd())) {
         char *copy = (char *)malloc(bsize);
         IX_CHECK_PTR(copy);
-        memcpy(copy, before, bsize);
+        memcpy(copy, b, bsize);
         b = copy;
     }
 
@@ -1899,14 +1853,13 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
         }
     }
 
-    if (a != after)
+    if (a != after.constData())
         ::free(const_cast<char *>(a));
-    if (b != before)
+    if (b != before.constData())
         ::free(const_cast<char *>(b));
 
     return *this;
 }
-
 
 /*!
     \fn iByteArray &iByteArray::replace(const iByteArray &before, const char *after)
@@ -1916,47 +1869,6 @@ iByteArray &iByteArray::replace(const char *before, int bsize, const char *after
     string \a after.
 */
 
-/*! \fn iByteArray &iByteArray::replace(const iString &before, const iByteArray &after)
-
-    \overload
-
-    Replaces every occurrence of the string \a before with the byte
-    array \a after. The Unicode data is converted into 8-bit
-    characters using iString::toUtf8().
-
-    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
-    compile your applications. You then need to call iString::toUtf8() (or
-    iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
-    convert the data to \c{const char *}.
-*/
-
-/*! \fn iByteArray &iByteArray::replace(const iString &before, const char *after)
-    \overload
-
-    Replaces every occurrence of the string \a before with the string
-    \a after.
-*/
-
-/*! \fn iByteArray &iByteArray::replace(const char *before, const char *after)
-
-    \overload
-
-    Replaces every occurrence of the string \a before with the string
-    \a after.
-*/
-
-/*!
-    \overload
-
-    Replaces every occurrence of the character \a before with the
-    byte array \a after.
-*/
-iByteArray &iByteArray::replace(char before, const iByteArray &after)
-{
-    char b[2] = { before, '\0' };
-    iByteArray cb = fromRawData(b, 1);
-    return replace(cb, after);
-}
 
 /*! \fn iByteArray &iByteArray::replace(char before, const iString &after)
 
@@ -2076,59 +1988,19 @@ iByteArray iByteArray::repeated(xsizetype times) const
 
     \sa lastIndexOf(), contains(), count()
 */
-xsizetype iByteArray::indexOf(const iByteArray &ba, xsizetype from) const
+xsizetype iByteArray::indexOf(iByteArrayView bv, xsizetype from) const
 {
-    const xsizetype ol = ba.d.size;
+    const xsizetype ol = bv.size();
     if (ol == 0)
         return from;
     if (ol == 1)
-        return indexOf(*ba.d.data(), from);
+        return indexOf(*bv.data(), from);
 
     const xsizetype l = d.size;
     if (from > d.size || ol + from > l)
         return -1;
 
-    return iFindByteArray(d.data(), d.size, from, ba.d.data(), ol);
-}
-
-/*! \fn int iByteArray::indexOf(const iString &str, int from) const
-
-    \overload
-
-    Returns the index position of the first occurrence of the string
-    \a str in the byte array, searching forward from index position
-    \a from. Returns -1 if \a str could not be found.
-
-    The Unicode data is converted into 8-bit characters using
-    iString::toUtf8().
-
-    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
-    compile your applications. You then need to call iString::toUtf8() (or
-    iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
-    convert the data to \c{const char *}.
-*/
-
-/*! \fn int iByteArray::indexOf(const char *str, int from) const
-
-    \overload
-
-    Returns the index position of the first occurrence of the string
-    \a str in the byte array, searching forward from index position \a
-    from. Returns -1 if \a str could not be found.
-*/
-xsizetype iByteArray::indexOf(const char *c, xsizetype from) const
-{
-    const xsizetype ol = istrlen(c);
-    if (ol == 1)
-        return indexOf(*c, from);
-
-    const xsizetype l = d.size;
-    if (from > d.size || ol + from > l)
-        return -1;
-    if (ol == 0)
-        return from;
-
-    return iFindByteArray(d.data(), d.size, from, c, ol);
+    return iFindByteArray(d.data(), d.size, from, bv.data(), ol);
 }
 
 /*!
@@ -2204,48 +2076,13 @@ static xsizetype lastIndexOfHelper(const char *haystack, xsizetype l, const char
 
     \sa indexOf(), contains(), count()
 */
-xsizetype iByteArray::lastIndexOf(const iByteArray &ba, xsizetype from) const
+xsizetype iByteArray::lastIndexOf(iByteArrayView bv, xsizetype from) const
 {
-    const xsizetype ol = ba.d.size;
+    const xsizetype ol = bv.size();
     if (ol == 1)
-        return lastIndexOf(*ba.d.data(), from);
+        return lastIndexOf(*bv.data(), from);
 
-    return lastIndexOfHelper(d.data(), d.size, ba.d.data(), ol, from);
-}
-
-/*! \fn int iByteArray::lastIndexOf(const iString &str, int from) const
-
-    \overload
-
-    Returns the index position of the last occurrence of the string \a
-    str in the byte array, searching backward from index position \a
-    from. If \a from is -1 (the default), the search starts at the
-    last (size() - 1) byte. Returns -1 if \a str could not be found.
-
-    The Unicode data is converted into 8-bit characters using
-    iString::toUtf8().
-
-    You can disable this function by defining \c IX_NO_CAST_TO_ASCII when you
-    compile your applications. You then need to call iString::toUtf8() (or
-    iString::toLatin1() or iString::toLocal8Bit()) explicitly if you want to
-    convert the data to \c{const char *}.
-*/
-
-/*! \fn int iByteArray::lastIndexOf(const char *str, int from) const
-    \overload
-
-    Returns the index position of the last occurrence of the string \a
-    str in the byte array, searching backward from index position \a
-    from. If \a from is -1 (the default), the search starts at the
-    last (size() - 1) byte. Returns -1 if \a str could not be found.
-*/
-xsizetype iByteArray::lastIndexOf(const char *str, xsizetype from) const
-{
-    const xsizetype ol = istrlen(str);
-    if (ol == 1)
-        return lastIndexOf(*str, from);
-
-    return lastIndexOfHelper(d.data(), d.size, str, ol, from);
+    return lastIndexOfHelper(d.data(), d.size, bv.data(), ol, from);
 }
 
 /*!
@@ -2283,30 +2120,19 @@ xsizetype iByteArray::lastIndexOf(char ch, xsizetype from) const
 
     \sa contains(), indexOf()
 */
-xsizetype iByteArray::count(const iByteArray &ba) const
+xsizetype iByteArray::count(iByteArrayView bv) const
 {
     xsizetype num = 0;
     xsizetype i = -1;
-    if (d.size > 500 && ba.d.size > 5) {
-        iByteArrayMatcher matcher(ba);
+    if (d.size > 500 && bv.size() > 5) {
+        iByteArrayMatcher matcher(bv);
         while ((i = matcher.indexIn(*this, i + 1)) != -1)
             ++num;
     } else {
-        while ((i = indexOf(ba, i + 1)) != -1)
+        while ((i = indexOf(bv, i + 1)) != -1)
             ++num;
     }
     return num;
-}
-
-/*!
-    \overload
-
-    Returns the number of (potentially overlapping) occurrences of
-    string \a str in the byte array.
-*/
-xsizetype iByteArray::count(const char *str) const
-{
-    return count(fromRawData(str, istrlen(str)));
 }
 
 /*!
@@ -2367,27 +2193,13 @@ xsizetype iByteArray::count(char ch) const
 
     \sa endsWith(), left()
 */
-bool iByteArray::startsWith(const iByteArray &ba) const
+bool iByteArray::startsWith(iByteArrayView bv) const
 {
-    if (d == ba.d || ba.d.size == 0)
+    if (d.data() == bv.data() || bv.size() == 0)
         return true;
-    if (d.size < ba.d.size)
+    if (d.size < bv.size())
         return false;
-    return memcmp(d.data(), ba.d.data(), ba.d.size) == 0;
-}
-
-/*! 
-    Returns \c true if this byte array starts with string \a str;
-    otherwise returns \c false.
-*/
-bool iByteArray::startsWith(const char *str) const
-{
-    if (!str || !*str)
-        return true;
-    size_t len = strlen(str);
-    if (d.size < len)
-        return false;
-    return istrncmp(d.data(), str, len) == 0;
+    return memcmp(d.data(), bv.data(), bv.size()) == 0;
 }
 
 /*! \overload
@@ -2411,28 +2223,13 @@ bool iByteArray::startsWith(char ch) const
 
     \sa startsWith(), right()
 */
-bool iByteArray::endsWith(const iByteArray &ba) const
+bool iByteArray::endsWith(iByteArrayView bv) const
 {
-    if (d == ba.d || ba.d.size == 0)
+    if (d.end() == bv.end() || bv.size() == 0)
         return true;
-    if (d.size < ba.d.size)
+    if (d.size < bv.size())
         return false;
-    return memcmp(d.data() + d.size - ba.d.size, ba.d.data(), ba.d.size) == 0;
-}
-
-/*! \overload
-
-    Returns \c true if this byte array ends with string \a str; otherwise
-    returns \c false.
-*/
-bool iByteArray::endsWith(const char *str) const
-{
-    if (!str || !*str)
-        return true;
-    const size_t len = strlen(str);
-    if (d.size < len)
-        return false;
-    return istrncmp(d.data() + d.size - len, str, len) == 0;
+    return memcmp(d.end() - bv.size(), bv.data(), bv.size()) == 0;
 }
 
 /*

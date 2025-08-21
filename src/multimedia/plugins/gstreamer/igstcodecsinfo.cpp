@@ -56,7 +56,7 @@ std::list<iString> iGstCodecsInfo::codecOptions(const iString &codec) const
             if (strcmp(property->name, "name") == 0 || strcmp(property->name, "parent") == 0)
                 continue;
 
-            options.push_back(iLatin1String(property->name));
+            options.push_back(iLatin1StringView(property->name));
         }
         g_free(properties);
         gst_object_unref(element);
@@ -131,7 +131,7 @@ void iGstCodecsInfo::updateCodecs(ElementType elementType)
                     GstCaps *newCaps = gst_caps_new_full(newStructure, IX_NULLPTR);
 
                     gchar *capsString = gst_caps_to_string(newCaps);
-                    iString codec = iLatin1String(capsString);
+                    iString codec = iLatin1StringView(capsString);
                     if (capsString)
                         g_free(capsString);
                     GstRank rank = GstRank(gst_plugin_feature_get_rank(GST_PLUGIN_FEATURE(factory)));

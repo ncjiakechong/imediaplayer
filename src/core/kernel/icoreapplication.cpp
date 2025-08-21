@@ -354,7 +354,7 @@ void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
             --pe.receiver->m_postedEvents;
             pe.event->m_posted = false;
             events.push_back(*it);
-            const_cast<iPostEvent &>(pe).event = nullptr;
+            const_cast<iPostEvent &>(pe).event = IX_NULLPTR;
             if (!data->postEventList.recursion) {
                 it = data->postEventList.erase(it);
                 continue;
@@ -487,7 +487,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
 
                     // null out the event so if sendPostedEvents recurses, it
                     // will ignore this one, as it's been re-posted.
-                    const_cast<iPostEvent &>(pe).event = nullptr;
+                    const_cast<iPostEvent &>(pe).event = IX_NULLPTR;
 
                     // re-post the copied event so it isn't lost
                     threadData->postEventList.addEvent(pe_copy);
@@ -565,7 +565,7 @@ xint64 iCoreApplication::applicationPid()
     return GetCurrentProcessId();
 #elif defined(IX_OS_VXWORKS)
     return (xint64)taskIdCurrent;
-#else 
+#else
     return getpid();
 #endif
 }

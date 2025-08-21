@@ -669,7 +669,7 @@ iString idtoa(xreal d, int *decpt, int *sign)
     if (decpt)
         *decpt = nonNullDecpt;
 
-    return iLatin1String(result, length);
+    return iLatin1StringView(result, length);
 }
 
 } // namespace iShell

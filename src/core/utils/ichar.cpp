@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ichar.cpp
-/// @brief   provides a representation of a Unicode character, offering 
+/// @brief   provides a representation of a Unicode character, offering
 ///          functionalities for character manipulation, classification, and conversion
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -13,26 +13,23 @@
 
 #include "core/utils/ichar.h"
 #include "core/utils/istring.h"
-#include "codecs/iunicodetables_p.h"
-#include "codecs/iunicodetables_data.h"
+#include "utils/iunicodetables_p.h"
+#include "utils/iunicodetables_data.h"
 #include "utils/itools_p.h"
-
 
 namespace iShell {
 
 #define FLAG(x) (1 << (x))
-
-using namespace iUnicodeTables;
-
 /*!
     \class iLatin1Char
+    \reentrant
     \brief The iLatin1Char class provides an 8-bit ASCII/Latin-1 character.
 
     \ingroup string-processing
 
     This class is only useful to construct a iChar with 8-bit character.
 
-    \sa iChar, iLatin1String, iString
+    \sa iChar, iLatin1StringView, iString
 */
 
 /*!
@@ -42,7 +39,7 @@ using namespace iUnicodeTables;
 */
 
 /*!
-    \fn const xuint16 iLatin1Char::unicode() const
+    \fn iLatin1Char::unicode() const
 
     Converts a Latin-1 character to an 16-bit-encoded Unicode representation
     of the character.
@@ -84,7 +81,7 @@ using namespace iUnicodeTables;
     sort of numeric character, not just 0-9), isLetterOrNumber(), and
     isDigit() (decimal digits). All of these are wrappers around
     category() which return the Unicode-defined category of each
-    character. Some of these also calculate the derived iUnicodeTables::properties
+    character. Some of these also calculate the derived properties
     (for example isSpace() returns \c true if the character is of category
     Separator_* or an exceptional code point from Other_Control category).
 
@@ -113,16 +110,8 @@ using namespace iUnicodeTables;
     cell), digitValue() (gives the integer value of any of the
     numerous digit characters), and a host of constructors.
 
-    iChar provides constructors and cast operators that make it easy
-    to convert to and from traditional 8-bit \c{char}s. If you
-    defined \c IX_NO_CAST_FROM_ASCII and \c IX_NO_CAST_TO_ASCII, as
-    explained in the iString documentation, you will need to
-    explicitly call fromLatin1(), or use iLatin1Char,
-    to construct a iChar from an 8-bit \c char, and you will need to
-    call toLatin1() to get the 8-bit value back.
-
     For more information see
-    \l{http://www.unicode.org/ucd/}{"About the Unicode Character Database"}.
+    \l{https://www.unicode.org/ucd/}{"About the Unicode Character Database"}.
 
     \sa Unicode, iString, iLatin1Char
 */
@@ -130,8 +119,8 @@ using namespace iUnicodeTables;
 /*!
     \enum iChar::UnicodeVersion
 
-    Specifies which version of the \l{http://www.unicode.org/}{Unicode standard}
-    introduced a certain character.
+    Specifies which version of the \l{Unicode standard} introduced a certain
+    character.
 
     \value Unicode_1_1  Version 1.1
     \value Unicode_2_0  Version 2.0
@@ -147,11 +136,19 @@ using namespace iUnicodeTables;
     \value Unicode_6_0  Version 6.0
     \value Unicode_6_1  Version 6.1
     \value Unicode_6_2  Version 6.2
-    \value Unicode_6_3  Version 6.3
-    \value Unicode_7_0  Version 7.0
-    \value Unicode_8_0  Version 8.0
-    \value Unicode_9_0  Version 9.0
-    \value Unicode_10_0 Version 10.0
+    \value [since 5.3] Unicode_6_3  Version 6.3
+    \value [since 5.5] Unicode_7_0  Version 7.0
+    \value [since 5.6] Unicode_8_0  Version 8.0
+    \value [since 5.11] Unicode_9_0  Version 9.0
+    \value [since 5.11] Unicode_10_0 Version 10.0
+    \value [since 5.15] Unicode_11_0 Version 11.0
+    \value [since 5.15] Unicode_12_0 Version 12.0
+    \value [since 5.15] Unicode_12_1 Version 12.1
+    \value [since 5.15] Unicode_13_0 Version 13.0
+    \value [since 6.3] Unicode_14_0 Version 14.0
+    \value [since 6.5] Unicode_15_0 Version 15.0
+    \value [since 6.8] Unicode_15_1 Version 15.1
+    \value [since 6.9] Unicode_16_0 Version 16.0
     \value Unicode_Unassigned  The value is not assigned to any character
                                in version 8.0 of Unicode.
 
@@ -233,12 +230,12 @@ using namespace iUnicodeTables;
 
 /*!
     \enum iChar::Script
-
+    \since 5.1
 
     This enum type defines the Unicode script property values.
 
     For details about the Unicode script property values see
-    \l{http://www.unicode.org/reports/tr24/}{Unicode Standard Annex #24}.
+    \l{https://www.unicode.org/reports/tr24/}{Unicode Standard Annex #24}.
 
     In order to conform to C/C++ naming conventions "Script_" is prepended
     to the codes used in the Unicode Standard.
@@ -251,145 +248,174 @@ using namespace iUnicodeTables;
     \value Script_Common     For characters that may be used with multiple scripts
                              and that do not inherit their script from the preceding characters.
 
-    \value Script_Latin
-    \value Script_Greek
-    \value Script_Cyrillic
-    \value Script_Armenian
-    \value Script_Hebrew
+    \value [since 5.11] Script_Adlam
+    \value [since 5.6] Script_Ahom
+    \value [since 5.6] Script_AnatolianHieroglyphs
     \value Script_Arabic
-    \value Script_Syriac
-    \value Script_Thaana
-    \value Script_Devanagari
+    \value Script_Armenian
+    \value Script_Avestan
+    \value Script_Balinese
+    \value Script_Bamum
+    \value [since 5.5] Script_BassaVah
+    \value Script_Batak
     \value Script_Bengali
-    \value Script_Gurmukhi
-    \value Script_Gujarati
-    \value Script_Oriya
-    \value Script_Tamil
-    \value Script_Telugu
-    \value Script_Kannada
-    \value Script_Malayalam
-    \value Script_Sinhala
-    \value Script_Thai
-    \value Script_Lao
-    \value Script_Tibetan
-    \value Script_Myanmar
-    \value Script_Georgian
-    \value Script_Hangul
-    \value Script_Ethiopic
-    \value Script_Cherokee
-    \value Script_CanadianAboriginal
-    \value Script_Ogham
-    \value Script_Runic
-    \value Script_Khmer
-    \value Script_Mongolian
-    \value Script_Hiragana
-    \value Script_Katakana
+    \value [since 5.11] Script_Bhaiksuki
     \value Script_Bopomofo
-    \value Script_Han
-    \value Script_Yi
-    \value Script_OldItalic
-    \value Script_Gothic
-    \value Script_Deseret
-    \value Script_Tagalog
-    \value Script_Hanunoo
-    \value Script_Buhid
-    \value Script_Tagbanwa
-    \value Script_Coptic
-    \value Script_Limbu
-    \value Script_TaiLe
-    \value Script_LinearB
-    \value Script_Ugaritic
-    \value Script_Shavian
-    \value Script_Osmanya
-    \value Script_Cypriot
+    \value Script_Brahmi
     \value Script_Braille
     \value Script_Buginese
-    \value Script_NewTaiLue
-    \value Script_Glagolitic
-    \value Script_Tifinagh
-    \value Script_SylotiNagri
-    \value Script_OldPersian
-    \value Script_Kharoshthi
-    \value Script_Balinese
-    \value Script_Cuneiform
-    \value Script_Phoenician
-    \value Script_PhagsPa
-    \value Script_Nko
-    \value Script_Sundanese
-    \value Script_Lepcha
-    \value Script_OlChiki
-    \value Script_Vai
-    \value Script_Saurashtra
-    \value Script_KayahLi
-    \value Script_Rejang
-    \value Script_Lycian
+    \value Script_Buhid
+    \value Script_CanadianAboriginal
     \value Script_Carian
-    \value Script_Lydian
-    \value Script_Cham
-    \value Script_TaiTham
-    \value Script_TaiViet
-    \value Script_Avestan
-    \value Script_EgyptianHieroglyphs
-    \value Script_Samaritan
-    \value Script_Lisu
-    \value Script_Bamum
-    \value Script_Javanese
-    \value Script_MeeteiMayek
-    \value Script_ImperialAramaic
-    \value Script_OldSouthArabian
-    \value Script_InscriptionalParthian
-    \value Script_InscriptionalPahlavi
-    \value Script_OldTurkic
-    \value Script_Kaithi
-    \value Script_Batak
-    \value Script_Brahmi
-    \value Script_Mandaic
+    \value [since 5.5] Script_CaucasianAlbanian
     \value Script_Chakma
+    \value Script_Cham
+    \value Script_Cherokee
+    \value [since 5.15] Script_Chorasmian
+    \value Script_Coptic
+    \value Script_Cuneiform
+    \value Script_Cypriot
+    \value [since 6.3] Script_CyproMinoan
+    \value Script_Cyrillic
+    \value Script_Deseret
+    \value Script_Devanagari
+    \value [since 5.15] Script_DivesAkuru
+    \value [since 5.15] Script_Dogra
+    \value [since 5.5] Script_Duployan
+    \value Script_EgyptianHieroglyphs
+    \value [since 5.5] Script_Elbasan
+    \value [since 5.15] Script_Elymaic
+    \value Script_Ethiopic
+    \value [since 6.9] Script_Garay
+    \value Script_Georgian
+    \value Script_Glagolitic
+    \value Script_Gothic
+    \value [since 5.5] Script_Grantha
+    \value Script_Greek
+    \value Script_Gujarati
+    \value [since 5.15] Script_GunjalaGondi
+    \value Script_Gurmukhi
+    \value [since 6.9] Script_GurungKhema
+    \value Script_Han
+    \value Script_Hangul
+    \value [since 5.15] Script_HanifiRohingya
+    \value Script_Hanunoo
+    \value [since 5.6] Script_Hatran
+    \value Script_Hebrew
+    \value Script_Hiragana
+    \value Script_ImperialAramaic
+    \value Script_InscriptionalPahlavi
+    \value Script_InscriptionalParthian
+    \value Script_Javanese
+    \value Script_Kaithi
+    \value Script_Kannada
+    \value Script_Katakana
+    \value [since 6.5] Script_Kawi
+    \value Script_KayahLi
+    \value Script_Kharoshthi
+    \value [since 5.15] Script_KhitanSmallScript
+    \value Script_Khmer
+    \value [since 5.5] Script_Khojki
+    \value [since 5.5] Script_Khudawadi
+    \value [since 6.9] Script_KiratRai
+    \value Script_Lao
+    \value Script_Latin
+    \value Script_Lepcha
+    \value Script_Limbu
+    \value [since 5.5] Script_LinearA
+    \value Script_LinearB
+    \value Script_Lisu
+    \value Script_Lycian
+    \value Script_Lydian
+    \value [since 5.5] Script_Mahajani
+    \value [since 5.15] Script_Makasar
+    \value Script_Malayalam
+    \value Script_Mandaic
+    \value [since 5.5] Script_Manichaean
+    \value [since 5.11] Script_Marchen
+    \value [since 5.11] Script_MasaramGondi
+    \value [since 5.15] Script_Medefaidrin
+    \value Script_MeeteiMayek
+    \value [since 5.5] Script_MendeKikakui
     \value Script_MeroiticCursive
     \value Script_MeroiticHieroglyphs
     \value Script_Miao
+    \value [since 5.5] Script_Modi
+    \value Script_Mongolian
+    \value [since 5.5] Script_Mro
+    \value [since 5.6] Script_Multani
+    \value Script_Myanmar
+    \value [since 5.5] Script_Nabataean
+    \value [since 6.3] Script_NagMundari
+    \value [since 5.15] Script_Nandinagari
+    \value [since 5.11] Script_Newa
+    \value Script_NewTaiLue
+    \value Script_Nko
+    \value [since 5.11] Script_Nushu
+    \value [since 5.15] Script_NyiakengPuachueHmong
+    \value Script_Ogham
+    \value Script_OlChiki
+    \value [since 6.9] Script_OlOnal
+    \value [since 5.6] Script_OldHungarian
+    \value Script_OldItalic
+    \value [since 5.5] Script_OldNorthArabian
+    \value [since 5.5] Script_OldPermic
+    \value Script_OldPersian
+    \value [since 5.15] Script_OldSogdian
+    \value Script_OldSouthArabian
+    \value Script_OldTurkic
+    \value [since 6.3] Script_OldUyghur
+    \value Script_Oriya
+    \value [since 5.11] Script_Osage
+    \value Script_Osmanya
+    \value [since 5.5] Script_PahawhHmong
+    \value [since 5.5] Script_Palmyrene
+    \value [since 5.5] Script_PauCinHau
+    \value Script_PhagsPa
+    \value Script_Phoenician
+    \value [since 5.5] Script_PsalterPahlavi
+    \value Script_Rejang
+    \value Script_Runic
+    \value Script_Samaritan
+    \value Script_Saurashtra
     \value Script_Sharada
+    \value Script_Shavian
+    \value [since 5.5] Script_Siddham
+    \value [since 5.6] Script_SignWriting
+    \value Script_Sinhala
+    \value [since 5.15] Script_Sogdian
     \value Script_SoraSompeng
+    \value [since 5.11] Script_Soyombo
+    \value Script_Sundanese
+    \value [since 6.9] Script_Sunuwar
+    \value Script_SylotiNagri
+    \value Script_Syriac
+    \value Script_Tagalog
+    \value Script_Tagbanwa
+    \value Script_TaiLe
+    \value Script_TaiTham
+    \value Script_TaiViet
     \value Script_Takri
-    \value Script_CaucasianAlbanian
-    \value Script_BassaVah
-    \value Script_Duployan
-    \value Script_Elbasan
-    \value Script_Grantha
-    \value Script_PahawhHmong
-    \value Script_Khojki
-    \value Script_LinearA
-    \value Script_Mahajani
-    \value Script_Manichaean
-    \value Script_MendeKikakui
-    \value Script_Modi
-    \value Script_Mro
-    \value Script_OldNorthArabian
-    \value Script_Nabataean
-    \value Script_Palmyrene
-    \value Script_PauCinHau
-    \value Script_OldPermic
-    \value Script_PsalterPahlavi
-    \value Script_Siddham
-    \value Script_Khudawadi
-    \value Script_Tirhuta
-    \value Script_WarangCiti
-    \value Script_Ahom
-    \value Script_AnatolianHieroglyphs
-    \value Script_Hatran
-    \value Script_Multani
-    \value Script_OldHungarian
-    \value Script_SignWriting
-    \value Script_Adlam
-    \value Script_Bhaiksuki
-    \value Script_Marchen
-    \value Script_Newa
-    \value Script_Osage
-    \value Script_Tangut
-    \value Script_MasaramGondi
-    \value Script_Nushu
-    \value Script_Soyombo
-    \value Script_ZanabazarSquare
+    \value Script_Tamil
+    \value [since 5.11] Script_Tangut
+    \value [since 6.3] Script_Tangsa
+    \value Script_Telugu
+    \value Script_Thaana
+    \value Script_Thai
+    \value Script_Tibetan
+    \value Script_Tifinagh
+    \value [since 5.5] Script_Tirhuta
+    \value [since 6.9] Script_Todhri
+    \value [since 6.3] Script_Toto
+    \value [since 6.9] Script_TuluTigalari
+    \value Script_Ugaritic
+    \value Script_Vai
+    \value [since 6.3] Script_Vithkuqi
+    \value [since 5.15] Script_Wancho
+    \value [since 5.5] Script_WarangCiti
+    \value [since 5.15] Script_Yezidi
+    \value Script_Yi
+    \value [since 5.11] Script_ZanabazarSquare
 
     \omitvalue ScriptCount
 
@@ -400,11 +426,35 @@ using namespace iUnicodeTables;
     \enum iChar::Direction
 
     This enum type defines the Unicode direction attributes. See the
-    \l{http://www.unicode.org/reports/tr9/tr9-35.html#Table_Bidirectional_Character_Types}{Unicode Standard} for a description
-    of the values.
+    \l{https://www.unicode.org/reports/tr9/tr9-35.html#Table_Bidirectional_Character_Types}{Unicode
+    Standard} for a description of the values.
 
     In order to conform to C/C++ naming conventions "Dir" is prepended
     to the codes used in the Unicode Standard.
+
+    \value DirAL
+    \value DirAN
+    \value DirB
+    \value DirBN
+    \value DirCS
+    \value DirEN
+    \value DirES
+    \value DirET
+    \value [since 5.3] DirFSI
+    \value DirL
+    \value DirLRE
+    \value [since 5.3] DirLRI
+    \value DirLRO
+    \value DirNSM
+    \value DirON
+    \value DirPDF
+    \value [since 5.3] DirPDI
+    \value DirR
+    \value DirRLE
+    \value [since 5.3] DirRLI
+    \value DirRLO
+    \value DirS
+    \value DirWS
 
     \sa direction()
 */
@@ -413,8 +463,7 @@ using namespace iUnicodeTables;
     \enum iChar::Decomposition
 
     This enum type defines the Unicode decomposition attributes. See
-    the \l{http://www.unicode.org/}{Unicode Standard} for a
-    description of the values.
+    the \l{Unicode standard} for a description of the values.
 
     \value NoDecomposition
     \value Canonical
@@ -440,9 +489,10 @@ using namespace iUnicodeTables;
 
 /*!
     \enum iChar::JoiningType
+    since 5.3
 
     This enum type defines the Unicode joining type attributes. See the
-    \l{http://www.unicode.org/}{Unicode Standard} for a description of the values.
+    \l{Unicode standard} for a description of the values.
 
     In order to conform to C/C++ naming conventions "Joining_" is prepended
     to the codes used in the Unicode Standard.
@@ -463,8 +513,7 @@ using namespace iUnicodeTables;
     \internal
 
     This enum type defines names for some of the Unicode combining
-    classes. See the \l{http://www.unicode.org/}{Unicode Standard}
-    for a description of the values.
+    classes. See the \l{Unicode Standard} for a description of the values.
 
     \value Combining_Above
     \value Combining_AboveAttached
@@ -493,6 +542,7 @@ using namespace iUnicodeTables;
     \value Null A iChar with this value isNull().
     \value Tabulation Character tabulation.
     \value LineFeed
+    \value FormFeed
     \value CarriageReturn
     \value Space
     \value Nbsp Non-breaking space.
@@ -507,90 +557,39 @@ using namespace iUnicodeTables;
     \value ByteOrderSwapped
     \value ParagraphSeparator
     \value LineSeparator
+    \value [since 6.2] VisualTabCharacter Used to represent a tabulation as a horizontal arrow.
     \value LastValidCodePoint
 */
 
 /*!
-    \fn void iChar::setCell(uchar cell)
-    \internal
-*/
+    \fn static auto iChar::fromUcs4(xuint32 c)
+    \since 6.0
 
-/*!
-    \fn void iChar::setRow(uchar row)
-    \internal
-*/
+    Returns an anonymous struct that
+    \list
+    \li contains a \c{xuint16 chars[2]} array,
+    \li can be implicitly converted to a iStringView, and
+    \li iterated over with a C++11 ranged for loop.
+    \endlist
 
-/*!
-    \fn iChar::iChar()
+    If \a c requires surrogates, \c{chars[0]} contains the high surrogate
+    and \c{chars[1]} the low surrogate, and the iStringView has size 2.
+    Otherwise, \c{chars[0]} contains \a c and \c{chars[1]} is
+    \l{iChar::isNull}{null}, and the iStringView has size 1.
 
-    Constructs a null iChar ('\\0').
+    This allows easy use of the result:
 
-    \sa isNull()
-*/
+    \code
+    iString s;
+    s += iChar::fromUcs4(ch);
+    \endcode
 
-/*!
-    \fn iChar::iChar(iLatin1Char ch)
+    \code
+    for (xuint16 c16 : iChar::fromUcs4(ch))
+        use(c16);
+    \endcode
 
-    Constructs a iChar corresponding to ASCII/Latin-1 character \a ch.
-*/
-
-/*!
-    \fn iChar::iChar(SpecialCharacter ch)
-
-    Constructs a iChar for the predefined character value \a ch.
-*/
-
-/*!
-    \fn iChar::iChar(char16_t ch)
-
-
-    Constructs a iChar corresponding to the UTF-16 character \a ch.
-*/
-
-/*!
-    \fn iChar::iChar(wchar_t ch)
-
-
-    Constructs a iChar corresponding to the wide character \a ch.
-
-    \note This constructor is only available on Windows.
-*/
-
-/*!
-    \fn iChar::iChar(char ch)
-
-    Constructs a iChar corresponding to ASCII/Latin-1 character \a ch.
-
-    \note This constructor is not available when \c IX_NO_CAST_FROM_ASCII
-    is defined.
-
-    \sa IX_NO_CAST_FROM_ASCII
-*/
-
-/*!
-    \fn iChar::iChar(uchar cell, uchar row)
-
-    Constructs a iChar for Unicode cell \a cell in row \a row.
-
-    \sa cell(), row()
-*/
-
-/*!
-    \fn iChar::iChar(short code)
-
-    Constructs a iChar for the character with Unicode code point \a code.
-*/
-
-/*!
-    \fn iChar::iChar(xuint32 code)
-
-    Constructs a iChar for the character with Unicode code point \a code.
-*/
-
-/*!
-    \fn iChar::iChar(int code)
-
-    Constructs a iChar for the character with Unicode code point \a code.
+    \sa fromUcs2(), requiresSurrogates()
 */
 
 /*!
@@ -628,7 +627,7 @@ using namespace iUnicodeTables;
 
 /*!
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a printable character; otherwise returns \c false.
@@ -660,13 +659,16 @@ bool iChar::isPrint(xuint32 ucs4)
 /*!
     \fn bool iChar::isSpace(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a separator character (Separator_* categories or certain code points
     from Other_Control category); otherwise returns \c false.
 */
 
+/*!
+    \internal
+*/
 bool iChar::isSpace_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
@@ -687,6 +689,9 @@ bool iChar::isSpace_helper(xuint32 ucs4)
 */
 
 /*!
+    \overload
+    \since 5.0
+
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a mark (Mark_* categories); otherwise returns \c false.
 */
@@ -708,6 +713,9 @@ bool iChar::isMark(xuint32 ucs4)
 */
 
 /*!
+    \overload
+    \since 5.0
+
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a punctuation mark (Punctuation_* categories); otherwise returns \c false.
 */
@@ -733,6 +741,9 @@ bool iChar::isPunct(xuint32 ucs4)
 */
 
 /*!
+    \overload
+    \since 5.0
+
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a symbol (Symbol_* categories); otherwise returns \c false.
 */
@@ -757,12 +768,15 @@ bool iChar::isSymbol(xuint32 ucs4)
 /*!
     \fn bool iChar::isLetter(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a letter (Letter_* categories); otherwise returns \c false.
 */
 
+/*!
+    \internal
+*/
 bool iChar::isLetter_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
@@ -787,7 +801,7 @@ bool iChar::isLetter_helper(xuint32 ucs4)
 /*!
     \fn bool iChar::isNumber(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a number (Number_* categories, not just 0-9); otherwise returns \c false.
@@ -795,6 +809,9 @@ bool iChar::isLetter_helper(xuint32 ucs4)
     \sa isDigit()
 */
 
+/*!
+    \internal
+*/
 bool iChar::isNumber_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
@@ -815,12 +832,15 @@ bool iChar::isNumber_helper(xuint32 ucs4)
 /*!
     \fn bool iChar::isLetterOrNumber(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a letter or number (Letter_* or Number_* categories); otherwise returns \c false.
 */
 
+/*!
+    \internal
+*/
 bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 {
     if (ucs4 > LastValidCodePoint)
@@ -848,7 +868,7 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 /*!
     \fn bool iChar::isDigit(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a decimal digit (Number_DecimalDigit); otherwise returns \c false.
@@ -858,7 +878,7 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 
 /*!
     \fn bool iChar::isNonCharacter() const
-
+    \since 5.0
 
     Returns \c true if the iChar is a non-character; false otherwise.
 
@@ -885,7 +905,7 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 
 /*!
     \fn bool iChar::isSurrogate() const
-
+    \since 5.0
 
     Returns \c true if the iChar contains a code point that is in either
     the high or the low part of the UTF-16 surrogate range
@@ -895,7 +915,7 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 /*!
     \fn static bool iChar::isNonCharacter(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a non-character; false otherwise.
@@ -928,7 +948,7 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 /*!
     \fn static bool iChar::isSurrogate(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     contains a code point that is in either the high or the low part of the
@@ -1027,13 +1047,16 @@ iChar::Direction iChar::direction(xuint32 ucs4)
 
 /*!
     \fn iChar::JoiningType iChar::joiningType() const
-
+    \since 5.3
 
     Returns information about the joining type attributes of the character
     (needed for certain languages such as Arabic or Syriac).
 */
 
 /*!
+    \overload
+    \since 5.3
+
     Returns information about the joining type attributes of the UCS-4-encoded
     character specified by \a ucs4
     (needed for certain languages such as Arabic or Syriac).
@@ -1057,6 +1080,9 @@ iChar::JoiningType iChar::joiningType(xuint32 ucs4)
 */
 
 /*!
+    \overload
+    \since 5.0
+
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     should be reversed if the text direction is reversed; otherwise returns \c false.
 
@@ -1083,7 +1109,7 @@ bool iChar::hasMirrored(xuint32 ucs4)
 /*!
     \fn static bool iChar::isLower(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a lowercase letter, for example category() is Letter_Lowercase.
@@ -1103,7 +1129,7 @@ bool iChar::hasMirrored(xuint32 ucs4)
 /*!
     \fn static bool iChar::isUpper(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is an uppercase letter, for example category() is Letter_Uppercase.
@@ -1123,7 +1149,7 @@ bool iChar::hasMirrored(xuint32 ucs4)
 /*!
     \fn static bool iChar::isTitleCase(xuint32 ucs4)
     \overload
-
+    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a titlecase letter, for example category() is Letter_Titlecase.
@@ -1153,24 +1179,22 @@ xuint32 iChar::mirroredChar(xuint32 ucs4)
     return ucs4 + iUnicodeTables::properties(ucs4)->mirrorDiff;
 }
 
-
-// constants for Hangul (de)composition, see UAX #15
-enum {
-    Hangul_SBase = 0xac00,
-    Hangul_LBase = 0x1100,
-    Hangul_VBase = 0x1161,
-    Hangul_TBase = 0x11a7,
-    Hangul_LCount = 19,
-    Hangul_VCount = 21,
-    Hangul_TCount = 28,
-    Hangul_NCount = Hangul_VCount * Hangul_TCount,
-    Hangul_SCount = Hangul_LCount * Hangul_NCount
-};
+// Constants for Hangul (de)composition, see UAX #15:
+static xuint32 Hangul_SBase = 0xac00;
+static xuint32 Hangul_LBase = 0x1100;
+static xuint32 Hangul_VBase = 0x1161;
+static xuint32 Hangul_TBase = 0x11a7;
+static xuint32 Hangul_LCount = 19;
+static xuint32 Hangul_VCount = 21;
+static xuint32 Hangul_TCount = 28;
+static xuint32 Hangul_NCount = Hangul_VCount * Hangul_TCount;
+static xuint32 Hangul_SCount = Hangul_LCount * Hangul_NCount;
 
 // buffer has to have a length of 3. It's needed for Hangul decomposition
-static const xuint16 * decompositionHelper
-    (xuint32 ucs4, xsizetype *length, int *tag, xuint16 *buffer)
+static const xuint16 * decompositionHelper(xuint32 ucs4, xsizetype *length, iChar::Decomposition  *tag, xuint16 *buffer)
 {
+    using namespace iUnicodeTables;
+
     if (ucs4 >= Hangul_SBase && ucs4 < Hangul_SBase + Hangul_SCount) {
         // compute Hangul syllable decomposition as per UAX #15
         const xuint32 SIndex = ucs4 - Hangul_SBase;
@@ -1190,9 +1214,9 @@ static const xuint16 * decompositionHelper
     }
 
     const xuint16 *decomposition = uc_decomposition_map+index;
-    *tag = (*decomposition) & 0xff;
+    *tag = iChar::Decomposition((*decomposition) & 0xff);
     *length = (*decomposition) >> 8;
-    return decomposition+1;
+    return decomposition + 1;
 }
 
 /*!
@@ -1213,7 +1237,7 @@ iString iChar::decomposition(xuint32 ucs4)
 {
     xuint16 buffer[3];
     xsizetype length;
-    int tag;
+    iChar::Decomposition tag;
     const xuint16 *d = decompositionHelper(ucs4, &length, &tag, buffer);
     return iString(reinterpret_cast<const iChar *>(d), length);
 }
@@ -1232,9 +1256,11 @@ iString iChar::decomposition(xuint32 ucs4)
 */
 iChar::Decomposition iChar::decompositionTag(xuint32 ucs4)
 {
+    using namespace iUnicodeTables;
+
     if (ucs4 >= Hangul_SBase && ucs4 < Hangul_SBase + Hangul_SCount)
         return iChar::Canonical;
-    const xuint16 index = GET_DECOMPOSITION_INDEX(ucs4);
+    const unsigned short index = GET_DECOMPOSITION_INDEX(ucs4);
     if (index == 0xffff)
         return iChar::NoDecomposition;
     return (iChar::Decomposition)(uc_decomposition_map[index] & 0xff);
@@ -1247,7 +1273,7 @@ iChar::Decomposition iChar::decompositionTag(xuint32 ucs4)
     Unicode standard. This is mainly useful as a positioning hint for
     marks attached to a base character.
 
-    The iShell text rendering engine uses this information to correctly
+    The text rendering engine uses this information to correctly
     position non-spacing marks around a base character.
 */
 
@@ -1265,12 +1291,15 @@ unsigned char iChar::combiningClass(xuint32 ucs4)
 
 /*!
     \fn iChar::Script iChar::script() const
-
+    \since 5.1
 
     Returns the Unicode script property value for this character.
 */
 
 /*!
+    \overload
+    \since 5.1
+
     Returns the Unicode script property value for the character specified in
     its UCS-4-encoded form as \a ucs4.
 */
@@ -1308,13 +1337,13 @@ iChar::UnicodeVersion iChar::currentUnicodeVersion()
 }
 
 template <typename T>
-static inline T convertCase_helper(T uc, iUnicodeTables::Case which) noexcept
+static inline T convertCase_helper(T uc, iUnicodeTables::Case which)
 {
-    const auto fold = properties(uc)->cases[which];
+    const auto fold = iUnicodeTables::properties(uc)->cases[which];
 
     if (fold.special) {
-        const xuint16 *specialCase = specialCaseMap + fold.diff;
-        // so far, there are no special cases beyond BMP (guaranteed by the qunicodetables generator)
+        const ushort *specialCase = iUnicodeTables::specialCaseMap + fold.diff;
+        // so far, there are no special cases beyond BMP (guaranteed by the unicodetables generator)
         return *specialCase == 1 ? specialCase[1] : uc;
     }
 
@@ -1346,6 +1375,11 @@ xuint32 iChar::toLower(xuint32 ucs4)
 
     Returns the uppercase equivalent if the character is lowercase or titlecase;
     otherwise returns the character itself.
+
+    \note This function also returns the original character in the rare case of
+    the uppercase form of the character requiring two or more characters.
+
+    \sa iString::toUpper()
 */
 
 /*!
@@ -1353,6 +1387,11 @@ xuint32 iChar::toLower(xuint32 ucs4)
     Returns the uppercase equivalent of the UCS-4-encoded character specified
     by \a ucs4 if the character is lowercase or titlecase; otherwise returns
     the character itself.
+
+    \note This function also returns the original character in the rare case of
+    the uppercase form of the character requiring two or more characters.
+
+    \sa iString::toUpper()
 */
 xuint32 iChar::toUpper(xuint32 ucs4)
 {
@@ -1451,45 +1490,13 @@ xuint32 iChar::toCaseFolded(xuint32 ucs4)
 */
 
 /*!
-    \fn char iChar::toAscii() const
-    \deprecated
-
-    Returns the Latin-1 character value of the iChar, or 0 if the character is not
-    representable.
-
-    The main purpose of this function is to preserve ASCII characters used
-    in C strings. This is mainly useful for developers of non-internationalized
-    software.
-
-    \note It is not possible to distinguish a non-Latin 1 character from an ASCII 0
-    (NUL) character. Prefer to use unicode(), which does not have this ambiguity.
-
-    \note This function does not check whether the character value is inside
-    the valid range of US-ASCII.
-
-    \sa toLatin1(), unicode()
-*/
-
-/*!
-    \fn iChar iChar::fromAscii(char)
-    \deprecated
-
-    Converts the ASCII character \a c to it's equivalent iChar. This
-    is mainly useful for non-internationalized software.
-
-    An alternative is to use iLatin1Char.
-
-    \sa fromLatin1(), unicode()
-*/
-
-/*!
-    \fn xuint16 & iChar::unicode()
+    \fn iChar::unicode()
 
     Returns a reference to the numeric Unicode value of the iChar.
 */
 
 /*!
-    \fn xuint16 iChar::unicode() const
+    \fn iChar::unicode() const
 
     Returns the numeric Unicode value of the iChar.
 */
@@ -1499,59 +1506,64 @@ xuint32 iChar::toCaseFolded(xuint32 ucs4)
  *****************************************************************************/
 
 /*!
-    \fn bool operator==(iChar c1, iChar c2)
-
-    \relates iChar
+    \fn bool iChar::operator==(const iChar &c1, const iChar &c2)
 
     Returns \c true if \a c1 and \a c2 are the same Unicode character;
     otherwise returns \c false.
 */
 
 /*!
-    \fn int operator!=(iChar c1, iChar c2)
-
-    \relates iChar
+    \fn bool iChar::operator!=(const iChar &c1, const iChar &c2)
 
     Returns \c true if \a c1 and \a c2 are not the same Unicode
     character; otherwise returns \c false.
 */
 
 /*!
-    \fn int operator<=(iChar c1, iChar c2)
-
-    \relates iChar
+    \fn bool iChar::operator<=(const iChar &c1, const iChar &c2)
 
     Returns \c true if the numeric Unicode value of \a c1 is less than
     or equal to that of \a c2; otherwise returns \c false.
 */
 
 /*!
-    \fn int operator>=(iChar c1, iChar c2)
-
-    \relates iChar
+    \fn bool iChar::operator>=(const iChar &c1, const iChar &c2)
 
     Returns \c true if the numeric Unicode value of \a c1 is greater than
     or equal to that of \a c2; otherwise returns \c false.
 */
 
 /*!
-    \fn int operator<(iChar c1, iChar c2)
-
-    \relates iChar
+    \fn bool iChar::operator<(const iChar &c1, const iChar &c2)
 
     Returns \c true if the numeric Unicode value of \a c1 is less than
     that of \a c2; otherwise returns \c false.
 */
 
 /*!
-    \fn int operator>(iChar c1, iChar c2)
-
-    \relates iChar
+    \fn bool iChar::operator>(const iChar &c1, const iChar &c2)
 
     Returns \c true if the numeric Unicode value of \a c1 is greater than
     that of \a c2; otherwise returns \c false.
 */
 
+/*!
+    \fn iShell::Literals::StringLiterals::operator""_L1(char ch)
+
+    \relates iLatin1Char
+    \since 6.4
+
+    Literal operator that creates a iLatin1Char out of \a ch.
+
+    The following code creates a iLatin1Char:
+    \code
+    using namespace iShell::Literals::StringLiterals;
+
+    auto ch = 'a'_L1;
+    \endcode
+
+    \sa iShell::Literals::StringLiterals
+*/
 
 // ---------------------------------------------------------------------------
 
@@ -1559,13 +1571,13 @@ xuint32 iChar::toCaseFolded(xuint32 ucs4)
 void decomposeHelper(iString *str, bool canonical, iChar::UnicodeVersion version, xsizetype from)
 {
     xsizetype length;
-    int tag;
+    iChar::Decomposition tag;
     xuint16 buffer[3];
 
     iString &s = *str;
 
     const xuint16 *utf16 = reinterpret_cast<xuint16 *>(s.data());
-    const xuint16 *uc = utf16 + s.length();
+    const xuint16 *uc = utf16 + s.size();
     while (uc != utf16 + from) {
         xuint32 ucs4 = *(--uc);
         if (iChar(ucs4).isLowSurrogate() && uc != utf16) {
@@ -1618,7 +1630,9 @@ inline bool operator<(const UCS2SurrogatePair &ligature, xuint32 u1)
 
 static xuint32 inline ligatureHelper(xuint32 u1, xuint32 u2)
 {
-    if (u1 >= Hangul_LBase && u1 <= Hangul_SBase + Hangul_SCount) {
+    using namespace iUnicodeTables;
+
+    if (u1 >= Hangul_LBase && u1 < Hangul_SBase + Hangul_SCount) {
         // compute Hangul syllable composition as per UAX #15
         // hangul L-V pair
         const xuint32 LIndex = u1 - Hangul_LBase;
@@ -1631,7 +1645,7 @@ static xuint32 inline ligatureHelper(xuint32 u1, xuint32 u2)
         const xuint32 SIndex = u1 - Hangul_SBase;
         if (SIndex < Hangul_SCount && (SIndex % Hangul_TCount) == 0) {
             const xuint32 TIndex = u2 - Hangul_TBase;
-            if (TIndex <= Hangul_TCount)
+            if (TIndex < Hangul_TCount && TIndex)
                 return u1 + TIndex;
         }
     }
@@ -1639,7 +1653,7 @@ static xuint32 inline ligatureHelper(xuint32 u1, xuint32 u2)
     const xuint16 index = GET_LIGATURE_INDEX(u2);
     if (index == 0xffff)
         return 0;
-    const xuint16 *ligatures = uc_ligature_map+index;
+    const xuint16 *ligatures = iUnicodeTables::uc_ligature_map+index;
     xuint16 length = *ligatures++;
     if (iChar::requiresSurrogates(u1)) {
         const UCS2SurrogatePair *data = reinterpret_cast<const UCS2SurrogatePair *>(ligatures);
@@ -1660,7 +1674,7 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
 {
     iString &s = *str;
 
-    if (from < 0 || s.length() - from < 2)
+    if (from < 0 || s.size() - from < 2)
         return;
 
     xuint32 stcode = 0; // starter code point
@@ -1669,11 +1683,11 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
     int lastCombining = 255; // to prevent combining > lastCombining
 
     xsizetype pos = from;
-    while (pos < s.length()) {
+    while (pos < s.size()) {
         xsizetype i = pos;
         xuint32 uc = s.at(pos).unicode();
-        if (iChar(uc).isHighSurrogate() && pos < s.length()-1) {
-            xuint16 low = s.at(pos+1).unicode();
+        if (iChar(uc).isHighSurrogate() && pos < s.size()-1) {
+            ushort low = s.at(pos+1).unicode();
             if (iChar(low).isLowSurrogate()) {
                 uc = iChar::surrogateToUcs4(uc, low);
                 ++pos;
@@ -1697,14 +1711,10 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
                 stcode = ligature;
                 iChar *d = s.data();
                 // ligatureHelper() never changes planes
-                if (iChar::requiresSurrogates(ligature)) {
-                    d[starter] = iChar::highSurrogate(ligature);
-                    d[starter + 1] = iChar::lowSurrogate(ligature);
-                    s.remove(i, 2);
-                } else {
-                    d[starter] = ligature;
-                    s.remove(i, 1);
-                }
+                xsizetype j = 0;
+                for (iChar ch : iChar::fromUcs4(ligature))
+                    d[starter + j++] = ch;
+                s.remove(i, j);
                 continue;
             }
         }
@@ -1719,11 +1729,10 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
     }
 }
 
-
 void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
 {
     iString &s = *str;
-    const xsizetype l = s.length()-1;
+    const xsizetype l = s.size()-1;
 
     xuint32 u1, u2;
     xuint16 c1, c2;
@@ -1732,9 +1741,9 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype
     while (pos < l) {
         xsizetype p2 = pos+1;
         u1 = s.at(pos).unicode();
-        if (iChar(u1).isHighSurrogate()) {
-            xuint16 low = s.at(p2).unicode();
-            if (iChar(low).isLowSurrogate()) {
+        if (iChar::isHighSurrogate(u1)) {
+            const xuint16 low = s.at(p2).unicode();
+            if (iChar::isLowSurrogate(low)) {
                 u1 = iChar::surrogateToUcs4(u1, low);
                 if (p2 >= l)
                     break;
@@ -1745,9 +1754,9 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype
 
     advance:
         u2 = s.at(p2).unicode();
-        if (iChar(u2).isHighSurrogate() && p2 < l) {
-            xuint16 low = s.at(p2+1).unicode();
-            if (iChar(low).isLowSurrogate()) {
+        if (iChar::isHighSurrogate(u2) && p2 < l) {
+            const xuint16 low = s.at(p2+1).unicode();
+            if (iChar::isLowSurrogate(low)) {
                 u2 = iChar::surrogateToUcs4(u2, low);
                 ++p2;
             }
@@ -1774,18 +1783,10 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype
             iChar *uc = s.data();
             xsizetype p = pos;
             // exchange characters
-            if (!iChar::requiresSurrogates(u2)) {
-                uc[p++] = u2;
-            } else {
-                uc[p++] = iChar::highSurrogate(u2);
-                uc[p++] = iChar::lowSurrogate(u2);
-            }
-            if (!iChar::requiresSurrogates(u1)) {
-                uc[p++] = u1;
-            } else {
-                uc[p++] = iChar::highSurrogate(u1);
-                uc[p++] = iChar::lowSurrogate(u1);
-            }
+            for (iChar ch : iChar::fromUcs4(u2))
+                uc[p++] = ch;
+            for (iChar ch : iChar::fromUcs4(u1))
+                uc[p++] = ch;
             if (pos > 0)
                 --pos;
             if (pos > 0 && s.at(pos).isLowSurrogate())
@@ -1819,8 +1820,8 @@ bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode
 
     enum { NFQC_YES = 0, NFQC_NO = 1, NFQC_MAYBE = 3 };
 
-    const xuint16 *string = reinterpret_cast<const xuint16 *>(str->constData());
-    xsizetype length = str->length();
+    const auto *string = reinterpret_cast<const xuint16 *>(str->constData());
+    xsizetype length = str->size();
 
     // this avoids one out of bounds check in the loop
     while (length > from && iChar::isHighSurrogate(string[length - 1]))
@@ -1838,7 +1839,7 @@ bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode
         }
 
         if (iChar::isHighSurrogate(uc)) {
-            xuint16 low = string[i + 1];
+            ushort low = string[i + 1];
             if (!iChar::isLowSurrogate(low)) {
                 // treat surrogate like stable code point
                 lastCombining = 0;
@@ -1863,8 +1864,8 @@ bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode
             *lastStable = pos;
     }
 
-    if (length != str->length()) // low surrogate parts at the end of text
-        *lastStable = str->length() - 1;
+    if (length != str->size()) // low surrogate parts at the end of text
+        *lastStable = str->size() - 1;
 
     return true;
 }

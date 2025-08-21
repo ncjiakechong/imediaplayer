@@ -19,7 +19,7 @@ iINCOperation::iINCOperation(iINCContext* c, iINCStream* s)
     : iObject(c)
     , m_context(c)
     , m_stream(s)
-    , m_state(STATE_RUNNING) 
+    , m_state(STATE_RUNNING)
 {
     IX_ASSERT(c);
 
@@ -35,7 +35,7 @@ iINCOperation::~iINCOperation()
     }
 }
 
-void iINCOperation::unlink() 
+void iINCOperation::unlink()
 {
     if (m_context) {
         std::unordered_set<iINCOperation*>::const_iterator it = m_context->m_operations.find(this);
@@ -48,7 +48,7 @@ void iINCOperation::unlink()
     m_stream = IX_NULLPTR;
 }
 
-void iINCOperation::setState(State now) 
+void iINCOperation::setState(State now)
 {
     if ((now == m_state) || (STATE_RUNNING != m_state))
         return;

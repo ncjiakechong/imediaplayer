@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ihashfunctions.cpp
-/// @brief   defines hash functions for various classes, 
+/// @brief   defines hash functions for various classes,
 ///          enabling their use as keys in hash tables
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -52,7 +52,7 @@ size_t iKeyHashFunc::operator()(const iString& key) const
 size_t iKeyHashFunc::operator()(const iStringView& key) const
 { return hash_internal(key.data(), size_t(key.size()), 0); }
 
-size_t iKeyHashFunc::operator()(const iLatin1String& key) const
+size_t iKeyHashFunc::operator()(const iLatin1StringView& key) const
 { return hash_internal(key.data(), size_t(key.size()), 0); }
 
 template <typename T>

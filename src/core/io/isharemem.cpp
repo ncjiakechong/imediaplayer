@@ -3,8 +3,8 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    isharemem.cpp
-/// @brief   provide an abstraction for managing shared memory regions. 
-///          It allows creating, attaching to, and detaching from shared memory segments, 
+/// @brief   provide an abstraction for managing shared memory regions.
+///          It allows creating, attaching to, and detaching from shared memory segments,
 ///          enabling inter-process communication and data sharing
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -77,7 +77,7 @@ struct SHMMarker {
     xuint64 _reserved4;
 };
 
-static inline size_t SHMMarkerSize(MemType type) 
+static inline size_t SHMMarkerSize(MemType type)
 {
     if (type == MEMTYPE_SHARED_POSIX)
         return IX_ALIGN(sizeof(SHMMarker));
@@ -85,7 +85,7 @@ static inline size_t SHMMarkerSize(MemType type)
     return 0;
 }
 
-static char* segmentName(char *fn, size_t l, unsigned id) 
+static char* segmentName(char *fn, size_t l, unsigned id)
 {
     snprintf(fn, l, "/ix-shm-%u", id);
     return fn;
@@ -123,7 +123,7 @@ iShareMem* iShareMem::createPrivateMem(size_t size)
 
 static void ix_random(void *ret_data, size_t length) {
     IX_ASSERT(ret_data && (length > 0));
-    
+
     size_t l = length;
     xuint8* p = (xuint8*)ret_data;
     for (p = (xuint8*)ret_data, l = length; l > 0; p++, l--)
@@ -226,7 +226,7 @@ iShareMem::iShareMem()
 {
 }
 
-iShareMem::~iShareMem() 
+iShareMem::~iShareMem()
 {
     detach();
 }
@@ -266,7 +266,7 @@ int iShareMem::detach()
     return 0;
 }
 
-void iShareMem::freePrivateMem() 
+void iShareMem::freePrivateMem()
 {
     #if defined(MAP_ANONYMOUS)
     if (munmap(m_ptr, m_size) < 0)
@@ -276,7 +276,7 @@ void iShareMem::freePrivateMem()
     #endif
 }
 
-void iShareMem::punch(size_t offset, size_t size) 
+void iShareMem::punch(size_t offset, size_t size)
 {
     IX_ASSERT(m_ptr && (m_size > 0) && (offset + size <= m_size));
     #ifdef MAP_FAILED
@@ -407,7 +407,7 @@ int iShareMem::attach(MemType type, uint id, xintptr memfd, bool writable)
 }
 
 /* Convert the string s to an unsigned integer in *ret_u */
-static int ix_atou(const char *s, xuint32 *ret_u) 
+static int ix_atou(const char *s, xuint32 *ret_u)
 {
     IX_ASSERT(s && ret_u);
 
@@ -448,7 +448,7 @@ static int ix_atou(const char *s, xuint32 *ret_u)
     return 0;
 }
 
-int iShareMem::cleanup() 
+int iShareMem::cleanup()
 {
     #if defined(SHM_PATH)
     DIR *d = opendir(SHM_PATH);

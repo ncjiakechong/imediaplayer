@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    igstreamerbufferprobe_p.h
-/// @brief   provides a mechanism for intercepting and examining 
+/// @brief   provides a mechanism for intercepting and examining
 ///          GStreamer buffers and caps as they flow through a pipeline
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com

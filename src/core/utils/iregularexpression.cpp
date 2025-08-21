@@ -934,10 +934,10 @@ int iRegularExpressionPrivate::captureIndexForName(iStringView name) const
     pcre2_pattern_info_16(compiledPattern, PCRE2_INFO_NAMEENTRYSIZE, &namedCapturingTableEntrySize);
 
     for (unsigned int i = 0; i < namedCapturingTableEntryCount; ++i) {
-        const char16_t* currentNamedCapturingTableRow =
-                reinterpret_cast<const char16_t *>(namedCapturingTable) + namedCapturingTableEntrySize * i;
+        const xuint16* currentNamedCapturingTableRow =
+                reinterpret_cast<const xuint16 *>(namedCapturingTable) + namedCapturingTableEntrySize * i;
 
-        if (name == (currentNamedCapturingTableRow + 1)) {
+        if (name == iStringView(currentNamedCapturingTableRow + 1)) {
             const int index = *currentNamedCapturingTableRow;
             return index;
         }
@@ -1348,8 +1348,8 @@ std::list<iString> iRegularExpression::namedCaptureGroups() const
     std::list<iString> result(d->capturingCount + 1);
 
     for (unsigned int i = 0; i < namedCapturingTableEntryCount; ++i) {
-        const char16_t* currentNamedCapturingTableRow =
-                reinterpret_cast<const char16_t *>(namedCapturingTable) + namedCapturingTableEntrySize * i;
+        const xuint16* currentNamedCapturingTableRow =
+                reinterpret_cast<const xuint16 *>(namedCapturingTable) + namedCapturingTableEntrySize * i;
 
         const int index = *currentNamedCapturingTableRow;
         std::list<iString>::iterator it = result.begin();
@@ -1395,7 +1395,7 @@ iString iRegularExpression::errorString() const
         return errorString;
     }
 
-    return iLatin1String("no error");
+    return iLatin1StringView("no error");
 }
 
 /*!
@@ -1682,12 +1682,12 @@ iString iRegularExpression::wildcardToRegularExpression(iStringView pattern, Wil
 
     #ifdef IX_OS_WIN
     const iLatin1Char nativePathSeparator('\\');
-    const iLatin1String starEscape("[^/\\\\]*");
-    const iLatin1String questionMarkEscape("[^/\\\\]");
+    const iLatin1StringView starEscape("[^/\\\\]*");
+    const iLatin1StringView questionMarkEscape("[^/\\\\]");
     #else
     const iLatin1Char nativePathSeparator('/');
-    const iLatin1String starEscape("[^/]*");
-    const iLatin1String questionMarkEscape("[^/]");
+    const iLatin1StringView starEscape("[^/]*");
+    const iLatin1StringView questionMarkEscape("[^/]");
     #endif
 
     while (i < wclen) {
@@ -1702,7 +1702,7 @@ iString iRegularExpression::wildcardToRegularExpression(iStringView pattern, Wil
         case '\\':
         #ifdef IX_OS_WIN
         case '/':
-            rx += iLatin1String("[/\\\\]");
+            rx += iLatin1StringView("[/\\\\]");
             break;
         #endif
         case '$':
@@ -1780,9 +1780,9 @@ iRegularExpression iRegularExpression::fromWildcard(iStringView pattern, iShell:
 iString iRegularExpression::anchoredPattern(iStringView expression)
 {
     return iString()
-           + iLatin1String("\\A(?:")
+           + iLatin1StringView("\\A(?:")
            + expression.toString()
-           + iLatin1String(")\\z");
+           + iLatin1StringView(")\\z");
 }
 
 /*!

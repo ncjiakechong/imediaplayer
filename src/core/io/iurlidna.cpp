@@ -2259,7 +2259,7 @@ void ix_punycodeEncoder(const iChar *s, int ucLength, iString *output)
     }
 
     // prepend ACE prefix
-    output->insert(outLen, iLatin1String("xn--"));
+    output->insert(outLen, iLatin1StringView("xn--"));
     return;
 }
 
@@ -2270,7 +2270,7 @@ iString ix_punycodeDecoder(const iString &pc)
     xuint32 bias = initial_bias;
 
     // strip any ACE prefix
-    int start = pc.startsWith(iLatin1String("xn--")) ? 4 : 0;
+    int start = pc.startsWith(iLatin1StringView("xn--")) ? 4 : 0;
     if (!start)
         return pc;
 
@@ -2583,7 +2583,7 @@ std::list<iString> iUrl::idnWhitelist()
     std::list<iString> list;
     unsigned int i = 0;
     while (i < idn_whitelist_size) {
-        list.push_back(iLatin1String(idn_whitelist[i]));
+        list.push_back(iLatin1StringView(idn_whitelist[i]));
         ++i;
     }
     return list;

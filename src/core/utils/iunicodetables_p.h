@@ -11,11 +11,11 @@
 #define IUNICODETABLES_P_H
 
 #include <core/utils/ichar.h>
-#include <core/global/iglobal.h>
+#include <core/utils/istringview.h>
 
 namespace iShell {
 
-#define UNICODE_DATA_VERSION iChar::Unicode_10_0
+#define UNICODE_DATA_VERSION iChar::Unicode_16_0
 
 namespace iUnicodeTables {
 
@@ -29,27 +29,41 @@ enum Case {
 };
 
 struct Properties {
-    xuint16 category            : 8; /* 5 used */
-    xuint16 direction           : 8; /* 5 used */
-    xuint16 combiningClass      : 8;
-    xuint16 joining             : 3;
-    xint16 digitValue           : 5;
-    xint16 mirrorDiff           : 16;
-    xuint16 unicodeVersion      : 8; /* 5 used */
-    xuint16 nfQuickCheck        : 8;
+    ushort category            : 5;
+    ushort direction           : 5;
+    ushort emojiFlags          : 6; /* 5 used */
+    ushort combiningClass      : 8;
+    ushort joining             : 3;
+    signed short digitValue    : 5;
+    signed short mirrorDiff    : 16;
+    ushort unicodeVersion      : 5; /* 5 used */
+    ushort eastAsianWidth      : 3; /* 3 used */
+    ushort nfQuickCheck        : 8;
+
     struct {
-        xuint16 special         : 1;
-        xint16 diff             : 15;
+        ushort special    : 1;
+        signed short diff : 15;
     } cases[NumCases];
-    xuint16 graphemeBreakClass  : 5; /* 5 used */
-    xuint16 wordBreakClass      : 5; /* 5 used */
-    xuint16 lineBreakClass      : 6; /* 6 used */
-    xuint16 sentenceBreakClass  : 8; /* 4 used */
-    xuint16 script              : 8;
+
+    ushort graphemeBreakClass  : 5; /* 5 used */
+    ushort wordBreakClass      : 5; /* 5 used */
+    ushort lineBreakClass      : 6; /* 6 used */
+    ushort sentenceBreakClass  : 4; /* 4 used */
+    ushort idnaStatus          : 4; /* 3 used */
+    ushort script              : 8;
 };
 
-const Properties * properties(xuint32 ucs4);
-const Properties * properties(xuint16 ucs2);
+IX_CORE_EXPORT const Properties* properties(xuint32 ucs4);
+IX_CORE_EXPORT const Properties* properties(xuint16 ucs2);
+
+enum class EastAsianWidth : unsigned int {
+    A,
+    F,
+    H,
+    N,
+    Na,
+    W,
+};
 
 enum GraphemeBreakClass {
     GraphemeBreak_Any,
@@ -66,10 +80,7 @@ enum GraphemeBreakClass {
     GraphemeBreak_T,
     GraphemeBreak_LV,
     GraphemeBreak_LVT,
-    Graphemebreak_E_Base,
-    Graphemebreak_E_Modifier,
-    Graphemebreak_Glue_After_Zwj,
-    Graphemebreak_E_Base_GAZ,
+    GraphemeBreak_Extended_Pictographic,
 
     NumGraphemeBreakClasses
 };
@@ -93,10 +104,6 @@ enum WordBreakClass {
     WordBreak_MidNum,
     WordBreak_Numeric,
     WordBreak_ExtendNumLet,
-    WordBreak_E_Base,
-    WordBreak_E_Modifier,
-    WordBreak_Glue_After_Zwj,
-    WordBreak_E_Base_GAZ,
     WordBreak_WSegSpace,
 
     NumWordBreakClasses
@@ -122,19 +129,47 @@ enum SentenceBreakClass {
 };
 
 // see http://www.unicode.org/reports/tr14/tr14-30.html
-// we don't use the XX and AI classes and map them to AL instead.
+// we don't use the XX and AI classes but map them to AL instead.
+// VI and VF classes are mapped to CM.
 enum LineBreakClass {
-    LineBreak_OP, LineBreak_CL, LineBreak_CP, LineBreak_QU, LineBreak_GL,
-    LineBreak_NS, LineBreak_EX, LineBreak_SY, LineBreak_IS, LineBreak_PR,
+    LineBreak_OP, LineBreak_CL, LineBreak_CP,
+    LineBreak_QU, LineBreak_QU_Pi, LineBreak_QU_Pf, LineBreak_QU_19,
+    LineBreak_GL, LineBreak_NS, LineBreak_EX, LineBreak_SY,
+    LineBreak_IS, LineBreak_PR,
     LineBreak_PO, LineBreak_NU, LineBreak_AL, LineBreak_HL, LineBreak_ID,
-    LineBreak_IN, LineBreak_HY, LineBreak_BA, LineBreak_BB, LineBreak_B2,
+    LineBreak_IN, LineBreak_HY, LineBreak_WS_HY,
+    LineBreak_BA, LineBreak_WS_BA,
+    LineBreak_HYBA,
+    LineBreak_BB, LineBreak_B2,
     LineBreak_ZW, LineBreak_CM, LineBreak_WJ, LineBreak_H2, LineBreak_H3,
     LineBreak_JL, LineBreak_JV, LineBreak_JT, LineBreak_RI, LineBreak_CB,
-    LineBreak_EB, LineBreak_EM, LineBreak_ZWJ,
+    LineBreak_EB, LineBreak_EM,
+
+    LineBreak_AK, LineBreak_AP, LineBreak_AS,
+    LineBreak_VI, LineBreak_VF,
+
+    LineBreak_ZWJ,
     LineBreak_SA, LineBreak_SG, LineBreak_SP,
     LineBreak_CR, LineBreak_LF, LineBreak_BK,
 
     NumLineBreakClasses
+};
+
+enum class IdnaStatus : unsigned int {
+    Disallowed,
+    Valid,
+    Ignored,
+    Mapped,
+    Deviation
+};
+
+enum class EmojiFlags : uchar {
+    NoEmoji = 0,
+    Emoji = 1,
+    Emoji_Presentation = 2,
+    Emoji_Modifier = 4,
+    Emoji_Modifier_Base = 8,
+    Emoji_Component = 16
 };
 
 GraphemeBreakClass graphemeBreakClass(xuint32 ucs4);
@@ -152,6 +187,18 @@ inline SentenceBreakClass sentenceBreakClass(iChar ch)
 LineBreakClass lineBreakClass(xuint32 ucs4);
 inline LineBreakClass lineBreakClass(iChar ch)
 { return lineBreakClass(ch.unicode()); }
+
+IdnaStatus idnaStatus(xuint32 ucs4);
+inline IdnaStatus idnaStatus(iChar ch)
+{ return idnaStatus(ch.unicode()); }
+
+iStringView idnaMapping(xuint32 usc4);
+inline iStringView idnaMapping(iChar ch)
+{ return idnaMapping(ch.unicode()); }
+
+EastAsianWidth eastAsianWidth(xuint32 ucs4);
+inline EastAsianWidth eastAsianWidth(iChar ch)
+{ return eastAsianWidth(ch.unicode()); }
 
 } // namespace iUnicodeTables
 

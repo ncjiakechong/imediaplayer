@@ -25,7 +25,7 @@ namespace iShell {
 
     The UTF-16 string may be represented as an array (or an array-compatible
     data-structure such as iString,
-    std::basic_string, etc.) of iChar, \c xuint16, \c char16_t (on compilers that
+    std::basic_string, etc.) of iChar, \c xuint16, \c xuint16 (on compilers that
     support C++11 Unicode strings) or (on platforms, such as Windows,
     where it is a 16-bit type) \c wchar_t.
 
@@ -39,7 +39,7 @@ namespace iShell {
     a wide variety of UTF-16 string data sources. One function accepting iStringView
     thus replaces three function overloads (taking iString, and
     \c{(const iChar*, int)}), while at the same time enabling even more string data
-    sources to be passed to the function, such as \c{u"Hello World"}, a \c char16_t
+    sources to be passed to the function, such as \c{u"Hello World"}, a \c xuint16
     string literal.
 
     iStringViews should be passed by value, not by reference-to-const:
@@ -55,11 +55,11 @@ namespace iShell {
             iChar constructor by itself.
         \li \e iString: if you store an unmodified copy of the string and thus would
             like to take advantage of iString's implicit sharing.
-        \li iLatin1String: if you can implement the function without converting the
-            iLatin1String to UTF-16 first; users expect a function overloaded on
-            iLatin1String to perform strictly less memory allocations than the
+        \li iLatin1StringView: if you can implement the function without converting the
+            iLatin1StringView to UTF-16 first; users expect a function overloaded on
+            iLatin1StringView to perform strictly less memory allocations than the
             semantically equivalent call of the iStringView version, involving
-            construction of a iString from the iLatin1String.
+            construction of a iString from the iLatin1StringView.
     \endlist
 
     iStringView can also be used as the return value of a function. If you call a
@@ -68,8 +68,8 @@ namespace iShell {
     If in doubt, obtain a strong reference to the data by calling toString() to convert
     the iStringView into a iString.
 
-    iStringView is a \e{Literal Type}, but since it stores data as \c{char16_t}, iteration
-    is not \c (casts from \c{const char16_t*} to \c{const iChar*}, which is not
+    iStringView is a \e{Literal Type}, but since it stores data as \c{xuint16}, iteration
+    is not \c (casts from \c{const xuint16*} to \c{const iChar*}, which is not
     allowed in \c functions). You can use an indexed loop and/or utf16() in
     \c contexts instead.
 
@@ -83,7 +83,7 @@ namespace iShell {
 /*!
     \typedef iStringView::storage_type
 
-    Alias for \c{char16_t} for non-Windows or if IX_COMPILER_UNICODE_STRINGS
+    Alias for \c{xuint16} for non-Windows or if IX_COMPILER_UNICODE_STRINGS
     is defined. Otherwise, alias for \c{wchar_t}.
 */
 
@@ -206,7 +206,7 @@ namespace iShell {
     The behavior is undefined if \a len is negative or, when positive, if \a str is \IX_NULLPTR.
 
     This constructor only participates in overload resolution if \c Char is a compatible
-    character type. The compatible character types are: \c iChar, \c xuint16, \c char16_t and
+    character type. The compatible character types are: \c iChar, \c xuint16, \c xuint16 and
     (on platforms, such as Windows, where it is a 16-bit type) \c wchar_t.
 */
 
@@ -226,7 +226,7 @@ namespace iShell {
 
     This constructor only participates in overload resolution if \c Char
     is a compatible character type. The compatible character types
-    are: \c iChar, \c xuint16, \c char16_t and (on platforms, such as
+    are: \c iChar, \c xuint16, \c xuint16 and (on platforms, such as
     Windows, where it is a 16-bit type) \c wchar_t.
 */
 
@@ -243,7 +243,7 @@ namespace iShell {
     This constructor only participates in overload resolution if \a
     str is not an array and if \c Char is a compatible character
     type. The compatible character types are: \c iChar, \c xuint16, \c
-    char16_t and (on platforms, such as Windows, where it is a 16-bit
+    xuint16 and (on platforms, such as Windows, where it is a 16-bit
     type) \c wchar_t.
 */
 
@@ -263,7 +263,7 @@ namespace iShell {
     This constructor only participates in overload resolution if \a
     string is an actual array and \c Char is a compatible character
     type. The compatible character types are: \c iChar, \c xuint16, \c
-    char16_t and (on platforms, such as Windows, where it is a 16-bit
+    xuint16 and (on platforms, such as Windows, where it is a 16-bit
     type) \c wchar_t.
 */
 
@@ -286,7 +286,7 @@ namespace iShell {
 
     This constructor only participates in overload resolution if \c StdBasicString is an
     instantiation of \c std::basic_string with a compatible character type. The
-    compatible character types are: \c iChar, \c xuint16, \c char16_t and
+    compatible character types are: \c iChar, \c xuint16, \c xuint16 and
     (on platforms, such as Windows, where it is a 16-bit type) \c wchar_t.
 
     The string view will be empty if and only if \c{str.empty()}. It is unspecified
@@ -323,7 +323,7 @@ namespace iShell {
 
     Returns a const pointer to the first character in the string.
 
-    \c{storage_type} is \c{char16_t}.
+    \c{storage_type} is \c{xuint16}.
 
     \note The character array represented by the return value is \e not null-terminated.
 
@@ -647,7 +647,7 @@ namespace iShell {
 
 /*!
     \fn bool iStringView::startsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \fn bool iStringView::startsWith(iLatin1String l1, iShell::CaseSensitivity cs) const
+    \fn bool iStringView::startsWith(iLatin1StringView l1, iShell::CaseSensitivity cs) const
     \fn bool iStringView::startsWith(iChar ch) const
     \fn bool iStringView::startsWith(iChar ch, iShell::CaseSensitivity cs) const
 
@@ -663,7 +663,7 @@ namespace iShell {
 
 /*!
     \fn bool iStringView::endsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \fn bool iStringView::endsWith(iLatin1String l1, iShell::CaseSensitivity cs) const
+    \fn bool iStringView::endsWith(iLatin1StringView l1, iShell::CaseSensitivity cs) const
     \fn bool iStringView::endsWith(iChar ch) const
     \fn bool iStringView::endsWith(iChar ch, iShell::CaseSensitivity cs) const
 

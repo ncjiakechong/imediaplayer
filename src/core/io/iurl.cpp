@@ -810,7 +810,7 @@ static const xuint16 * const fragmentInUrl = userNameInUrl + 6;
 
 static inline void parseDecodedComponent(iString &data)
 {
-    data.replace(iLatin1Char('%'), iLatin1String("%25"));
+    data.replace(iLatin1Char('%'), iLatin1StringView("%25"));
 }
 
 static inline iString
@@ -917,7 +917,7 @@ static int rootLength(const iString &name, bool allowUncPaths)
 {
     const int len = name.length();
     // starts with double slash
-    if (allowUncPaths && name.startsWith(iLatin1String("//"))) {
+    if (allowUncPaths && name.startsWith(iLatin1StringView("//"))) {
         // Server name '//server/path' is part of the prefix.
         const int nextSlash = name.indexOf(iLatin1Char('/'), 2);
         return nextSlash >= 0 ? nextSlash + 1 : len;
@@ -1194,7 +1194,7 @@ inline bool iUrlPrivate::setScheme(const iString &value, int len, bool doSetErro
         for (int i = needsLowercasing; i >= 0; --i) {
             xuint16 c = schemeData[i].unicode();
             if (c >= 'A' && c <= 'Z')
-                schemeData[i] = c + 0x20;
+                schemeData[i] = iChar(c + 0x20);
         }
     }
 
@@ -1396,7 +1396,7 @@ static const iChar *parseIpFuture(iString &host, const iChar *begin, const iChar
 
         // uppercase the version, if necessary
         if (begin[2].unicode() >= 'a')
-            host[host.length() - 2] = begin[2].unicode() - 0x20;
+            host[host.length() - 2] = iChar(begin[2].unicode() - 0x20);
 
         begin += 4;
         --end;
@@ -1439,7 +1439,7 @@ static const iChar *parseIp6(iString &host, const iChar *begin, const iChar *end
       decoded = iString(begin, end-begin);
     }
 
-    const iLatin1String zoneIdIdentifier("%25");
+    const iLatin1StringView zoneIdIdentifier("%25");
     iIPAddressUtils::IPv6Address address;
     iString zoneId;
 
@@ -1672,7 +1672,7 @@ iString iUrlPrivate::toLocalFile(iUrl::FormattingOptions options) const
 
     // magic for shared drive on windows
     if (!host.isEmpty()) {
-        tmp = iLatin1String("//") + host;
+        tmp = iLatin1StringView("//") + host;
         #ifdef IX_OS_WIN // WebDAV is visible as local file on Windows only.
         if (scheme == webDavScheme())
             tmp += webDavSslTag();
@@ -3402,11 +3402,11 @@ iString iUrl::toString(FormattingOptions options) const
 
     bool pathIsAbsolute = d->path.startsWith(iLatin1Char('/'));
     if (!((options & iUrl::RemoveAuthority) == iUrl::RemoveAuthority) && d->hasAuthority()) {
-        url += iLatin1String("//");
+        url += iLatin1StringView("//");
         d->appendAuthority(url, options, iUrlPrivate::FullUrl);
     } else if (isLocalFile() && pathIsAbsolute) {
         // Comply with the XDG file URI spec, which requires triple slashes.
-        url += iLatin1String("//");
+        url += iLatin1StringView("//");
     }
 
     if (!(options & iUrl::RemovePath))
@@ -3978,10 +3978,10 @@ static inline void appendComponentIfPresent(iString &msg, bool present, const ch
                                             const iString &component)
 {
     if (present) {
-        msg += iLatin1String(componentName);
+        msg += iLatin1StringView(componentName);
         msg += iLatin1Char('"');
         msg += component;
-        msg += iLatin1String("\",");
+        msg += iLatin1StringView("\",");
     }
 }
 
@@ -4009,9 +4009,9 @@ iString iUrl::errorString() const
         return msg;
 
     msg += errorMessage(errorCode, errorSource, errorPosition);
-    msg += iLatin1String("; source was \"");
+    msg += iLatin1StringView("; source was \"");
     msg += errorSource;
-    msg += iLatin1String("\";");
+    msg += iLatin1StringView("\";");
     appendComponentIfPresent(msg, d->sectionIsPresent & iUrlPrivate::Scheme,
                              " scheme = ", d->scheme);
     appendComponentIfPresent(msg, d->sectionIsPresent & iUrlPrivate::UserInfo,

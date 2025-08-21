@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iarraydatapointer.h
-/// @brief   provides a smart pointer-like interface for managing data stored 
+/// @brief   provides a smart pointer-like interface for managing data stored
 ///          in a contiguous block of memory
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -123,12 +123,165 @@ public:
         return d->allocatedCapacity() - freeSpaceAtBegin() - this->size;
     }
 
-    static iArrayDataPointer allocateGrow(const iArrayDataPointer &from,
-                                          xsizetype newSize, typename Data::ArrayOptions options)
-    { return allocateGrow(from, from.detachCapacity(newSize), newSize, options); }
 
-    static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype capacity,
-                                          xsizetype newSize, typename Data::ArrayOptions options) {
+    /*! \internal
+
+        Detaches this (optionally) and grows to accommodate the free space for
+        \a n elements at the required side. The side is determined from \a pos.
+
+        \a data pointer can be provided when the caller knows that \a data
+        points into range [this->begin(), this->end()). In case it is, *data
+        would be updated so that it continues to point to the element it was
+        pointing to before the data move. if \a data does not point into range,
+        one can/should pass \c nullptr.
+
+        The default rule would be: \a data and \a old must either both be valid
+        pointers, or both equal to \c nullptr.
+    */
+    void detachAndGrow(typename Data::ArrayOptions where, xsizetype n, const T **data, iArrayDataPointer *old)
+    {
+        const bool detach = needsDetach();
+        bool readjusted = false;
+        if (!detach) {
+            if (!n || ((where & Data::GrowsBackwards) && freeSpaceAtBegin() >= n)
+                || ((where & Data::GrowsForward) && freeSpaceAtEnd() >= n))
+                return;
+            readjusted = tryReadjustFreeSpace(where, n, data);
+            IX_ASSERT(!readjusted
+                     || ((where & Data::GrowsBackwards) && freeSpaceAtBegin() >= n)
+                     || ((where & Data::GrowsForward) && freeSpaceAtEnd() >= n));
+        }
+
+        if (!readjusted)
+            reallocateAndGrow(where, n, old);
+    }
+
+    /*! \internal
+
+        Reallocates to accommodate the free space for \a n elements at the
+        required side. The side is determined from \a pos. Might also shrink
+        when n < 0.
+    */
+    void reallocateAndGrow(typename Data::ArrayOptions where, xsizetype n, iArrayDataPointer *old = IX_NULLPTR)
+    {
+        if (iTypeInfo<T>::isRelocatable && alignof(T) <= alignof(std::max_align_t)) {
+            if ((where & Data::GrowsForward) && !old && !needsDetach() && n > 0) {
+                this->reallocate(allocatedCapacity() - freeSpaceAtEnd() + n, Data::GrowsForward); // fast path
+                return;
+            }
+        }
+
+        iArrayDataPointer dp(allocateGrow(*this, n, where));
+        if (n > 0)
+            IX_CHECK_PTR(dp.data());
+        if (where & Data::GrowsBackwards) {
+            IX_ASSERT(dp.freeSpaceAtBegin() >= n);
+        } else {
+            IX_ASSERT(dp.freeSpaceAtEnd() >= n);
+        }
+        if (size) {
+            xsizetype toCopy = size;
+            if (n < 0)
+                toCopy += n;
+            if (needsDetach() || old)
+                dp.copyAppend(begin(), begin() + toCopy);
+            else
+                dp.moveAppend(begin(), begin() + toCopy);
+            IX_ASSERT(dp.size == toCopy);
+        }
+
+        swap(dp);
+        if (old)
+            old->swap(dp);
+    }
+
+    /*! \internal
+
+        Attempts to relocate [begin(), end()) to accommodate the free space for
+        \a n elements at the required side. The side is determined from \a pos.
+
+        Returns \c true if the internal data is moved. Returns \c false when
+        there is no point in moving the data or the move is impossible. If \c
+        false is returned, it is the responsibility of the caller to figure out
+        how to accommodate the free space for \a n elements at \a pos.
+
+        This function expects that certain preconditions are met, e.g. the
+        detach is not needed, n > 0 and so on. This is intentional to reduce the
+        number of if-statements when the caller knows that preconditions would
+        be satisfied.
+
+        \sa reallocateAndGrow
+    */
+    bool tryReadjustFreeSpace(typename Data::ArrayOptions pos, xsizetype n, const T **data = IX_NULLPTR)
+    {
+        IX_ASSERT(!this->needsDetach());
+        IX_ASSERT(n > 0);
+        IX_ASSERT(((pos & Data::GrowsForward) && this->freeSpaceAtEnd() < n)
+                 || ((pos & Data::GrowsBackwards) && this->freeSpaceAtBegin() < n));
+
+        const xsizetype capacity = this->allocatedCapacity();
+        const xsizetype freeAtBegin = this->freeSpaceAtBegin();
+        const xsizetype freeAtEnd = this->freeSpaceAtEnd();
+
+        xsizetype dataStartOffset = 0;
+        // algorithm:
+        //   a. GrowsAtEnd: relocate if space at begin AND size < (capacity * 2) / 3
+        //      [all goes to free space at end]:
+        //      new free space at begin = 0
+        //
+        //   b. GrowsAtBeginning: relocate if space at end AND size < capacity / 3
+        //      [balance the free space]:
+        //      new free space at begin = n + (total free space - n) / 2
+        if ((pos & Data::GrowsForward) && freeAtBegin >= n
+            && ((3 * this->size) < (2 * capacity))) {
+            // dataStartOffset = 0; - done in declaration
+        } else if ((pos & Data::GrowsBackwards) && freeAtEnd >= n
+                   && ((3 * this->size) < capacity)) {
+            // total free space == capacity - size
+            dataStartOffset = n + std::max<xsizetype>(0, (capacity - this->size - n) / 2);
+        } else {
+            // nothing to do otherwise
+            return false;
+        }
+
+        relocate(dataStartOffset - freeAtBegin, data);
+
+        IX_ASSERT(((pos & Data::GrowsForward) && this->freeSpaceAtEnd() >= n)
+                 || ((pos & Data::GrowsBackwards) && this->freeSpaceAtBegin() >= n));
+        return true;
+    }
+
+    /*! \internal
+        Relocates [begin(), end()) by \a offset and updates \a data if it is not
+        \c nullptr and points into [begin(), end()).
+    */
+    void relocate(xsizetype offset, const T **data = IX_NULLPTR)
+    {
+        T *res = this->ptr + offset;
+        if (res != this->ptr)
+            std::memmove(static_cast<void *>(res), static_cast<const void *>(this->ptr), this->size * sizeof(T));
+
+        // first update data pointer, then this->ptr
+        if (data && (constBegin() <= *data) && (*data < constEnd()))
+            *data += offset;
+        this->ptr = res;
+    }
+
+    static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype newSize, typename Data::ArrayOptions options)
+    {
+        // calculate new capacity. We keep the free capacity at the side that does not have to grow
+        // to avoid quadratic behavior with mixed append/prepend cases
+
+        // use max below, because allocatedCapacity() can be 0 when using fromRawData()
+        xsizetype minimalCapacity = std::max<xsizetype>(from.size, from.allocatedCapacity()) + newSize;
+        // subtract the free space at the side we want to allocate. This ensures that the total size requested is
+        // the existing allocation at the other side + size + n.
+        minimalCapacity -= (options & Data::GrowsForward) ? from.freeSpaceAtEnd() : from.freeSpaceAtBegin();
+        xsizetype capacity = from.detachCapacity(minimalCapacity);
+        return allocateGrow(from, capacity, newSize, options);
+    }
+
+    static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype capacity, xsizetype newSize, typename Data::ArrayOptions options) {
         Data* d = Data::allocate(capacity, options);
         const bool valid = d != IX_NULLPTR && d->data().value() != IX_NULLPTR;
         const bool grows = (options & (Data::GrowsForward | Data::GrowsBackwards));
@@ -174,76 +327,6 @@ public:
         this->ptr = static_cast<T*>(d->data().value());
     }
 
-    // Returns whether reallocation is desirable before adding more elements
-    // into the container. This is a helper function that one can use to
-    // theoretically improve average operations performance. Ignoring this
-    // function does not affect the correctness of the array operations.
-    bool shouldGrowBeforeInsert(const_iterator where, xsizetype n) const {
-        if (this->d == IX_NULLPTR)
-            return true;
-        if (this->d->options() & Data::CapacityReserved)
-            return false;
-        if (!(this->d->options() & (Data::GrowsForward | Data::GrowsBackwards)))
-            return false;
-        IX_ASSERT(where >= this->begin() && where <= this->end());  // in range
-
-        const xsizetype freeAtBegin = this->freeSpaceAtBegin();
-        const xsizetype freeAtEnd = this->freeSpaceAtEnd();
-        const xsizetype capacity = this->allocatedCapacity();
-
-        if (this->size > 0 && where == this->begin()) {  // prepend
-            //iList in prepend: not enough space at begin && 33% full
-            // Now (below):
-            return freeAtBegin < n && (this->size >= (capacity / 3));
-        }
-
-        if (where == this->end()) {  // append
-            //  not enough space at end && less than 66% free space at front
-            // Now (below):
-            return freeAtEnd < n && !((freeAtBegin - n) >= (2 * capacity / 3));
-        }
-
-        // Now: no free space OR not enough space on either of the sides (bad perf. case)
-        return (freeAtBegin + freeAtEnd) < n || (freeAtBegin < n && freeAtEnd < n);
-    }
-
-    void moveInGrowthDirection(size_t futureGrowth) {
-        IX_ASSERT(this->isMutable());
-        IX_ASSERT(!this->isShared());
-        IX_ASSERT(futureGrowth <= size_t(this->freeSpaceAtEnd()));
-
-        const iterator oldBegin = this->begin();
-        this->ptr += futureGrowth;
-
-        // Note: move all elements!
-        ::memmove(static_cast<void *>(this->begin()), static_cast<const void *>(oldBegin),
-                    this->size * sizeof(T));
-    }
-
-    // Moves all elements in a specific direction by moveSize if available
-    // free space at one of the ends is smaller than required. Free space
-    // becomes available at the beginning if grows backwards and at the end
-    // if grows forward
-    xsizetype prepareFreeSpace(size_t required, size_t moveSize) {
-        IX_ASSERT(this->isMutable() || required == 0);
-        IX_ASSERT(!this->isShared() || required == 0);
-        IX_ASSERT(required <= this->allocatedCapacity() - this->size);
-
-        // if free space at the end is not enough, we need to move the data,
-        // move is performed in an inverse direction
-        if (size_t(this->freeSpaceAtEnd()) < required) {
-            moveInGrowthDirection(moveSize);
-            return xsizetype(moveSize);  // moving data to the right
-        }
-        return 0;
-    }
-
-    size_t moveSizeForAppend(size_t)
-    { return this->freeSpaceAtBegin(); }
-
-    void prepareSpaceForAppend(size_t required)
-    { prepareFreeSpace(required, moveSizeForAppend(required)); }
-
     void appendInitialize(size_t newSize) {
         IX_ASSERT(this->isMutable());
         IX_ASSERT(!this->isShared());
@@ -253,9 +336,6 @@ public:
         ::memset(static_cast<void *>(this->end()), 0, (newSize - this->size) * sizeof(T));
         this->size = xsizetype(newSize);
     }
-
-    void moveAppend(T *b, T *e)
-    { insert(this->end(), b, e); }
 
     void truncate(size_t newSize) {
         IX_ASSERT(this->isMutable());
@@ -271,6 +351,9 @@ public:
         // As this is to be called only from destructor, it doesn't need to be
         // exception safe; size not updated.
     }
+
+    void moveAppend(T *b, T *e)
+    { insert(this->end(), b, e); }
 
     void insert(T *where, const T *b, const T *e) {
         IX_ASSERT(this->isMutable() || (b == e && where == this->end()));
@@ -304,8 +387,16 @@ public:
         IX_ASSERT(b >= this->begin() && b < this->end());
         IX_ASSERT(e > this->begin() && e <= this->end());
 
-        ::memmove(static_cast<void *>(b), static_cast<void *>(e),
-                  (static_cast<T *>(this->end()) - e) * sizeof(T));
+        // Comply with std::vector::erase(): erased elements and all after them
+        // are invalidated. However, erasing from the beginning effectively
+        // means that all iterators are invalidated. We can use this freedom to
+        // erase by moving towards the end.
+        if (b == this->begin() && e != this->end()) {
+            this->ptr = e;
+        } else if (e != this->end()) {
+            ::memmove(static_cast<void *>(b), static_cast<void *>(e),
+                      (static_cast<T *>(this->end()) - e) * sizeof(T));
+        }
         this->size -= (e - b);
     }
 
@@ -350,6 +441,25 @@ public:
         // Preserve the value, because it might be a reference to some part of the moved chunk
         T tmp(t);
         insert(this->end(), n, tmp);
+    }
+
+    // slightly higher level API than copyAppend() that also preallocates space
+    void growAppend(const T *b, const T *e)
+    {
+        if (b == e)
+            return;
+        IX_ASSERT(b < e);
+        const xsizetype n = e - b;
+        iArrayDataPointer old;
+
+        // points into range:
+        if ((constBegin() <= b) && (b < constEnd()))
+            this->detachAndGrow(Data::GrowsForward, n, &b, &old);
+        else
+            this->detachAndGrow(Data::GrowsForward, n, IX_NULLPTR, IX_NULLPTR);
+        IX_ASSERT(this->freeSpaceAtEnd() >= n);
+        // b might be updated so use [b, n)
+        this->copyAppend(b, b + n);
     }
 
 private:

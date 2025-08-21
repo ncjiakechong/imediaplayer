@@ -10,59 +10,16 @@
 #ifndef IBYTEARRAY_H
 #define IBYTEARRAY_H
 
-#include <cstring>
-#include <cstdarg>
-
 #include <string>
 #include <iterator>
 #include <list>
 
+#include <core/utils/ibytearrayview.h>
 #include <core/utils/iarraydatapointer.h>
-#include <core/global/inamespace.h>
 
 namespace iShell {
 
 class iByteArray;
-
-/*****************************************************************************
-  Safe and portable C string functions; extensions to standard cstring
- *****************************************************************************/
-
-IX_CORE_EXPORT char *istrdup(const char *);
-
-inline size_t istrlen(const char *str)
-{ return str ? strlen(str) : 0; }
-
-inline size_t istrnlen(const char *str, size_t maxlen)
-{
-    size_t length = 0;
-    if (str) {
-        while (length < maxlen && *str++)
-            length++;
-    }
-    return length;
-}
-
-IX_CORE_EXPORT char *istrcpy(char *dst, const char *src);
-IX_CORE_EXPORT char *istrncpy(char *dst, const char *src, size_t len);
-
-IX_CORE_EXPORT int istrcmp(const char *str1, const char *str2);
-IX_CORE_EXPORT int istrcmp(const iByteArray &str1, const iByteArray &str2);
-IX_CORE_EXPORT int istrcmp(const iByteArray &str1, const char *str2);
-inline int istrcmp(const char *str1, const iByteArray &str2)
-{ return -istrcmp(str2, str1); }
-
-inline int istrncmp(const char *str1, const char *str2, size_t len)
-{
-    return (str1 && str2) ? strncmp(str1, str2, len)
-        : (str1 ? 1 : (str2 ? -1 : 0));
-}
-IX_CORE_EXPORT int istricmp(const char *, const char *);
-IX_CORE_EXPORT int istrnicmp(const char *, const char *, size_t len);
-IX_CORE_EXPORT int istrnicmp(const char *, xsizetype, const char *, xsizetype = -1);
-
-// iChecksum: Internet checksum
-IX_CORE_EXPORT xuint16 iChecksum(const char *s, xsizetype len, iShell::ChecksumType standard); // ### Use iShell::ChecksumType standard = iShell::ChecksumIso3309
 
 class iString;
 
@@ -95,6 +52,7 @@ public:
     iByteArray(const char *, xsizetype size = -1);
     iByteArray(xsizetype size, char c);
     iByteArray(xsizetype size, iShell::Initialization);
+    explicit iByteArray(iByteArrayView v) : iByteArray(v.data(), v.size()) {}
     inline iByteArray(const iByteArray &);
     inline ~iByteArray();
 
@@ -131,21 +89,16 @@ public:
     inline char &back();
 
     xsizetype indexOf(char c, xsizetype from = 0) const;
-    xsizetype indexOf(const char *c, xsizetype from = 0) const;
-    xsizetype indexOf(const iByteArray &a, xsizetype from = 0) const;
+    xsizetype indexOf(iByteArrayView bv, xsizetype from = 0) const;
     xsizetype lastIndexOf(char c, xsizetype from = -1) const;
-    xsizetype lastIndexOf(const char *c, xsizetype from = -1) const;
-    xsizetype lastIndexOf(const iByteArray &a, xsizetype from = -1) const;
+    xsizetype lastIndexOf(iByteArrayView bv, xsizetype from = -1) const;
 
     inline bool contains(char c) const;
-    inline bool contains(const char *a) const;
-    inline bool contains(const iByteArray &a) const;
+    inline bool contains(iByteArrayView bv) const;
     xsizetype count(char c) const;
-    xsizetype count(const char *a) const;
-    xsizetype count(const iByteArray &a) const;
+    xsizetype count(iByteArrayView bv) const;
 
-    inline int compare(const char *c, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
-    inline int compare(const iByteArray &a, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
+    inline int compare(iByteArrayView bv, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
     iByteArray left(xsizetype len) const;
     iByteArray right(xsizetype len) const;
@@ -162,13 +115,11 @@ public:
     iByteArray chopped(xsizetype len) const
     { IX_ASSERT(len >= 0); IX_ASSERT(len <= size()); return first(size() - len); }
 
-    bool startsWith(const iByteArray &a) const;
+    bool startsWith(iByteArrayView bv) const;
     bool startsWith(char c) const;
-    bool startsWith(const char *c) const;
 
-    bool endsWith(const iByteArray &a) const;
+    bool endsWith(iByteArrayView bv) const;
     bool endsWith(char c) const;
-    bool endsWith(const char *c) const;
 
     bool isUpper() const;
     bool isLower() const;
@@ -188,43 +139,40 @@ public:
      { return insert(0, c); }
     iByteArray &prepend(xsizetype count, char c)
     { return insert(0, count, c); }
-    iByteArray &prepend(const char *s)
-    { return insert(0, s); }
     iByteArray &prepend(const char *s, xsizetype len)
     { return insert(0, s, len); }
-    iByteArray &prepend(const iByteArray &a)
-    { return insert(0, a); }
+    iByteArray &prepend(iByteArrayView bv)
+    { return insert(0, bv); }
     iByteArray &append(char c)
     { return insert(size(), c); }
     iByteArray &append(xsizetype count, char c)
     { return insert(size(), count, c); }
-    iByteArray &append(const char *s)
-    { return insert(size(), s); }
     iByteArray &append(const char *s, xsizetype len)
     { return insert(size(), s, len); }
-    iByteArray &append(const iByteArray &a)
-    { return insert(size(), a); }
+    iByteArray &append(iByteArrayView bv)
+    { return insert(size(), bv); }
 
-    iByteArray &insert(xsizetype i, char c);
+    iByteArray &insert(xsizetype i, char c)
+    { return insert(i, iByteArrayView(&c, 1)); }
     iByteArray &insert(xsizetype i, xsizetype count, char c);
-    iByteArray &insert(xsizetype i, const char *s);
-    iByteArray &insert(xsizetype i, const char *s, xsizetype len);
-    iByteArray &insert(xsizetype i, const iByteArray &a);
+    iByteArray &insert(xsizetype i, const char *s, xsizetype len)
+    { return insert(i, iByteArrayView(s, len)); }
+    iByteArray &insert(xsizetype i, iByteArrayView bv);
     iByteArray &remove(xsizetype index, xsizetype len);
-    iByteArray &replace(xsizetype index, xsizetype len, const char *s);
-    iByteArray &replace(xsizetype index, xsizetype len, const char *s, xsizetype alen);
-    iByteArray &replace(xsizetype index, xsizetype len, const iByteArray &s);
-    inline iByteArray &replace(char before, const char *after);
-    iByteArray &replace(char before, const iByteArray &after);
-    inline iByteArray &replace(const char *before, const char *after);
-    iByteArray &replace(const char *before, int bsize, const char *after, xsizetype asize);
-    iByteArray &replace(const iByteArray &before, const iByteArray &after);
-    inline iByteArray &replace(const iByteArray &before, const char *after);
-    iByteArray &replace(const char *before, const iByteArray &after);
+    iByteArray &replace(xsizetype index, xsizetype len, const char *s, xsizetype alen)
+    { return replace(index, len, iByteArrayView(s, alen)); }
+    iByteArray &replace(xsizetype index, xsizetype len, iByteArrayView after);
+    iByteArray &replace(char before, iByteArrayView after)
+    { return replace(iByteArrayView(&before, 1), after); }
+    iByteArray &replace(const char *before, int bsize, const char *after, xsizetype asize)
+    { return replace(iByteArrayView(before, bsize), iByteArrayView(after, asize)); }
+    iByteArray &replace(iByteArrayView before, iByteArrayView after);
     iByteArray &replace(char before, char after);
-    inline iByteArray &operator+=(char c);
-    inline iByteArray &operator+=(const char *s);
-    inline iByteArray &operator+=(const iByteArray &a);
+
+    iByteArray &operator+=(char c) { return append(c); }
+    iByteArray &operator+=(const char *s) { return append(s); }
+    iByteArray &operator+=(const iByteArray& a) { return append(a); }
+    iByteArray &operator+=(iByteArrayView bv) { return append(bv); }
 
     std::list<iByteArray> split(char sep) const;
 
@@ -296,12 +244,10 @@ public:
     typedef char *pointer;
     typedef const char *const_pointer;
     typedef char value_type;
-    inline void push_back(char c);
-    inline void push_back(const char *c);
-    inline void push_back(const iByteArray &a);
-    inline void push_front(char c);
-    inline void push_front(const char *c);
-    inline void push_front(const iByteArray &a);
+    void push_back(char c) { append(c); }
+    void push_back(iByteArrayView bv) { append(bv); }
+    void push_front(char c) { prepend(c); }
+    void push_front(iByteArrayView bv) { prepend(bv); }
     void shrink_to_fit() { squeeze(); }
 
     static inline iByteArray fromStdString(const std::string &s);
@@ -409,74 +355,54 @@ inline iByteArray::const_iterator iByteArray::cend() const
 { return data() + size(); }
 inline iByteArray::const_iterator iByteArray::constEnd() const
 { return data() + size(); }
-inline iByteArray &iByteArray::operator+=(char c)
-{ return append(c); }
-inline iByteArray &iByteArray::operator+=(const char *s)
-{ return append(s); }
-inline iByteArray &iByteArray::operator+=(const iByteArray &a)
-{ return append(a); }
-inline void iByteArray::push_back(char c)
-{ append(c); }
-inline void iByteArray::push_back(const char *c)
-{ append(c); }
-inline void iByteArray::push_back(const iByteArray &a)
-{ append(a); }
-inline void iByteArray::push_front(char c)
-{ prepend(c); }
-inline void iByteArray::push_front(const char *c)
-{ prepend(c); }
-inline void iByteArray::push_front(const iByteArray &a)
-{ prepend(a); }
-inline bool iByteArray::contains(const iByteArray &a) const
-{ return indexOf(a) != -1; }
+
+inline bool iByteArray::contains(iByteArrayView bv) const
+{ return indexOf(bv) != -1; }
 inline bool iByteArray::contains(char c) const
 { return indexOf(c) != -1; }
-inline int iByteArray::compare(const char *c, iShell::CaseSensitivity cs) const
+inline int iByteArray::compare(iByteArrayView bv, iShell::CaseSensitivity cs) const
 {
-    return cs == iShell::CaseSensitive ? istrcmp(*this, c) :
-                                     istrnicmp(data(), size(), c, -1);
+    return cs == iShell::CaseSensitive ? iPrivate::compareMemory(*this, bv) :
+                                     istrnicmp(data(), size(), bv.data(), bv.size());
 }
-inline int iByteArray::compare(const iByteArray &a, iShell::CaseSensitivity cs) const
-{
-    return cs == iShell::CaseSensitive ? istrcmp(*this, a) :
-                                     istrnicmp(data(), size(), a.data(), a.size());
-}
+
 inline bool operator==(const iByteArray &a1, const iByteArray &a2)
 { return (a1.size() == a2.size()) && (memcmp(a1.constData(), a2.constData(), size_t(a1.size()))==0); }
 inline bool operator==(const iByteArray &a1, const char *a2)
-{ return a2 ? istrcmp(a1,a2) == 0 : a1.isEmpty(); }
+{ return a2 ? istrcmp(a1.data(), a2) == 0 : a1.isEmpty(); }
 inline bool operator==(const char *a1, const iByteArray &a2)
-{ return a1 ? istrcmp(a1,a2) == 0 : a2.isEmpty(); }
-inline bool operator!=(const iByteArray &a1, const iByteArray &a2)
-{ return !(a1==a2); }
-inline bool operator!=(const iByteArray &a1, const char *a2)
-{ return a2 ? istrcmp(a1,a2) != 0 : !a1.isEmpty(); }
-inline bool operator!=(const char *a1, const iByteArray &a2)
-{ return a1 ? istrcmp(a1,a2) != 0 : !a2.isEmpty(); }
+{ return a1 ? istrcmp(a1,a2.data()) == 0 : a2.isEmpty(); }
 inline bool operator<(const iByteArray &a1, const iByteArray &a2)
-{ return istrcmp(a1, a2) < 0; }
+{ return istrncmp(a1.data(),a1.length(),a2.data(), a2.length()) < 0; }
  inline bool operator<(const iByteArray &a1, const char *a2)
-{ return istrcmp(a1, a2) < 0; }
+{ return istrcmp(a1.data(), a2) < 0; }
 inline bool operator<(const char *a1, const iByteArray &a2)
-{ return istrcmp(a1, a2) < 0; }
-inline bool operator<=(const iByteArray &a1, const iByteArray &a2)
-{ return istrcmp(a1, a2) <= 0; }
-inline bool operator<=(const iByteArray &a1, const char *a2)
-{ return istrcmp(a1, a2) <= 0; }
-inline bool operator<=(const char *a1, const iByteArray &a2)
-{ return istrcmp(a1, a2) <= 0; }
+{ return istrcmp(a1, a2.data()) < 0; }
 inline bool operator>(const iByteArray &a1, const iByteArray &a2)
-{ return istrcmp(a1, a2) > 0; }
+{ return istrncmp(a1.data(),a1.length(),a2.data(), a2.length()) > 0; }
 inline bool operator>(const iByteArray &a1, const char *a2)
-{ return istrcmp(a1, a2) > 0; }
+{ return istrcmp(a1.data(), a2) > 0; }
 inline bool operator>(const char *a1, const iByteArray &a2)
-{ return istrcmp(a1, a2) > 0; }
+{ return istrcmp(a1, a2.data()) > 0; }
+
+inline bool operator!=(const iByteArray &a1, const iByteArray &a2)
+{ return !operator==(a1, a2); }
+inline bool operator!=(const iByteArray &a1, const char *a2)
+{ return !operator==(a1, a2); }
+inline bool operator!=(const char *a1, const iByteArray &a2)
+{ return !operator==(a1, a2); }
+inline bool operator<=(const iByteArray &a1, const iByteArray &a2)
+{ return !operator> (a1, a2); }
+inline bool operator<=(const iByteArray &a1, const char *a2)
+{ return !operator> (a1, a2); }
+inline bool operator<=(const char *a1, const iByteArray &a2)
+{ return !operator> (a1, a2); }
 inline bool operator>=(const iByteArray &a1, const iByteArray &a2)
-{ return istrcmp(a1, a2) >= 0; }
+{ return !operator< (a1, a2); }
 inline bool operator>=(const iByteArray &a1, const char *a2)
-{ return istrcmp(a1, a2) >= 0; }
+{ return !operator< (a1, a2); }
 inline bool operator>=(const char *a1, const iByteArray &a2)
-{ return istrcmp(a1, a2) >= 0; }
+{ return !operator< (a1, a2); }
 inline const iByteArray operator+(const iByteArray &a1, const iByteArray &a2)
 { return iByteArray(a1) += a2; }
 inline const iByteArray operator+(const iByteArray &a1, const char *a2)
@@ -487,15 +413,6 @@ inline const iByteArray operator+(const char *a1, const iByteArray &a2)
 { return iByteArray(a1) += a2; }
 inline const iByteArray operator+(char a1, const iByteArray &a2)
 { return iByteArray(&a1, 1) += a2; }
-inline bool iByteArray::contains(const char *c) const
-{ return indexOf(c) != -1; }
-inline iByteArray &iByteArray::replace(char before, const char *c)
-{ return replace(&before, 1, c, istrlen(c)); }
-inline iByteArray &iByteArray::replace(const iByteArray &before, const char *c)
-{ return replace(before.constData(), before.size(), c, istrlen(c)); }
-inline iByteArray &iByteArray::replace(const char *before, const char *after)
-{ return replace(before, istrlen(before), after, istrlen(after)); }
-
 inline iByteArray &iByteArray::setNum(short n, int base)
 { return base == 10 ? setNum(xint64(n), base) : setNum(xuint64(ushort(n)), base); }
 inline iByteArray &iByteArray::setNum(ushort n, int base)
@@ -512,6 +429,18 @@ inline std::string iByteArray::toStdString() const
 
 inline iByteArray iByteArray::fromStdString(const std::string &s)
 { return iByteArray(s.data(), int(s.size())); }
+
+//
+// iByteArrayView members that require iByteArray:
+//
+inline iByteArrayView::iByteArrayView(const iByteArray &ba)
+    : iByteArrayView(ba.begin(), ba.size())
+{}
+
+inline iByteArray iByteArrayView::toByteArray() const
+{
+    return iByteArray(*this);
+}
 
 } // namespace iShell
 

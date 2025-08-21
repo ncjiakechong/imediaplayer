@@ -156,21 +156,6 @@ void iByteArrayMatcher::setPattern(const iByteArray &pattern)
 }
 
 /*!
-    Searches the byte array \a ba, from byte position \a from (default
-    0, i.e. from the first byte), for the byte array pattern() that
-    was set in the constructor or in the most recent call to
-    setPattern(). Returns the position where the pattern() matched in
-    \a ba, or -1 if no match was found.
-*/
-xsizetype iByteArrayMatcher::indexIn(const iByteArray &ba, xsizetype from) const
-{
-    if (from < 0)
-        from = 0;
-    return bm_find(reinterpret_cast<const uchar *>(ba.constData()), ba.size(), from,
-                   p.p, p.l, p.ix_skiptable);
-}
-
-/*!
     Searches the char string \a str, which has length \a len, from
     byte position \a from (default 0, i.e. from the first byte), for
     the byte array pattern() that was set in the constructor or in the

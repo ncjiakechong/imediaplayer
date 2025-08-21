@@ -43,11 +43,33 @@ inline int fromHex(uint c)
            /* otherwise */              -1;
 }
 
+inline bool isOctalDigit(char32_t c)
+{ return c >= '0' && c <= '7'; }
+
 inline char toOct(uint value)
 { return char('0' + (value & 0x7)); }
 
 inline int fromOct(uint c)
 { return ((c >= '0') && (c <= '7')) ? int(c - '0') : -1; }
+
+inline bool isAsciiDigit(char32_t c)
+{ return c >= '0' && c <= '9'; }
+
+inline bool isAsciiUpper(char32_t c)
+{ return c >= 'A' && c <= 'Z'; }
+
+inline bool isAsciiLower(char32_t c)
+{ return c >= 'a' && c <= 'z'; }
+
+inline bool isAsciiLetterOrNumber(char32_t c)
+{ return  isAsciiDigit(c) || isAsciiLower(c) || isAsciiUpper(c); }
+
+inline char toAsciiLower(char ch)
+{ return isAsciiUpper(ch) ? ch - 'A' + 'a' : ch; }
+
+inline char toAsciiUpper(char ch)
+{ return isAsciiLower(ch) ? ch - 'a' + 'A' : ch; }
+
 }
 
 // We typically need an extra bit for iNextPowerOfTwo when determining the next allocation size.
@@ -59,6 +81,14 @@ enum {
     // Define as enum to force inlining. Don't expose MaxAllocSize in a public header.
     MaxByteArraySize = MaxAllocSize - sizeof(std::remove_pointer<iByteArray::DataPointer>::type)
 };
+
+/*!
+  Returns whether \a p is within a range [b, e). In simplest form equivalent to:
+  b <= p < e.
+*/
+template <typename T, typename Cmp = std::less<const T *>>
+static bool ix_points_into_range(const T *p, const T *b, const T *e, Cmp less = {})
+{ return !less(p, b) && less(p, e); }
 
 xuint32 foldCase(const xuint16 *ch, const xuint16 *start);
 xuint32 foldCase(xuint32 ch, xuint32 &last);
@@ -79,6 +109,13 @@ inline void* ix_page_align_ptr (const void *p) { return (void*) (((size_t) p) & 
 inline size_t ix_page_align(size_t l) {
     size_t page_size = ix_page_size();
     return (l + page_size - 1) & ~(page_size - 1);
+}
+
+inline int ix_lencmp(xsizetype lhs, xsizetype rhs)
+{
+    return lhs == rhs ? 0 :
+           lhs >  rhs ? 1 :
+           /* else */  -1 ;
 }
 
 } // namespace iShell

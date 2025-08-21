@@ -320,22 +320,22 @@ namespace iShell {
 
     \sa atEnd(), read()
 */
-iIODevice::iMBQueueRef::iMBQueueRef() : m_buf(IX_NULLPTR) 
+iIODevice::iMBQueueRef::iMBQueueRef() : m_buf(IX_NULLPTR)
 {}
 
-iIODevice::iMBQueueRef::~iMBQueueRef() 
+iIODevice::iMBQueueRef::~iMBQueueRef()
 {}
 
-xint64 iIODevice::iMBQueueRef::nextDataBlockSize() const 
+xint64 iIODevice::iMBQueueRef::nextDataBlockSize() const
 { return (m_buf ? m_buf->length() : IX_INT64_C(0)); }
 
-void iIODevice::iMBQueueRef::free(xint64 bytes) 
+void iIODevice::iMBQueueRef::free(xint64 bytes)
 { IX_ASSERT(m_buf); m_buf->drop(bytes); }
 
-bool iIODevice::iMBQueueRef::isEmpty() const 
+bool iIODevice::iMBQueueRef::isEmpty() const
 { return !m_buf || m_buf->isEmpty(); }
 
-int iIODevice::iMBQueueRef::getChar() 
+int iIODevice::iMBQueueRef::getChar()
 {
     iByteArray tchunk;
     if (!m_buf || (m_buf->peek(tchunk) < 0))
@@ -346,19 +346,19 @@ int iIODevice::iMBQueueRef::getChar()
 
     return ret;
 }
-void iIODevice::iMBQueueRef::putChar(char c) 
-{ 
+void iIODevice::iMBQueueRef::putChar(char c)
+{
     IX_ASSERT(m_buf);
     m_buf->pushAlign(iByteArray(1, c));
 }
 
-xint64 iIODevice::iMBQueueRef::size() const 
+xint64 iIODevice::iMBQueueRef::size() const
 { return (m_buf ? m_buf->length() : IX_INT64_C(0)); }
 
-void iIODevice::iMBQueueRef::clear() 
+void iIODevice::iMBQueueRef::clear()
 { if (m_buf) m_buf->flushWrite(false); }
 
-xint64 iIODevice::iMBQueueRef::indexOf(char c) const 
+xint64 iIODevice::iMBQueueRef::indexOf(char c) const
 { return indexOf(c, m_buf->length()); }
 
 struct _IndexOfData {
@@ -385,7 +385,7 @@ static bool _IndexofFunc(const iByteArray& chunk, xint64 pos, xint64 distance, v
     return true;
 }
 
-xint64 iIODevice::iMBQueueRef::indexOf(char c, xint64 maxLength, xint64 offset) const 
+xint64 iIODevice::iMBQueueRef::indexOf(char c, xint64 maxLength, xint64 offset) const
 {
     _IndexOfData userdata = {c, -1, offset, maxLength};
     m_buf->peekIterator(_IndexofFunc, &userdata);
@@ -434,7 +434,7 @@ static bool _PeekMaxFunc(const iByteArray& chunk, xint64, xint64 distance, void*
     return false;
 }
 
-iByteArray iIODevice::iMBQueueRef::peek(xint64 maxLength, xint64 offset) const 
+iByteArray iIODevice::iMBQueueRef::peek(xint64 maxLength, xint64 offset) const
 {
     if (!m_buf)
         return iByteArray();
@@ -452,10 +452,10 @@ void iIODevice::iMBQueueRef::append(const iByteArray& chunk)
     m_buf->pushAlign(chunk);
 }
 
-xint64 iIODevice::iMBQueueRef::skip(xint64 length) 
+xint64 iIODevice::iMBQueueRef::skip(xint64 length)
 { return (m_buf ? m_buf->drop(length) : IX_INT64_C(0)); }
 
-iByteArray iIODevice::iMBQueueRef::readLine(xint64 maxLength) 
+iByteArray iIODevice::iMBQueueRef::readLine(xint64 maxLength)
 {
     IX_ASSERT(maxLength > 1);
 
@@ -479,7 +479,6 @@ iByteArray iIODevice::iMBQueueRef::readLine(xint64 maxLength)
         if (result.length() >= maxLength || result.length() >= idx)
             break;
     }
-    
 
     // Terminate it.
     if (result.length() >= idx)
@@ -487,9 +486,9 @@ iByteArray iIODevice::iMBQueueRef::readLine(xint64 maxLength)
     return result;
 }
 
-bool iIODevice::iMBQueueRef::canReadLine() const 
+bool iIODevice::iMBQueueRef::canReadLine() const
 { return indexOf('\n') >= 0; }
-        
+
 /*!
     Constructs a iIODevice object.
 */
@@ -622,7 +621,7 @@ void iIODevice::setReadChannelCount(int count)
     int distance = std::abs(count - (int)m_readBuffers.size());
     for (int idx = 0; idx < distance; ++idx) {
         if (count > m_readBuffers.size()) {
-            m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceRead"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
+            m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1StringView("iodeviceRead"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
         } else {
             std::unordered_map<int, iMemBlockQueue*>::iterator it = m_readBuffers.find(count + distance - idx - 1);
             IX_ASSERT(it != m_readBuffers.end());
@@ -655,7 +654,7 @@ void iIODevice::setWriteChannelCount(int count)
     int distance = std::abs(count - (int)m_writeBuffers.size());
     for (int idx = 0; idx < distance; ++idx) {
         if (count > m_writeBuffers.size()) {
-            m_writeBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1String("iodeviceWrite"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
+            m_writeBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1StringView("iodeviceWrite"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
         } else {
             std::unordered_map<int, iMemBlockQueue*>::iterator it = m_writeBuffers.find(count + distance - idx - 1);
             IX_ASSERT(it != m_writeBuffers.end());
@@ -1620,7 +1619,7 @@ void iIODevice::setErrorString(const iString &str)
 iString iIODevice::errorString() const
 {
     if (m_errorString.isEmpty()) {
-        return iLatin1String("Unknown error");
+        return iLatin1StringView("Unknown error");
     }
     return m_errorString;
 }

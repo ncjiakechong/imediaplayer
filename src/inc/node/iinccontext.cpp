@@ -14,7 +14,7 @@
 namespace iShell {
 
 iINCContext::iINCContext(const iStringView& name, iINCEngine *engine, iObject *parent)
-    : iObject(parent) 
+    : iObject(parent)
     , m_engine(engine)
 {
     IX_ASSERT(IX_NULLPTR != engine);
@@ -22,6 +22,13 @@ iINCContext::iINCContext(const iStringView& name, iINCEngine *engine, iObject *p
 }
 
 iINCContext::~iINCContext()
-{}
+{
+
+}
+
+int iINCContext::connect(const iStringView& url)
+{
+    return 0;
+}
 
 } // namespace iShell

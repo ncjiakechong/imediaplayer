@@ -20,6 +20,8 @@ class iByteArrayMatcher
 public:
     iByteArrayMatcher();
     explicit iByteArrayMatcher(const iByteArray &pattern);
+    explicit iByteArrayMatcher(iByteArrayView pattern)
+        : iByteArrayMatcher(pattern.data(), pattern.size()) {}
     explicit iByteArrayMatcher(const char *pattern, xsizetype length);
     iByteArrayMatcher(const iByteArrayMatcher &other);
     ~iByteArrayMatcher();
@@ -28,7 +30,10 @@ public:
 
     void setPattern(const iByteArray &pattern);
 
-    xsizetype indexIn(const iByteArray &ba, xsizetype from = 0) const;
+    xsizetype indexIn(const iByteArray &ba, xsizetype from = 0) const
+    { return indexIn(ba.data(), ba.size(), from); }
+    xsizetype indexIn(iByteArrayView bv, xsizetype from = 0) const
+    { return indexIn(bv.data(), bv.size(), from); }
     xsizetype indexIn(const char *str, xsizetype len, xsizetype from = 0) const;
     inline iByteArray pattern() const {
         if (ix_pattern.isNull())

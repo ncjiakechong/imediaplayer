@@ -119,7 +119,7 @@ protected:
     inline iFreeListBase(int size)
         : /*_v{},*/ _stored(ConstantsType::MaxIndex)
         , _empty(ConstantsType::InitialNextValue)
-        , _maxIndex((size <= 0) ? ConstantsType::MaxIndex : std::min<int>(std::max(ConstantsType::InitialNextValue + 1, ConstantsType::InitialNextValue + size), ConstantsType::MaxIndex)) 
+        , _maxIndex((size <= 0) ? ConstantsType::MaxIndex : std::min<int>(std::max(ConstantsType::InitialNextValue + 1, ConstantsType::InitialNextValue + size), ConstantsType::MaxIndex))
     {}
 
     inline ~iFreeListBase() {
@@ -140,13 +140,13 @@ protected:
 
     // the max index for blocks
     const int _maxIndex;
-}; 
+};
 
 /*!
-    This is a generic implementation of a lock-free free list. 
-    Mode 1: Use next() to get the next free entry in the list, 
+    This is a generic implementation of a lock-free free list.
+    Mode 1: Use next() to get the next free entry in the list,
             and release(id) when done with the id.
-    Mode 2: Use push() to save an item to free entry in the list, 
+    Mode 2: Use push() to save an item to free entry in the list,
             and pop() to restore the item.
 
     This version is templated and allows having a payload of type T which can
@@ -179,13 +179,13 @@ public:
     }
 
     // returns the payload for the given index \a x
-    inline typename ParentType::ConstReferenceType at(int x) const 
+    inline typename ParentType::ConstReferenceType at(int x) const
     { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
-    inline typename ParentType::ReferenceType operator[](int x) 
+    inline typename ParentType::ReferenceType operator[](int x)
     { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
 
     /*
-        Mode 1: 
+        Mode 1:
         Return the next free id. Use this id to access the payload (see above).
         Call release(id) when done using the id.
     */
@@ -196,7 +196,7 @@ public:
     inline void release(int id) { this->release4list(this->_empty, id); }
 
     /*
-        Mode 2: 
+        Mode 2:
         cache value for free list
         Please note that this routine might fail!
     */
@@ -217,7 +217,7 @@ public:
         int id = this->next4list(this->_stored, false);
         if (id < ConstantsType::InitialNextValue)
             return defaultValue;
-        
+
         this->release4list(this->_empty, id);
         const int block = this->blockfor(id);
 
@@ -235,9 +235,9 @@ public:
     inline ~iFreeList() {}
 
     // returns the payload for the given index \a x
-    inline typename ParentType::ConstReferenceType at(int x) const 
+    inline typename ParentType::ConstReferenceType at(int x) const
         { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
-    inline typename ParentType::ReferenceType operator[](int x) 
+    inline typename ParentType::ReferenceType operator[](int x)
         { const int block = this->blockfor(x); IX_ASSERT(block >= 0); return (this->_v[block].load())[x].t(); }
 
     /*

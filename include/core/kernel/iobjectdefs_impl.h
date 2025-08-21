@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iobjectdefs_impl.h
-/// @brief   provides implementation details and helper classes 
+/// @brief   provides implementation details and helper classes
 ///          for the iObject signal/slot mechanism and property system
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -1797,7 +1797,7 @@ class _iConnectionHelper : public _iConnection
         this->_isArgAdapter = other._isArgAdapter;
         this->setSignal(other._sender, other._signal);
     }
-    
+
 public:
     _iConnectionHelper(const iObject* sender, SignalFunc signal, bool signalValid, const SlotObject* slotObj, SlotFunc slot, bool slotValid, ConnectionType type)
         : _iConnection(&impl, type, (signalValid ? sizeof(SignalFunc) : 0), (slotValid ? sizeof(SlotFunc) : 0))
@@ -1983,8 +1983,8 @@ public:
     iObject *cast(iObject *obj) const;
     const iObject *cast(const iObject *obj) const;
 
-    void setProperty(const std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> &ppt);
-    const _iProperty* property(const iLatin1String& name) const;
+    void setProperty(const std::unordered_map<iLatin1StringView, iSharedPtr<_iProperty>, iKeyHashFunc> &ppt);
+    const _iProperty* property(const iLatin1StringView& name) const;
     bool isPropertyReady() const { return (m_propertyCandidate || m_propertyInited); }
 
 private:
@@ -1992,7 +1992,7 @@ private:
     bool m_propertyInited : 1;    // hack for init property phase 2
     const char* m_className;
     const iMetaObject* m_superdata;
-    std::unordered_map<iLatin1String, iSharedPtr<_iProperty>, iKeyHashFunc> m_property;
+    std::unordered_map<iLatin1StringView, iSharedPtr<_iProperty>, iKeyHashFunc> m_property;
 };
 
 } // namespace iShell
@@ -2007,7 +2007,7 @@ public:                                                                         
     virtual const iShell::iMetaObject *metaObject() const {                                                                \
         static iShell::iMetaObject staticMetaObject = iShell::iMetaObject(# TYPE, IX_BaseType::metaObject());              \
         if (!staticMetaObject.isPropertyReady()) {                                                                         \
-            std::unordered_map<iShell::iLatin1String, iShell::iSharedPtr< iShell::_iProperty >, iShell::iKeyHashFunc> ppt; \
+            std::unordered_map<iShell::iLatin1StringView, iShell::iSharedPtr< iShell::_iProperty >, iShell::iKeyHashFunc> ppt; \
             staticMetaObject.setProperty(ppt);                                                                             \
             IX_ThisType::initProperty(&staticMetaObject);                                                                  \
             staticMetaObject.setProperty(ppt);                                                                             \
@@ -2026,12 +2026,12 @@ private:
         if (_mobj != mobj)                                                                                        \
             return;                                                                                               \
                                                                                                                   \
-        std::unordered_map<iShell::iLatin1String, iSharedPtr< iShell::_iProperty >, iShell::iKeyHashFunc> pptImp;
+        std::unordered_map<iShell::iLatin1StringView, iSharedPtr< iShell::_iProperty >, iShell::iKeyHashFunc> pptImp;
 
 #define IPROPERTY_ITEM(NAME, ...) IPROPERTY_ITEM2(NAME, __VA_ARGS__)
 #define IPROPERTY_ITEM2(NAME, ...)                                                                                     \
-        pptImp.insert(std::pair< iShell::iLatin1String, iShell::iSharedPtr< iShell::_iProperty > >(                    \
-                    iShell::iLatin1String(NAME), iShell::iSharedPtr< iShell::_iProperty >(newProperty(__VA_ARGS__))));
+        pptImp.insert(std::pair< iShell::iLatin1StringView, iShell::iSharedPtr< iShell::_iProperty > >(                    \
+                    iShell::iLatin1StringView(NAME), iShell::iSharedPtr< iShell::_iProperty >(newProperty(__VA_ARGS__))));
 
 #define IPROPERTY_END              \
         mobj->setProperty(pptImp); \

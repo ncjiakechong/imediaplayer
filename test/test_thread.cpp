@@ -46,7 +46,7 @@ public:
         } else {
             ilog_debug("test_thread: [", iThread::currentThreadId(), "] tst_slot_int1_block new ", arg);
         }
-        
+
         acount = arg;
         sender_obj = sender();
         slot.setLocalData(arg);

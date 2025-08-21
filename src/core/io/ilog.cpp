@@ -132,7 +132,7 @@ iLogTarget iLogger::s_target = {IX_NULLPTR, &ilog_default_set_threshold, &ilog_d
 iLogTarget iLogger::setDefaultTarget(const iLogTarget& target)
 {
     iLogTarget oldTarget = s_target;
-    
+
     if (!target.setThreshold || !target.filter || !target.metaCallback || !target.dataCallback) {
         s_target.user_data = IX_NULLPTR;
         s_target.filter = &ilog_default_filter;
@@ -441,6 +441,11 @@ void iLogger::append(const iStringView& value)
     m_buff.append(tmpValue.data(), tmpValue.size());
 }
 
+void iLogger::append(const iLatin1StringView& value)
+{
+    m_buff.append(value.data(), value.size());
+}
+
 void iLogger::append(const char* value)
 {
     m_buff.append(value);
@@ -611,6 +616,12 @@ iLogger& operator<<(iLogger& logger, const iString& value)
 }
 
 iLogger& operator<<(iLogger& logger, const iStringView& value)
+{
+    logger.append(value);
+    return logger;
+}
+
+iLogger& operator<<(iLogger& logger, const iLatin1StringView& value)
 {
     logger.append(value);
     return logger;

@@ -2,13 +2,13 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iutfcodec_p.h
-/// @brief   It is a private header file for iUtfCodec
+/// @file    istringconverter_p.h
+/// @brief   provides a base class for encoding and decoding text
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
-#ifndef IUTFCODEC_P_H
-#define IUTFCODEC_P_H
+#ifndef ISTRINGCONVERTER_P_H
+#define ISTRINGCONVERTER_P_H
 
 //
 //  W A R N I N G
@@ -22,9 +22,35 @@
 //
 
 #include <core/utils/istring.h>
-#include "codecs/itextcodec_p.h"
+#include <core/global/iendian.h>
+#include <core/utils/istringconverter.h>
+#include <core/utils/ibytearray.h>
 
 namespace iShell {
+
+enum xchar8_t : uchar {};
+
+struct iLatin1
+{
+    static xuint16 *convertToUnicode(xuint16 *dst, iLatin1StringView in);
+
+    static iChar *convertToUnicode(iChar *buffer, iLatin1StringView in)
+    {
+        xuint16 *dst = reinterpret_cast<xuint16 *>(buffer);
+        dst = convertToUnicode(dst, in);
+        return reinterpret_cast<iChar *>(dst);
+    }
+
+    static iChar *convertToUnicode(iChar *dst, iByteArrayView in, iStringConverter::State *state)
+    {
+        IX_ASSERT(state);
+        return convertToUnicode(dst, iLatin1StringView(in.data(), in.size()));
+    }
+
+    static char *convertFromUnicode(char *out, iStringView in, iStringConverter::State *state);
+
+    static char *convertFromUnicode(char *out, iStringView in);
+};
 
 struct iUtf8BaseTraits
 {
@@ -34,23 +60,41 @@ struct iUtf8BaseTraits
     static const int Error = -1;
     static const int EndOfString = -2;
 
-    static bool isValidCharacter(xuint32 u)
-    { return int(u) >= 0; }
-
     static void appendByte(uchar *&ptr, uchar b)
     { *ptr++ = b; }
 
-    static uchar peekByte(const uchar *ptr, int n = 0)
+    static void appendByte(xchar8_t *&ptr, xchar8_t b)
+    { *ptr++ = b; }
+
+    static uchar peekByte(const char *ptr, xsizetype n = 0)
     { return ptr[n]; }
+
+    static uchar peekByte(const uchar *ptr, xsizetype n = 0)
+    { return ptr[n]; }
+
+    static uchar peekByte(const xchar8_t *ptr, xsizetype n = 0)
+    { return ptr[n]; }
+
+    static xptrdiff availableBytes(const char *ptr, const char *end)
+    { return end - ptr; }
 
     static xptrdiff availableBytes(const uchar *ptr, const uchar *end)
     { return end - ptr; }
 
-    static void advanceByte(const uchar *&ptr, int n = 1)
+    static xptrdiff availableBytes(const xchar8_t *ptr, const xchar8_t *end)
+    { return end - ptr; }
+
+    static void advanceByte(const char *&ptr, xsizetype n = 1)
+    { ptr += n; }
+
+    static void advanceByte(const uchar *&ptr, xsizetype n = 1)
+    { ptr += n; }
+
+    static void advanceByte(const xchar8_t *&ptr, xsizetype n = 1)
     { ptr += n; }
 
     static void appendUtf16(xuint16 *&ptr, xuint16 uc)
-    { *ptr++ = uc; }
+    { *ptr++ = xuint16(uc); }
 
     static void appendUcs4(xuint16 *&ptr, xuint32 uc)
     {
@@ -58,18 +102,15 @@ struct iUtf8BaseTraits
         appendUtf16(ptr, iChar::lowSurrogate(uc));
     }
 
-    static xuint16 peekUtf16(const xuint16 *ptr, int n = 0)
-    { return ptr[n]; }
+    static xuint16 peekUtf16(const xuint16 *ptr, xsizetype n = 0) { return ptr[n]; }
 
     static xptrdiff availableUtf16(const xuint16 *ptr, const xuint16 *end)
     { return end - ptr; }
 
-    static void advanceUtf16(const xuint16 *&ptr, int n = 1)
-    { ptr += n; }
+    static void advanceUtf16(const xuint16 *&ptr, xsizetype n = 1) { ptr += n; }
 
-    // it's possible to output to UCS-4 too
     static void appendUtf16(xuint32 *&ptr, xuint16 uc)
-    { *ptr++ = uc; }
+    { *ptr++ = xuint32(uc); }
 
     static void appendUcs4(xuint32 *&ptr, xuint32 uc)
     { *ptr++ = uc; }
@@ -252,32 +293,75 @@ enum DataEndianness
 
 struct iUtf8
 {
-    static iChar *convertToUnicode(iChar *, const char *, xsizetype);
-    static iString convertToUnicode(const char *, xsizetype);
-    static iString convertToUnicode(const char *, xsizetype, iTextCodec::ConverterState *);
-    static iByteArray convertFromUnicode(const iChar *, xsizetype);
-    static iByteArray convertFromUnicode(const iChar *, xsizetype, iTextCodec::ConverterState *);
+    static iChar *convertToUnicode(iChar *buffer, iByteArrayView in)
+    {
+        xuint16 *dst = reinterpret_cast<xuint16 *>(buffer);
+        dst = iUtf8::convertToUnicode(dst, in);
+        return reinterpret_cast<iChar *>(dst);
+    }
+
+    static xuint16* convertToUnicode(xuint16 *dst, iByteArrayView in);
+    static iString convertToUnicode(iByteArrayView in);
+    static iString convertToUnicode(iByteArrayView in, iStringConverter::State *state);
+
+    static iChar *convertToUnicode(iChar *out, iByteArrayView in, iStringConverter::State *state)
+    {
+        xuint16 *buffer = reinterpret_cast<xuint16 *>(out);
+        buffer = convertToUnicode(buffer, in, state);
+        return reinterpret_cast<iChar *>(buffer);
+    }
+
+    static xuint16 *convertToUnicode(xuint16 *dst, iByteArrayView in, iStringConverter::State *state);
+
+    static char *convertFromUnicode(char *dst, iStringView in);
+    static iByteArray convertFromUnicode(iStringView in);
+    static iByteArray convertFromUnicode(iStringView in, iStringConverter::State *state);
+    static char *convertFromUnicode(char *out, iStringView in, iStringConverter::State *state);
+    static char *convertFromLatin1(char *out, iLatin1StringView in);
     struct ValidUtf8Result {
         bool isValidUtf8;
         bool isValidAscii;
     };
-    static ValidUtf8Result isValidUtf8(const char *, xsizetype);
-    static int compareUtf8(const char *, xsizetype, const iChar *, xsizetype);
-    static int compareUtf8(const char *, xsizetype, iLatin1String s);
+    static ValidUtf8Result isValidUtf8(iByteArrayView in);
+    static int compareUtf8(iByteArrayView utf8, iStringView utf16,
+                           iShell::CaseSensitivity cs = iShell::CaseSensitive);
+    static int compareUtf8(iByteArrayView utf8, iLatin1StringView s,
+                           iShell::CaseSensitivity cs = iShell::CaseSensitive);
+    static int compareUtf8(iByteArrayView lhs, iByteArrayView rhs,
+                           iShell::CaseSensitivity cs = iShell::CaseSensitive);
+
+private:
+    template <typename OnErrorLambda>
+    static char* convertFromUnicode(char *out, iStringView in, OnErrorLambda &&onError);
+    template <typename OnErrorLambda>
+    static xuint16* convertToUnicode(xuint16 *dst, iByteArrayView in, OnErrorLambda &&onError);
 };
 
 struct iUtf16
 {
-    static iString convertToUnicode(const char *, xsizetype, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
-    static iByteArray convertFromUnicode(const iChar *, xsizetype, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
+    static iString convertToUnicode(iByteArrayView, iStringConverter::State *, DataEndianness = DetectEndianness);
+    static iChar *convertToUnicode(iChar *out, iByteArrayView, iStringConverter::State *state, DataEndianness endian);
+    static iByteArray convertFromUnicode(iStringView, iStringConverter::State *, DataEndianness = DetectEndianness);
+    static char *convertFromUnicode(char *out, iStringView in, iStringConverter::State *state, DataEndianness endian);
 };
 
 struct iUtf32
 {
-    static iString convertToUnicode(const char *, xsizetype, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
-    static iByteArray convertFromUnicode(const iChar *, xsizetype, iTextCodec::ConverterState *, DataEndianness = DetectEndianness);
+    static iChar *convertToUnicode(iChar *out, iByteArrayView, iStringConverter::State *state, DataEndianness endian);
+    static iString convertToUnicode(iByteArrayView, iStringConverter::State *, DataEndianness = DetectEndianness);
+    static iByteArray convertFromUnicode(iStringView, iStringConverter::State *, DataEndianness = DetectEndianness);
+    static char *convertFromUnicode(char *out, iStringView in, iStringConverter::State *state, DataEndianness endian);
+};
+
+
+struct iLocal8Bit
+{
+    static iString convertToUnicode(iByteArrayView in, iStringConverter::State *state)
+    { return iUtf8::convertToUnicode(in, state); }
+    static iByteArray convertFromUnicode(iStringView in, iStringConverter::State *state)
+    { return iUtf8::convertFromUnicode(in, state); }
 };
 
 } // namespace iShell
 
-#endif // IUTFCODEC_P_H
+#endif // ISTRINGCONVERTER_P_H

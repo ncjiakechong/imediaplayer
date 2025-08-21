@@ -11,7 +11,7 @@
 #include "core/kernel/icoreapplication.h"
 #include "core/thread/ithreadstorage.h"
 #include "core/thread/ithread.h"
-#include "core/kernel/ievent.h" 
+#include "core/kernel/ievent.h"
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 #include "thread/ieventdispatcher_generic.h"
@@ -76,7 +76,7 @@ iAdoptedThread::~iAdoptedThread()
 {
 }
 
-void ix_watch_adopted_thread(const HANDLE adoptedThreadHandle, iThreadData *qthread);
+void ix_watch_adopted_thread(const HANDLE adoptedThreadHandle, iThreadData *xthread);
 DWORD WINAPI ix_adopted_thread_watcher_function(LPVOID);
 
 // Utility functions for getting, setting and clearing thread specific data.
@@ -134,7 +134,7 @@ static HANDLE ix_adopted_thread_wakeup = IX_NULLPTR;
     the thread data is properly cleaned up. This function starts the watcher
     thread if necessary.
 */
-void ix_watch_adopted_thread(const HANDLE adoptedThreadHandle, iThreadData *qthread)
+void ix_watch_adopted_thread(const HANDLE adoptedThreadHandle, iThreadData *xthread)
 {
     iScopedLock<iMutex> lock(ix_adopted_thread_watcher_mutex);
 
@@ -144,7 +144,7 @@ void ix_watch_adopted_thread(const HANDLE adoptedThreadHandle, iThreadData *qthr
     }
 
     ix_adopted_thread_handles.push_back(adoptedThreadHandle);
-    ix_adopted_ithreads.push_back(qthread);
+    ix_adopted_ithreads.push_back(xthread);
 
     // Start watcher thread if it is not already running.
     if (ix_adopted_thread_watcher_id == 0) {

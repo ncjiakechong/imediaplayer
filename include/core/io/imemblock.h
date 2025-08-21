@@ -4,8 +4,8 @@
 /////////////////////////////////////////////////////////////////
 /// @file    imemblock.h
 /// @brief   defines a memory management subsystem
-/// @details centered around the concepts of memory blocks, memory pools, and shared memory. 
-///          It provides classes for allocating, managing, and sharing memory 
+/// @details centered around the concepts of memory blocks, memory pools, and shared memory.
+///          It provides classes for allocating, managing, and sharing memory
 ///          between different parts of an application or even different processes.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -49,7 +49,7 @@ public:
  * A memblock is a reference counted memory block. PulseAudio
  * passes references to memblocks around instead of copying
  * data. See memchunk for a structure that describes parts of
- * memory blocks. 
+ * memory blocks.
  */
 class IX_CORE_EXPORT iMemBlock : public iSharedData
 {
@@ -62,7 +62,7 @@ public:
         GrowsBackwards       = 0x4   //!< allocate with eyes towards growing through prepend()
     };
 	typedef uint ArrayOptions;
-    
+
     /// Allocate a new memory block of type PMEMBLOCK_MEMPOOL or MEMBLOCK_APPENDED, depending on the size */
     static iMemBlock* newOne(iMemPool* pool, size_t elementCount, size_t elementSize = 1, size_t alignment = 0, ArrayOptions options = DefaultAllocationFlags);
 

@@ -3,7 +3,7 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iaupdate.cpp
-/// @brief   provides a mechanism for lock-free updates of arbitrary data structures, 
+/// @brief   provides a mechanism for lock-free updates of arbitrary data structures,
 ///          similar to Read-Copy-Update (RCU)
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
@@ -23,10 +23,10 @@ iAUpdate::iAUpdate()
     , m_semaphore(0)
 {}
 
-iAUpdate::~iAUpdate() 
+iAUpdate::~iAUpdate()
 {}
 
-uint iAUpdate::readBegin() 
+uint iAUpdate::readBegin()
 {
     /* Increase the lock counter */
     int n = ++m_readLock;
@@ -39,7 +39,7 @@ uint iAUpdate::readBegin()
     return WHICH(n);
 }
 
-void iAUpdate::readEnd() 
+void iAUpdate::readEnd()
 {
     /* Decrease the lock counter */
     int n = --m_readLock;
@@ -51,7 +51,7 @@ void iAUpdate::readEnd()
     m_semaphore.release();
 }
 
-uint iAUpdate::writeBegin() 
+uint iAUpdate::writeBegin()
 {
     m_writeLock.lock();
 
@@ -61,7 +61,7 @@ uint iAUpdate::writeBegin()
     return !WHICH(n);
 }
 
-uint iAUpdate::writeSwap() 
+uint iAUpdate::writeSwap()
 {
     int n = 0;
 
@@ -81,7 +81,7 @@ uint iAUpdate::writeSwap()
     return WHICH(n);
 }
 
-void iAUpdate::writeEnd() 
+void iAUpdate::writeEnd()
 {
     if (!m_swapped)
         writeSwap();
