@@ -23,8 +23,9 @@
 
 #include <core/utils/istring.h>
 #include <core/global/iendian.h>
-#include <core/utils/istringconverter.h>
 #include <core/utils/ibytearray.h>
+
+#include "utils/istringconverter.h"
 
 namespace iShell {
 

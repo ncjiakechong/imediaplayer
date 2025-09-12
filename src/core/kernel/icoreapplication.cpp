@@ -56,7 +56,7 @@ iEventDispatcher* iCoreApplicationPrivate::createEventDispatcher() const
 {
     iEventDispatcher* dispatcher = IX_NULLPTR;
 
-    #ifdef IBUILD_HAVE_GLIB
+    #if 0 // ifdef IBUILD_HAVE_GLIB
     dispatcher = new iEventDispatcher_Glib();
     #else
     dispatcher = new iEventDispatcher_generic();

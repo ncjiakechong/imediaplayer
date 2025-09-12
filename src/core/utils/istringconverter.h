@@ -10,8 +10,8 @@
 #ifndef ISTRINGCONVERTER_H
 #define ISTRINGCONVERTER_H
 
-#include <core/utils/istringconverterbase.h>
 #include <core/utils/istring.h>
+#include "utils/istringconverterbase.h"
 
 namespace iShell {
 

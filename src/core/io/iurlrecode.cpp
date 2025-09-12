@@ -473,8 +473,11 @@ static bool simdCheckNonEncoded(...)
     The input should also be a valid percent-encoded sequence (the output of
     ix_urlRecode is always valid).
 */
-static int decode(iString &appendTo, const xuint16 *begin, const xuint16 *end)
+static xsizetype decode(iString &appendTo, iStringView in)
 {
+    const xuint16 *begin = in.utf16();
+    const xuint16 *end = begin + in.size();
+
     // fast check whether there's anything to be decoded in the first place
     const xuint16 *input = iPrivate::xustrchr(iStringView(begin, end), '%');
     if (input == end)
@@ -516,7 +519,7 @@ static int decode(iString &appendTo, const xuint16 *begin, const xuint16 *end)
         }
     }
 
-    int len = output - reinterpret_cast<xuint16 *>(appendTo.begin());
+    xsizetype len = output - reinterpret_cast<xuint16 *>(appendTo.begin());
     appendTo.truncate(len);
     return len - origSize;
 }
@@ -560,12 +563,11 @@ static void maskTable(uchar (&table)[N], const uchar (&mask)[N])
     meaning "%25" (all percents in the same content).
  */
 
-int ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
-             iUrl::ComponentFormattingOptions encoding, const xuint16 *tableModifications)
+int ix_urlRecode(iString &appendTo, iStringView in, iUrl::ComponentFormattingOptions encoding, const xuint16 *tableModifications)
 {
     uchar actionTable[sizeof defaultActionTable];
     if (encoding == iUrl::FullyDecoded) {
-        return decode(appendTo, reinterpret_cast<const xuint16 *>(begin), reinterpret_cast<const xuint16 *>(end));
+        return decode(appendTo, in);
     }
 
     memcpy(actionTable, defaultActionTable, sizeof actionTable);
@@ -579,52 +581,26 @@ int ix_urlRecode(iString &appendTo, const iChar *begin, const iChar *end,
             actionTable[uchar(*p) - ' '] = *p >> 8;
     }
 
-    return recode(appendTo, reinterpret_cast<const xuint16 *>(begin), reinterpret_cast<const xuint16 *>(end),
+    return recode(appendTo, reinterpret_cast<const xuint16 *>(in.begin()), reinterpret_cast<const xuint16 *>(in.end()),
                   encoding, actionTable, false);
 }
 
-// istring.cpp
-bool ix_is_ascii(const char *&ptr, const char *end);
-
-/*!
-    \a ba contains an 8-bit form of the component and it might be
-    percent-encoded already. We can't use iString::fromUtf8 because it might
-    contain non-UTF8 sequences. We can't use iByteArray::toPercentEncoding
-    because it might already contain percent-encoded sequences. We can't use
-    ix_urlRecode because it needs UTF-16 input.
-*/
-iString ix_urlRecodeByteArray(const iByteArray &ba)
+xsizetype ix_encodeFromUser(iString &appendTo, const iString &in, const xuint16 *tableModifications)
 {
-    if (ba.isNull())
-        return iString();
+    uchar actionTable[sizeof defaultActionTable];
+    memcpy(actionTable, defaultActionTable, sizeof actionTable);
 
-    // scan ba for anything above or equal to 0x80
-    // control points below 0x20 are fine in iString
-    const char *in = ba.constData();
-    const char *const end = ba.constEnd();
-    if (ix_is_ascii(in, end)) {
-        // no non-ASCII found, we're safe to convert to iString
-        return iString::fromLatin1(ba.constData(), ba.size());
+    // Different defaults to the regular encoded-to-encoded recoding
+    actionTable['[' - ' '] = EncodeCharacter;
+    actionTable[']' - ' '] = EncodeCharacter;
+
+    if (tableModifications) {
+        for (const xuint16 *p = tableModifications; *p; ++p)
+            actionTable[uchar(*p) - ' '] = *p >> 8;
     }
 
-    // we found something that we need to encode
-    iByteArray intermediate = ba;
-    intermediate.resize(ba.size() * 3 - (in - ba.constData()));
-    uchar *out = reinterpret_cast<uchar *>(intermediate.data() + (in - ba.constData()));
-    for ( ; in < end; ++in) {
-        if (*in & 0x80) {
-            // encode
-            *out++ = '%';
-            *out++ = encodeNibble(uchar(*in) >> 4);
-            *out++ = encodeNibble(uchar(*in) & 0xf);
-        } else {
-            // keep
-            *out++ = uchar(*in);
-        }
-    }
-
-    // now it's safe to call fromLatin1
-    return iString::fromLatin1(intermediate.constData(), out - reinterpret_cast<uchar *>(intermediate.data()));
+    return recode(appendTo, reinterpret_cast<const xuint16 *>(in.begin()),reinterpret_cast<const xuint16 *>(in.end()),
+                  {}, actionTable, true);
 }
 
 } // namespace iShell

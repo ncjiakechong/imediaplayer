@@ -35,6 +35,13 @@ inline char toHexUpper(uint value)
 inline char toHexLower(uint value)
 { return "0123456789abcdef"[value & 0xF]; }
 
+inline bool isHexDigit(uint c)
+{
+    return (c >= '0' && c <= '9')
+        || (c >= 'A' && c <= 'F')
+        || (c >= 'a' && c <= 'f');
+}
+
 inline int fromHex(uint c)
 {
     return ((c >= '0') && (c <= '9')) ? int(c - '0') :
@@ -43,7 +50,7 @@ inline int fromHex(uint c)
            /* otherwise */              -1;
 }
 
-inline bool isOctalDigit(char32_t c)
+inline bool isOctalDigit(uint c)
 { return c >= '0' && c <= '7'; }
 
 inline char toOct(uint value)
@@ -52,16 +59,16 @@ inline char toOct(uint value)
 inline int fromOct(uint c)
 { return ((c >= '0') && (c <= '7')) ? int(c - '0') : -1; }
 
-inline bool isAsciiDigit(char32_t c)
+inline bool isAsciiDigit(uint c)
 { return c >= '0' && c <= '9'; }
 
-inline bool isAsciiUpper(char32_t c)
+inline bool isAsciiUpper(uint c)
 { return c >= 'A' && c <= 'Z'; }
 
-inline bool isAsciiLower(char32_t c)
+inline bool isAsciiLower(uint c)
 { return c >= 'a' && c <= 'z'; }
 
-inline bool isAsciiLetterOrNumber(char32_t c)
+inline bool isAsciiLetterOrNumber(uint c)
 { return  isAsciiDigit(c) || isAsciiLower(c) || isAsciiUpper(c); }
 
 inline char toAsciiLower(char ch)

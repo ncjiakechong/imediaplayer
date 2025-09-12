@@ -206,7 +206,7 @@ xsizetype iLatin1StringMatcher::indexIn_helper(String haystack, xsizetype from) 
 {
     if (m_pattern.isEmpty() && from == haystack.size())
         return from;
-    if (from < 0) // Historical behavior (see QString::indexOf and co.)
+    if (from < 0) // Historical behavior (see iString::indexOf and co.)
         from += haystack.size();
     if (from >= haystack.size())
         return -1;

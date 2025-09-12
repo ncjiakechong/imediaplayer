@@ -38,8 +38,6 @@ IX_CORE_EXPORT xsizetype count(iByteArrayView haystack, iByteArrayView needle);
 
 IX_CORE_EXPORT int compareMemory(iByteArrayView lhs, iByteArrayView rhs);
 
-IX_CORE_EXPORT iByteArrayView trimmed(iByteArrayView s);
-
 IX_CORE_EXPORT bool isValidUtf8(iByteArrayView s);
 
 } // namespace iPrivate
@@ -48,6 +46,8 @@ IX_CORE_EXPORT bool isValidUtf8(iByteArrayView s);
 /*****************************************************************************
   Safe and portable C string functions; extensions to standard cstring
  *****************************************************************************/
+
+IX_CORE_EXPORT const void *imemrchr(const void *s, int needle, size_t n);
 
 IX_CORE_EXPORT char *istrdup(const char *);
 

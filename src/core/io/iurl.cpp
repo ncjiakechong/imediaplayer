@@ -374,10 +374,13 @@
 #include <core/io/ilog.h>
 #include "iurl_p.h"
 #include "iipaddress_p.h"
+#include "utils/itools_p.h"
 
 #define ILOG_TAG "ix_io"
 
 namespace iShell {
+
+using namespace iMiscUtils;
 
 inline static bool isHex(char c)
 {
@@ -442,6 +445,14 @@ inline void iAtomicDetach(T *&d)
         delete x;
 }
 
+
+enum PathNormalization {
+    DefaultNormalization = 0x00,
+    UrlNormalizationMode = 0x01,
+    RemotePath = 0x02
+};
+typedef uint PathNormalizations;
+bool ix_normalizePathSegments(iString *path, PathNormalizations flags);
 
 class iUrlPrivate
 {
@@ -515,9 +526,9 @@ public:
 
     Error *cloneError() const;
     void clearError();
-    void setError(ErrorCode errorCode, const iString &source, int supplement = -1);
-    ErrorCode validityError(iString *source = IX_NULLPTR, int *position = IX_NULLPTR) const;
-    bool validateComponent(Section section, const iString &input, int begin, int end);
+    void setError(ErrorCode errorCode, const iString &source, xsizetype supplement = -1);
+    ErrorCode validityError(iString *source = IX_NULLPTR, xsizetype *position = IX_NULLPTR) const;
+    bool validateComponent(Section section, const iString &input, xsizetype begin, xsizetype end);
     bool validateComponent(Section section, const iString &input)
     { return validateComponent(section, input, 0, uint(input.length())); }
 
@@ -532,15 +543,32 @@ public:
     void appendFragment(iString &appendTo, iUrl::FormattingOptions options, Section appendingTo) const;
 
     // the "end" parameters are like STL iterators: they point to one past the last valid element
-    bool setScheme(const iString &value, int len, bool doSetError);
-    void setAuthority(const iString &auth, int from, int end, iUrl::ParsingMode mode);
-    void setUserInfo(const iString &userInfo, int from, int end);
-    void setUserName(const iString &value, int from, int end);
-    void setPassword(const iString &value, int from, int end);
-    bool setHost(const iString &value, int from, int end, iUrl::ParsingMode mode);
-    void setPath(const iString &value, int from, int end);
-    void setQuery(const iString &value, int from, int end);
-    void setFragment(const iString &value, int from, int end);
+    bool setScheme(const iString &value, xsizetype len, bool doSetError);
+    void setAuthority(const iString &auth, xsizetype from, xsizetype end, iUrl::ParsingMode mode);
+    void setUserInfo(iStringView userInfo, iUrl::ParsingMode mode);
+    void setUserName(iStringView value, iUrl::ParsingMode mode);
+    void setPassword(iStringView value, iUrl::ParsingMode mode);
+    bool setHost(const iString &value, xsizetype from, xsizetype end, iUrl::ParsingMode mode);
+    void setPath(iStringView value, iUrl::ParsingMode mode);
+    void setQuery(iStringView value, iUrl::ParsingMode mode);
+    void setFragment(iStringView value, iUrl::ParsingMode mode);
+
+    uint presentSections() const
+    {
+        uint s = sectionIsPresent;
+
+        // We have to ignore the host-is-present flag for local files (the
+        // "file" protocol), due to the requirements of the XDG file URI
+        // specification.
+        if (isLocalFile())
+            s &= ~Host;
+
+        // If the password was set, we must have a username too
+        if (s & Password)
+            s |= UserName;
+
+        return s;
+    }
 
     inline bool hasScheme() const { return sectionIsPresent & Scheme; }
     inline bool hasAuthority() const { return sectionIsPresent & Authority; }
@@ -556,7 +584,24 @@ public:
     inline bool isLocalFile() const { return flags & IsLocalFile; }
     iString toLocalFile(iUrl::FormattingOptions options) const;
 
+    bool normalizePathSegments(iString *path) const
+    {
+        PathNormalizations mode = UrlNormalizationMode;
+        if (!isLocalFile())
+            mode |= RemotePath;
+        return ix_normalizePathSegments(path, mode);
+    }
+
     iString mergePaths(const iString &relativePath) const;
+
+    void clear()
+    {
+        clearError();
+        scheme = userName = password = host = path = query = fragment = iString();
+        port = -1;
+        sectionIsPresent = 0;
+        flags = 0;
+    }
 
     iRefCount ref;
     int port;
@@ -585,7 +630,7 @@ public:
 inline iUrlPrivate::iUrlPrivate()
     : ref(1)
     , port(-1)
-    , error(0)
+    , error(IX_NULLPTR)
     , sectionIsPresent(0)
     , flags(0)
 {}
@@ -621,7 +666,7 @@ inline void iUrlPrivate::clearError()
     error = IX_NULLPTR;
 }
 
-inline void iUrlPrivate::setError(ErrorCode errorCode, const iString &source, int supplement)
+inline void iUrlPrivate::setError(ErrorCode errorCode, const iString &source, xsizetype supplement)
 {
     if (error) {
         // don't overwrite an error set in a previous section during parsing
@@ -808,21 +853,26 @@ static const xuint16 * const pathInUrl = userNameInUrl + 5;
 static const xuint16 * const queryInUrl = userNameInUrl + 6;
 static const xuint16 * const fragmentInUrl = userNameInUrl + 6;
 
-static inline void parseDecodedComponent(iString &data)
+static void recodeFromUser(iString &output, const iString &input, const ushort *actions, iUrl::ParsingMode mode)
 {
-    data.replace(iLatin1Char('%'), iLatin1StringView("%25"));
+    output.resize(0);
+    xsizetype appended;
+    if (mode == iUrl::DecodedMode)
+        appended = ix_encodeFromUser(output, input, actions);
+    else
+        appended = ix_urlRecode(output, input, {}, actions);
+    if (!appended)
+        output = input;
 }
 
-static inline iString
-recodeFromUser(const iString &input, const xuint16 *actions, int from, int to)
+static void recodeFromUser(iString &output, const iStringView &input, const ushort *actions, iUrl::ParsingMode mode)
 {
-    iString output;
-    const iChar *begin = input.constData() + from;
-    const iChar *end = input.constData() + to;
-    if (ix_urlRecode(output, begin, end, 0, actions))
-        return output;
-
-    return input.mid(from, to - from);
+    IX_ASSERT_X(mode != iUrl::DecodedMode, "This function should only be called when parsing encoded components");
+    IX_UNUSED(mode);
+    output.resize(0);
+    if (ix_urlRecode(output, input, {}, actions))
+        return;
+    output.append(input);
 }
 
 // appendXXXX functions: copy from the internal form to the external, user form.
@@ -830,13 +880,16 @@ recodeFromUser(const iString &input, const xuint16 *actions, int from, int to)
 static inline void appendToUser(iString &appendTo, const iStringView &value, iUrl::FormattingOptions options,
                                 const xuint16 *actions)
 {
-    if (options == iUrl::PrettyDecoded) {
+    // The stored value is already iUrl::PrettyDecoded, so there's nothing to
+    // do if that's what the user asked for (test only
+    // ComponentFormattingOptions, ignore FormattingOptions).
+    if ((options & 0xFFFF0000) == iUrl::PrettyDecoded ||
+            !ix_urlRecode(appendTo, value, options, actions))
         appendTo += value;
-        return;
-    }
 
-    if (!ix_urlRecode(appendTo, value.data(), value.end(), options, actions))
-        appendTo += value;
+    // copy nullness, if necessary, because iString::operator+=(iStringView) doesn't
+    if (appendTo.isNull() && !value.isNull())
+        appendTo.detach();
 }
 
 inline void iUrlPrivate::appendAuthority(iString &appendTo, iUrl::FormattingOptions options, Section appendingTo) const
@@ -886,13 +939,13 @@ inline void iUrlPrivate::appendUserInfo(iString &appendTo, iUrl::FormattingOptio
         }
     }
 
-    if (!ix_urlRecode(appendTo, userName.constData(), userName.constEnd(), options, userNameActions))
+    if (!ix_urlRecode(appendTo, userName, options, userNameActions))
         appendTo += userName;
     if (options & iUrl::RemovePassword || !hasPassword()) {
         return;
     } else {
         appendTo += iLatin1Char(':');
-        if (!ix_urlRecode(appendTo, password.constData(), password.constEnd(), options, passwordActions))
+        if (!ix_urlRecode(appendTo, password, options, passwordActions))
             appendTo += password;
     }
 }
@@ -902,6 +955,8 @@ inline void iUrlPrivate::appendUserName(iString &appendTo, iUrl::FormattingOptio
     // only called from iUrl::userName()
     appendToUser(appendTo, userName, options,
                  options & iUrl::EncodeDelimiters ? userNameInUrl : userNameInIsolation);
+    if (appendTo.isNull() && hasPassword())
+        appendTo.detach();      // the presence of password implies presence of username
 }
 
 inline void iUrlPrivate::appendPassword(iString &appendTo, iUrl::FormattingOptions options) const
@@ -913,210 +968,207 @@ inline void iUrlPrivate::appendPassword(iString &appendTo, iUrl::FormattingOptio
 
 
 // Return the length of the root part of an absolute path, for use by cleanPath(), cd().
-static int rootLength(const iString &name, bool allowUncPaths)
+static xsizetype rootLength(iStringView name, PathNormalizations flags)
 {
-    const int len = name.length();
-    // starts with double slash
-    if (allowUncPaths && name.startsWith(iLatin1StringView("//"))) {
-        // Server name '//server/path' is part of the prefix.
-        const int nextSlash = name.indexOf(iLatin1Char('/'), 2);
-        return nextSlash >= 0 ? nextSlash + 1 : len;
-    }
+    const bool UseWindowsRules = false
+#if defined(IX_OS_WIN)
+            || true
+#endif
+            ;
+    const xsizetype len = name.size();
+    xuint16 firstChar = len > 0 ? name.at(0).unicode() : u'\0';
+    xuint16 secondChar = len > 1 ? name.at(1).unicode() : u'\0';
+    if (UseWindowsRules) {
+        // Handle possible UNC paths which start with double slash
+        bool urlMode = flags & UrlNormalizationMode;
+        if (firstChar == u'/' && secondChar == u'/' && !urlMode) {
+            // Server name '//server/path' is part of the prefix.
+            const xsizetype nextSlash = name.indexOf(u'/', 2);
+            return nextSlash >= 0 ? nextSlash + 1 : len;
+        }
 
-    #if defined(IX_OS_WIN)
-    if (len >= 2 && name.at(1) == iLatin1Char(':')) {
         // Handle a possible drive letter
-        return len > 2 && name.at(2) == iLatin1Char('/') ? 3 : 2;
+        xsizetype driveLength = 2;
+        if (firstChar == u'/' && urlMode && len > 2 && name.at(2) == u':') {
+            // Drive-in-URL-Path mode, e.g. "/c:" or "/c:/autoexec.bat"
+            ++driveLength;
+            secondChar = u':';
+        }
+        if (secondChar == u':') {
+            if (len > driveLength && name.at(driveLength) == u'/')
+                return driveLength + 1;     // absolute drive path, e.g. "c:/config.sys"
+            return driveLength;             // relative drive path, e.g. "c:" or "d:swapfile.sys"
+        }
     }
-    #endif
-    if (name.at(0) == iLatin1Char('/'))
-        return 1;
-    return 0;
-}
 
-enum PathNormalization {
-    DefaultNormalization = 0x00,
-    AllowUncPaths = 0x01,
-    RemotePath = 0x02
-};
-typedef uint PathNormalizations;
+    return firstChar == u'/' ? 1 : 0;
+}
 
 /*!
     \internal
-    Returns \a path with redundant directory separators removed,
-    and "."s and ".."s resolved (as far as possible).
+
+    Updates \a path with redundant directory separators removed, and "."s and
+    ".."s resolved (as far as possible). It returns \c false if there were ".."
+    segments left over, attempt to go up past the root (only applies to
+    absolute paths), or \c true otherwise.
 
     This method is shared with iUrl, so it doesn't deal with iDir::separator(),
     nor does it remove the trailing slash, if any.
+
+    When dealing with URLs, we are following the "Remove dot segments"
+    algorithm from https://www.ietf.org/rfc/rfc3986.html#section-5.2.4
+    URL mode differs from local path mode in these ways:
+    1) it can set *path to empty ("." becomes "")
+    2) directory path outputs end in / ("a/.." becomes "a/" instead of "a")
+    3) a sequence of "//" is treated as multiple path levels ("a/b//.." becomes
+       "a/b/" and "a/b//../.." becomes "a/"), which matches the behavior
+       observed in web browsers.
+
+    As a Qt extension, for local URLs we treat multiple slashes as one slash.
 */
-iString ix_normalizePathSegments(const iString &name, PathNormalizations flags, bool *ok = IX_NULLPTR)
+bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
 {
-    const bool allowUncPaths = AllowUncPaths & flags;
-    const bool isRemote = RemotePath & flags;
-    const int len = name.length();
+    const bool isRemote = flags & RemotePath;
+    const xsizetype prefixLength = rootLength(*path, flags);
 
-    if (ok)
-        *ok = false;
+    // RFC 3986 says: "The input buffer is initialized with the now-appended
+    // path components and the output buffer is initialized to the empty
+    // string."
+    const iChar *in = path->constBegin();
 
-    if (len == 0)
-        return name;
-
-    int i = len - 1;
-    iVarLengthArray<xuint16> outVector(len);
-    int used = len;
-    xuint16 *out = outVector.data();
-    const xuint16 *p = name.utf16();
-    const xuint16 *prefix = p;
-    int up = 0;
-
-    const int prefixLength = rootLength(name, allowUncPaths);
-    p += prefixLength;
-    i -= prefixLength;
-
-    // replicate trailing slash (i > 0 checks for emptiness of input string p)
-    // except for remote paths because there can be /../ or /./ ending
-    if (i > 0 && p[i] == '/' && !isRemote) {
-        out[--used] = '/';
-        --i;
+    // Scan the input for a "." or ".." segment. If there isn't any, we may not
+    // need to modify this path at all. Also scan for "//" segments, which
+    // will be normalized if the path is local.
+    xsizetype i = prefixLength;
+    xsizetype n = path->size();
+    for (bool lastWasSlash = true; i < n; ++i) {
+        if (lastWasSlash && in[i] == u'.') {
+            if (i + 1 == n || in[i + 1] == u'/')
+                break;
+            if (in[i + 1] == u'.' && (i + 2 == n || in[i + 2] == u'/'))
+                break;
+        }
+        if (!isRemote && lastWasSlash && in[i] == u'/' && i > 0) {
+            // backtrack one, so the algorithm below gobbles up the remaining
+            // slashes
+            --i;
+            break;
+        }
+        lastWasSlash = in[i] == u'/';
     }
+    if (i == n)
+        return true;
 
-    auto isDot = [](const xuint16 *p, int i) {
-        return i > 1 && p[i - 1] == '.' && p[i - 2] == '/';
-    };
-    auto isDotDot = [](const xuint16 *p, int i) {
-        return i > 2 && p[i - 1] == '.' && p[i - 2] == '.' && p[i - 3] == '/';
-    };
+    iChar *out = path->data();  // detaches
+    const iChar *start = out + prefixLength;
+    const iChar *end = out + path->size();
+    out += i;
+    in = out;
 
-    while (i >= 0) {
-        // copy trailing slashes for remote urls
-        if (p[i] == '/') {
-            if (isRemote && !up) {
-                if (isDot(p, i)) {
-                    i -= 2;
+    // We implement a modified algorithm compared to RFC 3986, for efficiency.
+    bool ok = true;
+    do {
+        // First, copy the preceding slashes, so we can look at the segment's
+        // content. If the path is part of a URL, we copy all slashes, otherwise
+        // just one.
+        if (in[0] == u'/') {
+            *out++ = *in++;
+            while (in < end && in[0] == u'/') {
+                if (isRemote)
+                    *out++ = *in++;
+                else
+                    ++in; // Skip multiple slashes for local URLs
+
+                // Note: we may exit this loop with in == end, in which case we
+                // *shouldn't* dereference *in. But since we are pointing to a
+                // detached, non-empty QString, we know there's a u'\0' at the
+                // end, so dereferencing is safe.
+            }
+        }
+
+        // Is this path segment either "." or ".."?
+        enum { Nothing, Dot, DotDot } type = Nothing;
+        if (in[0] == u'.') {
+            if (in + 1 == end || in[1] == u'/')
+                type = Dot;
+            else if (in[1] == u'.' && (in + 2 == end || in[2] == u'/'))
+                type = DotDot;
+        }
+        if (type == Nothing) {
+            // If it is neither, then we copy this segment.
+            while (in < end && in[0] != u'/')
+                *out++ = *in++;
+            continue;
+        }
+
+        // Otherwise, we skip it and remove preceding slashes (if
+        // any, exactly one if part of a URL, all otherwise) from the
+        // output. If it is "..", we remove the segment before that and
+        // preceding slashes too in a similar fashion, if they are there.
+        if (type == DotDot) {
+            if (out == start) {
+                // we can't go further up from here, so we "re-root"
+                // without cleaning this segment
+                ok = false;
+                if (!isRemote) {
+                    *out++ = u'.';
+                    *out++ = u'.';
+                    if (in + 2 != end) {
+                        IX_ASSERT(in[2] == u'/');
+                        *out++ = u'/';
+                        ++in;
+                    }
+                    start = out;
+                    in += 2;
                     continue;
                 }
-                out[--used] = p[i];
             }
 
-            --i;
-            continue;
+            if (out > start)
+                --out; // backtrack the first dot
+            // backtrack the previous path segment
+            while (out > start && out[-1] != u'/')
+                --out;
+            in += 2;    // the two dots
+        } else {
+            ++in;       // the one dot
         }
 
-        // remove current directory
-        if (p[i] == '.' && (i == 0 || p[i-1] == '/')) {
-            --i;
-            continue;
+        // Not at 'end' yet, prepare for the next loop iteration by backtracking one slash.
+        // E.g.: /a/b/../c    >>> /a/b/../c
+        //          ^out            ^out
+        // the next iteration will copy '/c' to the output buffer >>> /a/c
+        if (in != end && out > start && out[-1] == u'/')
+            --out;
+        if (out == start) {
+            // We've reached the root. Make sure we don't turn a relative path
+            // to absolute or, in the case of local paths that are already
+            // absolute, into UNC.
+            // Note: this will turn ".//a" into "a" even for URLs!
+            if (in != end && in[0] == u'/')
+                ++in;
+            while (prefixLength == 0 && in != end && in[0] == u'/')
+                ++in;
         }
+    } while (in < end);
 
-        // detect up dir
-        if (i >= 1 && p[i] == '.' && p[i-1] == '.' && (i < 2 || p[i - 2] == '/')) {
-            ++up;
-            i -= i >= 2 ? 3 : 2;
+    path->truncate(out - path->constBegin());
+    if (!isRemote && path->isEmpty())
+        *path = iLatin1StringView(".");
 
-            if (isRemote) {
-                // moving up should consider empty path segments too (/path//../ -> /path/)
-                while (i > 0 && up && p[i] == '/') {
-                    --up;
-                    --i;
-                }
-            }
-            continue;
-        }
-
-        // prepend a slash before copying when not empty
-        if (!up && used != len && out[used] != '/')
-            out[--used] = '/';
-
-        // skip or copy
-        while (i >= 0) {
-            if (p[i] == '/') {
-                // copy all slashes as is for remote urls if they are not part of /./ or /../
-                if (isRemote && !up) {
-                    while (i > 0 && p[i] == '/' && !isDotDot(p, i)) {
-
-                        if (isDot(p, i)) {
-                            i -= 2;
-                            continue;
-                        }
-
-                        out[--used] = p[i];
-                        --i;
-                    }
-
-                    // in case of /./, jump over
-                    if (isDot(p, i))
-                        i -= 2;
-
-                    break;
-                }
-
-                --i;
-                break;
-            }
-
-            // actual copy
-            if (!up)
-                out[--used] = p[i];
-            --i;
-        }
-
-        // decrement up after copying/skipping
-        if (up)
-            --up;
-    }
-
-    // Indicate failure when ".." are left over for an absolute path.
-    if (ok)
-        *ok = prefixLength == 0 || up == 0;
-
-    // add remaining '..'
-    while (up && !isRemote) {
-        if (used != len && out[used] != '/') // is not empty and there isn't already a '/'
-            out[--used] = '/';
-        out[--used] = '.';
-        out[--used] = '.';
-        --up;
-    }
-
-    bool isEmpty = used == len;
-
-    if (prefixLength) {
-        if (!isEmpty && out[used] == '/') {
-            // Eventhough there is a prefix the out string is a slash. This happens, if the input
-            // string only consists of a prefix followed by one or more slashes. Just skip the slash.
-            ++used;
-        }
-        for (int i = prefixLength - 1; i >= 0; --i)
-            out[--used] = prefix[i];
-    } else {
-        if (isEmpty) {
-            // After resolving the input path, the resulting string is empty (e.g. "foo/.."). Return
-            // a dot in that case.
-            out[--used] = '.';
-        } else if (out[used] == '/') {
-            // After parsing the input string, out only contains a slash. That happens whenever all
-            // parts are resolved and there is a trailing slash ("./" or "foo/../" for example).
-            // Prepend a dot to have the correct return value.
-            out[--used] = '.';
-        }
-    }
-
-    // If path was not modified return the original value
-    if (used == 0)
-        return name;
-    return iString::fromUtf16(out + used, len - used);
+    // we return false only if the path was absolute
+    return ok || prefixLength == 0;
 }
 
 inline void iUrlPrivate::appendPath(iString &appendTo, iUrl::FormattingOptions options, Section appendingTo) const
 {
     iString thePath = path;
-    if (options & iUrl::NormalizePathSegments) {
-        thePath = ix_normalizePathSegments(path, isLocalFile() ? DefaultNormalization : RemotePath);
-    }
+    if (options & iUrl::NormalizePathSegments)
+        normalizePathSegments(&thePath);
 
     iStringView thePathView(thePath);
     if (options & iUrl::RemoveFilename) {
-        const int slash = path.lastIndexOf(iLatin1Char('/'));
+        const xsizetype slash = path.lastIndexOf(iLatin1Char('/'));
         if (slash == -1)
             return;
         thePathView = path.left(slash + 1);
@@ -1135,7 +1187,7 @@ inline void iUrlPrivate::appendFragment(iString &appendTo, iUrl::FormattingOptio
 {
     appendToUser(appendTo, fragment, options,
                  options & iUrl::EncodeDelimiters ? fragmentInUrl :
-                 appendingTo == FullUrl ? 0 : fragmentInIsolation);
+                 appendingTo == FullUrl ? IX_NULLPTR : fragmentInIsolation);
 }
 
 inline void iUrlPrivate::appendQuery(iString &appendTo, iUrl::FormattingOptions options, Section appendingTo) const
@@ -1146,7 +1198,7 @@ inline void iUrlPrivate::appendQuery(iString &appendTo, iUrl::FormattingOptions 
 
 // setXXX functions
 
-inline bool iUrlPrivate::setScheme(const iString &value, int len, bool doSetError)
+inline bool iUrlPrivate::setScheme(const iString &value, xsizetype len, bool doSetError)
 {
     // schemes are strictly RFC-compliant:
     //    scheme        = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
@@ -1162,17 +1214,17 @@ inline bool iUrlPrivate::setScheme(const iString &value, int len, bool doSetErro
     sectionIsPresent |= Scheme;
 
     // validate it:
-    int needsLowercasing = -1;
+    xsizetype needsLowercasing = -1;
     const xuint16 *p = reinterpret_cast<const xuint16 *>(value.constData());
-    for (int i = 0; i < len; ++i) {
-        if (p[i] >= 'a' && p[i] <= 'z')
+    for (xsizetype i = 0; i < len; ++i) {
+        if (isAsciiLower(p[i]))
             continue;
-        if (p[i] >= 'A' && p[i] <= 'Z') {
+        if (isAsciiUpper(p[i])) {
             needsLowercasing = i;
             continue;
         }
         if (i) {
-            if (p[i] >= '0' && p[i] <= '9')
+            if (isAsciiDigit(p[i]))
                 continue;
             if (p[i] == '+' || p[i] == '-' || p[i] == '.')
                 continue;
@@ -1191,9 +1243,9 @@ inline bool iUrlPrivate::setScheme(const iString &value, int len, bool doSetErro
     if (needsLowercasing != -1) {
         // schemes are ASCII only, so we don't need the full Unicode toLower
         iChar *schemeData = scheme.data(); // force detaching here
-        for (int i = needsLowercasing; i >= 0; --i) {
+        for (xsizetype i = needsLowercasing; i >= 0; --i) {
             xuint16 c = schemeData[i].unicode();
-            if (c >= 'A' && c <= 'Z')
+            if (isAsciiUpper(c))
                 schemeData[i] = iChar(c + 0x20);
         }
     }
@@ -1211,41 +1263,42 @@ inline bool iUrlPrivate::setScheme(const iString &value, int len, bool doSetErro
     return true;
 }
 
-inline void iUrlPrivate::setAuthority(const iString &auth, int from, int end, iUrl::ParsingMode mode)
+inline void iUrlPrivate::setAuthority(const iString &auth, xsizetype from, xsizetype end, iUrl::ParsingMode mode)
 {
     sectionIsPresent &= ~Authority;
-    sectionIsPresent |= Host;
     port = -1;
+    if (from == end && !auth.isNull())
+        sectionIsPresent |= Host;   // empty but not null authority implies host
 
     // we never actually _loop_
     while (from != end) {
-        int userInfoIndex = auth.indexOf(iLatin1Char('@'), from);
-        if (uint(userInfoIndex) < uint(end)) {
-            setUserInfo(auth, from, userInfoIndex);
+        xsizetype userInfoIndex = auth.indexOf(iLatin1Char('@'), from);
+        if (size_t(userInfoIndex) < size_t(end)) {
+            setUserInfo(iStringView(auth).sliced(from, userInfoIndex - from), mode);
             if (mode == iUrl::StrictMode && !validateComponent(UserInfo, auth, from, userInfoIndex))
                 break;
             from = userInfoIndex + 1;
         }
 
-        int colonIndex = auth.lastIndexOf(iLatin1Char(':'), end - 1);
+        xsizetype colonIndex = auth.lastIndexOf(iLatin1Char(':'), end - 1);
         if (colonIndex < from)
             colonIndex = -1;
 
-        if (uint(colonIndex) < uint(end)) {
+        if (size_t(colonIndex) < size_t(end)) {
             if (auth.at(from).unicode() == '[') {
                 // check if colonIndex isn't inside the "[...]" part
-                int closingBracket = auth.indexOf(iLatin1Char(']'), from);
-                if (uint(closingBracket) > uint(colonIndex))
+                xsizetype closingBracket = auth.indexOf(iLatin1Char(']'), from);
+                if (size_t(closingBracket) > size_t(colonIndex))
                     colonIndex = -1;
             }
         }
 
-        if (uint(colonIndex) < uint(end) - 1) {
+        if (size_t(colonIndex) < size_t(end) - 1) {
             // found a colon with digits after it
             unsigned long x = 0;
-            for (int i = colonIndex + 1; i < end; ++i) {
+            for (xsizetype i = colonIndex + 1; i < end; ++i) {
                 xuint16 c = auth.at(i).unicode();
-                if (c >= '0' && c <= '9') {
+                if (isAsciiDigit(c)) {
                     x *= 10;
                     x += c - '0';
                 } else {
@@ -1280,47 +1333,48 @@ inline void iUrlPrivate::setAuthority(const iString &auth, int from, int end, iU
     port = -1;
 }
 
-inline void iUrlPrivate::setUserInfo(const iString &userInfo, int from, int end)
+inline void iUrlPrivate::setUserInfo(iStringView userInfo, iUrl::ParsingMode mode)
 {
-    int delimIndex = userInfo.indexOf(iLatin1Char(':'), from);
-    setUserName(userInfo, from, std::min<uint>(delimIndex, end));
-
-    if (uint(delimIndex) >= uint(end)) {
+    xsizetype delimIndex = userInfo.indexOf(iLatin1Char(':'));
+    if (delimIndex < 0) {
+        // no password
+        setUserName(userInfo, mode);
         password.clear();
         sectionIsPresent &= ~Password;
     } else {
-        setPassword(userInfo, delimIndex + 1, end);
+        setUserName(userInfo.first(delimIndex), mode);
+        setPassword(userInfo.sliced(delimIndex + 1), mode);
     }
 }
 
-inline void iUrlPrivate::setUserName(const iString &value, int from, int end)
+inline void iUrlPrivate::setUserName(iStringView value, iUrl::ParsingMode mode)
 {
     sectionIsPresent |= UserName;
-    userName = recodeFromUser(value, userNameInIsolation, from, end);
+    recodeFromUser(userName, value, userNameInIsolation, mode);
 }
 
-inline void iUrlPrivate::setPassword(const iString &value, int from, int end)
+inline void iUrlPrivate::setPassword(iStringView value, iUrl::ParsingMode mode)
 {
     sectionIsPresent |= Password;
-    password = recodeFromUser(value, passwordInIsolation, from, end);
+    recodeFromUser(password, value, passwordInIsolation, mode);
 }
 
-inline void iUrlPrivate::setPath(const iString &value, int from, int end)
+inline void iUrlPrivate::setPath(iStringView value, iUrl::ParsingMode mode)
 {
     // sectionIsPresent |= Path; // not used, save some cycles
-    path = recodeFromUser(value, pathInIsolation, from, end);
+    recodeFromUser(path, value, pathInIsolation, mode);
 }
 
-inline void iUrlPrivate::setFragment(const iString &value, int from, int end)
+inline void iUrlPrivate::setFragment(iStringView value, iUrl::ParsingMode mode)
 {
     sectionIsPresent |= Fragment;
-    fragment = recodeFromUser(value, fragmentInIsolation, from, end);
+    recodeFromUser(fragment, value, fragmentInIsolation, mode);
 }
 
-inline void iUrlPrivate::setQuery(const iString &value, int from, int iend)
+inline void iUrlPrivate::setQuery(iStringView value, iUrl::ParsingMode mode)
 {
     sectionIsPresent |= Query;
-    query = recodeFromUser(value, queryInIsolation, from, iend);
+    recodeFromUser(query, value, queryInIsolation, mode);
 }
 
 // Host handling
@@ -1355,12 +1409,15 @@ inline void iUrlPrivate::setQuery(const iString &value, int from, int iend)
 
 inline void iUrlPrivate::appendHost(iString &appendTo, iUrl::FormattingOptions options) const
 {
-    if (host.isEmpty())
+    if (host.isEmpty()) {
+        if ((sectionIsPresent & Host) && appendTo.isNull())
+            appendTo.detach();
         return;
+    }
     if (host.at(0).unicode() == '[') {
         // IPv6 addresses might contain a zone-id which needs to be recoded
         if (options != 0)
-            if (ix_urlRecode(appendTo, host.constBegin(), host.constEnd(), options, 0))
+            if (ix_urlRecode(appendTo, host, options, IX_NULLPTR))
                 return;
         appendTo += host;
     } else {
@@ -1387,12 +1444,10 @@ static const iChar *parseIpFuture(iString &host, const iChar *begin, const iChar
     const iChar *const origBegin = begin;
     if (begin[3].unicode() != '.')
         return &begin[3];
-    if ((begin[2].unicode() >= 'A' && begin[2].unicode() <= 'F') ||
-            (begin[2].unicode() >= 'a' && begin[2].unicode() <= 'f') ||
-            (begin[2].unicode() >= '0' && begin[2].unicode() <= '9')) {
+    if (isHexDigit(begin[2].unicode())) {
         // this is so unlikely that we'll just go down the slow path
         // decode the whole string, skipping the "[vH." and "]" which we already know to be there
-        host += iString::fromRawData(begin, 4);
+        host += iStringView(begin, 4);
 
         // uppercase the version, if necessary
         if (begin[2].unicode() >= 'a')
@@ -1402,25 +1457,21 @@ static const iChar *parseIpFuture(iString &host, const iChar *begin, const iChar
         --end;
 
         iString decoded;
-        if (mode == iUrl::TolerantMode && ix_urlRecode(decoded, begin, end, iUrl::FullyDecoded, 0)) {
+        if (mode == iUrl::TolerantMode && ix_urlRecode(decoded, iStringView(begin, end), iUrl::FullyDecoded, IX_NULLPTR)) {
             begin = decoded.constBegin();
             end = decoded.constEnd();
         }
 
         for ( ; begin != end; ++begin) {
-            if (begin->unicode() >= 'A' && begin->unicode() <= 'Z')
+            if (isAsciiLetterOrNumber(begin->unicode()))
                 host += *begin;
-            else if (begin->unicode() >= 'a' && begin->unicode() <= 'z')
-                host += *begin;
-            else if (begin->unicode() >= '0' && begin->unicode() <= '9')
-                host += *begin;
-            else if (begin->unicode() < 0x80 && strchr(acceptable, begin->unicode()) != 0)
+            else if (begin->unicode() < 0x80 && strchr(acceptable, begin->unicode()) != IX_NULLPTR)
                 host += *begin;
             else
                 return decoded.isEmpty() ? begin : &origBegin[2];
         }
         host += iLatin1Char(']');
-        return 0;
+        return IX_NULLPTR;
     }
     return &origBegin[2];
 }
@@ -1428,37 +1479,39 @@ static const iChar *parseIpFuture(iString &host, const iChar *begin, const iChar
 // ONLY the IPv6 address is parsed here, WITHOUT the brackets
 static const iChar *parseIp6(iString &host, const iChar *begin, const iChar *end, iUrl::ParsingMode mode)
 {
-    // ### Update to use iStringView once iStringView::indexOf and iStringView::lastIndexOf exists
-    iString decoded;
+    iStringView decoded(begin, end);
+    iString decodedBuffer;
     if (mode == iUrl::TolerantMode) {
         // this struct is kept in automatic storage because it's only 4 bytes
         const xuint16 decodeColon[] = { decode(':'), 0 };
-        if (ix_urlRecode(decoded, begin, end, iUrl::ComponentFormattingOption::PrettyDecoded, decodeColon) == 0)
-            decoded = iString(begin, end-begin);
-    } else {
-      decoded = iString(begin, end-begin);
+        if (ix_urlRecode(decodedBuffer, decoded, iUrl::ComponentFormattingOption::PrettyDecoded, decodeColon))
+            decoded = decodedBuffer;
     }
 
-    const iLatin1StringView zoneIdIdentifier("%25");
+    const iStringView zoneIdIdentifier(u"%25");
     iIPAddressUtils::IPv6Address address;
-    iString zoneId;
+    iStringView zoneId;
 
-    const iChar *endBeforeZoneId = decoded.constEnd();
-
-    int zoneIdPosition = decoded.indexOf(zoneIdIdentifier);
+    xsizetype zoneIdPosition = decoded.indexOf(zoneIdIdentifier);
     if ((zoneIdPosition != -1) && (decoded.lastIndexOf(zoneIdIdentifier) == zoneIdPosition)) {
         zoneId = decoded.mid(zoneIdPosition + zoneIdIdentifier.size());
-        endBeforeZoneId = decoded.constBegin() + zoneIdPosition;
+        decoded.truncate(zoneIdPosition);
 
+        // was there anything after the zone ID separator?
         if (zoneId.isEmpty())
             return end;
     }
 
-    const iChar *ret = iIPAddressUtils::parseIp6(address, decoded.constBegin(), endBeforeZoneId);
-    if (ret)
-        return begin + (ret - decoded.constBegin());
+    // did the address become empty after removing the zone ID?
+    // (it might have always been empty)
+    if (decoded.isEmpty())
+        return end;
 
-    host.reserve(host.size() + (decoded.constEnd() - decoded.constBegin()));
+    const iChar *ret = iIPAddressUtils::parseIp6(address, decoded.begin(), decoded.end());
+    if (ret)
+        return begin + (ret - decoded.begin());
+
+    host.reserve(host.size() + (end - begin) + 2);  // +2 for the brackets
     host += iLatin1Char('[');
     iIPAddressUtils::toString(host, address);
 
@@ -1467,17 +1520,19 @@ static const iChar *parseIp6(iString &host, const iChar *begin, const iChar *end
         host += zoneId;
     }
     host += iLatin1Char(']');
-    return 0;
+    return IX_NULLPTR;
 }
 
-inline bool iUrlPrivate::setHost(const iString &value, int from, int iend, iUrl::ParsingMode mode)
+inline bool iUrlPrivate::setHost(const iString &value, xsizetype from, xsizetype iend, iUrl::ParsingMode mode)
 {
     const iChar *begin = value.constData() + from;
     const iChar *end = value.constData() + iend;
 
-    const int len = end - begin;
+    const xsizetype len = end - begin;
     host.clear();
-    sectionIsPresent |= Host;
+    sectionIsPresent &= ~Host;
+    if (!value.isNull() || (sectionIsPresent & Authority))
+        sectionIsPresent |= Host;
     if (len == 0)
         return true;
 
@@ -1533,10 +1588,10 @@ inline bool iUrlPrivate::setHost(const iString &value, int from, int iend, iUrl:
 
     // check for percent-encoding first
     iString s;
-    if (mode == iUrl::TolerantMode && ix_urlRecode(s, begin, end, 0, 0)) {
+    if (mode == iUrl::TolerantMode && ix_urlRecode(s, iStringView{begin, end}, { }, IX_NULLPTR)) {
         // something was decoded
         // anything encoded left?
-        int pos = s.indexOf(iChar(0x25)); // '%'
+        xsizetype pos = s.indexOf(iChar(0x25)); // '%'
         if (pos != -1) {
             setError(InvalidRegNameError, s, pos);
             return false;
@@ -1546,7 +1601,7 @@ inline bool iUrlPrivate::setHost(const iString &value, int from, int iend, iUrl:
         return setHost(s, 0, s.length(), iUrl::StrictMode);
     }
 
-    s = ix_ACE_do(iString::fromRawData(begin, len), NormalizeAce, ForbidLeadingDot);
+    s = ix_ACE_do(value.mid(from, iend - from), NormalizeAce, ForbidLeadingDot, {});
     if (s.isEmpty()) {
         setError(InvalidRegNameError, value);
         return false;
@@ -1571,19 +1626,19 @@ inline void iUrlPrivate::parse(const iString &url, iUrl::ParsingMode parsingMode
     //   relative-part = "//" authority path-abempty
     //                 /  other path types here
 
-    sectionIsPresent = 0;
-    flags = 0;
-    clearError();
+    IX_ASSERT_X(parsingMode != iUrl::DecodedMode, "This function should only be called when parsing encoded URLs");
+    IX_ASSERT(sectionIsPresent == 0);
+    IX_ASSERT(!error);
 
     // find the important delimiters
-    int colon = -1;
-    int question = -1;
-    int hash = -1;
-    const int len = url.length();
+    xsizetype colon = -1;
+    xsizetype question = -1;
+    xsizetype hash = -1;
+    const xsizetype len = url.length();
     const iChar *const begin = url.constData();
     const xuint16 *const data = reinterpret_cast<const xuint16 *>(begin);
 
-    for (int i = 0; i < len; ++i) {
+    for (xsizetype i = 0; i < len; ++i) {
         xuint32 uc = data[i];
         if (uc == '#' && hash == -1) {
             hash = i;
@@ -1601,7 +1656,7 @@ inline void iUrlPrivate::parse(const iString &url, iUrl::ParsingMode parsingMode
     }
 
     // check if we have a scheme
-    int hierStart;
+    xsizetype hierStart;
     if (colon != -1 && setScheme(url, colon, /* don't set error */ false)) {
         hierStart = colon + 1;
     } else {
@@ -1611,12 +1666,12 @@ inline void iUrlPrivate::parse(const iString &url, iUrl::ParsingMode parsingMode
         hierStart = 0;
     }
 
-    int pathStart;
-    int hierEnd = std::min<uint>(std::min<uint>(question, hash), len);
+    xsizetype pathStart;
+    xsizetype hierEnd = std::min<size_t>(std::min<size_t>(question, hash), len);
     if (hierEnd - hierStart >= 2 && data[hierStart] == '/' && data[hierStart + 1] == '/') {
         // we have an authority, it ends at the first slash after these
-        int authorityEnd = hierEnd;
-        for (int i = hierStart + 2; i < authorityEnd ; ++i) {
+        xsizetype authorityEnd = hierEnd;
+        for (xsizetype i = hierStart + 2; i < authorityEnd ; ++i) {
             if (data[i] == '/') {
                 authorityEnd = i;
                 break;
@@ -1627,7 +1682,7 @@ inline void iUrlPrivate::parse(const iString &url, iUrl::ParsingMode parsingMode
 
         // even if we failed to set the authority properly, let's try to recover
         pathStart = authorityEnd;
-        setPath(url, pathStart, hierEnd);
+        setPath(iStringView(url).sliced(pathStart, hierEnd - pathStart), parsingMode);
     } else {
         userName.clear();
         password.clear();
@@ -1636,16 +1691,19 @@ inline void iUrlPrivate::parse(const iString &url, iUrl::ParsingMode parsingMode
         pathStart = hierStart;
 
         if (hierStart < hierEnd)
-            setPath(url, hierStart, hierEnd);
+            setPath(iStringView(url).sliced(hierStart, hierEnd - hierStart), parsingMode);
         else
             path.clear();
     }
 
-    if (uint(question) < uint(hash))
-        setQuery(url, question + 1, std::min<uint>(hash, len));
+    IX_ASSERT(query.isNull());
+    if (size_t(question) < size_t(hash))
+        setQuery(iStringView(url).sliced(question + 1, std::min<size_t>(hash, len) - question - 1),
+                 parsingMode);
 
+    IX_ASSERT(fragment.isNull());
     if (hash != -1)
-        setFragment(url, hash + 1, len);
+        setFragment(iStringView(url).sliced(hash + 1, len - hash - 1), parsingMode);
 
     if (error || parsingMode == iUrl::TolerantMode)
         return;
@@ -1658,7 +1716,7 @@ inline void iUrlPrivate::parse(const iString &url, iUrl::ParsingMode parsingMode
 
     if (!validateComponent(Path, url, pathStart, hierEnd))
         return;
-    if (uint(question) < uint(hash) && !validateComponent(Query, url, question + 1, std::min<uint>(hash, len)))
+    if (size_t(question) < size_t(hash) && !validateComponent(Query, url, question + 1, std::min<size_t>(hash, len)))
         return;
     if (hash != -1)
         validateComponent(Fragment, url, hash + 1, len);
@@ -1721,89 +1779,24 @@ inline iString iUrlPrivate::mergePaths(const iString &relativePath) const
     return newPath;
 }
 
-/*
-    From http://www.ietf.org/rfc/rfc3986.txt, 5.2.4: Remove dot segments
-
-    Removes unnecessary ../ and ./ from the path. Used for normalizing
-    the URL.
-*/
-static void removeDotsFromPath(iString *path)
+// Authority-less URLs cannot have paths starting with double slashes (see
+// iUrlPrivate::validityError). We refuse to turn a valid URL into invalid by
+// way of iUrl::resolved().
+static void fixupNonAuthorityPath(iString *path)
 {
-    // The input buffer is initialized with the now-appended path
-    // components and the output buffer is initialized to the empty
-    // string.
-    iChar *out = path->data();
-    const iChar *in = out;
-    const iChar *end = out + path->size();
+    if (path->isEmpty() || path->at(0) != u'/')
+        return;
 
-    // If the input buffer consists only of
-    // "." or "..", then remove that from the input
-    // buffer;
-    if (path->size() == 1 && in[0].unicode() == '.')
-        ++in;
-    else if (path->size() == 2 && in[0].unicode() == '.' && in[1].unicode() == '.')
-        in += 2;
-    // While the input buffer is not empty, loop:
-    while (in < end) {
-
-        // otherwise, if the input buffer begins with a prefix of "../" or "./",
-        // then remove that prefix from the input buffer;
-        if (path->size() >= 2 && in[0].unicode() == '.' && in[1].unicode() == '/')
-            in += 2;
-        else if (path->size() >= 3 && in[0].unicode() == '.'
-                 && in[1].unicode() == '.' && in[2].unicode() == '/')
-            in += 3;
-
-        // otherwise, if the input buffer begins with a prefix of
-        // "/./" or "/.", where "." is a complete path segment,
-        // then replace that prefix with "/" in the input buffer;
-        if (in <= end - 3 && in[0].unicode() == '/' && in[1].unicode() == '.'
-                && in[2].unicode() == '/') {
-            in += 2;
-            continue;
-        } else if (in == end - 2 && in[0].unicode() == '/' && in[1].unicode() == '.') {
-            *out++ = iLatin1Char('/');
-            in += 2;
-            break;
-        }
-
-        // otherwise, if the input buffer begins with a prefix
-        // of "/../" or "/..", where ".." is a complete path
-        // segment, then replace that prefix with "/" in the
-        // input buffer and remove the last //segment and its
-        // preceding "/" (if any) from the output buffer;
-        if (in <= end - 4 && in[0].unicode() == '/' && in[1].unicode() == '.'
-                && in[2].unicode() == '.' && in[3].unicode() == '/') {
-            while (out > path->constData() && (--out)->unicode() != '/')
-                ;
-            if (out == path->constData() && out->unicode() != '/')
-                ++in;
-            in += 3;
-            continue;
-        } else if (in == end - 3 && in[0].unicode() == '/' && in[1].unicode() == '.'
-                   && in[2].unicode() == '.') {
-            while (out > path->constData() && (--out)->unicode() != '/')
-                ;
-            if (out->unicode() == '/')
-                ++out;
-            in += 3;
-            break;
-        }
-
-        // otherwise move the first path segment in
-        // the input buffer to the end of the output
-        // buffer, including the initial "/" character
-        // (if any) and any subsequent characters up
-        // to, but not including, the next "/"
-        // character or the end of the input buffer.
-        *out++ = *in++;
-        while (in < end && in->unicode() != '/')
-            *out++ = *in++;
-    }
-    path->truncate(out - path->constData());
+    // Find the first non-slash character, because its position is equal to the
+    // number of slashes. We'll remove all but one of them.
+    xsizetype i = 0;
+    while (i + 1 < path->size() && path->at(i + 1) == u'/')
+        ++i;
+    if (i)
+        path->remove(0, i);
 }
 
-inline iUrlPrivate::ErrorCode iUrlPrivate::validityError(iString *source, int *position) const
+inline iUrlPrivate::ErrorCode iUrlPrivate::validityError(iString *source, xsizetype *position) const
 {
     IX_ASSERT(!source == !position);
     if (error) {
@@ -1850,7 +1843,7 @@ inline iUrlPrivate::ErrorCode iUrlPrivate::validityError(iString *source, int *p
         return NoError;
 
     // check for a path of "text:text/"
-    for (int i = 0; i < path.length(); ++i) {
+    for (xsizetype i = 0; i < path.length(); ++i) {
         xuint16 c = path.at(i).unicode();
         if (c == '/') {
             // found the slash before the colon
@@ -1868,8 +1861,7 @@ inline iUrlPrivate::ErrorCode iUrlPrivate::validityError(iString *source, int *p
     return NoError;
 }
 
-bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString &input,
-                                    int begin, int end)
+bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString &input, xsizetype begin, xsizetype end)
 {
     // What we need to look out for, that the regular parser tolerates:
     //  - percent signs not followed by two hex digits
@@ -1890,13 +1882,13 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
     IX_ASSERT(section != Authority && section != Hierarchy && section != FullUrl);
 
     const xuint16 *const data = reinterpret_cast<const xuint16 *>(input.constData());
-    for (uint i = uint(begin); i < uint(end); ++i) {
+    for (size_t i = size_t(begin); i < size_t(end); ++i) {
         xuint32 uc = data[i];
         if (uc >= 0x80)
             continue;
 
         bool error = false;
-        if ((uc == '%' && (uint(end) < i + 2 || !isHex(data[i + 1]) || !isHex(data[i + 2])))
+        if ((uc == '%' && (size_t(end) < i + 2 || !isHex(data[i + 1]) || !isHex(data[i + 2])))
                 || uc <= 0x20 || strchr(forbidden, uc)) {
             // found an error
             error = true;
@@ -1914,7 +1906,7 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
         if (section == UserInfo) {
             // is it the user name or the password?
             errorCode = InvalidUserNameError;
-            for (uint j = uint(begin); j < i; ++j)
+            for (size_t j = size_t(begin); j < i; ++j)
                 if (data[j] == ':') {
                     errorCode = InvalidPasswordError;
                     break;
@@ -2076,7 +2068,7 @@ void iUrl::setUrl(const iString &url, ParsingMode parsingMode)
     if (parsingMode == DecodedMode) {
         ilog_warn("iUrl::DecodedMode is not permitted when parsing a full URL");
     } else {
-        detach();
+        detachToClear();
         d->parse(url, parsingMode);
     }
 }
@@ -2190,11 +2182,6 @@ void iUrl::setAuthority(const iString &authority, ParsingMode mode)
     }
 
     d->setAuthority(authority, 0, authority.length(), mode);
-    if (authority.isNull()) {
-        // iUrlPrivate::setAuthority cleared almost everything
-        // but it leaves the Host bit set
-        d->sectionIsPresent &= ~iUrlPrivate::Authority;
-    }
 }
 
 /*!
@@ -2260,7 +2247,7 @@ void iUrl::setUserInfo(const iString &userInfo, ParsingMode mode)
         return;
     }
 
-    d->setUserInfo(trimmed, 0, trimmed.length());
+    d->setUserInfo(trimmed, mode);
     if (userInfo.isNull()) {
         // iUrlPrivate::setUserInfo cleared almost everything
         // but it leaves the UserName bit set
@@ -2326,13 +2313,7 @@ void iUrl::setUserName(const iString &userName, ParsingMode mode)
     detach();
     d->clearError();
 
-    iString data = userName;
-    if (mode == DecodedMode) {
-        parseDecodedComponent(data);
-        mode = TolerantMode;
-    }
-
-    d->setUserName(data, 0, data.length());
+    d->setUserName(userName, mode);
     if (userName.isNull())
         d->sectionIsPresent &= ~iUrlPrivate::UserName;
     else if (mode == StrictMode && !d->validateComponent(iUrlPrivate::UserName, userName))
@@ -2416,13 +2397,7 @@ void iUrl::setPassword(const iString &password, ParsingMode mode)
     detach();
     d->clearError();
 
-    iString data = password;
-    if (mode == DecodedMode) {
-        parseDecodedComponent(data);
-        mode = TolerantMode;
-    }
-
-    d->setPassword(data, 0, data.length());
+    d->setPassword(password, mode);
     if (password.isNull())
         d->sectionIsPresent &= ~iUrlPrivate::Password;
     else if (mode == StrictMode && !d->validateComponent(iUrlPrivate::Password, password))
@@ -2507,13 +2482,12 @@ void iUrl::setHost(const iString &host, ParsingMode mode)
 
     iString data = host;
     if (mode == DecodedMode) {
-        parseDecodedComponent(data);
+        data.replace(u'%', "%25");
         mode = TolerantMode;
     }
 
     if (d->setHost(data, 0, data.length(), mode)) {
-        if (host.isNull())
-            d->sectionIsPresent &= ~iUrlPrivate::Host;
+        return;
     } else if (!data.startsWith(iLatin1Char('['))) {
         // setHost failed, it might be IPv6 or IPvFuture in need of bracketing
         IX_ASSERT(d->error);
@@ -2526,6 +2500,7 @@ void iUrl::setHost(const iString &host, ParsingMode mode)
                 // source data contains ':', so it's an IPv6 error
                 d->error->code = iUrlPrivate::InvalidIPv6AddressError;
             }
+            d->sectionIsPresent &= ~iUrlPrivate::Host;
         } else {
             // succeeded
             d->clearError();
@@ -2660,13 +2635,7 @@ void iUrl::setPath(const iString &path, ParsingMode mode)
     detach();
     d->clearError();
 
-    iString data = path;
-    if (mode == DecodedMode) {
-        parseDecodedComponent(data);
-        mode = TolerantMode;
-    }
-
-    d->setPath(data, 0, data.length());
+    d->setPath(path, mode);
 
     // optimized out, since there is no path delimiter
 //    if (path.isNull())
@@ -2773,7 +2742,7 @@ iString iUrl::path(ComponentFormattingOptions options) const
 iString iUrl::fileName(ComponentFormattingOptions options) const
 {
     const iString ourPath = path(options);
-    const int slash = ourPath.lastIndexOf(iLatin1Char('/'));
+    const xsizetype slash = ourPath.lastIndexOf(iLatin1Char('/'));
     if (slash == -1)
         return ourPath;
     return ourPath.mid(slash + 1);
@@ -2826,13 +2795,7 @@ void iUrl::setQuery(const iString &query, ParsingMode mode)
     detach();
     d->clearError();
 
-    iString data = query;
-    if (mode == DecodedMode) {
-        parseDecodedComponent(data);
-        mode = TolerantMode;
-    }
-
-    d->setQuery(data, 0, data.length());
+    d->setQuery(query, mode);
     if (query.isNull())
         d->sectionIsPresent &= ~iUrlPrivate::Query;
     else if (mode == StrictMode && !d->validateComponent(iUrlPrivate::Query, query))
@@ -3157,13 +3120,7 @@ void iUrl::setFragment(const iString &fragment, ParsingMode mode)
     detach();
     d->clearError();
 
-    iString data = fragment;
-    if (mode == DecodedMode) {
-        parseDecodedComponent(data);
-        mode = TolerantMode;
-    }
-
-    d->setFragment(data, 0, data.length());
+    d->setFragment(fragment, mode);
     if (fragment.isNull())
         d->sectionIsPresent &= ~iUrlPrivate::Fragment;
     else if (mode == StrictMode && !d->validateComponent(iUrlPrivate::Fragment, fragment))
@@ -3319,7 +3276,13 @@ iUrl iUrl::resolved(const iUrl &relative) const
     else
         t.d->sectionIsPresent &= ~iUrlPrivate::Fragment;
 
-    removeDotsFromPath(&t.d->path);
+    t.d->normalizePathSegments(&t.d->path);
+    if (!t.d->hasAuthority()) {
+        if (t.d->isLocalFile() && t.d->path.startsWith(u'/'))
+            t.d->sectionIsPresent |= iUrlPrivate::Host;
+        else
+            fixupNonAuthorityPath(&t.d->path);
+    }
 
     ilog_debug("iUrl(",url(), ").resolved(", relative.url(), ") = ", t.url());
     return t;
@@ -3372,9 +3335,9 @@ iString iUrl::toString(FormattingOptions options) const
         // also catches isEmpty()
         return url;
     }
-    if (options == iUrl::FullyDecoded) {
+    if (options & iUrl::FullyDecoded) {
         ilog_warn("iUrl::FullyDecoded is not permitted when reconstructing the full URL");
-        options = iUrl::PrettyDecoded;
+        options &= ~iUrl::FullyDecoded;
     }
 
     // return just the path if:
@@ -3480,9 +3443,13 @@ iUrl iUrl::adjusted(iUrl::FormattingOptions options) const
         that.setPath(iString());
     } else if (options & (StripTrailingSlash | RemoveFilename | NormalizePathSegments)) {
         that.detach();
-        iString path;
-        d->appendPath(path, options | FullyEncoded, iUrlPrivate::Path);
-        that.d->setPath(path, 0, path.length());
+        that.d->path.resize(0);
+        d->appendPath(that.d->path, options | FullyEncoded, iUrlPrivate::Path);
+    }
+    if (that.d->isLocalFile() && that.d->path.startsWith(u'/')) {
+        // ensure absolute file URLs have an empty authority to comply with the
+        // XDG file spec (note this may undo a RemoveAuthority)
+        that.d->sectionIsPresent |= iUrlPrivate::Host;
     }
     return that;
 }
@@ -3513,9 +3480,9 @@ iByteArray iUrl::toEncoded(FormattingOptions options) const
 
     \sa toEncoded(), setUrl()
 */
-iUrl iUrl::fromEncoded(const iByteArray &input, ParsingMode mode)
+iUrl iUrl::fromEncoded(iByteArrayView input, ParsingMode mode)
 {
-    return iUrl(iString::fromUtf8(input.constData(), input.size()), mode);
+    return iUrl(iString::fromUtf8(input), mode);
 }
 
 /*!
@@ -3547,16 +3514,6 @@ iString iUrl::fromPercentEncoding(const iByteArray &input)
 iByteArray iUrl::toPercentEncoding(const iString &input, const iByteArray &exclude, const iByteArray &include)
 {
     return input.toUtf8().toPercentEncoding(exclude, include);
-}
-
-/*!
-    \internal
-    Used in the setEncodedXXX compatibility functions. Converts \a ba to
-    iString form.
-*/
-iString iUrl::fromEncodedComponent_helper(const iByteArray &ba)
-{
-    return ix_urlRecodeByteArray(ba);
 }
 
 /*!
@@ -3594,9 +3551,9 @@ iString iUrl::fromEncodedComponent_helper(const iByteArray &ba)
     (like \c "example.com") to be written using international
     characters.
 */
-iString iUrl::fromAce(const iByteArray &domain)
+iString iUrl::fromAce(const iByteArray &domain, AceProcessingOptions options)
 {
-    return ix_ACE_do(iString::fromLatin1(domain), NormalizeAce, ForbidLeadingDot /*FIXME: make configurable*/);
+    return ix_ACE_do(iString::fromLatin1(domain), NormalizeAce, ForbidLeadingDot /*FIXME: make configurable*/, options);
 }
 
 /*!
@@ -3613,9 +3570,9 @@ iString iUrl::fromAce(const iByteArray &domain)
     hostname. Note, in particular, that IPv6 literals are not valid domain
     names.
 */
-iByteArray iUrl::toAce(const iString &domain)
+iByteArray iUrl::toAce(const iString &domain, AceProcessingOptions options)
 {
-    return ix_ACE_do(domain, ToAceOnly, ForbidLeadingDot /*FIXME: make configurable*/).toLatin1();
+    return ix_ACE_do(domain, ToAceOnly, ForbidLeadingDot /*FIXME: make configurable*/, options).toLatin1();
 }
 
 /*!
@@ -3833,6 +3790,17 @@ void iUrl::detach()
         iAtomicDetach(d);
 }
 
+void iUrl::detachToClear()
+{
+    if (d && (d->ref.value() == 1 || !d->ref.deref())) {
+        // we had the only copy
+        d->ref.initializeOwned();
+        d->clear();
+    } else {
+        d = new iUrlPrivate;
+    }
+}
+
 /*!
     \internal
 */
@@ -4003,7 +3971,7 @@ iString iUrl::errorString() const
         return msg;
 
     iString errorSource;
-    int errorPosition = 0;
+    xsizetype errorPosition = 0;
     iUrlPrivate::ErrorCode errorCode = d->validityError(&errorSource, &errorPosition);
     if (errorCode == iUrlPrivate::NoError)
         return msg;

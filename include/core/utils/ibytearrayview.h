@@ -15,7 +15,6 @@
 
 namespace iShell {
 
-
 namespace iPrivate {
 
 template <typename Byte>
@@ -167,7 +166,6 @@ public:
     void chop(xsizetype n)
     { verify(0, n); m_size -= n; }
 
-    // TODO:
     iByteArrayView trimmed() const;
     short toShort(bool *ok = IX_NULLPTR, int base = 10) const;
     ushort toUShort(bool *ok = IX_NULLPTR, int base = 10) const;
@@ -186,23 +184,29 @@ public:
     bool endsWith(iByteArrayView other) const;
     bool endsWith(char c) const;
 
-    xsizetype indexOf(iByteArrayView a, xsizetype from = 0) const;
-    xsizetype indexOf(char ch, xsizetype from = 0) const;
+    xsizetype indexOf(iByteArrayView a, xsizetype from = 0) const
+    { return iPrivate::findByteArray(*this, from, a); }
+    xsizetype indexOf(char ch, xsizetype from = 0) const
+    { return iPrivate::findByteArray(*this, from, ch); }
 
     bool contains(iByteArrayView a) const;
     bool contains(char c) const;
 
     xsizetype lastIndexOf(iByteArrayView a) const
     { return lastIndexOf(a, size()); }
-    xsizetype lastIndexOf(iByteArrayView a, xsizetype from) const;
-    xsizetype lastIndexOf(char ch, xsizetype from = -1) const;
+    xsizetype lastIndexOf(iByteArrayView a, xsizetype from) const
+    { return iPrivate::lastIndexOf(*this, from, a); }
+    xsizetype lastIndexOf(char ch, xsizetype from = -1) const
+    { return iPrivate::lastIndexOf(*this, from, ch); }
 
-    xsizetype count(iByteArrayView a) const;
-    xsizetype count(char ch) const;
+    xsizetype count(iByteArrayView a) const
+    { return iPrivate::count(*this, a); }
+    xsizetype count(char ch) const
+    { return iPrivate::count(*this, iByteArrayView(&ch, 1)); }
 
     inline int compare(iByteArrayView a, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
-    inline bool isValidUtf8() const;
+    inline bool isValidUtf8() const { return iPrivate::isValidUtf8(*this); }
 
     //
     // STL compatibility API:

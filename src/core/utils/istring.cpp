@@ -237,10 +237,8 @@ static void append_helper(iString &self, T view)
        if (is_same<T, iLatin1StringView>::value) {
             iLatin1::convertToUnicode(dst, view);
             dst += strSize;
-        } else {
-            // TODO: fix
-            // IX_COMPILER_VERIFY(0);
         }
+
         self.resize(std::distance(d.begin(), dst));
     } else if (d.isNull() && !view.isNull()) { // special case
         self = iLatin1StringView("");

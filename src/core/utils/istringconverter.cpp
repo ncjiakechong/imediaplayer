@@ -12,7 +12,7 @@
 #include "core/global/iendian.h"
 #include "utils/istringalgorithms_p.h"
 #include "utils/istringiterator_p.h"
-#include "core/utils/istringconverter.h"
+#include "utils/istringconverter.h"
 #include "utils/istringconverter_p.h"
 #include "utils/itools_p.h"
 

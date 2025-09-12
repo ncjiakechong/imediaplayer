@@ -129,7 +129,7 @@ public:
     iUrl adjusted(FormattingOptions options) const;
 
     iByteArray toEncoded(FormattingOptions options = FullyEncoded) const;
-    static iUrl fromEncoded(const iByteArray &url, ParsingMode mode = TolerantMode);
+    static iUrl fromEncoded(iByteArrayView input, ParsingMode mode = TolerantMode);
 
     bool isValid() const;
     iString errorString() const;
@@ -154,7 +154,6 @@ public:
 
     void setHost(const iString &host, ParsingMode mode = DecodedMode);
     iString host(ComponentFormattingOptions = FullyDecoded) const;
-    iString topLevelDomain(ComponentFormattingOptions options = FullyDecoded) const;
 
     void setPort(int port);
     int port(int defaultPort = -1) const;
@@ -193,12 +192,15 @@ public:
                                         const iByteArray &exclude = iByteArray(),
                                         const iByteArray &include = iByteArray());
 
-private:
-    static iString fromEncodedComponent_helper(const iByteArray &ba);
-
 public:
-    static iString fromAce(const iByteArray &);
-    static iByteArray toAce(const iString &);
+    enum AceProcessingOption {
+        IgnoreIDNWhitelist = 0x1,
+        AceTransitionalProcessing = 0x2,
+    };
+    typedef uint AceProcessingOptions;
+
+    static iString fromAce(const iByteArray &domain, AceProcessingOptions options = {});
+    static iByteArray toAce(const iString &domain, AceProcessingOptions options = {});
     static std::list<iString> idnWhitelist();
     static std::list<iString> toStringList(const std::list<iUrl> &uris, FormattingOptions options = FormattingOptions(PrettyDecoded));
     static std::list<iUrl> fromStringList(const std::list<iString> &uris, ParsingMode mode = TolerantMode);
@@ -206,6 +208,8 @@ public:
     static void setIdnWhitelist(const std::list<iString> &);
 
 private:
+    void detachToClear();
+
     iUrlPrivate *d;
 };
 

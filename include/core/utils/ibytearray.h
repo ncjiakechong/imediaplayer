@@ -89,14 +89,17 @@ public:
     inline char &back();
 
     xsizetype indexOf(char c, xsizetype from = 0) const;
-    xsizetype indexOf(iByteArrayView bv, xsizetype from = 0) const;
+    xsizetype indexOf(iByteArrayView bv, xsizetype from = 0) const
+    { return iPrivate::findByteArray(iByteArrayView(constBegin(), size()), from, bv); }
     xsizetype lastIndexOf(char c, xsizetype from = -1) const;
-    xsizetype lastIndexOf(iByteArrayView bv, xsizetype from = -1) const;
+    xsizetype lastIndexOf(iByteArrayView bv, xsizetype from = -1) const
+    { return iPrivate::lastIndexOf(iByteArrayView(constBegin(), size()), from, bv); }
 
     inline bool contains(char c) const;
     inline bool contains(iByteArrayView bv) const;
     xsizetype count(char c) const;
-    xsizetype count(iByteArrayView bv) const;
+    xsizetype count(iByteArrayView bv) const
+    { return iPrivate::count(iByteArrayView(constBegin(), size()), bv); }
 
     inline int compare(iByteArrayView bv, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
 
@@ -115,14 +118,19 @@ public:
     iByteArray chopped(xsizetype len) const
     { IX_ASSERT(len >= 0); IX_ASSERT(len <= size()); return first(size() - len); }
 
-    bool startsWith(iByteArrayView bv) const;
-    bool startsWith(char c) const;
+    bool startsWith(iByteArrayView bv) const
+    { return iPrivate::startsWith(iByteArrayView(constBegin(), size()), bv); }
+    bool startsWith(char c) const { return size() > 0 && front() == c; }
 
-    bool endsWith(iByteArrayView bv) const;
-    bool endsWith(char c) const;
+    bool endsWith(iByteArrayView bv) const
+    { return iPrivate::endsWith(iByteArrayView(constBegin(), size()), bv); }
+    bool endsWith(char c) const { return size() > 0 && back() == c; }
 
     bool isUpper() const;
     bool isLower() const;
+
+    bool isValidUtf8() const
+    { return iPrivate::isValidUtf8(iByteArrayView(constBegin(), size())); }
 
     void truncate(xsizetype pos);
     void chop(xsizetype n);

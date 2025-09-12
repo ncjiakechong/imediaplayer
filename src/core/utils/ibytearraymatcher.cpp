@@ -218,9 +218,7 @@ static xsizetype iFindByteArrayBoyerMoore(
 /*!
     \internal
  */
-xsizetype iFindByteArray(
-    const char *haystack0, xsizetype haystackLen, xsizetype from,
-    const char *needle, xsizetype needleLen)
+static xsizetype iFindByteArray(const char *haystack0, xsizetype haystackLen, xsizetype from, const char *needle, xsizetype needleLen)
 {
     const xsizetype l = haystackLen;
     const xsizetype sl = needleLen;
@@ -273,6 +271,30 @@ xsizetype iFindByteArray(
     return -1;
 }
 
+xsizetype iPrivate::findByteArray(iByteArrayView haystack, xsizetype from, iByteArrayView needle)
+{
+    const auto haystack0 = haystack.data();
+    const auto l = haystack.size();
+    const auto sl = needle.size();
+
+    if (from < 0)
+        from += l;
+    if (std::size_t(sl + from) > std::size_t(l))
+        return -1;
+    if (!sl)
+        return from;
+    if (!l)
+        return -1;
+
+    /*
+      We use the Boyer-Moore algorithm in cases where the overhead
+      for the skip table should pay off, otherwise we use a simple
+      hash function.
+    */
+    if (l > 500 && sl > 5)
+        return iFindByteArrayBoyerMoore(haystack0, l, from, needle.data(), sl);
+    return iFindByteArray(haystack0, l, from, needle.data(), sl);
+}
 /*!
     \class iStaticByteArrayMatcherBase
 

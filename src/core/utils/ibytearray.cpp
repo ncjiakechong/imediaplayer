@@ -16,6 +16,7 @@
 #include "core/utils/ibytearray.h"
 #include "utils/ibytearraymatcher.h"
 #include "utils/istringalgorithms_p.h"
+#include "utils/istringconverter_p.h"
 #include "core/kernel/imath.h"
 #include "global/inumeric_p.h"
 #include "utils/itools_p.h"
@@ -50,10 +51,6 @@ static inline uchar asciiUpper(uchar c)
 static inline uchar asciiLower(uchar c)
 { return c >= 'A' && c <= 'Z' ? c | 0x20 : c; }
 
-xsizetype iFindByteArray(
-    const char *haystack0, xsizetype haystackLen, xsizetype from,
-    const char *needle, xsizetype needleLen);
-
 /*****************************************************************************
   Safe and portable C string functions; extensions to standard cstring
  *****************************************************************************/
@@ -69,6 +66,17 @@ xsizetype iFindByteArray(
     Ownership is passed to the caller, so the returned string must be
     deleted using \c delete[].
 */
+const void *imemrchr(const void *s, int needle, size_t size)
+{
+    auto b = static_cast<const uchar *>(s);
+    const uchar *n = b + size;
+    while (n-- != b) {
+        if (*n == uchar(needle))
+            return n;
+    }
+    return IX_NULLPTR;
+}
+
 char *istrdup(const char *src)
 {
     if (!src)
@@ -409,6 +417,24 @@ int istrcmp(const iByteArray &str1, const iByteArray &str2)
     // they matched std::min(l1, l2) bytes
     // so the longer one is lexically after the shorter one
     return l1 - l2;
+}
+
+int iPrivate::compareMemory(iByteArrayView lhs, iByteArrayView rhs)
+{
+    if (!lhs.isNull() && !rhs.isNull()) {
+        int ret = memcmp(lhs.data(), rhs.data(), std::min(lhs.size(), rhs.size()));
+        if (ret != 0)
+            return ret;
+    }
+
+    // they matched qMin(l1, l2) bytes
+    // so the longer one is lexically after the shorter one
+    return lhs.size() == rhs.size() ? 0 : lhs.size() > rhs.size() ? 1 : -1;
+}
+
+bool iPrivate::isValidUtf8(iByteArrayView s)
+{
+    return iUtf8::isValidUtf8(s).isValidUtf8;
 }
 
 static const xuint16 crc_tbl[16] = {
@@ -1979,31 +2005,6 @@ iByteArray iByteArray::repeated(xsizetype times) const
     hashHaystack <<= 1
 
 /*!
-    Returns the index position of the first occurrence of the byte
-    array \a ba in this byte array, searching forward from index
-    position \a from. Returns -1 if \a ba could not be found.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 21
-
-    \sa lastIndexOf(), contains(), count()
-*/
-xsizetype iByteArray::indexOf(iByteArrayView bv, xsizetype from) const
-{
-    const xsizetype ol = bv.size();
-    if (ol == 0)
-        return from;
-    if (ol == 1)
-        return indexOf(*bv.data(), from);
-
-    const xsizetype l = d.size;
-    if (from > d.size || ol + from > l)
-        return -1;
-
-    return iFindByteArray(d.data(), d.size, from, bv.data(), ol);
-}
-
-/*!
     \overload
 
     Returns the index position of the first occurrence of the
@@ -2063,6 +2064,46 @@ static xsizetype lastIndexOfHelper(const char *haystack, xsizetype l, const char
 
 }
 
+xsizetype iPrivate::findByteArray(iByteArrayView haystack, xsizetype from, char needle)
+{
+    if (from < 0)
+        from = std::max(from + haystack.size(), xsizetype(0));
+    if (from < haystack.size()) {
+        const char *const b = haystack.data();
+        if (const auto n = static_cast<const char *>(
+                    memchr(b + from, needle, static_cast<size_t>(haystack.size() - from)))) {
+            return n - b;
+        }
+    }
+    return -1;
+}
+
+xsizetype iPrivate::lastIndexOf(iByteArrayView haystack, xsizetype from, uchar needle)
+{
+    if (from < 0)
+        from = std::max(from + haystack.size(), xsizetype(0));
+    else
+        from = std::min(from, haystack.size() - 1);
+
+    const char *const b = haystack.data();
+    const void *n = b ? imemrchr(b, needle, from + 1) : IX_NULLPTR;
+    return n ? static_cast<const char *>(n) - b : -1;
+}
+
+xsizetype iPrivate::lastIndexOf(iByteArrayView haystack, xsizetype from, iByteArrayView needle)
+{
+    if (haystack.isEmpty()) {
+        if (needle.isEmpty() && from == 0)
+            return 0;
+        return -1;
+    }
+    const auto ol = needle.size();
+    if (ol == 1)
+        return iPrivate::lastIndexOf(haystack, from, needle.front());
+
+    return lastIndexOfHelper(haystack.data(), haystack.size(), needle.data(), ol, from);
+}
+
 /*!
     \fn int iByteArray::lastIndexOf(const iByteArray &ba, int from) const
 
@@ -2076,14 +2117,6 @@ static xsizetype lastIndexOfHelper(const char *haystack, xsizetype l, const char
 
     \sa indexOf(), contains(), count()
 */
-xsizetype iByteArray::lastIndexOf(iByteArrayView bv, xsizetype from) const
-{
-    const xsizetype ol = bv.size();
-    if (ol == 1)
-        return lastIndexOf(*bv.data(), from);
-
-    return lastIndexOfHelper(d.data(), d.size, bv.data(), ol, from);
-}
 
 /*!
     \overload
@@ -2114,22 +2147,32 @@ xsizetype iByteArray::lastIndexOf(char ch, xsizetype from) const
     return -1;
 }
 
-/*!
-    Returns the number of (potentially overlapping) occurrences of
-    byte array \a ba in this byte array.
-
-    \sa contains(), indexOf()
-*/
-xsizetype iByteArray::count(iByteArrayView bv) const
+static inline xsizetype countCharHelper(iByteArrayView haystack, char needle)
 {
     xsizetype num = 0;
+    for (char ch : haystack) {
+        if (ch == needle)
+            ++num;
+    }
+    return num;
+}
+
+xsizetype iPrivate::count(iByteArrayView haystack, iByteArrayView needle)
+{
+    if (needle.size() == 0)
+        return haystack.size() + 1;
+
+    if (needle.size() == 1)
+        return countCharHelper(haystack, needle[0]);
+
+    xsizetype num = 0;
     xsizetype i = -1;
-    if (d.size > 500 && bv.size() > 5) {
-        iByteArrayMatcher matcher(bv);
-        while ((i = matcher.indexIn(*this, i + 1)) != -1)
+    if (haystack.size() > 500 && needle.size() > 5) {
+        iByteArrayMatcher matcher(needle);
+        while ((i = matcher.indexIn(haystack, i + 1)) != -1)
             ++num;
     } else {
-        while ((i = indexOf(bv, i + 1)) != -1)
+        while ((i = haystack.indexOf(needle, i + 1)) != -1)
             ++num;
     }
     return num;
@@ -2152,12 +2195,23 @@ xsizetype iByteArray::count(char ch) const
     return num;
 }
 
-/*! \fn int iByteArray::count() const
+bool iPrivate::startsWith(iByteArrayView haystack, iByteArrayView needle)
+{
+    if (haystack.size() < needle.size())
+        return false;
+    if (haystack.data() == needle.data() || needle.size() == 0)
+        return true;
+    return memcmp(haystack.data(), needle.data(), needle.size()) == 0;
+}
 
-    \overload
-
-    Same as size().
-*/
+bool iPrivate::endsWith(iByteArrayView haystack, iByteArrayView needle)
+{
+    if (haystack.size() < needle.size())
+        return false;
+    if (haystack.end() == needle.end() || needle.size() == 0)
+        return true;
+    return memcmp(haystack.end() - needle.size(), needle.data(), needle.size()) == 0;
+}
 
 /*!
     \fn int iByteArray::compare(const char *c, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
@@ -2183,54 +2237,6 @@ xsizetype iByteArray::count(char ch) const
 
     \sa operator==
 */
-
-/*!
-    Returns \c true if this byte array starts with byte array \a ba;
-    otherwise returns \c false.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 25
-
-    \sa endsWith(), left()
-*/
-bool iByteArray::startsWith(iByteArrayView bv) const
-{
-    if (d.data() == bv.data() || bv.size() == 0)
-        return true;
-    if (d.size < bv.size())
-        return false;
-    return memcmp(d.data(), bv.data(), bv.size()) == 0;
-}
-
-/*! \overload
-
-    Returns \c true if this byte array starts with character \a ch;
-    otherwise returns \c false.
-*/
-bool iByteArray::startsWith(char ch) const
-{
-    if (d.size == 0)
-        return false;
-    return d.data()[0] == ch;
-}
-
-/*!
-    Returns \c true if this byte array ends with byte array \a ba;
-    otherwise returns \c false.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 26
-
-    \sa startsWith(), right()
-*/
-bool iByteArray::endsWith(iByteArrayView bv) const
-{
-    if (d.end() == bv.end() || bv.size() == 0)
-        return true;
-    if (d.size < bv.size())
-        return false;
-    return memcmp(d.end() - bv.size(), bv.data(), bv.size()) == 0;
-}
 
 /*
     Returns true if \a c is an uppercase ASCII letter.
@@ -2290,18 +2296,6 @@ bool iByteArray::isLower() const
     }
 
     return true;
-}
-
-/*! \overload
-
-    Returns \c true if this byte array ends with character \a ch;
-    otherwise returns \c false.
-*/
-bool iByteArray::endsWith(char ch) const
-{
-    if (d.size == 0)
-        return false;
-    return d.data()[d.size - 1] == ch;
 }
 
 /*!
@@ -2864,6 +2858,13 @@ iByteArray iByteArray::trimmed_helper(iByteArray &a)
     return iStringAlgorithms<iByteArray>::trimmed_helper(a);
 }
 
+iByteArrayView iByteArrayView::trimmed() const
+{ 
+    const char *start = cbegin();
+    const char *stop = cend();
+    iStringAlgorithms<iByteArrayView>::trimmed_helper_positions(start, stop);
+    return iByteArrayView(start, stop);
+}
 
 /*!
     Returns a byte array of size \a width that contains this byte
