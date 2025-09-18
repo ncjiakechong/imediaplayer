@@ -3664,7 +3664,7 @@ iString iString::fromUcs4(const xuint32 *unicode, xsizetype size)
         if (sizeof(xuint32) == sizeof(wchar_t))
             size = wcslen(reinterpret_cast<const wchar_t *>(unicode));
         else
-            size = std::char_traits<xuint32>::length(unicode);
+            size = std::char_traits<char32_t>::length((const char32_t*)unicode);
     }
     iStringDecoder toUtf16(iStringDecoder::Utf32, iStringDecoder::Flag::Stateless);
     return toUtf16(iByteArrayView(reinterpret_cast<const char *>(unicode), size * 4));

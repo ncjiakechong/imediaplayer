@@ -3,7 +3,12 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ibytearray.cpp
-/// @brief   provides a dynamic array of bytes for storing and manipulating sequences of characters
+/// @brief   iByteArray can be used to store both raw bytes (including '\\0's)
+///          and traditional 8-bit '\\0'-terminated strings. Using iByteArray
+///          is much more convenient than using const char *. Behind the
+///          scenes, it always ensures that the data is followed by a '\\0'
+///          terminator, and uses implicit sharing (copy-on-write) to
+///          reduce memory usage and avoid needless copying of data.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -12,7 +17,6 @@
 #include <cstring>
 #include <cstdlib>
 
-#include "core/io/imemchunk.h"
 #include "core/utils/ibytearray.h"
 #include "utils/ibytearraymatcher.h"
 #include "utils/istringalgorithms_p.h"
@@ -21,6 +25,7 @@
 #include "global/inumeric_p.h"
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
+#include "io/imemchunk.h"
 
 #define ILOG_TAG "ix_utils"
 

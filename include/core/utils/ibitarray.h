@@ -3,8 +3,10 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    ibitarray.h
-/// @brief   provides a dynamic array of bits,
-///          allowing efficient storage and manipulation of boolean values
+/// @brief   A iBitArray is an array that gives access to individual bits and
+///          provides operators AND, OR, XOR, and NOT that work on
+///          entire arrays of bits. It uses copy-on-write
+///          to reduce memory usage and to avoid the needless copying of data.
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

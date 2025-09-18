@@ -12,6 +12,7 @@
 #include "core/io/imemblockq.h"
 #include "core/io/imemblock.h"
 #include "core/utils/ibytearray.h"
+#include "io/imemchunk.h"
 
 #define ILOG_TAG "ix_utils"
 

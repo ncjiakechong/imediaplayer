@@ -4,7 +4,8 @@
 /////////////////////////////////////////////////////////////////
 /// @file    iurl.h
 /// @brief   provide a comprehensive and flexible way to represent and manipulate URLs.
-/// @details description.
+/// @details It can parse and construct URLs in both encoded and unencoded
+///          form. iUrl also has support for internationalized domain names(IDNs).
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

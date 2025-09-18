@@ -29,6 +29,7 @@
 namespace iShell {
 
 namespace iMiscUtils {
+
 inline char toHexUpper(uint value)
 { return "0123456789ABCDEF"[value & 0xF]; }
 

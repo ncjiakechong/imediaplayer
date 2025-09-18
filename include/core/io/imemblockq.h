@@ -10,11 +10,11 @@
 #ifndef IMEMBLOCKQ_H
 #define IMEMBLOCKQ_H
 
-#include <core/io/imemchunk.h>
-#include <core/utils/istring.h>
+#include <core/utils/ibytearray.h>
 
 namespace iShell {
 
+class iMCAlign;
 struct iMBQListItem;
 
 struct IX_CORE_EXPORT iBufferAttr

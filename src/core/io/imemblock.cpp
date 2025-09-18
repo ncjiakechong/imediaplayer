@@ -12,10 +12,10 @@
 #include "core/kernel/imath.h"
 #include "core/io/isharemem.h"
 #include "core/io/imemtrap.h"
-#include "core/io/imemchunk.h"
 #include "core/io/imemblock.h"
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
+#include "io/imemchunk.h"
 
 #define IX_BYTES_SNPRINT_MAX 11
 

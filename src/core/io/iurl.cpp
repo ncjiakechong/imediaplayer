@@ -382,12 +382,6 @@ namespace iShell {
 
 using namespace iMiscUtils;
 
-inline static bool isHex(char c)
-{
-    c |= 0x20;
-    return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
-}
-
 static inline iString ftpScheme()
 {
     return iStringLiteral("ftp");
@@ -411,9 +405,7 @@ static inline iString webDavSslTag()
 
 /*!
     This is a helper for the assignment operators of implicitly
-    shared classes. Your assignment operator should look like this:
-
-    \snippet code/src.corelib.thread.qatomic.h 0
+    shared classes.
 */
 template <typename T>
 inline void iAtomicAssign(T *&d, T *x)
@@ -1888,7 +1880,7 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
             continue;
 
         bool error = false;
-        if ((uc == '%' && (size_t(end) < i + 2 || !isHex(data[i + 1]) || !isHex(data[i + 2])))
+        if ((uc == '%' && (size_t(end) < i + 2 || !isHexDigit(data[i + 1]) || !isHexDigit(data[i + 2])))
                 || uc <= 0x20 || strchr(forbidden, uc)) {
             // found an error
             error = true;

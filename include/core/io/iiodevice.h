@@ -3,7 +3,13 @@
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
 /// @file    iiodevice.h
-/// @brief   servers as an abstract base class for all I/O devices
+/// @brief   iIODevice provides both a common implementation and an abstract
+///          interface for devices that support reading and writing of blocks
+///          of data, such as iFile, iBuffer and iTcpSocket. iIODevice is
+///          abstract and cannot be instantiated, but it is common to use the
+///          interface it defines to provide device-independent I/O features.
+///          For example, XML classes operate on a iIODevice pointer,
+///          allowing them to be used with various devices (such as files and buffers).
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////

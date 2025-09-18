@@ -9,9 +9,9 @@
 /////////////////////////////////////////////////////////////////
 
 #include <string.h>
-#include "core/io/imemchunk.h"
 #include "core/io/imemblock.h"
 #include "core/io/ilog.h"
+#include "io/imemchunk.h"
 
 #define ILOG_TAG "ix_utils"
 
