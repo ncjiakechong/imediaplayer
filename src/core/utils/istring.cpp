@@ -650,29 +650,6 @@ void iWarnAboutInvalidRegularExpression(const iString &pattern, const char *wher
 }
 
 /*!
-  \macro IX_RESTRICTED_CAST_FROM_ASCII
-  \relates iString
-
-  Disables most automatic conversions from source literals and 8-bit data
-  to unicode iStrings, but allows the use of
-  the \c{iChar(char)} and \c{iString(const char (&ch)[N]} constructors
-
-  Using this macro together with source strings outside the 7-bit range,
-  non-literals, or literals with embedded NUL characters is undefined.
-*/
-
-/*!
-  \internal
-  \relates iString
-
-  This macro can be defined to force a warning whenever a function is
-  called that automatically converts between unicode and 8-bit encodings.
-
-  Note: This only works for compilers that support warnings for
-  deprecated API.
-*/
-
-/*!
     \class iString
     \reentrant
 
@@ -982,72 +959,6 @@ void iWarnAboutInvalidRegularExpression(const iString &pattern, const char *wher
         iLatin1StringView, iByteArray
 */
 
-/*!
-    \typedef iString::value_type
-*/
-
-/*! \fn iString::iterator iString::begin()
-
-    Returns an \l{STL-style iterators}{STL-style iterator} pointing to the
-    first character in the string.
-
-//! [iterator-invalidation-func-desc]
-    \warning The returned iterator is invalidated on detachment or when the
-    iString is modified.
-//! [iterator-invalidation-func-desc]
-
-    \sa constBegin(), end()
-*/
-
-/*! \fn iString::const_iterator iString::begin() const
-
-    \overload begin()
-*/
-
-/*! \fn iString::iString(const char *str)
-
-    Constructs a string initialized with the 8-bit string \a str. The
-    given const char pointer is converted to Unicode using the
-    fromUtf8() function.
-
-    \note Defining \l IX_RESTRICTED_CAST_FROM_ASCII also disables
-    this constructor, but enables a \c{iString(const char (&ch)[N])}
-    constructor instead. Using non-literal input, or input with
-    embedded NUL characters, or non-7-bit characters is undefined
-    in this case.
-
-    \sa fromLatin1(), fromLocal8Bit(), fromUtf8()
-*/
-
-/*! \fn iString::iString(const char8_t *str)
-
-    Constructs a string initialized with the UTF-8 string \a str. The
-    given const char8_t pointer is converted to Unicode using the
-    fromUtf8() function.
-
-    \since 6.1
-    \sa fromLatin1(), fromLocal8Bit(), fromUtf8()
-*/
-
-/*!
-    \fn iString::iString(iStringView sv)
-
-    Constructs a string initialized with the string view's data.
-
-    The iString will be null if and only if \a sv is null.
-
-    \since 6.8
-
-    \sa fromUtf16()
-*/
-
-/*
-//! [from-std-string]
-Returns a copy of the \a str string. The given string is assumed to be
-encoded in \1, and is converted to iString using the \2 function.
-//! [from-std-string]
-*/
-
 /*! \fn iString iString::fromStdWString(const std::wstring &str)
 
     Returns a copy of the \a str string. The given string is assumed
@@ -1212,52 +1123,6 @@ iString::iString(iChar ch)
     d.data()[0] = ch.unicode();
     d.data()[1] = '\0';
 }
-
-
-/*! \fn iString::iString(const Null &)
-    \internal
-*/
-
-/*! \fn iString::iString(QStringPrivate)
-    \internal
-*/
-
-/*! \fn iString &iString::operator=(const iString::Null &)
-    \internal
-*/
-
-/*!
-  \fn iString::~iString()
-
-    Destroys the string.
-*/
-
-
-/*! \fn void iString::swap(iString &other)
-    \since 4.8
-    \memberswap{string}
-*/
-
-/*! \fn void iString::detach()
-
-    \internal
-*/
-
-/*! \fn bool iString::isDetached() const
-
-    \internal
-*/
-
-/*! \fn bool iString::isSharedWith(const iString &other) const
-
-    \internal
-*/
-
-/*! \fn iString::operator std::u16string_view() const
-    \since 6.7
-
-    Converts this iString object to a \c{std::u16string_view} object.
-*/
 
 static bool needsReallocate(const iString &str, xsizetype newSize)
 {
@@ -1452,20 +1317,6 @@ iString &iString::operator=(const iString &other)
     return *this;
 }
 
-/*!
-    \fn iString &iString::operator=(iString &&other)
-
-    Move-assigns \a other to this iString instance.
-
-    \since 5.2
-*/
-
-/*! \fn iString &iString::operator=(iLatin1StringView str)
-
-    \overload operator=()
-
-    Assigns the Latin-1 string viewed by \a str to this string.
-*/
 iString &iString::operator=(iLatin1StringView other)
 {
     const xsizetype capacityAtEnd = capacity() - d.freeSpaceAtBegin();
@@ -1677,13 +1528,6 @@ iString &iString::append(const iString &str)
     \since 6.0
 
     Appends the given string view \a v to this string and returns the result.
-*/
-
-/*!
-  \overload append()
-  \since 5.0
-
-  Appends \a len characters from the iChar array \a str to this string.
 */
 iString &iString::append(const iChar *str, xsizetype len)
 {
@@ -3124,9 +2968,6 @@ bool iString::startsWith(const iString& s, iShell::CaseSensitivity cs) const
     return ix_starts_with_impl(iStringView(*this), iStringView(s), cs);
 }
 
-/*!
-  \overload startsWith()
- */
 bool iString::startsWith(iLatin1StringView s, iShell::CaseSensitivity cs) const
 {
     return ix_starts_with_impl(iStringView(*this), s, cs);
@@ -3158,12 +2999,6 @@ bool iString::startsWith(iChar c, iShell::CaseSensitivity cs) const
     \sa endsWith()
 */
 
-/*!
-    Returns \c true if the string ends with \a s; otherwise returns
-    \c false.
-
-    \sa startsWith()
-*/
 bool iString::endsWith(const iString &s, iShell::CaseSensitivity cs) const
 {
     return ix_ends_with_impl(iStringView(*this), iStringView(s), cs);
@@ -3178,21 +3013,11 @@ bool iString::endsWith(const iString &s, iShell::CaseSensitivity cs) const
 
     \sa startsWith()
 */
-
-/*!
-    \overload endsWith()
-*/
 bool iString::endsWith(iLatin1StringView s, iShell::CaseSensitivity cs) const
 {
     return ix_ends_with_impl(iStringView(*this), s, cs);
 }
 
-/*!
-  Returns \c true if the string ends with \a c; otherwise returns
-  \c false.
-
-  \overload endsWith()
- */
 bool iString::endsWith(iChar c, iShell::CaseSensitivity cs) const
 {
     if (!size())
