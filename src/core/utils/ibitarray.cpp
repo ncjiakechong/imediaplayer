@@ -36,7 +36,6 @@ namespace iShell {
     The following code constructs a iBitArray containing 200 bits
     initialized to false (0):
 
-    \snippet code/src_corelib_tools_qbitarray.cpp 0
 
     To initialize the bits to true, either pass \c true as second
     argument to the constructor, or call fill() later on.
@@ -47,13 +46,11 @@ namespace iShell {
     bit that can be used on the left side of an assignment. For
     example:
 
-    \snippet code/src_corelib_tools_qbitarray.cpp 1
 
     For technical reasons, it is more efficient to use testBit() and
     setBit() to access bits in the array than operator[](). For
     example:
 
-    \snippet code/src_corelib_tools_qbitarray.cpp 2
 
     iBitArray supports \c{&} (\l{operator&()}{AND}), \c{|}
     (\l{operator|()}{OR}), \c{^} (\l{operator^()}{XOR}),
@@ -62,7 +59,6 @@ namespace iShell {
     as the built-in C++ bitwise operators of the same name. For
     example:
 
-    \snippet code/src_corelib_tools_qbitarray.cpp 3
 
     For historical reasons, iBitArray distinguishes between a null
     bit array and an empty bit array. A \e null bit array is a bit
@@ -71,7 +67,6 @@ namespace iShell {
     array is always empty, but an empty bit array isn't necessarily
     null:
 
-    \snippet code/src_corelib_tools_qbitarray.cpp 4
 
     All functions except isNull() treat null bit arrays the same as
     empty bit arrays; for example, iBitArray() compares equal to
@@ -213,10 +208,6 @@ void iBitArray::resize(int size)
 /*! \fn bool iBitArray::isNull() const
 
     Returns \c true if this bit array is null; otherwise returns \c false.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 5
-
     iShell makes a distinction between null bit arrays and empty bit
     arrays for historical reasons. For most applications, what
     matters is whether or not a bit array contains any data,
@@ -230,10 +221,6 @@ void iBitArray::resize(int size)
     Sets every bit in the bit array to \a value, returning true if successful;
     otherwise returns \c false. If \a size is different from -1 (the default),
     the bit array is resized to \a size beforehand.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 6
-
     \sa resize()
 */
 
@@ -248,11 +235,7 @@ void iBitArray::resize(int size)
 
     \a end must be either a valid index position or equal to size(), in
     which case the fill operation runs until the end of the array
-    (0 <= \a end <= size()).
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 15
-*/
+    (0 <= \a end <= size()). */
 
 void iBitArray::fill(bool value, int begin, int end)
 {
@@ -394,10 +377,6 @@ iBitArray iBitArray::fromBits(const char *data, xsizetype size)
 
     \a i must be a valid index position in the bit array (i.e., 0 <=
     \a i < size()).
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 7
-
     The return value is of type iBitRef, a helper class for iBitArray.
     When you get an object of type iBitRef, you can assign to
     it, and the assignment will apply to the bit in the iBitArray
@@ -480,10 +459,6 @@ iBitArray iBitArray::fromBits(const char *data, xsizetype size)
     The result has the length of the longest of the two bit arrays,
     with any missing bits (if one array is shorter than the other)
     taken to be 0.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 8
-
     \sa operator&(), operator|=(), operator^=(), operator~()
 */
 
@@ -509,10 +484,6 @@ iBitArray &iBitArray::operator&=(const iBitArray &other)
     The result has the length of the longest of the two bit arrays,
     with any missing bits (if one array is shorter than the other)
     taken to be 0.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 9
-
     \sa operator|(), operator&=(), operator^=(), operator~()
 */
 
@@ -535,10 +506,6 @@ iBitArray &iBitArray::operator|=(const iBitArray &other)
     The result has the length of the longest of the two bit arrays,
     with any missing bits (if one array is shorter than the other)
     taken to be 0.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 10
-
     \sa operator^(), operator&=(), operator|=(), operator~()
 */
 
@@ -556,10 +523,6 @@ iBitArray &iBitArray::operator^=(const iBitArray &other)
 /*!
     Returns a bit array that contains the inverted bits of this bit
     array.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 11
-
     \sa operator&(), operator|(), operator^()
 */
 
@@ -588,10 +551,6 @@ iBitArray iBitArray::operator~() const
     The result has the length of the longest of the two bit arrays,
     with any missing bits (if one array is shorter than the other)
     taken to be 0.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 12
-
     \sa {iBitArray::}{operator&=()}, {iBitArray::}{operator|()}, {iBitArray::}{operator^()}
 */
 
@@ -611,10 +570,6 @@ iBitArray operator&(const iBitArray &a1, const iBitArray &a2)
     The result has the length of the longest of the two bit arrays,
     with any missing bits (if one array is shorter than the other)
     taken to be 0.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 13
-
     \sa iBitArray::operator|=(), operator&(), operator^()
 */
 
@@ -634,10 +589,6 @@ iBitArray operator|(const iBitArray &a1, const iBitArray &a2)
     The result has the length of the longest of the two bit arrays,
     with any missing bits (if one array is shorter than the other)
     taken to be 0.
-
-    Example:
-    \snippet code/src_corelib_tools_qbitarray.cpp 14
-
     \sa {iBitArray}{operator^=()}, {iBitArray}{operator&()}, {iBitArray}{operator|()}
 */
 

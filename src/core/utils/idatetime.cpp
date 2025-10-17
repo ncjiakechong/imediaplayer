@@ -681,10 +681,6 @@ iDate iDate::addYears(int nyears) const
     negative if \a d is earlier than this date).
 
     Returns 0 if either date is invalid.
-
-    Example:
-    \snippet code/src_corelib_tools_qdatetime.cpp 0
-
     \sa addDays()
 */
 xint64 iDate::daysTo(const iDate &d) const
@@ -753,10 +749,6 @@ xint64 iDate::daysTo(const iDate &d) const
 
     Returns \c true if the specified date (\a year, \a month, and \a
     day) is valid; otherwise returns \c false.
-
-    Example:
-    \snippet code/src_corelib_tools_qdatetime.cpp 4
-
     \sa isNull(), setDate()
 */
 bool iDate::isValid(int year, int month, int day)
@@ -980,11 +972,6 @@ bool iTime::setHMS(int h, int m, int s, int ms)
     Note that the time will wrap if it passes midnight.
 
     Returns a null time if this time is invalid.
-
-    Example:
-
-    \snippet code/src_corelib_tools_qdatetime.cpp 5
-
     \sa addMSecs(), secsTo(), iDateTime::addSecs()
 */
 iTime iTime::addSecs(int s) const
@@ -1100,12 +1087,7 @@ int iTime::msecsTo(const iTime &t) const
     false.
 
     The time is valid if \a h is in the range 0 to 23, \a m and
-    \a s are in the range 0 to 59, and \a ms is in the range 0 to 999.
-
-    Example:
-
-    \snippet code/src_corelib_tools_qdatetime.cpp 9
-*/
+    \a s are in the range 0 to 59, and \a ms is in the range 0 to 999. */
 bool iTime::isValid(int h, int m, int s, int ms)
 {
     return (uint)h < 24 && (uint)m < 60 && (uint)s < 60 && (uint)ms < 1000;
@@ -1115,7 +1097,6 @@ bool iTime::isValid(int h, int m, int s, int ms)
 /*!
     Sets this time to the current time. This is practical for timing:
 
-    \snippet code/src_corelib_tools_qdatetime.cpp 10
 
     \sa restart(), elapsed(), currentTime()
 */
@@ -1389,11 +1370,11 @@ static bool epochMSecsToLocalTime(xint64 msecs, iDate *localDate, iTime *localTi
             *daylightStatus = iDateTimePrivate::StandardTime;
         return true;
     } else if (msecs > (xint64(TIME_T_MAX) * 1000)) {
-        // Docs state any LocalTime after 2037-12-31 *will* have any DST applied
-        // but this may fall outside the supported time_t range, so need to fake it.
-        // Use existing method to fake the conversion, but this is deeply flawed as it may
-        // apply the conversion from the wrong day number, e.g. if rule is last Sunday of month
-        // TODO Use TimeZone when available to apply the future rule correctly
+        // Handle dates after 2037-12-31 which exceed time_t range (32-bit systems)
+        // Workaround: Map future dates to year 2037 to calculate DST, then adjust back
+        // Limitation: This assumes DST rules remain constant, which may not be accurate
+        // for dates far in the future (e.g., "last Sunday of month" rule may shift)
+        // TODO: Implement proper timezone database support for accurate future DST calculation
         iDate utcDate;
         iTime utcTime;
         msecsToTime(msecs, &utcDate, &utcTime);
@@ -1477,9 +1458,10 @@ static xint64 localMSecsToEpochMSecs(xint64 localMsecs,
                 return utcMsecs;
             }
         }
-        // Use existing method to fake the conversion, but this is deeply flawed as it may
-        // apply the conversion from the wrong day number, e.g. if rule is last Sunday of month
-        // TODO Use TimeZone when available to apply the future rule correctly
+        // Handle dates before 1970-01-01 which are below time_t range
+        // Workaround: Map historical dates to year 2037 to calculate DST, then adjust back
+        // Limitation: Assumes DST rules remain constant across different years
+        // TODO: Implement proper timezone database support for accurate historical DST calculation
         int year, month, day;
         dt.getDate(&year, &month, &day);
         // 2037 is not a leap year, so make sure date isn't Feb 29
@@ -2263,10 +2245,6 @@ void iDateTime::setTime(const iTime &time)
 
     If \a spec is iShell::TimeZone then the spec will be set to iShell::LocalTime,
     i.e. the current system time zone.
-
-    Example:
-    \snippet code/src_corelib_tools_qdatetime.cpp 19
-
     \sa timeSpec(), setDate(), setTime(), setTimeZone(), iShell::TimeSpec
 */
 
@@ -2572,10 +2550,6 @@ iDateTime iDateTime::addMSecs(xint64 msecs) const
 
     If the \a other datetime is earlier than this datetime,
     the value returned is negative.
-
-    Example:
-    \snippet code/src_corelib_tools_qdatetime.cpp 15
-
     \sa addDays(), secsTo(), msecsTo()
 */
 xint64 iDateTime::daysTo(const iDateTime &other) const
@@ -2591,10 +2565,6 @@ xint64 iDateTime::daysTo(const iDateTime &other) const
     (DST) applies to one of the two datetimes but not the other.
 
     Returns 0 if either datetime is invalid.
-
-    Example:
-    \snippet code/src_corelib_tools_qdatetime.cpp 11
-
     \sa addSecs(), daysTo(), iTime::secsTo()
 */
 xint64 iDateTime::secsTo(const iDateTime &other) const
@@ -2632,10 +2602,6 @@ xint64 iDateTime::msecsTo(const iDateTime &other) const
 
     If \a spec is iShell::TimeZone then it is set to iShell::LocalTime,
     i.e. the local Time Zone.
-
-    Example:
-    \snippet code/src_corelib_tools_qdatetime.cpp 16
-
     \sa timeSpec(), toTimeZone(), toUTC(), toLocalTime()
 */
 iDateTime iDateTime::toTimeSpec(iShell::TimeSpec spec) const
@@ -2887,11 +2853,6 @@ iDateTime iDateTime::fromSecsSinceEpoch(xint64 secs, iShell::TimeSpec spec, int 
 
     Returns a datetime containing the date and time information in
     this datetime, but specified using the iShell::LocalTime definition.
-
-    Example:
-
-    \snippet code/src_corelib_tools_qdatetime.cpp 17
-
     \sa toTimeSpec()
 */
 
@@ -2900,11 +2861,6 @@ iDateTime iDateTime::fromSecsSinceEpoch(xint64 secs, iShell::TimeSpec spec, int 
 
     Returns a datetime containing the date and time information in
     this datetime, but specified using the iShell::UTC definition.
-
-    Example:
-
-    \snippet code/src_corelib_tools_qdatetime.cpp 18
-
     \sa toTimeSpec()
 */
 

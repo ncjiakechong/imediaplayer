@@ -41,7 +41,7 @@ const uchar iPrivate::iCaseInsensitiveLatin1Hash::latin1Lower[256] = {
     account.
 
     This class is useful when you have a Latin-1 encoded string that
-    you want to repeatedly search for in some QLatin1StringViews
+    you want to repeatedly search for in some Latin-1 string views
     (perhaps in a loop), or when you want to search for all
     instances of it in a given iLatin1StringView. Using a matcher
     object and indexIn() is faster than matching a plain
@@ -56,7 +56,7 @@ const uchar iPrivate::iCaseInsensitiveLatin1Hash::latin1Lower[256] = {
     indexIn() with the iLatin1StringView that you want to search
     within.
 
-    \sa iLatin1StringView, QStringMatcher, QByteArrayMatcher
+    \sa iLatin1StringView, iStringMatcher, iByteArrayMatcher
 */
 
 /*!
@@ -185,7 +185,6 @@ xsizetype iLatin1StringMatcher::indexIn(iLatin1StringView haystack, xsizetype fr
 }
 
 /*!
-    \since 6.8
     \overload
 
     Searches for the pattern in the given \a haystack starting from index

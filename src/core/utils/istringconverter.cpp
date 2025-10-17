@@ -184,7 +184,6 @@ iString iUtf8::convertToUnicode(iByteArrayView in)
 }
 
 /*! \internal
-    \since 6.6
     \overload
 
     Converts the UTF-8 sequence of bytes viewed by \a in to a sequence of
@@ -993,7 +992,6 @@ static xsizetype toLatin1Len(xsizetype l) { return l + 1; }
     want to convert it to a iString. The simple way
     to do it is to use a \l {iStringDecoder} like this:
 
-    \snippet code/src_corelib_text_qstringconverter.cpp 0
 
     After this, \c string holds the text in decoded form.
     Converting a string from Unicode to the local encoding is just as
@@ -1010,7 +1008,6 @@ static xsizetype toLatin1Len(xsizetype l) { return l + 1; }
     again with the next chunk of data will automatically continue encoding
     or decoding the data correctly:
 
-    \snippet code/src_corelib_text_qstringconverter.cpp 2
 
     The iStringDecoder object maintains state between chunks and therefore
     works correctly even if a multi-byte character is split between
@@ -1168,13 +1165,11 @@ const char *iStringConverter::name() const
     Converting a string from Unicode to the local encoding can be achieved
     using the following code:
 
-    \snippet code/src_corelib_text_qstringconverter.cpp 1
 
     The encoder remembers any state that is required between calls, so converting
     data received in chunks, for example, when receiving it over a network, is just as
     easy, by calling the encoder whenever new data is available:
 
-    \snippet code/src_corelib_text_qstringconverter.cpp 3
 
     The iStringEncoder object maintains state between chunks and therefore
     works correctly even if a UTF-16 surrogate character is split between
@@ -1219,7 +1214,6 @@ const char *iStringConverter::name() const
 
     Converts \a in and returns a struct that is implicitly convertible to iByteArray.
 
-    \snippet code/src_corelib_text_qstringconverter.cpp 5
 */
 
 /*!
@@ -1257,13 +1251,11 @@ const char *iStringConverter::name() const
     Converting encoded data into a iString can be achieved
     using the following code:
 
-    \snippet code/src_corelib_text_qstringconverter.cpp 0
 
     The decoder remembers any state that is required between calls, so converting
     data received in chunks, for example, when receiving it over a network, is just as
     easy, by calling the decoder whenever new data is available:
 
-    \snippet code/src_corelib_text_qstringconverter.cpp 2
 
     The iStringDecoder object maintains state between chunks and therefore
     works correctly even if chunks are split in the middle of a multi-byte character
@@ -1309,7 +1301,6 @@ const char *iStringConverter::name() const
     Converts \a ba and returns a struct that is implicitly convertible to iString.
 
 
-    \snippet code/src_corelib_text_qstringconverter.cpp 4
 */
 
 /*!
@@ -1336,7 +1327,6 @@ const char *iStringConverter::name() const
 
 /*!
     \fn xuint16 *iStringDecoder::appendToBuffer(xuint16 *out, iByteArrayView in)
-    \since 6.6
     \overload
 */
 

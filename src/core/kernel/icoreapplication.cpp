@@ -338,7 +338,7 @@ void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
     iThreadData *data = receiver ? receiver->m_threadData : iThreadData::current();
     iScopedLock<iMutex> locker(data->postEventList.mutex);
 
-    // the iObject destructor calls this function directly.  this can
+    // the iObject destructor calls this function directly. this can
     // happen while the event loop is in the middle of posting events,
     // and when we get here, we may not have any more posted events
     // for this object.
@@ -351,7 +351,8 @@ void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
         const iPostEvent &pe = *it;
         if ((!receiver || pe.receiver == receiver)
             && (pe.event && (iEvent::None == eventType || pe.event->type() == eventType))) {
-            --pe.receiver->m_postedEvents;
+            // Check receiver is not null before dereferencing
+            if (pe.receiver) --pe.receiver->m_postedEvents;
             pe.event->m_posted = false;
             events.push_back(*it);
             const_cast<iPostEvent &>(pe).event = IX_NULLPTR;

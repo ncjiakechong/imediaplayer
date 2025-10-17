@@ -109,7 +109,6 @@ void toString(iString &appendTo, IPv4Address address)
 
 /*!
     \internal
-    \since 5.0
 
     Parses one IPv6 address from \a begin to \a end and stores the
     representation in \a address. Returns null if everything was parsed

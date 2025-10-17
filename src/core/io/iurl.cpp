@@ -85,12 +85,10 @@
     Calling isRelative() will return whether or not the URL is relative.
     A relative URL has no \l {scheme}. For example:
 
-    \snippet code/src_corelib_io_iurl.cpp 8
 
     Notice that a URL can be absolute while containing a relative path, and
     vice versa:
 
-    \snippet code/src_corelib_io_iurl.cpp 9
 
     A relative URL can be resolved by passing it as an argument to resolved(),
     which returns an absolute URL. isParentOf() is used for determining whether
@@ -322,7 +320,6 @@
 
     The following example illustrates the problem:
 
-    \snippet code/src_corelib_io_iurl.cpp 10
 
     If the two URLs were used via HTTP GET, the interpretation by the web
     server would probably be different. In the first case, it would interpret
@@ -1016,7 +1013,7 @@ static xsizetype rootLength(iStringView name, PathNormalizations flags)
        "a/b/" and "a/b//../.." becomes "a/"), which matches the behavior
        observed in web browsers.
 
-    As a Qt extension, for local URLs we treat multiple slashes as one slash.
+    As an extension, for local URLs we treat multiple slashes as one slash.
 */
 bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
 {
@@ -1041,8 +1038,9 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
                 break;
         }
         if (!isRemote && lastWasSlash && in[i] == u'/' && i > 0) {
-            // backtrack one, so the algorithm below gobbles up the remaining
-            // slashes
+            // Found consecutive slashes in local path (e.g., "path//to/file")
+            // Move back one position so the normalization loop below will remove
+            // all consecutive slashes in one pass
             --i;
             break;
         }
@@ -1051,7 +1049,7 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
     if (i == n)
         return true;
 
-    iChar *out = path->data();  // detaches
+    iChar *out = path->data();  // Triggers copy-on-write detachment for modification
     const iChar *start = out + prefixLength;
     const iChar *end = out + path->size();
     out += i;
@@ -1073,7 +1071,7 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
 
                 // Note: we may exit this loop with in == end, in which case we
                 // *shouldn't* dereference *in. But since we are pointing to a
-                // detached, non-empty QString, we know there's a u'\0' at the
+                // detached, non-empty string, we know there's a u'\0' at the
                 // end, so dereferencing is safe.
             }
         }
@@ -1309,12 +1307,12 @@ inline void iUrlPrivate::setAuthority(const iString &auth, xsizetype from, xsize
 
         setHost(auth, from, std::min<uint>(end, colonIndex), mode);
         if (mode == iUrl::StrictMode && !validateComponent(Host, auth, from, std::min<uint>(end, colonIndex))) {
-            // clear host too
+            // Validation failed: clear entire authority section (not just host)
             sectionIsPresent &= ~Authority;
             break;
         }
 
-        // success
+        // Authority section successfully parsed and validated
         return;
     }
     // clear all sections but host
@@ -1581,15 +1579,15 @@ inline bool iUrlPrivate::setHost(const iString &value, xsizetype from, xsizetype
     // check for percent-encoding first
     iString s;
     if (mode == iUrl::TolerantMode && ix_urlRecode(s, iStringView{begin, end}, { }, IX_NULLPTR)) {
-        // something was decoded
-        // anything encoded left?
+        // Host was percent-decoded successfully
+        // Verify no illegal percent sequences remain (should all be decoded by now)
         xsizetype pos = s.indexOf(iChar(0x25)); // '%'
         if (pos != -1) {
             setError(InvalidRegNameError, s, pos);
             return false;
         }
 
-        // recurse
+        // Recursively validate the decoded host in strict mode
         return setHost(s, 0, s.length(), iUrl::StrictMode);
     }
 
@@ -1948,14 +1946,8 @@ bool iUrlPrivate::validateComponent(iUrlPrivate::Section section, const iString 
     characters are not present in unencoded form. If an error is detected in
     StrictMode, isValid() will return false. The parsing mode DecodedMode is not
     permitted in this context.
-
-    Example:
-
-    \snippet code/src_corelib_io_iurl.cpp 0
-
     To construct a URL from an encoded string, you can also use fromEncoded():
 
-    \snippet code/src_corelib_io_iurl.cpp 1
 
     Both functions are equivalent and, both functions accept encoded
     data. Usually, the choice of the iUrl constructor or setUrl() versus
@@ -2001,7 +1993,6 @@ iUrl::~iUrl()
     must conform to the standard encoding rules of the URI standard
     for the URL to be reported as valid.
 
-    \snippet code/src_corelib_io_iurl.cpp 2
 */
 bool iUrl::isValid() const
 {
@@ -2096,7 +2087,6 @@ void iUrl::setUrl(const iString &url, ParsingMode parsingMode)
     \image iurl-authority2.png
 
     To set the scheme, the following call is used:
-    \snippet code/src_corelib_io_iurl.cpp 11
 
     The scheme can also be empty, in which case the URL is interpreted
     as relative.
@@ -2487,14 +2477,14 @@ void iUrl::setHost(const iString &host, ParsingMode mode)
         data.prepend(iLatin1Char('['));
         data.append(iLatin1Char(']'));
         if (!d->setHost(data, 0, data.length(), mode)) {
-            // failed again
+            // Host validation failed even after percent-decoding
             if (data.contains(iLatin1Char(':'))) {
-                // source data contains ':', so it's an IPv6 error
+                // Presence of ':' indicates this was likely an IPv6 address parse error
                 d->error->code = iUrlPrivate::InvalidIPv6AddressError;
             }
             d->sectionIsPresent &= ~iUrlPrivate::Host;
         } else {
-            // succeeded
+            // Host successfully validated and set
             d->clearError();
         }
     }
@@ -2585,12 +2575,7 @@ void iUrl::setPort(int port)
 
 /*!
     Returns the port of the URL, or \a defaultPort if the port is
-    unspecified.
-
-    Example:
-
-    \snippet code/src_corelib_io_iurl.cpp 3
-*/
+    unspecified.*/
 int iUrl::port(int defaultPort) const
 {
     if (!d) return defaultPort;
@@ -2629,10 +2614,8 @@ void iUrl::setPath(const iString &path, ParsingMode mode)
 
     d->setPath(path, mode);
 
-    // optimized out, since there is no path delimiter
-//    if (path.isNull())
-//        d->sectionIsPresent &= ~iUrlPrivate::Path;
-//    else
+    // Path null check removed - optimization since path has no delimiter marker
+    // No need to clear sectionIsPresent flag as path is always considered present
     if (mode == StrictMode && !d->validateComponent(iUrlPrivate::Path, path))
         d->path.clear();
 }
@@ -2640,7 +2623,6 @@ void iUrl::setPath(const iString &path, ParsingMode mode)
 /*!
     Returns the path of the URL.
 
-    \snippet code/src_corelib_io_iurl.cpp 12
 
     The \a options argument controls how to format the path component. All
     values produce an unambiguous result. With iUrl::FullyDecoded, all
@@ -2655,18 +2637,15 @@ void iUrl::setPath(const iString &path, ParsingMode mode)
     An example of data loss is when you have non-Unicode percent-encoded sequences
     and use FullyDecoded (the default):
 
-    \snippet code/src_corelib_io_iurl.cpp 13
 
     In this example, there will be some level of data loss because the \c %FF cannot
     be converted.
 
     Data loss can also occur when the path contains sub-delimiters (such as \c +):
 
-    \snippet code/src_corelib_io_iurl.cpp 14
 
     Other decoding examples:
 
-    \snippet code/src_corelib_io_iurl.cpp 15
 
     \sa setPath()
 */
@@ -2718,11 +2697,6 @@ iString iUrl::path(ComponentFormattingOptions options) const
     Note that, if this iUrl object is given a path ending in a slash, the name of the file is considered empty.
 
     If the path doesn't contain any slash, it is fully returned as the fileName.
-
-    Example:
-
-    \snippet code/src_corelib_io_iurl.cpp 7
-
     The \a options argument controls how to format the file name component. All
     values produce an unambiguous result. With iUrl::FullyDecoded, all
     percent-encoded sequences are decoded; otherwise, the returned value may
@@ -3204,7 +3178,6 @@ bool iUrl::hasFragment() const
     the base URL, but with the merged path, as in the following
     example:
 
-    \snippet code/src_corelib_io_iurl.cpp 5
 
     Calling resolved() with ".." returns a iUrl whose directory is
     one level higher than the original. Similarly, calling resolved()
@@ -3501,7 +3474,6 @@ iString iUrl::fromPercentEncoding(const iByteArray &input)
     Unreserved is defined as:
        \tt {ALPHA / DIGIT / "-" / "." / "_" / "~"}
 
-    \snippet code/src_corelib_io_iurl.cpp 6
 */
 iByteArray iUrl::toPercentEncoding(const iString &input, const iByteArray &exclude, const iByteArray &include)
 {
@@ -3810,7 +3782,6 @@ bool iUrl::isDetached() const
     returned value in the form found on SMB networks (for example,
     "//servername/path/to/file.txt").
 
-    \snippet code/src_corelib_io_iurl.cpp 20
 
     Note: if the path component of this URL contains a non-UTF-8 binary
     sequence (such as %80), the behaviour of this function is undefined.

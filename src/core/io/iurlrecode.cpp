@@ -291,10 +291,10 @@ static bool encodedUtf8ToUtf16(iString &result, xuint16 *&output, const xuint16 
 static void unicodeToEncodedUtf8(iString &result, xuint16 *&output, const xuint16 *begin,
                                  const xuint16 *&input, const xuint16 *end, xuint16 decoded)
 {
-    // calculate the utf8 length and ensure enough space is available
+    // Calculate UTF-8 byte length: 4 bytes for surrogate pairs, 3 for U+0800+, 2 for U+0080+
     int utf8len = iChar::isHighSurrogate(decoded) ? 4 : decoded >= 0x800 ? 3 : 2;
 
-    // detach
+    // Ensure string is detached (not shared) before modification
     if (!output) {
         // we need 3 * utf8len for the encoded UTF-8 sequence
         // but ensureDetached already adds 3 for the char we're processing
@@ -478,12 +478,12 @@ static xsizetype decode(iString &appendTo, iStringView in)
     const xuint16 *begin = in.utf16();
     const xuint16 *end = begin + in.size();
 
-    // fast check whether there's anything to be decoded in the first place
+    // Quick check: search for '%' to see if any decoding is needed
     const xuint16 *input = iPrivate::xustrchr(iStringView(begin, end), '%');
     if (input == end)
-        return 0;           // nothing to do, it was already decoded!
+        return 0;           // No encoded characters found, string is already decoded
 
-    // detach
+    // Prepare output buffer by resizing and copying unencoded prefix
     const int origSize = appendTo.size();
     appendTo.resize(origSize + (end - begin));
     xuint16 *output = reinterpret_cast<xuint16 *>(appendTo.begin()) + origSize;

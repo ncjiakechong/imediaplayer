@@ -603,7 +603,6 @@ int iPrivate::compareStrings(iStringView lhs, iLatin1StringView rhs, iShell::Cas
 /*!
     \relates iStringView
     \internal
-    \since 5.10
     \overload
 */
 int iPrivate::compareStrings(iLatin1StringView lhs, iStringView rhs, iShell::CaseSensitivity cs)
@@ -854,7 +853,6 @@ void iWarnAboutInvalidRegularExpression(const iString &pattern, const char *wher
     8-bit string, or use the lightweight iLatin1StringView class. For
     example:
 
-    \snippet code/src_corelib_text_qstring.cpp 1
 
     Similarly, you must call toLatin1(), toUtf8(), or
     toLocal8Bit() explicitly to convert the iString to an 8-bit
@@ -919,13 +917,12 @@ void iWarnAboutInvalidRegularExpression(const iString &pattern, const char *wher
     where \e{n > 2}, there can be as many as \e{n - 1} calls to the
     memory allocator.
 
-    These allocations can be optimized by an internal class
-    \c{QStringBuilder}. This class is marked
-    internal and does not appear in the documentation, because you
-    aren't meant to instantiate it in your code. Its use will be
+    These allocations can be optimized by an internal string builder class.
+    This class is marked internal and does not appear in the documentation,
+    because you aren't meant to instantiate it in your code. Its use will be
     automatic, as described below.
 
-    \c{QStringBuilder} uses expression templates and reimplements the
+    The string builder uses expression templates and reimplements the
     \c{'%'} operator so that when you use \c{'%'} for string
     concatenation instead of \c{'+'}, multiple substring
     concatenations will be postponed until the final result is about
@@ -935,7 +932,7 @@ void iWarnAboutInvalidRegularExpression(const iString &pattern, const char *wher
     are copied into it one by one.
 
     Additional efficiency is gained by inlining and reducing reference
-    counting (the iString created from a \c{QStringBuilder}
+    counting (the iString created from the string builder
     has a ref count of 1, whereas iString::append() needs an extra
     test).
 
@@ -971,7 +968,6 @@ void iWarnAboutInvalidRegularExpression(const iString &pattern, const char *wher
 */
 
 /*! \fn iString iString::fromWCharArray(const wchar_t *string, xsizetype size)
-    \since 4.2
 
     Reads the first \a size code units of the \c wchar_t array to whose start
     \a string points, converting them to Unicode and returning the result as
@@ -1010,7 +1006,6 @@ xsizetype iString::toUcs4_helper(const xuint16 *uc, xsizetype length, xuint32 *o
 }
 
 /*! \fn xsizetype iString::toWCharArray(wchar_t *array) const
-  \since 4.2
 
   Fills the \a array with the data contained in this iString object.
   The array is encoded in UTF-16 on platforms where
@@ -1176,7 +1171,6 @@ void iString::resize(xsizetype newSize, iChar fillChar)
 
 
 /*!
-    \since 6.8
 
     Sets the size of the string to \a size characters. If the size of
     the string grows, the new characters are uninitialized.
@@ -1357,7 +1351,6 @@ iString &iString::operator=(iChar ch)
 
 /*!
     \fn iString& iString::insert(xsizetype position, iStringView str)
-    \since 6.0
     \overload insert()
 
     Inserts the string view \a str at the given index \a position and
@@ -1367,7 +1360,6 @@ iString &iString::operator=(iChar ch)
 
 /*!
     \fn iString& iString::insert(xsizetype position, const char *str)
-    \since 5.5
     \overload insert()
 
     Inserts the C string \a str at the given index \a position and
@@ -1376,7 +1368,6 @@ iString &iString::operator=(iChar ch)
 
 /*!
     \fn iString& iString::insert(xsizetype position, const iByteArray &str)
-    \since 5.5
     \overload insert()
 
     Interprets the contents of \a str as UTF-8, inserts the Unicode string
@@ -1525,7 +1516,6 @@ iString &iString::append(const iString &str)
 /*!
     \fn iString &iString::append(iStringView v)
     \overload append()
-    \since 6.0
 
     Appends the given string view \a v to this string and returns the result.
 */
@@ -1659,17 +1649,18 @@ static void removeStringImpl(iString &s, const T &needle, iShell::CaseSensitivit
     if (!needleSize)
         return;
 
-    // avoid detach if nothing to do:
+    // Early exit optimization: search first to avoid detaching if needle not found
     xsizetype idx = s.indexOf(needle, 0, cs);
     if (idx < 0)
         return;
 
-    const auto beg = s.begin(); // detaches
+    const auto beg = s.begin(); // Triggers copy-on-write detachment for in-place modification
     auto dst = beg + idx;
     auto src = beg + idx + needleSize;
     const auto end = s.end();
-    // loop invariant: [beg, dst[ is partial result
-    //                 [src, end[ still to be checked for needles
+    // Maintain invariant during removal loop:
+    //   [beg, dst[ - processed result with all needles removed
+    //   [src, end[ - remaining string still to be searched
     while (src < end) {
         const auto i = s.indexOf(needle, src - beg, cs);
         const auto hit = i == -1 ? end : beg + i;
@@ -1700,7 +1691,6 @@ iString &iString::remove(const iString &str, iShell::CaseSensitivity cs)
 }
 
 /*!
-  \since 5.11
   \overload
 
   Removes every occurrence of the given Latin-1 string viewed by \a str
@@ -1717,7 +1707,6 @@ iString &iString::remove(iLatin1StringView str, iShell::CaseSensitivity cs)
 /*!
   \fn iString &iString::removeAt(xsizetype pos)
 
-  \since 6.5
 
   Removes the character at index \a pos. If \a pos is out of bounds
   (i.e. \a pos >= size()), this function does nothing.
@@ -1728,7 +1717,6 @@ iString &iString::remove(iLatin1StringView str, iShell::CaseSensitivity cs)
 /*!
   \fn iString &iString::removeFirst()
 
-  \since 6.5
 
   Removes the first character in this string. If the string is empty,
   this function does nothing.
@@ -1739,7 +1727,6 @@ iString &iString::remove(iLatin1StringView str, iShell::CaseSensitivity cs)
 /*!
   \fn iString &iString::removeLast()
 
-  \since 6.5
 
   Removes the last character in this string. If the string is empty,
   this function does nothing.
@@ -1775,7 +1762,6 @@ iString &iString::remove(iChar ch, iShell::CaseSensitivity cs)
 
 /*!
   \fn iString &iString::remove(const iRegularExpression &re)
-  \since 5.0
 
   Removes every occurrence of the regular expression \a re in the
   string, and returns a reference to the string. For example:
@@ -1785,7 +1771,6 @@ iString &iString::remove(iChar ch, iShell::CaseSensitivity cs)
 
 /*!
   \fn template <typename Predicate> iString &iString::removeIf(Predicate pred)
-  \since 6.1
 
   Removes all elements for which the predicate \a pred returns true
   from the string. Returns a reference to the string.
@@ -1930,7 +1915,6 @@ iString &iString::replace(const iString &before, const iString &after, iShell::C
 }
 
 /*!
-  \since 4.5
   \overload replace()
 
   Replaces each occurrence in this string of the first \a blen
@@ -2084,7 +2068,6 @@ iString& iString::replace(iChar before, iChar after, iShell::CaseSensitivity cs)
 }
 
 /*!
-  \since 4.5
   \overload replace()
 
   Replaces every occurrence in this string of the Latin-1 string viewed
@@ -2104,7 +2087,6 @@ iString &iString::replace(iLatin1StringView before, iLatin1StringView after, iSh
 }
 
 /*!
-  \since 4.5
   \overload replace()
 
   Replaces every occurrence in this string of the Latin-1 string viewed
@@ -2122,7 +2104,6 @@ iString &iString::replace(iLatin1StringView before, const iString &after, iShell
 }
 
 /*!
-  \since 4.5
   \overload replace()
 
   Replaces every occurrence of the string \a before with the string \a
@@ -2139,7 +2120,6 @@ iString &iString::replace(const iString &before, iLatin1StringView after, iShell
 }
 
 /*!
-  \since 4.5
   \overload replace()
 
   Replaces every occurrence of the character \a c with the string \a
@@ -2189,7 +2169,6 @@ xsizetype iString::lastIndexOf(iChar ch, xsizetype from, iShell::CaseSensitivity
 
 /*!
   \fn xsizetype iString::lastIndexOf(iLatin1StringView str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-  \since 6.2
   \overload lastIndexOf()
 
   Returns the index position of the last occurrence of the string \a
@@ -2205,13 +2184,11 @@ xsizetype iString::lastIndexOf(iChar ch, xsizetype from, iShell::CaseSensitivity
 
 /*!
   \fn iString::lastIndexOf(iChar ch, iShell::CaseSensitivity) const
-  \since 6.3
   \overload lastIndexOf()
 */
 
 /*!
   \fn xsizetype iString::lastIndexOf(iStringView str, xsizetype from, iShell::CaseSensitivity cs) const
-  \since 5.14
   \overload lastIndexOf()
 
   \note When searching for a 0-length \a str, the match at the end of
@@ -2226,7 +2203,6 @@ xsizetype iString::lastIndexOf(iChar ch, xsizetype from, iShell::CaseSensitivity
 
 /*!
   \fn xsizetype iString::lastIndexOf(iStringView str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-  \since 6.2
   \overload lastIndexOf()
 
   Returns the index position of the last occurrence of the string view \a
@@ -2245,7 +2221,6 @@ IX_DECLARE_TYPEINFO(iStringCapture, IX_PRIMITIVE_TYPE);
 
 /*!
   \overload replace()
-  \since 5.0
 
   Replaces every occurrence of the regular expression \a re in the
   string with \a after. Returns a reference to the string.
@@ -2390,7 +2365,6 @@ xsizetype iString::count(iChar ch, iShell::CaseSensitivity cs) const
 }
 
 /*!
-    \since 6.0
     \overload count()
     Returns the number of (potentially overlapping) occurrences of the
     string view \a str in this string.
@@ -2411,7 +2385,6 @@ xsizetype iString::count(iStringView str, iShell::CaseSensitivity cs) const
 */
 
 /*! \fn bool iString::contains(iLatin1StringView str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \since 5.3
 
     \overload contains()
 
@@ -2428,7 +2401,6 @@ xsizetype iString::count(iStringView str, iShell::CaseSensitivity cs) const
 */
 
 /*! \fn bool iString::contains(iStringView str, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    \since 5.14
     \overload contains()
 
     Returns \c true if this string contains an occurrence of the string view
@@ -2438,7 +2410,6 @@ xsizetype iString::count(iStringView str, iShell::CaseSensitivity cs) const
 */
 
 /*!
-    \since 5.5
 
     Returns the index position of the first match of the regular
     expression \a re in the string, searching forward from index
@@ -2467,7 +2438,6 @@ xsizetype iString::indexOf(const iRegularExpression &re, xsizetype from, iRegula
 }
 
 /*!
-    \since 5.5
 
     Returns the index position of the last match of the regular
     expression \a re in the string, which starts before the index
@@ -2518,7 +2488,6 @@ xsizetype iString::lastIndexOf(const iRegularExpression &re, xsizetype from, iRe
 
 /*!
     \fn xsizetype iString::lastIndexOf(const iRegularExpression &re, iRegularExpressionMatch *rmatch = IX_NULLPTR) const
-    \since 6.2
     \overload lastIndexOf()
 
     Returns the index position of the last match of the regular
@@ -2534,7 +2503,6 @@ xsizetype iString::lastIndexOf(const iRegularExpression &re, xsizetype from, iRe
 */
 
 /*!
-    \since 5.1
 
     Returns \c true if the regular expression \a re matches somewhere in this
     string; otherwise returns \c false.
@@ -2560,7 +2528,6 @@ bool iString::contains(const iRegularExpression &re, iRegularExpressionMatch *rm
 
 /*!
     \overload count()
-    \since 5.0
 
     Returns the number of times the regular expression \a re matches
     in the string.
@@ -2767,7 +2734,6 @@ static iString extractSections(const std::list<ix_section_chunk> &sections, xsiz
 
 /*!
     \overload section()
-    \since 5.0
 
     This string is treated as a sequence of fields separated by the
     regular expression, \a re.
@@ -2880,7 +2846,6 @@ iString iString::mid(xsizetype position, xsizetype n) const
 /*!
     \fn iString iString::first(xsizetype n) const &
     \fn iString iString::first(xsizetype n) &&
-    \since 6.0
 
     Returns a string that contains the first \a n characters of this string,
     (that is, from the beginning of this string up to, but not including,
@@ -2894,7 +2859,6 @@ iString iString::mid(xsizetype position, xsizetype n) const
 /*!
     \fn iString iString::last(xsizetype n) const &
     \fn iString iString::last(xsizetype n) &&
-    \since 6.0
 
     Returns the string that contains the last \a n characters of this string.
 
@@ -2906,7 +2870,6 @@ iString iString::mid(xsizetype position, xsizetype n) const
 /*!
     \fn iString iString::sliced(xsizetype pos) const &
     \fn iString iString::sliced(xsizetype pos) &&
-    \since 6.0
     \overload
 
     Returns a string that contains the portion of this string starting at
@@ -2919,7 +2882,6 @@ iString iString::mid(xsizetype position, xsizetype n) const
 
 /*!
     \fn iString &iString::slice(xsizetype pos, xsizetype n)
-    \since 6.8
 
     Modifies this string to start at position \a pos, up to, but not including,
     the character (code point) at index position \c {\a pos + n}; and returns
@@ -2933,7 +2895,6 @@ iString iString::mid(xsizetype position, xsizetype n) const
 
 /*!
     \fn iString &iString::slice(xsizetype pos)
-    \since 6.8
     \overload
 
     Modifies this string to start at position \a pos and extending to its end,
@@ -2947,7 +2908,6 @@ iString iString::mid(xsizetype position, xsizetype n) const
 /*!
     \fn iString iString::chopped(xsizetype len) const &
     \fn iString iString::chopped(xsizetype len) &&
-    \since 5.10
 
     Returns a string that contains the size() - \a len leftmost characters
     of this string.
@@ -2990,7 +2950,6 @@ bool iString::startsWith(iChar c, iShell::CaseSensitivity cs) const
 
 /*!
     \fn bool iString::startsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \since 5.10
     \overload
 
     Returns \c true if the string starts with the string view \a str;
@@ -3006,7 +2965,6 @@ bool iString::endsWith(const iString &s, iShell::CaseSensitivity cs) const
 
 /*!
     \fn bool iString::endsWith(iStringView str, iShell::CaseSensitivity cs) const
-    \since 5.10
     \overload endsWith()
     Returns \c true if the string ends with the string view \a str;
     otherwise returns \c false.
@@ -3057,7 +3015,6 @@ bool iPrivate::isUpper(iStringView s)
     folding; they are left unchanged by toUpper()).
     For more information, refer to the Unicode standard, section 3.13.
 
-    \since 5.12
 
     \sa iChar::toUpper(), isLower()
 */
@@ -3075,7 +3032,6 @@ bool iString::isUpper() const
     folding; they are left unchanged by toLower()).
     For more information, refer to the Unicode standard, section 3.13.
 
-    \since 5.12
 
     \sa iChar::toLower(), isUpper()
  */
@@ -3092,7 +3048,6 @@ iByteArray iString::toLatin1_helper(const iString &string)
 }
 
 /*!
-    \since 5.10
     \internal
     \relates iStringView
 
@@ -3149,7 +3104,6 @@ iByteArray iString::toLatin1_helper_inplace(iString &s)
 }
 
 /*!
-    \since 6.9
     \internal
     \relates iLatin1StringView
 
@@ -3223,7 +3177,6 @@ static iByteArray ix_convert_to_local_8bit(iStringView string)
 }
 
 /*!
-    \since 5.10
     \internal
     \relates iStringView
 
@@ -3269,7 +3222,6 @@ static iByteArray ix_convert_to_utf8(iStringView str)
 }
 
 /*!
-    \since 5.10
     \internal
     \relates iStringView
 
@@ -3330,7 +3282,6 @@ std::list<xuint32> iPrivate::convertToUcs4(iStringView string)
 /*!
     \fn iString iString::fromLatin1(iByteArrayView str)
     \overload
-    \since 6.0
 
     Returns a iString initialized with the Latin-1 string \a str.
 
@@ -3400,7 +3351,6 @@ iString iString::fromLocal8Bit(iByteArrayView ba)
 /*!
     \fn iString iString::fromUtf8(const char8_t *str)
     \overload
-    \since 6.1
 
     This overload is only available when compiling in C++20 mode.
 */
@@ -3408,7 +3358,6 @@ iString iString::fromLocal8Bit(iByteArrayView ba)
 /*!
     \fn iString iString::fromUtf8(const char8_t *str, xsizetype size)
     \overload
-    \since 6.0
 
     This overload is only available when compiling in C++20 mode.
 */
@@ -3416,7 +3365,6 @@ iString iString::fromLocal8Bit(iByteArrayView ba)
 /*!
     \fn iString iString::fromUtf8(iByteArrayView str)
     \overload
-    \since 6.0
 
     Returns a iString initialized with the UTF-8 string \a str.
 
@@ -3433,7 +3381,6 @@ iString iString::fromUtf8(iByteArrayView ba)
 }
 
 /*!
-    \since 5.3
     Returns a iString initialized with the first \a size characters
     of the Unicode string \a unicode (ISO-10646-UTF-16 encoded).
 
@@ -3466,12 +3413,10 @@ iString iString::fromUtf16(const xuint16 *unicode, xsizetype size)
 
 /*!
     \fn iString iString::fromUcs4(const uint *str, xsizetype size)
-    \since 4.2
     \deprecated [6.0] Use the \c xuint32 overload instead.
 */
 
 /*!
-    \since 5.3
 
     Returns a iString initialized with the first \a size characters
     of the Unicode string \a unicode (encoded as UTF-32).
@@ -3515,14 +3460,12 @@ iString& iString::setUnicode(const iChar *unicode, xsizetype size)
 /*!
     \fn iString::setUnicode(const xuint16 *unicode, xsizetype size)
     \overload
-    \since 6.9
 
     \sa unicode(), setUtf16()
 */
 
 /*!
     \fn iString::setUtf16(const xuint16 *unicode, xsizetype size)
-    \since 6.9
 
     Resizes the string to \a size characters and copies \a unicode
     into the string.
@@ -3579,7 +3522,6 @@ namespace {
     \fn iLatin1StringView iPrivate::trimmed(iLatin1StringView s)
     \internal
     \relates iStringView
-    \since 5.10
 
     Returns \a s with whitespace removed from the start and the end.
 
@@ -3649,7 +3591,6 @@ iString iString::trimmed_helper(iString &str)
 
 /*!
     \fn iChar iString::front() const
-    \since 5.10
 
     Returns the first character in the string.
     Same as \c{at(0)}.
@@ -3664,7 +3605,6 @@ iString iString::trimmed_helper(iString &str)
 
 /*!
     \fn iChar iString::back() const
-    \since 5.10
 
     Returns the last character in the string.
     Same as \c{at(size() - 1)}.
@@ -3679,7 +3619,6 @@ iString iString::trimmed_helper(iString &str)
 
 /*!
     \fn iChar &iString::front()
-    \since 5.10
 
     Returns a reference to the first character in the string.
     Same as \c{operator[](0)}.
@@ -3694,7 +3633,6 @@ iString iString::trimmed_helper(iString &str)
 
 /*!
     \fn iChar &iString::back()
-    \since 5.10
 
     Returns a reference to the last character in the string.
     Same as \c{operator[](size() - 1)}.
@@ -3783,7 +3721,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 /*!
     \fn xsizetype iString::max_size() const
     \fn xsizetype iString::maxSize()
-    \since 6.8
 
     It returns the maximum number of elements that the string can
     theoretically hold. In practice, the number can be much smaller,
@@ -3792,7 +3729,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 
 /*!
     \fn int iString::compare(const iString &s1, const iString &s2, iShell::CaseSensitivity cs)
-    \since 4.2
 
     Compares the string \a s1 with the string \a s2 and returns a negative integer
     if \a s1 is less than \a s2, a positive integer if it is greater than \a s2,
@@ -3813,7 +3749,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 
 /*!
     \fn int iString::compare(const iString &s1, iLatin1StringView s2, iShell::CaseSensitivity cs)
-    \since 4.2
     \overload compare()
 
     Performs a comparison of \a s1 and \a s2, using the case
@@ -3823,7 +3758,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 /*!
     \fn int iString::compare(iLatin1StringView s1, const iString &s2, iShell::CaseSensitivity cs = iShell::CaseSensitive)
 
-    \since 4.2
     \overload compare()
 
     Performs a comparison of \a s1 and \a s2, using the case
@@ -3833,7 +3767,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 /*!
     \fn int iString::compare(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
 
-    \since 5.12
     \overload compare()
 
     Performs a comparison of this with \a s, using the case
@@ -3843,7 +3776,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 /*!
     \fn int iString::compare(iChar ch, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
 
-    \since 5.14
     \overload compare()
 
     Performs a comparison of this with \a ch, using the case
@@ -3852,7 +3784,6 @@ iString& iString::fill(iChar ch, xsizetype size)
 
 /*!
     \overload compare()
-    \since 4.2
 
     Lexically compares this string with the string \a other and returns
     a negative integer if this string is less than \a other, a positive
@@ -3867,7 +3798,6 @@ int iString::compare(const iString &other, iShell::CaseSensitivity cs) const
 
 /*!
     \internal
-    \since 4.5
 */
 int iString::compare_helper(const iChar *data1, xsizetype length1, const iChar *data2, xsizetype length2,
                             iShell::CaseSensitivity cs)
@@ -3881,7 +3811,6 @@ int iString::compare_helper(const iChar *data1, xsizetype length1, const iChar *
 
 /*!
     \overload compare()
-    \since 4.2
 
     Same as compare(*this, \a other, \a cs).
 */
@@ -3892,7 +3821,6 @@ int iString::compare(iLatin1StringView other, iShell::CaseSensitivity cs) const
 
 /*!
     \internal
-    \since 5.0
 */
 int iString::compare_helper(const iChar *data1, xsizetype length1, const char *data2, xsizetype length2,
                             iShell::CaseSensitivity cs)
@@ -3961,7 +3889,6 @@ iString iChar::fromUcs4(xuint32 c)
 
 /*!
     \fn int iString::localeAwareCompare(iStringView other) const
-    \since 6.0
     \overload localeAwareCompare()
 
     Compares this string with the \a other string and returns an
@@ -3979,7 +3906,6 @@ iString iChar::fromUcs4(xuint32 c)
 
 /*!
     \fn int iString::localeAwareCompare(iStringView s1, iStringView s2)
-    \since 6.0
     \overload localeAwareCompare()
 
     Compares \a s1 with \a s2 and returns an integer less than, equal
@@ -4022,7 +3948,6 @@ int iString::localeAwareCompare(const iString &other) const
 
 /*!
     \internal
-    \since 4.5
 */
 int iString::localeAwareCompare_helper(const iChar *data1, xsizetype length1,
                                        const iChar *data2, xsizetype length2)
@@ -4032,12 +3957,13 @@ int iString::localeAwareCompare_helper(const iChar *data1, xsizetype length1,
     IX_ASSERT(length2 >= 0);
     IX_ASSERT(data2 || length2 == 0);
 
-    // do the right thing for null and empty
+    // Handle empty string cases with simple byte comparison
     if (length1 == 0 || length2 == 0)
         return iPrivate::compareStrings(iStringView(data1, length1), iStringView(data2, length2),
                                iShell::CaseSensitive);
 
-    // TODO: platform compare
+    // Normalize strings to NFC form for proper Unicode comparison
+    // TODO: Consider using platform-specific locale-aware comparison (strcoll/ICU) for better performance
     const iString lhs = iString::fromRawData(data1, length1).normalized(iString::NormalizationForm_C);
     const iString rhs = iString::fromRawData(data2, length2).normalized(iString::NormalizationForm_C);
 
@@ -4080,7 +4006,6 @@ const xuint16 *iString::utf16() const
 /*!
     \fn iString iString::nullTerminated() const &
     \fn iString iString::nullTerminated() &&
-    \since 6.10
 
     Returns a copy of this string that is always null-terminated.
     See nullTerminate().
@@ -4251,12 +4176,13 @@ static iString detachAndConvertCase(T &str, iStringIterator it, iUnicodeTables::
         const auto folded = fullConvertCase(it.next(), which);
         if (folded.size() > 1) {
             if (folded.chars[0] == *pp && folded.size() == 2) {
-                // special case: only second actually changed (e.g. surrogate pairs),
-                // avoid slow case
+                // Optimization: For surrogate pairs where only the second char changes,
+                // use fast in-place update instead of triggering the string growth path
                 ++pp;
                 *pp++ = folded.chars[1];
             } else {
-                // slow path: the string is growing
+                // General case: Case folding expands the string (e.g., ß -> SS in German)
+                // Requires slower path with replace() to handle memory reallocation
                 xsizetype inpos = it.index() - 1;
                 xsizetype outpos = pp - s.constBegin();
 
@@ -4349,7 +4275,6 @@ iString iString::toUpper_helper(iString &str)
 }
 
 /*!
-    \since 5.5
 
     Safely builds a formatted string from the format string \a cformat
     and an arbitrary list of arguments.
@@ -4450,7 +4375,6 @@ static LengthMod parse_length_modifier(const char * &c)
 
 /*!
     \fn iString iString::vasprintf(const char *cformat, va_list ap)
-    \since 5.5
 
     Equivalent method to asprintf(), but takes a va_list \a ap
     instead a list of variable arguments. See the asprintf()
@@ -5145,14 +5069,12 @@ static ResultList splitString(const StringSource &source, iStringView sep,
 
     \sa std::list<iString>::join(), section()
 
-    \since 5.14
 */
 std::list<iString> iString::split(const iString &sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 { return splitString<std::list<iString>>(*this, sep, behavior, cs); }
 
 /*!
     \overload
-    \since 5.14
 */
 std::list<iString> iString::split(iChar sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 { return splitString<std::list<iString>>(*this, iStringView(&sep, 1), behavior, cs); }
@@ -5168,7 +5090,6 @@ std::list<iString> iString::split(iChar sep, iShell::SplitBehavior behavior, iSh
     this string view is valid. Destroying the data will cause all views to
     become dangling.
 
-    \since 6.0
 */
 std::list<iStringView> iStringView::split(iStringView sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
 { return splitString< std::list<iStringView> >(iStringView(*this), sep, behavior, cs); }
@@ -5207,7 +5128,6 @@ static ResultList splitString(const String &source, const iRegularExpression &re
 
 /*!
     \overload
-    \since 5.14
 
     Splits the string into substrings wherever the regular expression
     \a re matches, and returns the list of those strings. If \a re
@@ -5234,16 +5154,10 @@ std::list<iString> iString::split(const iRegularExpression &re, iShell::SplitBeh
 */
 
 /*!
-    \since 4.5
 
     Returns a copy of this string repeated the specified number of \a times.
 
-    If \a times is less than 1, an empty string is returned.
-
-    Example:
-
-    \snippet code/src_corelib_text_qstring.cpp 8
-*/
+    If \a times is less than 1, an empty string is returned. */
 iString iString::repeated(xsizetype times) const
 {
     if (d.size == 0)
@@ -5282,7 +5196,9 @@ iString iString::repeated(xsizetype times) const
 void ix_string_normalize(iString *data, iString::NormalizationForm mode, iChar::UnicodeVersion version, xsizetype from)
 {
     {
-        // check if it's fully ASCII first, because then we have no work
+        // Fast path: Check if string is pure ASCII (no normalization needed for ASCII)
+        // Unicode normalization only affects non-ASCII characters, so we can skip
+        // expensive normalization algorithm if all characters are in ASCII range (0-127)
         auto start = reinterpret_cast<const xuint16 *>(data->constData());
         const xuint16 *p = start + from;
         if (isAscii_helper(p, p + data->size() - from))
@@ -5549,8 +5465,6 @@ iString iString::arg(const iString &a, int fieldWidth, iChar fillChar) const
 
     This example shows how we might create a \c status string for
     reporting progress while processing a list of files:
-
-    \snippet istring/main.cpp 11-qstringview
 
     First, \c arg(i) replaces \c %1. Then \c arg(total) replaces \c
     %2. Finally, \c arg(fileName) replaces \c %3.
@@ -5940,7 +5854,6 @@ iString iString::arg(char a, int fieldWidth, iChar fillChar) const
   value produces right-aligned text; a negative value produces
   left-aligned text.
 
-  \snippet code/src_corelib_tools_qstring.cpp 2
 
   The '%' can be followed by an 'L', in which case the sequence is
   replaced with a localized representation of \a a. The conversion
@@ -6201,7 +6114,6 @@ bool iString::isRightToLeft() const
 
 /*!
     \fn bool iString::isValidUtf16() const
-    \since 5.15
 
     Returns \c true if the string contains valid UTF-16 encoded data,
     or \c false otherwise.
@@ -6287,7 +6199,6 @@ bool iString::isRightToLeft() const
 */
 
 /*!
-    \since 6.1
 
     Removes from the string the characters in the half-open range
     [ \a first , \a last ). Returns an iterator to the character
@@ -6306,7 +6217,6 @@ iString::iterator iString::erase(iString::const_iterator first, iString::const_i
     \fn iString::iterator iString::erase(iString::const_iterator it)
 
     \overload
-    \since 6.5
 
     Removes the character denoted by \c it from the string.
     Returns an iterator to the character immediately after the
@@ -6319,7 +6229,6 @@ iString::iterator iString::erase(iString::const_iterator first, iString::const_i
 */
 
 /*! \fn void iString::shrink_to_fit()
-    \since 5.10
 
     This function is provided for STL compatibility. It is
     equivalent to squeeze().
@@ -6354,7 +6263,6 @@ std::string iString::toStdString() const
 
 /*!
     \fn iString iString::fromRawData(const xuint16 *unicode, xsizetype size)
-    \since 6.10
 
     Constructs a iString that uses the first \a size Unicode characters
     in the array \a unicode. The data in \a unicode is \e not
@@ -6386,7 +6294,6 @@ iString iString::fromRawData(const iChar *unicode, xsizetype size, iFreeCb freeC
 }
 
 /*!
-    \since 4.7
 
     Resets the iString to use the first \a size Unicode characters
     in the array \a unicode. The data in \a unicode is \e not
@@ -6410,7 +6317,6 @@ iString &iString::setRawData(const iChar *unicode, xsizetype size, iFreeCb freeC
 
 /*!
     \fn std::u16string iString::toStdU16String() const
-    \since 5.5
 
     Returns a std::u16string object with the data contained in this
     iString. The Unicode data is the same as returned by the utf16()
@@ -6421,7 +6327,6 @@ iString &iString::setRawData(const iChar *unicode, xsizetype size, iFreeCb freeC
 
 /*!
     \fn std::u32string iString::toStdU32String() const
-    \since 5.5
 
     Returns a std::u32string object with the data contained in this
     iString. The Unicode data is the same as returned by the toUcs4()
@@ -6431,7 +6336,6 @@ iString &iString::setRawData(const iChar *unicode, xsizetype size, iFreeCb freeC
 */
 
 /*!
-    \since 5.11
     \internal
     \relates iStringView
 
@@ -6584,13 +6488,9 @@ xsizetype iPrivate::count(iLatin1StringView haystack, iChar needle, iShell::Case
 
 /*!
     \fn bool iPrivate::startsWith(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::startsWith(iStringView haystack, iLatin1StringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::startsWith(iLatin1StringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::startsWith(iLatin1StringView haystack, iLatin1StringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \internal
     \relates iStringView
 
@@ -6619,13 +6519,9 @@ bool iPrivate::startsWith(iLatin1StringView haystack, iLatin1StringView needle, 
 
 /*!
     \fn bool iPrivate::endsWith(iStringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::endsWith(iStringView haystack, iLatin1StringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::endsWith(iLatin1StringView haystack, iStringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \fn bool iPrivate::endsWith(iLatin1StringView haystack, iLatin1StringView needle, iShell::CaseSensitivity cs)
-    \since 5.10
     \internal
     \relates iStringView
 
@@ -6808,8 +6704,7 @@ xsizetype iPrivate::findString(iLatin1StringView haystack, xsizetype from, iLati
     // initialization is slower the boyer-moore search it employs still makes up
     // for it when haystack and needle are sufficiently long.
     // The needle size was chosen by testing various lengths using the
-    // istringtokenizer benchmark with the
-    // "tokenize_qlatin1string_qlatin1string" test.
+    // istringtokenizer benchmark with the Latin1 string tokenization test.
     const xsizetype threshold = 13;
     if (needle.size() <= threshold) {
         const auto begin = haystack.begin();
@@ -6857,16 +6752,8 @@ xsizetype iPrivate::lastIndexOf(iLatin1StringView haystack, xsizetype from, iLat
 }
 
 /*!
-    \since 5.0
-
     Converts a plain text string to an HTML string with
-    HTML metacharacters \c{<}, \c{>}, \c{&}, and \c{"} replaced by HTML
-    entities.
-
-    Example:
-
-    \snippet code/src_corelib_text_qstring.cpp 7
-*/
+    HTML metacharacters \c{<}, \c{>}, \c{&}, and \c{"} replaced by HTML entities. */
 iString iString::toHtmlEscaped() const
 {
     iString rich;

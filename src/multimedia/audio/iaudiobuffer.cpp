@@ -106,11 +106,12 @@ public:
                 if (data) {
                     memcpy(mBuffer, data, numBytes);
                 } else {
-                    // We have to fill with the zero value..
+                    // Fill buffer with format-appropriate zero value
                     switch (format.sampleType()) {
                         case iAudioFormat::SignedInt:
-                            // Signed int means 0x80, 0x8000 is zero
-                            // XXX this is not right for > 8 bits(0x8080 vs 0x8000)
+                            // For signed integers, zero point is 0x80 (8-bit) or 0x8000 (16-bit)
+                            // Note: This implementation assumes 8-bit samples; multi-byte samples
+                            // would require byte-order aware initialization (e.g., 0x00 0x80 for 16-bit LE)
                             memset(mBuffer, 0x80, numBytes);
                             break;
                         default:

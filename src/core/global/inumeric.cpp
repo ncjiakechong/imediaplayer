@@ -88,7 +88,6 @@ static inline xuint32 f2i(float f)
     two 32-bit floating point numbers and all you need is an approximated 24-bit precision, you can
     use this function like this:
 
-    \snippet code/src_corelib_global_qnumeric.cpp 0
 
     \sa iFuzzyCompare()
 */

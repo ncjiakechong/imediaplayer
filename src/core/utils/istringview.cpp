@@ -43,14 +43,12 @@ namespace iShell {
     string literal.
 
     iStringViews should be passed by value, not by reference-to-const:
-    \snippet code/src_corelib_tools_qstringview.cpp 0
 
     If you want to give your users maximum freedom in what strings they can pass
     to your function, accompany the iStringView overload with overloads for
 
     \list
         \li \e iChar: this overload can delegate to the iStringView version:
-            \snippet code/src_corelib_tools_qstringview.cpp 1
             even though, for technical reasons, iStringView cannot provide a
             iChar constructor by itself.
         \li \e iString: if you store an unmodified copy of the string and thus would
@@ -255,7 +253,6 @@ namespace iShell {
     If you need the full array, use the constructor from pointer and
     size instead:
 
-    \snippet code/src_corelib_tools_qstringview.cpp 2
 
     \a string must remain valid for the lifetime of this string view
     object.

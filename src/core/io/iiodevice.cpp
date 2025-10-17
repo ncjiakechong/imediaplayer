@@ -18,8 +18,6 @@
 
 namespace iShell {
 
-#define IX_VOID
-
 #ifndef IIODEVICE_BUFFERSIZE
 #define IIODEVICE_BUFFERSIZE 16384
 #endif
@@ -142,10 +140,7 @@ namespace iShell {
     \endlist
 
     Calling these functions from the main, GUI thread, may cause your
-    user interface to freeze. Example:
-
-    \snippet code/src_corelib_io_qiodevice.cpp 0
-
+    user interface to freeze.
     By subclassing iIODevice, you can provide the same interface to
     your own I/O devices. Subclasses of iIODevice are only required to
     implement the protected readData() and writeData() functions.
@@ -251,7 +246,6 @@ namespace iShell {
 
 /*!
     \fn iIODevice::channelBytesWritten(int channel, xint64 bytes)
-    \since 5.7
 
     This signal is emitted every time a payload of data has been written to
     the device. The \a bytes argument is set to the number of bytes that were
@@ -289,7 +283,6 @@ namespace iShell {
 
 /*!
     \fn iIODevice::channelReadyRead(int channel)
-    \since 5.7
 
     This signal is emitted when new data is available for reading from the
     device. The \a channel argument is set to the index of the read channel on
@@ -311,7 +304,6 @@ namespace iShell {
 
 /*!
     \fn iIODevice::readChannelFinished()
-    \since 4.4
 
     This signal is emitted when the input (reading) stream is closed
     in this device. It is emitted as soon as the closing is detected,
@@ -837,10 +829,7 @@ bool iIODevice::reset()
     number of bytes to allocate in a buffer before reading.
 
     Subclasses that reimplement this function must call the base
-    implementation in order to include the size of the buffer of iIODevice. Example:
-
-    \snippet code/src_corelib_io_qiodevice.cpp 1
-
+    implementation in order to include the size of the buffer of iIODevice.
     \sa bytesToWrite(), readyRead(), isSequential()
 */
 xint64 iIODevice::bytesAvailable() const
@@ -1077,7 +1066,6 @@ iByteArray iIODevice::readAll()
     For example, the following code reads a line of characters from a
     file:
 
-    \snippet code/src_corelib_io_qiodevice.cpp 2
 
     The newline character ('\\n') is included in the buffer. If a
     newline is not encountered before maxSize - 1 bytes are read, a
@@ -1241,10 +1229,7 @@ iByteArray iIODevice::readLineData(xint64 maxSize, xint64* readErr)
     signal.
 
     Subclasses that reimplement this function must call the base
-    implementation in order to include the contents of the iIODevice's buffer. Example:
-
-    \snippet code/src_corelib_io_qiodevice.cpp 3
-
+    implementation in order to include the contents of the iIODevice's buffer.
     \sa readyRead(), readLine()
 */
 bool iIODevice::canReadLine() const
@@ -1414,11 +1399,6 @@ bool iIODevice::getChar(char *c)
 /*!
     Peeks at most \a maxSize bytes from the device, returning the data peeked
     as a iByteArray.
-
-    Example:
-
-    \snippet code/src_corelib_io_qiodevice.cpp 5
-
     This function has no way of reporting errors; returning an empty
     iByteArray can mean either that no data was currently available
     for peeking, or that an error occurred.

@@ -393,18 +393,15 @@ int istrcmp(const iByteArray &str1, const char *str2)
     for ( ; str1data < str1end && *str2; ++str1data, ++str2) {
         int diff = int(uchar(*str1data)) - uchar(*str2);
         if (diff)
-            // found a difference
-            return diff;
+            return diff;  // Characters differ at this position
     }
 
-    // Why did we stop?
+    // Determine result based on why comparison loop terminated
     if (*str2 != '\0')
-        // not the null, so we stopped because str1 is shorter
-        return -1;
+        return -1;  // str2 continues but str1 ended, so str1 < str2
     if (str1data < str1end)
-        // we haven't reached the end, so str1 must be longer
-        return +1;
-    return 0;
+        return +1;  // str1 continues but str2 ended, so str1 > str2
+    return 0;  // Both strings ended at same position, they are equal
 }
 
 /*!
@@ -526,7 +523,6 @@ xuint16 iChecksum(const char *data, xsizetype len, iShell::ChecksumType standard
     char *} to its constructor. For example, the following code
     creates a byte array of size 5 containing the data "Hello":
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 0
 
     Although the size() is 5, the byte array also maintains an extra
     '\\0' character at the end so that if a function is used that
@@ -546,11 +542,9 @@ xuint16 iChecksum(const char *data, xsizetype len, iShell::ChecksumType standard
     arrays, operator[]() returns a reference to a byte that can be
     used on the left side of an assignment. For example:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 1
 
     For read-only access, an alternative syntax is to use at():
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 2
 
     at() can be faster than operator[](), because it never causes a
     \l{deep copy} to occur.
@@ -562,7 +556,6 @@ xuint16 iChecksum(const char *data, xsizetype len, iShell::ChecksumType standard
     bytes, but excluding the terminating '\\0' added by iByteArray.
     For example:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 48
 
     If you want to obtain the length of the data up to and
     excluding the first '\\0' character, call istrlen() on the byte
@@ -583,7 +576,6 @@ xuint16 iChecksum(const char *data, xsizetype len, iShell::ChecksumType standard
     the byte data: append(), prepend(), insert(), replace(), and
     remove(). For example:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 3
 
     The replace() and remove() functions' first two arguments are the
     position from which to start erasing and the number of bytes that
@@ -611,7 +603,6 @@ xuint16 iChecksum(const char *data, xsizetype len, iShell::ChecksumType standard
     For example, here's a typical loop that finds all occurrences of a
     particular substring:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 4
 
     If you simply want to check whether a iByteArray contains a
     particular character or substring, use contains(). If you want to
@@ -635,7 +626,6 @@ xuint16 iChecksum(const char *data, xsizetype len, iShell::ChecksumType standard
     array is always empty, but an empty byte array isn't necessarily
     null:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 5
 
     All functions except isNull() treat null byte arrays the same as
     empty byte arrays. For example, data() returns a pointer to a
@@ -929,20 +919,12 @@ iByteArray &iByteArray::operator=(const char *str)
     was created from a \l{fromRawData()}{raw data} that didn't include the
     trailing null-termination character then iByteArray doesn't add it
     automaticall unless the \l{deep copy} is created.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 6
-
     \sa isEmpty(), resize()
 */
 
 /*! \fn bool iByteArray::isEmpty() const
 
     Returns \c true if the byte array has size 0; otherwise returns \c false.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 7
-
     \sa size()
 */
 
@@ -1026,10 +1008,6 @@ iByteArray &iByteArray::operator=(const char *str)
     the array. The data is '\\0'-terminated, i.e. the number of
     bytes in the returned character string is size() + 1 for the
     '\\0' terminator.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 8
-
     The pointer remains valid as long as the byte array isn't
     reallocated or destroyed. For read-only access, constData() is
     faster because it never causes a \l{deep copy} to occur.
@@ -1041,11 +1019,9 @@ iByteArray &iByteArray::operator=(const char *str)
     data(), but it will corrupt the heap and cause a crash because it
     does not allocate a byte for the '\\0' at the end:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 46
 
     This one allocates the correct amount of space:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 47
 
     Note: A iByteArray can store any byte values including '\\0's,
     but most functions that take \c{char *} arguments assume that the
@@ -1109,10 +1085,6 @@ iByteArray &iByteArray::operator=(const char *str)
     If an assignment is made beyond the end of the byte array, the
     array is extended with resize() before the assignment takes
     place.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 9
-
     \sa at()
 */
 
@@ -1212,10 +1184,6 @@ iByteArray &iByteArray::operator=(const char *str)
     Truncates the byte array at index position \a pos.
 
     If \a pos is beyond the end of the array, nothing happens.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 10
-
     \sa chop(), resize(), left()
 */
 void iByteArray::truncate(xsizetype pos)
@@ -1230,10 +1198,6 @@ void iByteArray::truncate(xsizetype pos)
 
     If \a n is greater than size(), the result is an empty byte
     array.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 11
-
     \sa truncate(), resize(), left()
 */
 void iByteArray::chop(xsizetype n)
@@ -1247,10 +1211,6 @@ void iByteArray::chop(xsizetype n)
 
     Appends the byte array \a ba onto the end of this byte array and
     returns a reference to this byte array.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 12
-
     Note: iByteArray is an \l{implicitly shared} class. Consequently,
     if you append to an empty byte array, then the byte array will just
     share the data held in \a ba. In this case, no copying of data is done,
@@ -1291,10 +1251,6 @@ void iByteArray::chop(xsizetype n)
 /*! \fn bool iByteArray::isNull() const
 
     Returns \c true if this byte array is null; otherwise returns \c false.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 13
-
     iShell makes a distinction between null byte arrays and empty byte
     arrays for historical reasons. For most applications, what
     matters is whether or not a byte array contains any data,
@@ -1404,10 +1360,6 @@ void iByteArray::resize(xsizetype size)
     Sets every byte in the byte array to character \a ch. If \a size
     is different from -1 (the default), the byte array is resized to
     size \a size beforehand.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 14
-
     \sa resize()
 */
 iByteArray &iByteArray::fill(char ch, xsizetype size)
@@ -1473,10 +1425,11 @@ void iByteArray::expand(xsizetype i)
 */
 iByteArray iByteArray::nulTerminated() const
 {
-    // is this fromRawData?
+    // Check if data is from fromRawData() which may not be null-terminated
     if (d.isMutable())
-        return *this;           // no, then we're sure we're zero terminated
+        return *this;  // Mutable data is always null-terminated, safe to return as-is
 
+    // Data is immutable (fromRawData), create a detached copy to ensure null termination
     iByteArray copy(*this);
     copy.detach();
     return copy;
@@ -1485,10 +1438,6 @@ iByteArray iByteArray::nulTerminated() const
 /*!
     Prepends the byte array \a ba to this byte array and returns a
     reference to this byte array.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 15
-
     This is the same as insert(0, \a ba).
 
     Note: iByteArray is an \l{implicitly shared} class. Consequently,
@@ -1531,10 +1480,6 @@ iByteArray iByteArray::nulTerminated() const
 */
 /*!
     Appends the byte array \a ba onto the end of this byte array.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 16
-
     This is the same as insert(size(), \a ba).
 
     Note: iByteArray is an \l{implicitly shared} class. Consequently,
@@ -1635,13 +1580,13 @@ iByteArray &iByteArray::insert(xsizetype i, iByteArrayView data)
     if (i < 0 || size <= 0)
         return *this;
 
-    // handle this specially, as insert() doesn't handle out of
-    // bounds positions
+    // Handle insertion beyond array bounds (insert() doesn't support this)
+    // Pads with spaces up to insertion point, then appends data
     if (i >= d.size) {
-        // In case when data points into the range or is == *this, we need to
-        // defer a call to free() so that it comes after we copied the data from
-        // the old memory:
-        DataPointer detached{};  // construction is free
+        // Safety: If 'str' points to data within this array, we must detach before
+        // freeing old memory to avoid use-after-free. The detached pointer preserves
+        // the old data until after the copy operation completes.
+        DataPointer detached{};  // Lightweight construction, no allocation yet
         d.detachAndGrow(Data::GrowsForward, (i - d.size) + size, &str, &detached);
         IX_CHECK_PTR(d.data());
         d.copyAppend(i - d.size, ' ');
@@ -1713,10 +1658,6 @@ iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
     If \a pos is out of range, nothing happens. If \a pos is valid,
     but \a pos + \a len is larger than the size of the array, the
     array is truncated at position \a pos.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 18
-
     \sa insert(), replace()
 */
 iByteArray &iByteArray::remove(xsizetype pos, xsizetype len)
@@ -1732,10 +1673,6 @@ iByteArray &iByteArray::remove(xsizetype pos, xsizetype len)
 /*!
     Replaces \a len bytes from index position \a pos with the byte
     array \a after, and returns a reference to this byte array.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 19
-
     \sa insert(), remove()
 */
 iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, iByteArrayView after)
@@ -1759,22 +1696,21 @@ iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, iByteArrayView aft
         }
         return *this;
     } else {
-        // ### optimize me
+        // TODO: Optimize by implementing in-place replacement without remove+insert
+        // Current implementation performs two operations (remove then insert) which
+        // may cause unnecessary memory allocations and data copying
         remove(pos, len);
         return insert(pos, after);
     }
 }
 
-// ### optimize all other replace method, by offering
+// TODO: Optimize all replace methods by providing a base implementation:
 // iByteArray::replace(const char *before, int blen, const char *after, int alen)
+// This would allow string and character-based replace to share optimized code path
 
 /*!
     Replaces every occurrence of the byte array \a before with the
-    byte array \a after.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 20
-*/
+    byte array \a after. */
 iByteArray &iByteArray::replace(iByteArrayView before, iByteArrayView after)
 {
     if (isNull() || (before == after))
@@ -1802,7 +1738,7 @@ iByteArray &iByteArray::replace(iByteArrayView before, iByteArrayView after)
     iByteArrayMatcher matcher(b, bsize);
     xsizetype index = 0;
     xsizetype len = size();
-    char *d = data(); // detaches
+    char *d = data(); // Triggers copy-on-write detachment for in-place modification
 
     if (bsize == asize) {
         if (bsize) {
@@ -1960,15 +1896,9 @@ std::list<iByteArray> iByteArray::split(char sep) const
 
 /*!
 
-
     Returns a copy of this byte array repeated the specified number of \a times.
 
-    If \a times is less than 1, an empty byte array is returned.
-
-    Example:
-
-    \snippet code/src_corelib_tools_iByteArray.cpp 49
-*/
+    If \a times is less than 1, an empty byte array is returned. */
 iByteArray iByteArray::repeated(xsizetype times) const
 {
     if (isEmpty())
@@ -2015,10 +1945,6 @@ iByteArray iByteArray::repeated(xsizetype times) const
     Returns the index position of the first occurrence of the
     character \a ch in the byte array, searching forward from index
     position \a from. Returns -1 if \a ch could not be found.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 22
-
     \sa lastIndexOf(), contains()
 */
 xsizetype iByteArray::indexOf(char ch, xsizetype from) const
@@ -2116,10 +2042,6 @@ xsizetype iPrivate::lastIndexOf(iByteArrayView haystack, xsizetype from, iByteAr
     array \a ba in this byte array, searching backward from index
     position \a from. If \a from is -1 (the default), the search
     starts at the last byte. Returns -1 if \a ba could not be found.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 23
-
     \sa indexOf(), contains(), count()
 */
 
@@ -2130,10 +2052,6 @@ xsizetype iPrivate::lastIndexOf(iByteArrayView haystack, xsizetype from, iByteAr
     ch in the byte array, searching backward from index position \a
     from. If \a from is -1 (the default), the search starts at the
     last (size() - 1) byte. Returns -1 if \a ch could not be found.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 24
-
     \sa indexOf(), contains()
 */
 xsizetype iByteArray::lastIndexOf(char ch, xsizetype from) const
@@ -2309,10 +2227,6 @@ bool iByteArray::isLower() const
 
     The entire byte array is returned if \a len is greater than
     size().
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 27
-
     \sa startsWith(), right(), mid(), chopped(), chop(), truncate()
 */
 
@@ -2331,10 +2245,6 @@ iByteArray iByteArray::left(xsizetype len)  const
 
     The entire byte array is returned if \a len is greater than
     size().
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 28
-
     \sa endsWith(), left(), mid(), chopped(), chop(), truncate()
 */
 
@@ -2354,10 +2264,6 @@ iByteArray iByteArray::right(xsizetype len) const
     If \a len is -1 (the default), or \a pos + \a len >= size(),
     returns a byte array containing all bytes starting at position \a
     pos until the end of the byte array.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 29
-
     \sa left(), right(), chopped(), chop(), truncate()
 */
 iByteArray iByteArray::mid(xsizetype pos, xsizetype len) const
@@ -2396,20 +2302,17 @@ iByteArray iByteArray::mid(xsizetype pos, xsizetype len) const
 
     Returns a lowercase copy of the byte array. The bytearray is
     interpreted as a Latin-1 encoded string.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 30
-
     \sa isLower(), toUpper(), {8-bit Character Comparisons}
 */
 
-// prevent the compiler from inlining the function in each of
-// toLower and toUpper when the only difference is the table being used
-// (even with constant propagation, there's no gain in performance).
+// Shared implementation for toLower() and toUpper() case conversion
+// Using template + function pointer prevents code duplication while maintaining performance
+// Note: Compiler won't inline this even with constant propagation, but the trade-off
+// between code size and performance is favorable for this rarely-hot code path
 template <typename T>
 static iByteArray toCase_template(T &input, uchar (*lookup)(uchar))
 {
-    // find the first bad character in input
+    // Scan forward to find first character that needs conversion
     const char *orig_begin = input.constBegin();
     const char *firstBad = orig_begin;
     const char *e = input.constEnd();
@@ -2448,10 +2351,6 @@ iByteArray iByteArray::toLower_helper(iByteArray &a)
 
     Returns an uppercase copy of the byte array. The bytearray is
     interpreted as a Latin-1 encoded string.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 31
-
     \sa isUpper(), toLower(), {8-bit Character Comparisons}
 */
 
@@ -2820,10 +2719,6 @@ void iByteArray::clear()
     \c isspace() function returns \c true in the C locale. This includes the ASCII
     isspace() function returns \c true in the C locale. This includes the ASCII
     characters '\\t', '\\n', '\\v', '\\f', '\\r', and ' '.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 32
-
     \sa trimmed()
 */
 iByteArray iByteArray::simplified_helper(const iByteArray &a)
@@ -2845,10 +2740,6 @@ iByteArray iByteArray::simplified_helper(iByteArray &a)
     Whitespace means any character for which the standard C++
     \c isspace() function returns \c true in the C locale. This includes the ASCII
     characters '\\t', '\\n', '\\v', '\\f', '\\r', and ' '.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 33
-
     Unlike simplified(), \l {iByteArray::trimmed()}{trimmed()} leaves internal whitespace alone.
 
     \sa simplified()
@@ -2882,10 +2773,6 @@ iByteArrayView iByteArrayView::trimmed() const
     If \a truncate is true and the size() of the byte array is more
     than \a width, then any bytes in a copy of the byte array
     after position \a width are removed, and the copy is returned.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 34
-
     \sa rightJustified()
 */
 
@@ -2919,10 +2806,6 @@ iByteArray iByteArray::leftJustified(xsizetype width, char fill, bool truncate) 
     If \a truncate is true and the size of the byte array is more
     than \a width, then the resulting byte array is truncated at
     position \a width.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 35
-
     \sa leftJustified()
 */
 
@@ -3042,7 +2925,6 @@ xuint64 iByteArray::toULongLong(bool *ok, int base) const
     If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 36
 
     \note The conversion of the number is performed in the default C locale,
     irrespective of the user's locale.
@@ -3090,7 +2972,6 @@ uint iByteArray::toUInt(bool *ok, int base) const
     If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 37
 
     \note The conversion of the number is performed in the default C locale,
     irrespective of the user's locale.
@@ -3175,7 +3056,6 @@ ushort iByteArray::toUShort(bool *ok, int base) const
     If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 38
 
     \warning The iByteArray content may only contain valid numerical characters
     which includes the plus/minus sign, the character e used in scientific
@@ -3209,7 +3089,6 @@ double iByteArray::toDouble(bool *ok) const
     If \a ok is not \IX_NULLPTR, failure is reported by setting *\a{ok}
     to \c false, and success by setting *\a{ok} to \c true.
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 38float
 
     \warning The iByteArray content may only contain valid numerical characters
     which includes the plus/minus sign, the character e used in scientific
@@ -3232,7 +3111,6 @@ float iByteArray::toFloat(bool *ok) const
 
     Returns a copy of the byte array, encoded using the options \a options.
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 39bis
 
     The algorithm used to encode Base64-encoded data is defined in \l{RFC 4648}.
 
@@ -3299,10 +3177,6 @@ iByteArray iByteArray::toBase64(Base64Options options) const
     by default) and returns a reference to the byte array. The \a base can
     be any value between 2 and 36. For bases other than 10, n is treated
     as an unsigned integer.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 40
-
     \note The format of the number is not localized; the default C locale
     is used irrespective of the user's locale.
 
@@ -3431,10 +3305,6 @@ iByteArray &iByteArray::setNum(double n, char f, int prec)
     Returns a byte array containing the string equivalent of the
     number \a n to base \a base (10 by default). The \a base can be
     any value between 2 and 36.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 41
-
     \note The format of the number is not localized; the default C locale
     is used irrespective of the user's locale.
 
@@ -3488,7 +3358,6 @@ iByteArray iByteArray::number(xuint64 n, int base)
     decimal point. With 'g' and 'G', \a prec is the maximum number of
     significant digits (trailing zeroes are omitted).
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 42
 
     \note The format of the number is not localized; the default C locale
     is used irrespective of the user's locale.
@@ -3522,7 +3391,6 @@ iByteArray iByteArray::number(double n, char f, int prec)
     ensures that the raw \a data array itself will never be modified
     by iByteArray.
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 43
 
     \warning A byte array created with fromRawData() is \e not
     '\\0'-terminated, unless the raw data contains a 0 character at
@@ -3675,7 +3543,6 @@ static FromBase64Result fromBase64Encoding(const iByteArray &base64, iByteArray:
 
     For example:
 
-    \snippet code/src_corelib_text_qbytearray.cpp 44
 
     The algorithm used to decode Base64-encoded data is defined in \l{RFC 4648}.
 
@@ -3700,7 +3567,6 @@ iByteArray iByteArray::fromBase64(const iByteArray &base64, Base64Options option
 
     For example:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 45
 
     \sa toHex()
 */
@@ -3734,10 +3600,6 @@ iByteArray iByteArray::fromHex(const iByteArray &hexEncoded)
     the letters a-f.
 
     If \a separator is not '\0', the separator character is inserted between the hex bytes.
-
-    Example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 50
-
     \sa fromHex()
 */
 iByteArray iByteArray::toHex(char separator) const
@@ -3810,7 +3672,6 @@ void ix_fromPercentEncoding(iByteArray *ba)
     another (for instance, '_' or '=').
 
     For example:
-    \snippet code/src_corelib_tools_iByteArray.cpp 51
 
     \note Given invalid input (such as a string containing the sequence "%G5",
     which is not a valid hexadecimal number) the output will be invalid as
@@ -3926,11 +3787,6 @@ void ix_normalizePercentEncoding(iByteArray *ba, const char *exclude)
     To prevent characters from being encoded pass them to \a
     exclude. To force characters to be encoded pass them to \a
     include. The \a percent character is always encoded.
-
-    Example:
-
-    \snippet code/src_corelib_tools_iByteArray.cpp 52
-
     The hex encoding uses the numbers 0-9 and the uppercase letters A-F.
 
     \sa fromPercentEncoding()
@@ -4009,7 +3865,6 @@ iByteArray iByteArray::toPercentEncoding(const iByteArray &exclude, const iByteA
 
     For instance:
 
-    \snippet code/src_corelib_tools_iByteArray.cpp 53
 
     Using iByteArrayLiteral instead of a double quoted plain C++ string literal
     can significantly speed up creation of iByteArray instances from data known

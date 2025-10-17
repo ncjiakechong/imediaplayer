@@ -1557,10 +1557,10 @@ void iGstreamerPlayerSession::playbinNotifySource(GObject *o, GParamSpec *p, gpo
                      self->m_request.toEncoded().constData(), IX_NULLPTR);
     }
 
-    // The rest
+    // Configure extra HTTP headers if supported by the source element
     if (g_object_class_find_property(G_OBJECT_GET_CLASS(source), "extra-headers") != 0) {
         GstStructure *extras = ix_gst_structure_new_empty("extras");
-        // TODO:
+        // TODO: Implement custom HTTP header support when request object is available
         #if 0
         const auto rawHeaderList = self->m_request.rawHeaderList();
         for (const iByteArray &rawHeader : rawHeaderList) {

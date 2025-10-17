@@ -230,7 +230,6 @@ namespace iShell {
 
 /*!
     \enum iChar::Script
-    \since 5.1
 
     This enum type defines the Unicode script property values.
 
@@ -563,7 +562,6 @@ namespace iShell {
 
 /*!
     \fn static auto iChar::fromUcs4(xuint32 c)
-    \since 6.0
 
     Returns an anonymous struct that
     \list
@@ -627,7 +625,6 @@ namespace iShell {
 
 /*!
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a printable character; otherwise returns \c false.
@@ -659,7 +656,6 @@ bool iChar::isPrint(xuint32 ucs4)
 /*!
     \fn bool iChar::isSpace(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a separator character (Separator_* categories or certain code points
@@ -690,7 +686,6 @@ bool iChar::isSpace_helper(xuint32 ucs4)
 
 /*!
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a mark (Mark_* categories); otherwise returns \c false.
@@ -714,7 +709,6 @@ bool iChar::isMark(xuint32 ucs4)
 
 /*!
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a punctuation mark (Punctuation_* categories); otherwise returns \c false.
@@ -742,7 +736,6 @@ bool iChar::isPunct(xuint32 ucs4)
 
 /*!
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a symbol (Symbol_* categories); otherwise returns \c false.
@@ -768,7 +761,6 @@ bool iChar::isSymbol(xuint32 ucs4)
 /*!
     \fn bool iChar::isLetter(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a letter (Letter_* categories); otherwise returns \c false.
@@ -801,7 +793,6 @@ bool iChar::isLetter_helper(xuint32 ucs4)
 /*!
     \fn bool iChar::isNumber(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a number (Number_* categories, not just 0-9); otherwise returns \c false.
@@ -832,7 +823,6 @@ bool iChar::isNumber_helper(xuint32 ucs4)
 /*!
     \fn bool iChar::isLetterOrNumber(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a letter or number (Letter_* or Number_* categories); otherwise returns \c false.
@@ -868,7 +858,6 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 /*!
     \fn bool iChar::isDigit(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4 is
     a decimal digit (Number_DecimalDigit); otherwise returns \c false.
@@ -878,7 +867,6 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 
 /*!
     \fn bool iChar::isNonCharacter() const
-    \since 5.0
 
     Returns \c true if the iChar is a non-character; false otherwise.
 
@@ -905,7 +893,6 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 
 /*!
     \fn bool iChar::isSurrogate() const
-    \since 5.0
 
     Returns \c true if the iChar contains a code point that is in either
     the high or the low part of the UTF-16 surrogate range
@@ -915,7 +902,6 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 /*!
     \fn static bool iChar::isNonCharacter(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a non-character; false otherwise.
@@ -948,7 +934,6 @@ bool iChar::isLetterOrNumber_helper(xuint32 ucs4)
 /*!
     \fn static bool iChar::isSurrogate(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     contains a code point that is in either the high or the low part of the
@@ -1047,7 +1032,6 @@ iChar::Direction iChar::direction(xuint32 ucs4)
 
 /*!
     \fn iChar::JoiningType iChar::joiningType() const
-    \since 5.3
 
     Returns information about the joining type attributes of the character
     (needed for certain languages such as Arabic or Syriac).
@@ -1055,7 +1039,6 @@ iChar::Direction iChar::direction(xuint32 ucs4)
 
 /*!
     \overload
-    \since 5.3
 
     Returns information about the joining type attributes of the UCS-4-encoded
     character specified by \a ucs4
@@ -1081,7 +1064,6 @@ iChar::JoiningType iChar::joiningType(xuint32 ucs4)
 
 /*!
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     should be reversed if the text direction is reversed; otherwise returns \c false.
@@ -1109,7 +1091,6 @@ bool iChar::hasMirrored(xuint32 ucs4)
 /*!
     \fn static bool iChar::isLower(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a lowercase letter, for example category() is Letter_Lowercase.
@@ -1129,7 +1110,6 @@ bool iChar::hasMirrored(xuint32 ucs4)
 /*!
     \fn static bool iChar::isUpper(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is an uppercase letter, for example category() is Letter_Uppercase.
@@ -1149,7 +1129,6 @@ bool iChar::hasMirrored(xuint32 ucs4)
 /*!
     \fn static bool iChar::isTitleCase(xuint32 ucs4)
     \overload
-    \since 5.0
 
     Returns \c true if the UCS-4-encoded character specified by \a ucs4
     is a titlecase letter, for example category() is Letter_Titlecase.
@@ -1291,14 +1270,12 @@ unsigned char iChar::combiningClass(xuint32 ucs4)
 
 /*!
     \fn iChar::Script iChar::script() const
-    \since 5.1
 
     Returns the Unicode script property value for this character.
 */
 
 /*!
     \overload
-    \since 5.1
 
     Returns the Unicode script property value for the character specified in
     its UCS-4-encoded form as \a ucs4.
@@ -1551,7 +1528,6 @@ xuint32 iChar::toCaseFolded(xuint32 ucs4)
     \fn iShell::Literals::StringLiterals::operator""_L1(char ch)
 
     \relates iLatin1Char
-    \since 6.4
 
     Literal operator that creates a iLatin1Char out of \a ch.
 

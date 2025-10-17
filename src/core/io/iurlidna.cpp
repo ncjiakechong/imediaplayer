@@ -78,7 +78,7 @@ void ix_punycodeEncoder(iStringView in, iString *output)
 
     // Do not try to encode strings that certainly will result in output
     // that is longer than allowable domain name label length. Note that
-    // non-BMP codepoints are encoded as two QChars.
+    // non-BMP codepoints are encoded as two UTF-16 code units.
     if (in.size() > MaxDomainLabelLength * 2)
         return;
 
@@ -254,7 +254,7 @@ iString ix_punycodeDecoder(const iString &pc)
         }
 
         // Surrogates should normally be rejected later by other IDNA code.
-        // But because of Qt's use of UTF-16 to represent strings the
+        // But because of the use of UTF-16 to represent strings, the
         // IDNA code is not able to distinguish characters represented as pairs
         // of surrogates from normal code points. This is why surrogates are
         // not allowed here.

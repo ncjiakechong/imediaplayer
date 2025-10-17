@@ -123,7 +123,6 @@ private:
     friend class iRegularExpressionMatch;
     friend class iRegularExpressionMatchPrivate;
     friend class iRegularExpressionMatchIterator;
-    friend IX_CORE_EXPORT size_t qHash(const iRegularExpression &key, size_t seed);
 
     iRegularExpression(iRegularExpressionPrivate &dd);
     iExplicitlySharedDataPointer<iRegularExpressionPrivate> d;

@@ -263,8 +263,9 @@ iObject::~iObject()
     if (!m_runningTimers.empty()) {
         if (m_threadData == iThreadData::current()) {
             // unregister pending timers
-            if (m_threadData->dispatcher.load())
-                m_threadData->dispatcher.load()->unregisterTimers(this, true);
+            // Cache dispatcher pointer to avoid race condition with double load()
+            iEventDispatcher* dispatcher = m_threadData->dispatcher.load();
+            if (dispatcher) dispatcher->unregisterTimers(this, true);
         } else {
             ilog_warn("Timers cannot be stopped from another thread");
         }
@@ -370,9 +371,11 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
     }
 
     // need weak target
-    if (eventsMoved > 0 && targetData->dispatcher.load()) {
+    // Cache dispatcher pointer to avoid race condition with double load()
+    iEventDispatcher* dispatcher = targetData->dispatcher.load();
+    if (eventsMoved > 0 && dispatcher) {
         targetData->canWait = false;
-        targetData->dispatcher.load()->wakeUp();
+        dispatcher->wakeUp();
     }
 
     if (IX_NULLPTR != m_currentSender) {
@@ -412,7 +415,10 @@ int iObject::startPreciseTimer(xint64 nsec, xintptr userdata, TimerType timerTyp
         ilog_warn("Timers cannot have negative intervals");
         return 0;
     }
-    if (!m_threadData->dispatcher.load()) {
+
+    // Cache dispatcher pointer to avoid race condition with double load()
+    iEventDispatcher* dispatcher = m_threadData->dispatcher.load();
+    if (!dispatcher) {
         ilog_warn("Timers can only be used with threads started with iThread");
         return 0;
     }
@@ -421,7 +427,7 @@ int iObject::startPreciseTimer(xint64 nsec, xintptr userdata, TimerType timerTyp
         return 0;
     }
 
-    int timerId = m_threadData->dispatcher.load()->registerTimer(nsec, timerType, this, userdata);
+    int timerId = dispatcher->registerTimer(nsec, timerType, this, userdata);
     m_runningTimers.insert(timerId);
     return timerId;
 }
@@ -445,8 +451,12 @@ void iObject::killTimer(int id)
                   " (", objectName(), "), timer has not been killed");
         return;
     }
-    if (m_threadData->dispatcher.load())
-        m_threadData->dispatcher.load()->unregisterTimer(id);
+
+    // Cache dispatcher pointer to avoid race condition with double load()
+    iEventDispatcher* dispatcher = m_threadData->dispatcher.load();
+    if (dispatcher) {
+        dispatcher->unregisterTimer(id);
+    }
 
     m_runningTimers.erase(at);
 }
