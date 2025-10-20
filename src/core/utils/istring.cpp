@@ -6074,7 +6074,7 @@ static xsizetype resolveStringRefsAndReturnTotalSize(ParseResult &parts, const A
 iString iString::multiArg(xsizetype numArgs, const iString **args) const
 {
     // Step 1-2 above
-    ParseResult parts = parseMultiArgFormatString(*this);
+    ParseResult parts = parseMultiArgFormatString<iStringView>(*this);
 
     // 3-4
     ArgIndexToPlaceholderMap argIndexToPlaceholderMap = makeArgIndexToPlaceholderMap(parts);
@@ -6088,14 +6088,16 @@ iString iString::multiArg(xsizetype numArgs, const iString **args) const
     // 5
     const xsizetype totalSize = resolveStringRefsAndReturnTotalSize(parts, argIndexToPlaceholderMap, args);
 
-    // 6:
+    // 6
     iString result(totalSize, iShell::Uninitialized);
     iChar *out = result.data();
 
     for (ParseResult::const_iterator it = parts.begin(), end = parts.end(); it != end; ++it) {
         const Part& part = *it;
-        if (part.size)
+        if (part.size) {
             memcpy(out, part.data, part.size * sizeof(iChar));
+            out += part.size;  // Fixed: advance pointer after memcpy
+        }
     }
 
     return result;

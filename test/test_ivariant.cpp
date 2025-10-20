@@ -224,6 +224,48 @@ int test_ivariant(void)
     IX_ASSERT_X(tmp1.replace(iByteArrayView("ab"), iByteArrayView("xy")) == iByteArray("xycxycxyc"), "iByteArray replace error");
     IX_ASSERT(tmp1.constData() == tmp1_ptr); // make sure str1 is not changed
 
+    // iString::arg() single argument
+    iString tpl_arg1 = "Hello %1!";
+    iString result_arg1 = tpl_arg1.arg("World");
+    IX_ASSERT_X(result_arg1 == "Hello World!", "iString arg single test error");
+    ilog_debug("arg single: ", result_arg1);
+
+    // iString::arg() out-of-order placeholders
+    iString tpl_arg2 = "%3 %2 %1";
+    iString result_arg2 = tpl_arg2.arg("first", "second", "third");
+    IX_ASSERT_X(result_arg2 == "third second first", "iString arg out-of-order test error");
+    ilog_debug("arg out-of-order: ", result_arg2);
+
+    // iString::arg() repeated placeholders
+    iString tpl_arg3 = "%1 and %1 again";
+    iString result_arg3 = tpl_arg3.arg("test");
+    IX_ASSERT_X(result_arg3 == "test and test again", "iString arg repeated test error");
+    ilog_debug("arg repeated: ", result_arg3);
+
+    // iString::arg() numeric arguments
+    iString tpl_arg4 = "Value: %1, Index: %2";
+    iString result_arg4 = tpl_arg4.arg(iString::number(42), iString::number(7));
+    IX_ASSERT_X(result_arg4 == "Value: 42, Index: 7", "iString arg numeric test error");
+    ilog_debug("arg numeric: ", result_arg4);
+
+    // iString::arg() chained calls
+    iString tpl_arg5 = "%1 %2 %3";
+    iString result_arg5 = tpl_arg5.arg("a").arg("b").arg("c");
+    IX_ASSERT_X(result_arg5 == "a b c", "iString arg chained test error");
+    ilog_debug("arg chained: ", result_arg5);
+
+    // iString::arg() multiArg BUG fix verification
+    iString tpl_arg6 = "%1%2%3%4%5";
+    iString result_arg6 = tpl_arg6.arg("A", "B", "C", "D", "E");
+    IX_ASSERT_X(result_arg6 == "ABCDE", "iString arg multiArg test error");
+    ilog_debug("arg multiArg: ", result_arg6);
+
+    // iString::arg() 9 arguments
+    iString tpl_arg7 = "%1 %2 %3 %4 %5 %6 %7 %8 %9";
+    iString result_arg7 = tpl_arg7.arg("1", "2", "3", "4", "5", "6", "7", "8", "9");
+    IX_ASSERT_X(result_arg7 == "1 2 3 4 5 6 7 8 9", "iString arg 9-args test error");
+    ilog_debug("arg 9-args: ", result_arg7);
+
     iString var1("test124");
     iString refVar1 = var1;
     iString refVar2 = var1;
