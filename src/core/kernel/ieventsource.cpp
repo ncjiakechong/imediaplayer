@@ -124,6 +124,14 @@ int iEventSource::removePoll(iPollFD* fd)
     return 0;
 }
 
+int iEventSource::updatePoll(iPollFD* fd)
+{
+    if (m_dispatcher)
+        m_dispatcher->updatePoll(fd, this);
+
+    return 0;
+}
+
 bool iEventSource::prepare(xint64*)
 { return false; }
 

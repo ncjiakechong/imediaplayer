@@ -57,7 +57,26 @@ set (ComSource
 	utils/isize.cpp
 	utils/istring.cpp
 	utils/istringmatcher.cpp
-	utils/istringview.cpp)
+	utils/istringview.cpp
+	
+	# INC Framework (Inter Node Communication)
+	inc/iincengine.cpp
+	inc/iincerror.cpp
+	inc/iincmessage.cpp
+	inc/iinctagstruct.cpp
+	inc/iinchandshake.cpp
+	inc/iincprotocol.cpp
+	inc/iincdevice.cpp
+	inc/itcpdevice.cpp
+	inc/iunixdevice.cpp
+	inc/iincoperation.cpp
+	inc/iinccontext.cpp
+	inc/iincserver.cpp
+	inc/iincconnection.cpp
+	inc/iincstream.cpp
+	inc/iinccontextconfig.cpp
+	inc/iincserverconfig.cpp
+)
 
 find_package(PkgConfig)
 

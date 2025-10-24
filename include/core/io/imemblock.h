@@ -90,7 +90,7 @@ public:
     inline void clearOptions(ArrayOptions o) { m_options &= ~o; }
     void setIsSilence(bool v);
 
-    inline iExplicitlySharedDataPointer<iMemPool> pool() const { return m_pool; }
+    inline iSharedDataPointer<iMemPool> pool() const { return m_pool; }
 
     inline iMemDataWraper data() const { return iMemDataWraper(this, 0); }
 
@@ -153,7 +153,7 @@ private:
     size_t m_length;
     size_t m_capacity;
 
-    iExplicitlySharedDataPointer<iMemPool> m_pool;
+    iSharedDataPointer<iMemPool> m_pool;
 
     iAtomicPointer<void> m_data;
 
@@ -277,7 +277,7 @@ private:
 
     iMutex m_mutex;
 
-    iExplicitlySharedDataPointer<iMemPool> m_pool;
+    iSharedDataPointer<iMemPool> m_pool;
     std::unordered_map<uint, iMemImportSegment*> m_segments;
     std::unordered_map<uint, iMemBlock*> m_blocks;
 
@@ -321,7 +321,7 @@ private:
     Slot* m_usedSlots;
 
     iMutex m_mutex;
-    iExplicitlySharedDataPointer<iMemPool> m_pool;
+    iSharedDataPointer<iMemPool> m_pool;
 
     /* Called whenever a client from which we imported a memory block
        which we in turn exported to another client dies and we need to

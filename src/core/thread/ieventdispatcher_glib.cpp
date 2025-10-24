@@ -514,4 +514,43 @@ int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource* source)
     return 0;
 }
 
+int iEventDispatcher_Glib::updatePoll(iPollFD* fd, iEventSource* source)
+{
+    std::map<iPollFD*, GPollFD*>::const_iterator itMap;
+    itMap = m_fd2gfdMap.find(fd);
+    if (itMap == m_fd2gfdMap.cend()) {
+        ilog_warn("fd not found for update->", fd);
+        return -1;
+    }
+
+    int priority = 0;
+    if (source)
+        priority = source->priority();
+
+    GPollFD* wraper = itMap->second;
+    
+    // Remove old GPollFD from context
+    g_main_context_remove_poll(m_mainContext, wraper);
+    
+    // Update GPollFD events from iPollFD
+    wraper->events = 0;
+    if (fd->events & IX_IO_IN)
+        wraper->events |= G_IO_IN;
+    if (fd->events & IX_IO_OUT)
+        wraper->events |= G_IO_OUT;
+    if (fd->events & IX_IO_PRI)
+        wraper->events |= G_IO_PRI;
+    if (fd->events & IX_IO_ERR)
+        wraper->events |= G_IO_ERR;
+    if (fd->events & IX_IO_HUP)
+        wraper->events |= G_IO_HUP;
+    if (fd->events & IX_IO_NVAL)
+        wraper->events |= G_IO_NVAL;
+    
+    // Re-add GPollFD to context with updated events
+    g_main_context_add_poll(m_mainContext, wraper, priority);
+    
+    return 0;
+}
+
 } // namespace iShell

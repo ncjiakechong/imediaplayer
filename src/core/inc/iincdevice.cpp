@@ -2,23 +2,24 @@
 /// Copyright 2018-2020
 /// All rights reserved.
 /////////////////////////////////////////////////////////////////
-/// @file    iincstream.cpp
-/// @brief   stream of INC(Inter Node Communication)
-/// @details description.
+/// @file    iincdevice.cpp
+/// @brief   Base class for INC transport devices implementation
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <inc/node/iincstream.h>
-#include <inc/node/iinccontext.h>
+#include "inc/iincdevice.h"
 
 namespace iShell {
 
-iINCStream::iINCStream(iINCContext* context)
-    : iObject(context)
-{}
+iINCDevice::iINCDevice(Role role, iObject *parent)
+    : iIODevice(parent)
+    , m_role(role)
+{
+}
 
-iINCStream::~iINCStream()
-{}
+iINCDevice::~iINCDevice()
+{
+}
 
 } // namespace iShell

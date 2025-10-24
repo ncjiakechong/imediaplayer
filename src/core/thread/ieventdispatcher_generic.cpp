@@ -333,6 +333,13 @@ int iEventDispatcher_generic::removePoll(iPollFD* fd, iEventSource*)
     return 0;
 }
 
+int iEventDispatcher_generic::updatePoll(iPollFD*, iEventSource*)
+{
+    // No action needed for generic dispatcher since it stores pointer to pollfd
+    // Changes to pollfd->events are automatically visible
+    return 0;
+}
+
 bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
 {
     if (m_inCheckOrPrepare) {

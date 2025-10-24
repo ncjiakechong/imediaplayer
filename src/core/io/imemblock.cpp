@@ -675,7 +675,7 @@ iMemPool* iMemPool::create(const char* name, MemType type, size_t size, bool per
 
 iMemPool* iMemPool::fakeAdaptor()
 {
-    static iExplicitlySharedDataPointer<iMemPool> s_fakeMemPool(new iMemPool("FakePool", new iShareMem(), 1024, 0, false));
+    static iSharedDataPointer<iMemPool> s_fakeMemPool(new iMemPool("FakePool", new iShareMem(), 1024, 0, false));
     return s_fakeMemPool.data();
 }
 

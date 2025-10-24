@@ -47,6 +47,7 @@ protected:
     virtual int removeEventSource(iEventSource* source);
     virtual int addPoll(iPollFD* fd, iEventSource* source);
     virtual int removePoll(iPollFD* fd, iEventSource* source);
+    virtual int updatePoll(iPollFD* fd, iEventSource* source);
 
 protected:
     struct iPollRec

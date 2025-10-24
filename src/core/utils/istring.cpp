@@ -1585,6 +1585,11 @@ iString &iString::assign(iStringView s)
     return *this;
 }
 
+iString &iString::assign(iByteArrayView s)
+{
+    return (*this = iString::fromUtf8(s));
+}
+
 iString &iString::assign_helper(const xuint32 *data, xsizetype len)
 {
     // worst case: each xuint32 requires a surrogate pair, so

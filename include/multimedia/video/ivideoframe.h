@@ -137,7 +137,7 @@ public:
     void setMetaData(const iString &key, const iVariant &value);
 
 private:
-    iExplicitlySharedDataPointer<iVideoFramePrivate> d;
+    iSharedDataPointer<iVideoFramePrivate> d;
 };
 
 } // namespace iShell

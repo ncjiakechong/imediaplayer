@@ -37,6 +37,7 @@ public:
 
     int addPoll(iPollFD* fd);
     int removePoll(iPollFD* fd);
+    int updatePoll(iPollFD* fd);
 
     int priority() const { return m_priority; }
 
@@ -48,7 +49,7 @@ public:
      * Called before all the file descriptors are polled. If the
      * source can determine that it is ready here (without waiting for the
      * results of the poll() call) it should return %TRUE. It can also return
-     * a @timeout_ value which should be the maximum timeout (in milliseconds)
+     * a @timeout_ value which should be the maximum timeout (in nanoseconds)
      * which should be passed to the poll() call. The actual timeout used will
      * be -1 if all sources returned -1, or it will be the minimum of all
      * the @timeout_ values returned which were >= 0.  Since this may

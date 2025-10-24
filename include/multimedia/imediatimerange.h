@@ -85,7 +85,7 @@ public:
     void clear();
 
 private:
-    iExplicitlySharedDataPointer<iMediaTimeRangePrivate> d;
+    iSharedDataPointer<iMediaTimeRangePrivate> d;
 };
 
 IX_MULTIMEDIA_EXPORT bool operator==(const iMediaTimeRange&, const iMediaTimeRange&);

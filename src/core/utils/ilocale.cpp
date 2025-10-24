@@ -536,7 +536,7 @@ static iLocale::NumberOptions default_number_options = iLocale::DefaultNumberOpt
 static const iLocaleData *const c_data = locale_data;
 static iLocalePrivate *c_private()
 {
-    static iExplicitlySharedDataPointer<iLocalePrivate> c_locale(new iLocalePrivate(c_data, iLocale::OmitGroupSeparator));
+    static iSharedDataPointer<iLocalePrivate> c_locale(new iLocalePrivate(c_data, iLocale::OmitGroupSeparator));
     return c_locale.data();
 }
 
@@ -579,7 +579,7 @@ static const int locale_data_size = sizeof(locale_data)/sizeof(iLocaleData) - 1;
 
 IX_GLOBAL_STATIC_WITH_ARGS(iSharedDataPointer<iLocalePrivate>, defaultLocalePrivate,
                           (iLocalePrivate::create(defaultData(), default_number_options)))
-IX_GLOBAL_STATIC_WITH_ARGS(iExplicitlySharedDataPointer<iLocalePrivate>, systemLocalePrivate,
+IX_GLOBAL_STATIC_WITH_ARGS(iSharedDataPointer<iLocalePrivate>, systemLocalePrivate,
                           (iLocalePrivate::create(systemData())))
 
 static iLocalePrivate *localePrivateByName(const iString &name)

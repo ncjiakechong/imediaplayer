@@ -581,20 +581,23 @@ bool iObject::connectImpl(const _iConnection& conn)
 
     iOrderedMutexLocker locker(&s->m_signalSlotLock, &r->m_signalSlotLock);
 
-    if ((conn._type & UniqueConnection) && conn._slot) {
+    do {
+        if (!(conn._type & UniqueConnection) || (IX_NULLPTR == conn._slot)) break;
+
         _iObjectConnectionList* connectionLists = s->m_connectionLists;
-        if ((IX_NULLPTR != connectionLists) && !connectionLists->allsignals.empty()) {
-            sender_map::const_iterator it = connectionLists->allsignals.find(conn._signal);
-            _iConnection* c2 = it->second.first;
+        if ((IX_NULLPTR == connectionLists) || connectionLists->allsignals.empty()) break;
 
-            while (c2) {
-                if (conn.compare(c2))
-                    return false;
+        sender_map::const_iterator it = connectionLists->allsignals.find(conn._signal);
+        if (connectionLists->allsignals.end() == it) break;
+    
+        _iConnection* c2 = it->second.first;
+        while (c2) {
+            if (conn.compare(c2))
+                return false;
 
-                c2 = c2->_nextConnectionList;
-            }
+            c2 = c2->_nextConnectionList;
         }
-    }
+    } while(false);
 
     _iConnection* c = conn.clone();
     c->ref(); // both link sender/reciver

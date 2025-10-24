@@ -69,6 +69,7 @@ protected:
     virtual int removeEventSource(iEventSource* source) = 0;
     virtual int addPoll(iPollFD* fd, iEventSource* source) = 0;
     virtual int removePoll(iPollFD* fd, iEventSource* source) = 0;
+    virtual int updatePoll(iPollFD* fd, iEventSource* source) = 0;
 
 private:
     friend class iEventSource;

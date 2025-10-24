@@ -90,7 +90,7 @@ public:
     void setProperty(const char *name, const iVariant &value);
 
 private:
-    iExplicitlySharedDataPointer<iVideoSurfaceFormatPrivate> d;
+    iSharedDataPointer<iVideoSurfaceFormatPrivate> d;
 };
 
 } // namespace iShell
