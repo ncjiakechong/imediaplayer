@@ -112,12 +112,12 @@ private:
     
     // Auto-connect behavior
     bool m_autoReconnect = true;
-    int m_reconnectIntervalMs = 1000;
+    int m_reconnectIntervalMs = 500;
     int m_maxReconnectAttempts = 5;
     
     // Timeouts
-    int m_connectTimeoutMs = 5000;
-    int m_operationTimeoutMs = 10000;
+    int m_connectTimeoutMs = 3000;
+    int m_operationTimeoutMs = 2000;
 };
 
 } // namespace iShell

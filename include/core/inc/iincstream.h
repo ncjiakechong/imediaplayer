@@ -5,6 +5,11 @@
 /// @file    iincstream.h
 /// @brief   Shared memory stream for large data transfer
 /// @details Provides high-performance data transfer using shared memory
+/// 
+/// @par Zero-Copy Transfer:
+/// - Uses shared memory (memfd/shm) for large data blocks
+/// - Lock-free binary data transfer via iMemBlock
+/// - Asynchronous write operations with callbacks
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -27,6 +32,12 @@ class iMutex;
 /// @details Delegates to iINCProtocol for zero-copy binary data transfer.
 ///          Provides channel-based multiplexing over single connection.
 ///          Design inspired by PulseAudio's pa_stream architecture.
+/// 
+/// @par Shared Memory Features:
+/// - Zero-copy data transfer using memfd/shm
+/// - Memory pool: 2MB pools with 32 slots × 64KB
+/// - Async write with bytesWritten() signal
+/// - Lock-free binary block transfer
 class IX_CORE_EXPORT iINCStream : public iObject
 {
     IX_OBJECT(iINCStream)

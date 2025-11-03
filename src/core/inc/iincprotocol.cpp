@@ -52,6 +52,16 @@ iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
 
 iINCProtocol::~iINCProtocol()
 {
+    // Cancel all pending operations
+    for (auto& pair : m_operations) {
+        iINCOperation* op = pair.second;
+        if (op && op->getState() == iINCOperation::STATE_RUNNING) {
+            op->cancel();
+        }
+        op->deref();  // Release reference held by map
+    }
+    m_operations.clear();
+    
     // Clean up shared memory resources
     if (m_memExport) {
         delete m_memExport;
@@ -65,28 +75,37 @@ iINCProtocol::~iINCProtocol()
 
 xuint32 iINCProtocol::nextSequence()
 {
-    iScopedLock<iMutex> locker(m_sendMutex);
     return m_seqCounter++;
 }
 
-bool iINCProtocol::sendMessage(const iINCMessage& msg)
+iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& msg)
 {
-    iScopedLock<iMutex> locker(m_sendMutex);
-    
+    // Create operation for tracking this request
+    xuint32 seqNum = msg.sequenceNumber();
+    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
+
+    op->ref(true);
+    invokeMethod(this, &iINCProtocol::sendMessageImpl, msg, op.data());
+    return op;
+}
+
+void iINCProtocol::sendMessageImpl(const iINCMessage& msg, iINCOperation* op)
+{   
     // Check queue size limit
     if (m_sendQueue.size() >= INC_MAX_SEND_QUEUE) {
         ilog_warn("Send queue full, dropping message");
-        return false;
+        
+        op->setResult(INC_ERROR_QUEUE_FULL, iByteArray());
+        op->deref();  // Release map reference
+        return;
     }
     
     // Always queue the message first
+    m_operations[msg.sequenceNumber()] = op;
     m_sendQueue.push(msg);
-    locker.unlock();
     
     // Trigger immediate send attempt
     onReadyWrite();
-    
-    return true;
 }
 
 void iINCProtocol::setMemoryPool(iMemPool* pool)
@@ -106,7 +125,7 @@ void iINCProtocol::setMemoryPool(iMemPool* pool)
     }
 }
 
-xuint32 iINCProtocol::sendBinaryData(xuint32 channel, const iByteArray& data)
+iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, const iByteArray& data)
 {
     xuint32 seqNum = nextSequence();  // Allocate sequence number first
     iINCMessage msg(INC_MSG_BINARY_DATA, seqNum);
@@ -153,8 +172,7 @@ xuint32 iINCProtocol::sendBinaryData(xuint32 channel, const iByteArray& data)
                    seqNum, channel, data.size());
     }
     
-    bool success = sendMessage(msg);
-    return success ? seqNum : 0;  // Return seqNum on success, 0 on failure
+    return sendMessage(msg);
 }
 
 bool iINCProtocol::readMessage(iINCMessage& msg)
@@ -259,23 +277,56 @@ void iINCProtocol::flush()
     onReadyWrite();
 }
 
-xint32 iINCProtocol::sendQueueSize() const
-{
-    iScopedLock<iMutex> locker(const_cast<iINCProtocol*>(this)->m_sendMutex);
-    return static_cast<xint32>(m_sendQueue.size());
-}
-
 void iINCProtocol::onReadyRead()
 {
     // Read messages, readMessage() will populate type and seqNum
     iINCMessage msg(INC_MSG_INVALID, 0);
     while (readMessage(msg)) {
+        // Check if this is a reply message that completes an operation
+        bool isReply = false;
+        xuint32 seqNum = msg.sequenceNumber();
+        
+        switch (msg.type()) {
+            case INC_MSG_PONG:
+            case INC_MSG_METHOD_REPLY:
+            case INC_MSG_SUBSCRIBE_ACK:
+            case INC_MSG_UNSUBSCRIBE_ACK:
+            case INC_MSG_STREAM_OPEN:  // Reply to requestChannel
+                isReply = true;
+                break;
+            default:
+                break;
+        }
+        
+        if (isReply && seqNum > 0) {
+            // Find and complete the corresponding operation
+            auto it = m_operations.find(seqNum);
+            if (it != m_operations.end()) {
+                iINCOperation* op = it->second;
+                m_operations.erase(it);
+                
+                // Extract error code and result data from payload
+                bool ok;
+                xint32 errorCode = msg.payload().getInt32(&ok);
+                if (!ok) {
+                    errorCode = 0;  // Default to success if no error code in payload
+                }
+                
+                iByteArray resultData = msg.payload().data();
+                
+                // Complete the operation
+                op->setResult(errorCode, resultData);
+                op->deref();  // Release reference held by map
+            }
+        }
+        
         // Handle binary data messages specially
         if (msg.type() == INC_MSG_BINARY_DATA) {
             processBinaryDataMessage(msg);
         } else {
             IEMIT messageReceived(msg);
         }
+        
         // Reset for next message
         msg = iINCMessage(INC_MSG_INVALID, 0);
     }
@@ -367,18 +418,14 @@ void iINCProtocol::onReadyWrite()
 
     // State machine loop: process all sendable data
     while (true) {
-        iScopedLock<iMutex> locker(m_sendMutex);
-        
         // State 1: Priority - send partial data (resume incomplete write)
         if (!m_partialSendBuffer.isEmpty()) {
             xint64 remaining = m_partialSendBuffer.size() - m_partialSendOffset;
             const char* dataPtr = m_partialSendBuffer.constData() + m_partialSendOffset;
-            locker.unlock();
             
-            // Perform write (without lock)
+            // Perform write
             xint64 written = m_device->write(dataPtr, remaining);
             
-            locker.relock();
             if (written < 0) {
                 // Write error
                 ilog_error("Failed to write partial data");
@@ -407,7 +454,6 @@ void iINCProtocol::onReadyWrite()
         // State 2: Send messages from queue
         if (m_sendQueue.empty()) {
             // State 3: Queue empty - complete sending
-            locker.unlock();
             m_device->configEventAbility(true, false);
             return;
         }
@@ -419,13 +465,10 @@ void iINCProtocol::onReadyWrite()
         iByteArray header = msg.header();
         const iByteArray& payload = msg.payload().data();
         
-        locker.unlock();
-        
         // Write header first (24 bytes)
         xint64 written = m_device->write(header.constData(), header.size());
         
         if (written < 0) {
-            locker.relock();
             ilog_error("Failed to write message header");
             IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
             return;
@@ -437,10 +480,8 @@ void iINCProtocol::onReadyWrite()
             if (!payload.isEmpty()) {
                 data.append(payload);
             }
-            locker.relock();
             m_partialSendBuffer = data;
             m_partialSendOffset = written;
-            locker.unlock();
             m_device->configEventAbility(true, true);
             return;
         }
@@ -450,7 +491,6 @@ void iINCProtocol::onReadyWrite()
             written = m_device->write(payload.constData(), payload.size());
             
             if (written < 0) {
-                locker.relock();
                 ilog_error("Failed to write message payload");
                 IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
                 return;
@@ -458,17 +498,14 @@ void iINCProtocol::onReadyWrite()
             
             if (written < payload.size()) {
                 // Partial payload write - save remaining data
-                locker.relock();
                 m_partialSendBuffer = payload.mid(written);
                 m_partialSendOffset = 0;
-                locker.unlock();
                 m_device->configEventAbility(true, true);
                 return;
             }
         }
         
         // Complete write - pop message and continue loop
-        locker.relock();
         m_sendQueue.pop();
     }
 }

@@ -34,17 +34,13 @@
 namespace iShell {
 
 iINCContext::iINCContext(const iStringView& name, iObject *parent)
-    : iObject(parent)
+    : iObject(name.toString(), parent)
     , m_engine(IX_NULLPTR)
     , m_protocol(IX_NULLPTR)
     , m_handshake(IX_NULLPTR)
     , m_state(STATE_UNCONNECTED)
     , m_reconnectTimerId(0)
 {
-    setObjectName(name.toString());
-    
-    // Config is already initialized with defaults via default constructor
-    
     // Create engine - each context owns its own engine
     m_engine = new iINCEngine(this);
     m_engine->initialize();
@@ -52,25 +48,17 @@ iINCContext::iINCContext(const iStringView& name, iObject *parent)
 
 void iINCContext::setState(State newState)
 {
-    if (m_state != newState) {
-        State previous = m_state;
-        m_state = newState;
-        IEMIT stateChanged(previous, newState);
-    }
+    if (m_state == newState) return;
+
+
+    State previous = m_state;
+    m_state = newState;
+    IEMIT stateChanged(previous, newState);
 }
 
 iINCContext::~iINCContext()
 {
     disconnect();
-    
-    // Cleanup pending operations
-    {
-        iScopedLock<iMutex> locker(m_opMutex);
-        for (auto it = m_operations.begin(); it != m_operations.end(); ++it) {
-            it->second->cancel();
-        }
-        m_operations.clear();
-    }
     
     // Cleanup handshake
     if (m_handshake) {
@@ -87,8 +75,8 @@ iINCContext::~iINCContext()
 
 int iINCContext::connect(const iStringView& url)
 {
-    if (m_state == STATE_READY || m_state == STATE_CONNECTING) {
-        ilog_warn("Already connected or connecting");
+    if (m_state == STATE_CONNECTING || m_state == STATE_READY) {
+        ilog_warn("already connecting or connected");
         return INC_ERROR_ALREADY_CONNECTED;
     }
     
@@ -118,22 +106,20 @@ int iINCContext::connect(const iStringView& url)
     // Create protocol handler (role is derived from device)
     m_protocol = new iINCProtocol(device, this);
     
-    // Connect protocol signals FIRST
-    iObject::connect(m_protocol, &iINCProtocol::messageReceived, this, &iINCContext::onProtocolMessage);
-    iObject::connect(m_protocol, &iINCProtocol::errorOccurred, this, &iINCContext::onProtocolError);
-    
-    // Connect device error signal to handle connection errors
-    iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCContext::onDeviceError);
-    
+    // Connect protocol/device signals FIRST
+    iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCContext::onDeviceError, iShell::DirectConnection);
+    iObject::connect(m_protocol, &iINCProtocol::errorOccurred, this, &iINCContext::onProtocolError, iShell::DirectConnection);
+    iObject::connect(m_protocol, &iINCProtocol::messageReceived, this, &iINCContext::onProtocolMessage, iShell::DirectConnection);
+        
     // NOW start EventSource monitoring (attach to EventDispatcher)
     // This ensures no race condition - signals are connected before events can arrive
     iEventDispatcher* dispatcher = iEventDispatcher::instance();
     if (!dispatcher || !device->startEventMonitoring(dispatcher)) {
         ilog_error("Failed to start EventSource monitoring");
-        delete m_protocol;
+        m_protocol->deleteLater();
+        device->deleteLater();
+
         m_protocol = IX_NULLPTR;
-        delete device;
-        
         setState(STATE_FAILED);
         
         if (m_config.autoReconnect()) {
@@ -177,7 +163,8 @@ void iINCContext::disconnect()
     
     // Cleanup protocol
     if (m_protocol) {
-        delete m_protocol;
+        m_protocol->device()->deleteLater();
+        m_protocol->deleteLater();
         m_protocol = IX_NULLPTR;
     }
     
@@ -193,35 +180,23 @@ void iINCContext::disconnect()
 
 iSharedDataPointer<iINCOperation> iINCContext::callMethod(iStringView method, xuint16 version, const iByteArray& args, xint64 timeout)
 {
-    if (m_state != STATE_READY) {
-        ilog_warn("Not connected, cannot call method");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_NOT_CONNECTED, iByteArray());
-        return op;
+    if (m_state != STATE_READY || !m_protocol) {
+        ilog_warn("context not ready, cannot call method");
+        return iSharedDataPointer<iINCOperation>();
     }
     
     // Create and send method call message
-    xuint32 seqNum = m_protocol->nextSequence();
-    iINCMessage msg(INC_MSG_METHOD_CALL, seqNum);
+    iINCMessage msg(INC_MSG_METHOD_CALL, m_protocol->nextSequence());  // Protocol will assign sequence number
     msg.payload().putUint16(version);
     msg.payload().putString(method);
     msg.payload().putBytes(args);
-    m_protocol->sendMessage(msg);
     
-    // Create operation with the actual sequence number used in the message
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-    // Use timeout parameter if specified, otherwise use config default
-    if (timeout > 0) {
-        op->setTimeout(timeout);
-    } else {
-        op->setTimeout(m_config.operationTimeoutMs());
-    }
+    // Protocol creates and tracks the operation
+    auto op = m_protocol->sendMessage(msg);
     
-    // Store operation
-    {
-        iScopedLock<iMutex> locker(m_opMutex);
-        m_operations[seqNum] = op;
+    // Set timeout if operation was created
+    if (op) {
+        op->setTimeout(timeout > 0 ? timeout : m_config.operationTimeoutMs());
     }
     
     return op;
@@ -229,89 +204,44 @@ iSharedDataPointer<iINCOperation> iINCContext::callMethod(iStringView method, xu
 
 iSharedDataPointer<iINCOperation> iINCContext::subscribe(iStringView pattern)
 {
-    if (m_state != STATE_READY) {
-        ilog_warn("Not connected, cannot subscribe");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_NOT_CONNECTED, iByteArray());
-        return op;
+    if (m_state != STATE_READY || !m_protocol) {
+        ilog_warn("context not ready, cannot subscribe");
+        return iSharedDataPointer<iINCOperation>();
     }
     
-    if (!m_protocol) {
-        ilog_error("No protocol available for subscription");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_INTERNAL, iByteArray());
-        return op;
-    }
-    
-    // Create subscribe message and send it directly
-    xuint32 seqNum = m_protocol->nextSequence();
-    iINCMessage msg(INC_MSG_SUBSCRIBE, seqNum);
+    // Create subscribe message and send it - protocol handles operation tracking
+    iINCMessage msg(INC_MSG_SUBSCRIBE, m_protocol->nextSequence());
     msg.payload().putString(pattern);
-    m_protocol->sendMessage(msg);
-    
-    // Create and track operation
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-    m_operations[seqNum] = op;
-    
-    return op;
+    return m_protocol->sendMessage(msg);
 }
 
 iSharedDataPointer<iINCOperation> iINCContext::unsubscribe(iStringView pattern)
 {
-    if (m_state != STATE_READY) {
+    if (m_state != STATE_READY || !m_protocol) {
+        ilog_warn("context not ready, cannot unsubscribe");
         return iSharedDataPointer<iINCOperation>();
     }
     
-    if (!m_protocol) {
-        ilog_error("No protocol available for unsubscription");
-        return iSharedDataPointer<iINCOperation>();
-    }
-    
-    // Create unsubscribe message and send it directly
-    xuint32 seqNum = m_protocol->nextSequence();
-    iINCMessage msg(INC_MSG_UNSUBSCRIBE, seqNum);
+    // Create unsubscribe message and send it - protocol handles operation tracking
+    iINCMessage msg(INC_MSG_UNSUBSCRIBE, m_protocol->nextSequence());
     msg.payload().putString(pattern);
-    m_protocol->sendMessage(msg);
-    
-    // Create and track operation
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-    m_operations[seqNum] = op;
-    
-    return op;
+    return m_protocol->sendMessage(msg);
 }
 
 iSharedDataPointer<iINCOperation> iINCContext::pingpong()
 {
-    if (m_state != STATE_READY) {
-        ilog_warn("Not connected, cannot ping");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_NOT_CONNECTED, iByteArray());
-        return op;
+    if (m_state != STATE_READY || !m_protocol ) {
+        ilog_warn("context not ready, cannot ping");
+        return iSharedDataPointer<iINCOperation>();
     }
     
-    if (!m_protocol) {
-        ilog_error("No protocol available for ping");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_INTERNAL, iByteArray());
-        return op;
-    }
+    // Create PING message and send it - protocol handles operation tracking
+    iINCMessage msg(INC_MSG_PING, m_protocol->nextSequence());
+    auto op = m_protocol->sendMessage(msg);
     
-    // Create PING message and send it
-    xuint32 seqNum = m_protocol->nextSequence();
-    iINCMessage msg(INC_MSG_PING, seqNum);
-    m_protocol->sendMessage(msg);
-    
-    // Create and track operation with default timeout
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-    op->setTimeout(m_config.operationTimeoutMs());
-    
-    {
-        iScopedLock<iMutex> locker(m_opMutex);
-        m_operations[seqNum] = op;
+    // Set timeout
+    if (op) {
+        op->setTimeout(m_config.operationTimeoutMs());
     }
     
     return op;
@@ -324,23 +254,8 @@ void iINCContext::onProtocolMessage(const iINCMessage& msg)
         handleHandshakeAck(msg);
         break;
         
-    case INC_MSG_METHOD_REPLY:
-        handleMethodReply(msg);
-        break;
-        
     case INC_MSG_EVENT:
         handleEvent(msg);
-        break;
-        
-    case INC_MSG_SUBSCRIBE_ACK:
-    case INC_MSG_UNSUBSCRIBE_ACK:
-        // Treat subscribe/unsubscribe acknowledgements like method replies
-        handleMethodReply(msg);
-        break;
-        
-    case INC_MSG_PONG:
-        // Handle PONG response to PING request
-        handleMethodReply(msg);
         break;
         
     case INC_MSG_PING: {
@@ -351,15 +266,13 @@ void iINCContext::onProtocolMessage(const iINCMessage& msg)
     }
         
     case INC_MSG_STREAM_OPEN:
-        // This is the reply from server with allocated channel ID
-        handleStreamOpenReply(msg);
-        break;
-        
     case INC_MSG_STREAM_CLOSE:
-        // This is the reply from server confirming channel release
-        handleStreamCloseReply(msg);
+    case INC_MSG_METHOD_REPLY:
+    case INC_MSG_SUBSCRIBE_ACK:
+    case INC_MSG_UNSUBSCRIBE_ACK:
+    case INC_MSG_PONG:
         break;
-        
+
     default:
         ilog_warn("Unexpected message type:", msg.type());
         break;
@@ -381,11 +294,12 @@ void iINCContext::onProtocolError(xint32 errorCode)
 void iINCContext::onDeviceError(xint32 errorCode)
 {
     ilog_warn("Device error occurred in context, error:", errorCode);
-    
-    // Disconnect and potentially reconnect
     m_protocol->device()->close();
+    
+    // Disconnect (will cleanup protocol and device)
     disconnect();
     
+    // Schedule reconnect if auto-reconnect is enabled
     if (m_config.autoReconnect() && !m_serverUrl.isEmpty()) {
         scheduleReconnect();
     }
@@ -428,61 +342,19 @@ void iINCContext::handleHandshakeAck(const iINCMessage& msg)
     ilog_info("Handshake completed with", m_serverName, "protocol version", m_serverProtocol);
 }
 
-void iINCContext::handleMethodReply(const iINCMessage& msg)
-{
-    xuint32 seqNum = msg.sequenceNumber();
-    
-    iSharedDataPointer<iINCOperation> op;
-    {
-        iScopedLock<iMutex> locker(m_opMutex);
-        auto it = m_operations.find(seqNum);
-        if (it == m_operations.end()) {
-            ilog_warn("Received reply for unknown operation:", seqNum);
-            return;
-        }
-        
-        op = it->second;
-        m_operations.erase(it);
-    }
-    
-    // For SUBSCRIBE_ACK, UNSUBSCRIBE_ACK, and PONG, there's no error code or result
-    if (msg.type() == INC_MSG_SUBSCRIBE_ACK || msg.type() == INC_MSG_UNSUBSCRIBE_ACK || msg.type() == INC_MSG_PONG) {
-        op->setResult(INC_OK, iByteArray());
-        return;
-    }
-    
-    // Parse error code and result from payload
-    bool ok;
-    xint32 errorCode = msg.payload().getInt32(&ok);
-    if (!ok) {
-        ilog_error("Failed to read error code from payload");
-        op->setResult(INC_ERROR_PROTOCOL_ERROR, iByteArray());
-        return;
-    }
-    
-    iByteArray result = msg.payload().getBytes(&ok);
-    if (!ok) {
-        ilog_warn("Failed to read method reply payload");
-        result = iByteArray();
-    }
-    
-    // Set result with error code (0 = success, non-zero = error)
-    op->setResult(errorCode, result);
-}
-
 void iINCContext::handleEvent(const iINCMessage& msg)
 {
     // Parse version, event name and data with type-safe API
     bool ok;
     xuint16 version = msg.payload().getUint16(&ok);
     if (!ok) {
-        ilog_error("Failed to read version from event payload");
+        ilog_warn("Failed to read version from event payload");
         return;
     }
     
     iString eventName = msg.payload().getString(&ok);
     if (!ok) {
-        ilog_error("Failed to read event name from payload");
+        ilog_warn("Failed to read event name from payload");
         return;
     }
     
@@ -522,7 +394,6 @@ bool iINCContext::event(iEvent* e)
 
         // Handle reconnect timer
         ilog_info("Attempting reconnection to", m_serverUrl);
-        
         int result = connect(m_serverUrl);
 
         // Failed, schedule another reconnect if enabled
@@ -538,144 +409,47 @@ bool iINCContext::event(iEvent* e)
 
 iSharedDataPointer<iINCOperation> iINCContext::requestChannel(xuint32 mode)
 {
-    if (!m_protocol) {
-        ilog_error("No protocol available for channel request");
+    if (m_state != STATE_READY || !m_protocol) {
+        ilog_error("context not ready for channel request");
         return iSharedDataPointer<iINCOperation>();
     }
-    
-    if (m_state != STATE_READY) {
-        ilog_error("Context not ready for channel request, state=%d", m_state);
-        return iSharedDataPointer<iINCOperation>();
-    }
-    
-    // Allocate sequence number for this request
-    xuint32 seqNum = m_protocol->nextSequence();
-    
-    // Create operation to track this request
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-    op->setTimeout(5000);  // 5 second timeout
-    
-    // Store operation for tracking
-    {
-        iScopedLock<iMutex> locker(m_opMutex);
-        m_operations[seqNum] = op;
-    }
-    
+
     // Prepare STREAM_OPEN message with mode in payload using type-safe API
-    iINCMessage msg(INC_MSG_STREAM_OPEN, seqNum);
+    iINCMessage msg(INC_MSG_STREAM_OPEN, m_protocol->nextSequence());  // Protocol assigns sequence number
     msg.payload().putUint32(mode);
     
-    // Send request (async, non-blocking)
-    if (!m_protocol->sendMessage(msg)) {
-        ilog_error("Failed to send STREAM_OPEN request");
-        iScopedLock<iMutex> locker(m_opMutex);
-        m_operations.erase(seqNum);
-        op->setResult(INC_ERROR_CONNECTION_FAILED, iByteArray());
-        return iSharedDataPointer<iINCOperation>();
+    // Send request - protocol creates and tracks operation
+    auto op = m_protocol->sendMessage(msg);
+    // Set timeout
+    if (op) {
+        op->setTimeout(m_config.operationTimeoutMs());
+        ilog_info("Sent async channel request, seqNum=%u, mode=%u", op->sequenceNumber(), mode);
     }
     
-    ilog_info("Sent async channel request, seqNum=%u, mode=%u", seqNum, mode);
-    
-    // Return operation immediately (don't wait)
     return op;
 }
 
 iSharedDataPointer<iINCOperation> iINCContext::releaseChannel(xuint32 channelId)
 {
-    if (!m_protocol) {
-        ilog_error("No protocol available");
+    if (m_state != STATE_READY || !m_protocol) {
+        ilog_error("context not ready for channel release");
         return iSharedDataPointer<iINCOperation>();
     }
     
-    xuint32 seqNum = m_protocol->nextSequence();
-    
-    // Create operation to track async release
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-    op->setTimeout(5000);  // 5 second timeout
-    
-    // Store operation for reply handling
-    m_operations[seqNum] = op;
-    
     // Send release request to server with type-safe API
-    iINCMessage msg(INC_MSG_STREAM_CLOSE, seqNum);
+    iINCMessage msg(INC_MSG_STREAM_CLOSE, m_protocol->nextSequence());  // Protocol assigns sequence number
     msg.payload().putUint32(channelId);
     
-    if (!m_protocol->sendMessage(msg)) {
-        ilog_error("Failed to send channel release request");
-        m_operations.erase(seqNum);
-        op->setResult(INC_ERROR_CONNECTION_FAILED, iByteArray());
-        return op;
+    // Protocol creates and tracks operation
+    auto op = m_protocol->sendMessage(msg);
+    
+    // Set timeout
+    if (op) {
+        op->setTimeout(m_config.operationTimeoutMs());
+        ilog_info("Sent async channel release request: channelId=%u, seqNum=%u", channelId, op->sequenceNumber());
     }
     
-    ilog_info("Sent async channel release request: channelId=%u, seqNum=%u", 
-             channelId, seqNum);
-    return op;  // Immediate return
-}
-
-void iINCContext::handleStreamOpenReply(const iINCMessage& msg)
-{
-    xuint32 seqNum = msg.sequenceNumber();
-    
-    // Extract channel ID from payload with type-safe API
-    bool ok;
-    xuint32 channelId = msg.payload().getUint32(&ok);
-    if (!ok) {
-        ilog_error("Failed to read channel ID from STREAM_OPEN reply");
-        return;
-    }
-    
-    // Find and complete operation
-    iSharedDataPointer<iINCOperation> op;
-    {
-        iScopedLock<iMutex> locker(m_opMutex);
-        auto it = m_operations.find(seqNum);
-        if (it == m_operations.end()) {
-            ilog_warn("Unexpected STREAM_OPEN reply, seqNum=%u", seqNum);
-            return;
-        }
-        op = it->second;
-        m_operations.erase(it);
-    }
-    
-    // Complete operation with channel ID as result
-    iByteArray result;
-    result.append(reinterpret_cast<const char*>(&channelId), sizeof(channelId));
-    op->setResult(INC_OK, result);
-    
-    ilog_info("Received channel allocation: channelId=%u for seqNum=%u", channelId, seqNum);
-}
-
-void iINCContext::handleStreamCloseReply(const iINCMessage& msg)
-{
-    xuint32 seqNum = msg.sequenceNumber();
-    
-    // Extract channel ID from payload with type-safe API
-    bool ok;
-    xuint32 channelId = msg.payload().getUint32(&ok);
-    if (!ok) {
-        ilog_error("Failed to read channel ID from STREAM_CLOSE reply");
-        return;
-    }
-    
-    // Find and complete operation
-    iSharedDataPointer<iINCOperation> op;
-    {
-        iScopedLock<iMutex> locker(m_opMutex);
-        auto it = m_operations.find(seqNum);
-        if (it == m_operations.end()) {
-            ilog_warn("Unexpected STREAM_CLOSE reply, seqNum=%u", seqNum);
-            return;
-        }
-        op = it->second;
-        m_operations.erase(it);
-    }
-    
-    // Complete operation with result
-    iByteArray result;
-    result.append(reinterpret_cast<const char*>(&channelId), sizeof(channelId));
-    op->setResult(INC_OK, result);
-    
-    ilog_info("Received channel release confirmation: channelId=%u for seqNum=%u", channelId, seqNum);
+    return op;
 }
 
 } // namespace iShell

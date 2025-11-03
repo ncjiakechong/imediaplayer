@@ -125,9 +125,6 @@ private:
     
     /// Clear handshake handler (server-side only)
     void clearHandshake();
-    
-    /// Handle PONG response from client (completes pingpong operation)
-    void handlePongResponse(xuint32 seqNum);
 
     iINCServer*             m_server;
     iINCProtocol*           m_protocol;         // Owned protocol instance
@@ -141,10 +138,6 @@ private:
     
     // Channel management (server-side)
     std::unordered_map<xuint32, xuint32> m_channels;  ///< channelId -> mode
-    xuint32                 m_nextChannelId;           ///< Next available channel ID
-    
-    // Operation tracking for server-side async operations (e.g., pingpong)
-    std::unordered_map<xuint32, iSharedDataPointer<iINCOperation>> m_operations;
     
     friend class iINCServer;
     IX_DISABLE_COPY(iINCConnection)

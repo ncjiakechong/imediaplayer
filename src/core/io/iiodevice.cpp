@@ -715,8 +715,6 @@ void iIODevice::close()
     if (m_openMode == NotOpen)
         return;
 
-    IEMIT aboutToClose();
-
     m_openMode = NotOpen;
     m_pos = 0;
     m_transactionStarted = false;
@@ -724,6 +722,8 @@ void iIODevice::close()
     setReadChannelCount(0);
     // Do not clear write buffers to allow delayed close in sockets
     m_writeChannelCount = 0;
+
+    IEMIT aboutToClose();
 }
 
 /*!

@@ -4,6 +4,11 @@
 /////////////////////////////////////////////////////////////////
 /// @file    iincoperation.h
 /// @brief   Async operation tracking with timeout support
+/// 
+/// @par Asynchronous Features:
+/// - Non-blocking RPC with callbacks
+/// - Operation state tracking (running/done/failed/timeout)
+/// - Automatic timeout management via iTimer
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -20,6 +25,12 @@ namespace iShell {
 /// @brief Tracks asynchronous operation state and result
 /// @details Each async operation returns an iSharedDataPointer<iINCOperation> for automatic lifecycle management.
 ///          Application can monitor state changes via callbacks and cancel operations.
+/// 
+/// @par Async Architecture:
+/// - Non-blocking: All RPC operations return immediately
+/// - Callback-driven: State changes trigger callbacks
+/// - Timeout support: Automatic timeout via iTimer
+/// - Cancellable: Operations can be cancelled anytime
 class IX_CORE_EXPORT iINCOperation : public iSharedData
 {
 public:
@@ -81,10 +92,8 @@ private:
     // Callbacks
     FinishedCallback m_finishedCallback;
     void*           m_finishedUserData;
-    
-    friend class iINCContext;
-    friend class iINCConnection;  // Allow iINCConnection to complete operations
-    friend class iINCStream;  // Allow iINCStream to create operations for write ACK
+
+    friend class iINCProtocol;
     IX_DISABLE_COPY(iINCOperation)
 };
 

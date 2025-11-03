@@ -32,7 +32,6 @@ iINCConnection::iINCConnection(iINCServer* server, iINCDevice* device, xuint64 c
     , m_connId(connId)
     , m_clientProtocol(0)
     , m_handshake(IX_NULLPTR)
-    , m_nextChannelId(1)  // Start from 1, 0 is reserved for invalid
 {
     // Create protocol handler for this device
     m_protocol = new iINCProtocol(device, this);
@@ -45,6 +44,9 @@ iINCConnection::iINCConnection(iINCServer* server, iINCDevice* device, xuint64 c
 
 iINCConnection::~iINCConnection()
 {
+    m_protocol->device()->deleteLater();
+    m_protocol->deleteLater();
+    clearHandshake();
 }
 
 iString iINCConnection::peerAddress() const
@@ -63,56 +65,43 @@ bool iINCConnection::isConnected() const
 
 void iINCConnection::sendReply(xuint32 seqNum, xint32 errorCode, const iByteArray& result)
 {
-    if (m_protocol) {
-        iINCMessage msg(INC_MSG_METHOD_REPLY, seqNum);
-        msg.payload().putInt32(errorCode);
-        msg.payload().putBytes(result);
-        m_protocol->sendMessage(msg);
-    }
+    IX_ASSERT(m_protocol);
+
+    iINCMessage msg(INC_MSG_METHOD_REPLY, seqNum);
+    msg.payload().putInt32(errorCode);
+    msg.payload().putBytes(result);
+    m_protocol->sendMessage(msg);
 }
 
 void iINCConnection::sendEvent(const iStringView& eventName, xuint16 version, const iByteArray& data)
 {
-    if (m_protocol) {
-        iINCMessage msg(INC_MSG_EVENT, 0);  // Events use seq=0
-        msg.payload().putUint16(version);
-        msg.payload().putString(eventName.toString());
-        msg.payload().putBytes(data);
-        m_protocol->sendMessage(msg);
-    }
+    IX_ASSERT(m_protocol);
+    iINCMessage msg(INC_MSG_EVENT, m_protocol->nextSequence());
+    msg.payload().putUint16(version);
+    msg.payload().putString(eventName.toString());
+    msg.payload().putBytes(data);
+    m_protocol->sendMessage(msg);
 }
 
 iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
 {
-    if (!m_protocol) {
-        ilog_error("No protocol available for ping");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_INTERNAL, iByteArray());
-        return op;
+    IX_ASSERT(m_protocol);
+    
+    // Create PING message and send it - protocol creates and tracks operation
+    iINCMessage msg(INC_MSG_PING, 0);  // Protocol assigns sequence number
+    auto op = m_protocol->sendMessage(msg);
+    if (op) {
+        op->setTimeout(5000);  // 5 seconds
+        ilog_debug("Sent PING to client", m_connId, "seq:", op->sequenceNumber());
     }
-    
-    // Create PING message and send it
-    xuint32 seqNum = m_protocol->nextSequence();
-    iINCMessage msg(INC_MSG_PING, seqNum);
-    m_protocol->sendMessage(msg);
-    
-    ilog_debug("Sent PING to client", m_connId, "seq:", seqNum);
-    
-    // Create and track operation
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-    // Use default timeout from config (5 seconds typically)
-    op->setTimeout(5000);
-    m_operations[seqNum] = op;
     
     return op;
 }
 
 void iINCConnection::sendMessage(const iINCMessage& msg)
 {
-    if (m_protocol) {
-        m_protocol->sendMessage(msg);
-    }
+    IX_ASSERT(m_protocol);
+    m_protocol->sendMessage(msg);
 }
 
 bool iINCConnection::isSubscribed(const iStringView& eventName) const
@@ -150,10 +139,10 @@ void iINCConnection::removeSubscription(const iString& pattern)
 
 void iINCConnection::close()
 {
-    if (m_protocol && m_protocol->device()) {
+    if (m_protocol && m_protocol->device() && m_protocol->device()->isOpen()) {
         m_protocol->device()->close();
+        IEMIT disconnected();
     }
-    IEMIT disconnected();
 }
 
 void iINCConnection::setHandshakeHandler(iINCHandshake* handshake)
@@ -170,23 +159,6 @@ void iINCConnection::clearHandshake()
     }
 }
 
-void iINCConnection::handlePongResponse(xuint32 seqNum)
-{
-    auto it = m_operations.find(seqNum);
-    if (it == m_operations.end()) {
-        ilog_debug("Received PONG for unknown operation:", seqNum);
-        return;
-    }
-    
-    iSharedDataPointer<iINCOperation> op = it->second;
-    m_operations.erase(it);
-    
-    // PONG received successfully - complete operation with success
-    op->setResult(INC_OK, iByteArray());
-    
-    ilog_debug("PONG received from client", m_connId, "seq:", seqNum);
-}
-
 bool iINCConnection::matchesPattern(const iString& eventName, const iString& pattern) const
 {
     // Simple wildcard matching: "system.*" matches "system.shutdown"
@@ -201,10 +173,11 @@ bool iINCConnection::matchesPattern(const iString& eventName, const iString& pat
 
 xuint32 iINCConnection::allocateChannel(xuint32 mode)
 {
-    xuint32 channelId = m_nextChannelId++;
+    // Get server-wide unique channel ID
+    xuint32 channelId = m_server->allocateChannelId();
     m_channels[channelId] = mode;
     
-    ilog_info("Allocated channel %u for connection %llu, mode=%u", channelId, m_connId, mode);
+    ilog_info("Client", m_connId, "Allocated channel %u for connection %llu, mode=%u", channelId, m_connId, mode);
     return channelId;
 }
 
@@ -212,12 +185,12 @@ void iINCConnection::releaseChannel(xuint32 channelId)
 {
     auto it = m_channels.find(channelId);
     if (it == m_channels.end()) {
-        ilog_warn("Channel %u not found for connection %llu", channelId, m_connId);
+        ilog_warn("Client", m_connId, "Channel %u not found for connection %llu", channelId, m_connId);
         return;
     }
     
     m_channels.erase(it);
-    ilog_info("Released channel %u for connection %llu", channelId, m_connId);
+    ilog_info("Client", m_connId, "Released channel %u for connection %llu", channelId, m_connId);
 }
 
 bool iINCConnection::isChannelAllocated(xuint32 channelId) const

@@ -31,16 +31,13 @@ namespace iShell {
 // - Inspired by PulseAudio's pa_stream design
 
 iINCStream::iINCStream(const iStringView& name, iINCContext* context, iObject* parent)
-    : iObject(parent)
+    : iObject(name.toString(), parent)
     , m_context(context)
     , m_state(STATE_DETACHED)
     , m_mode(MODE_WRITE)
     , m_channelId(0)  // Will be allocated by server during attach()
 {
     IX_ASSERT(context != IX_NULLPTR);
-    
-    // Set object name for debugging
-    setObjectName(name.toString());
     
     // Monitor context state changes
     iObject::connect(context, &iINCContext::stateChanged, this, &iINCStream::onContextStateChanged);
@@ -58,11 +55,11 @@ iINCProtocol* iINCStream::protocol() const
 
 void iINCStream::setState(State newState)
 {
-    if (m_state != newState) {
-        State previous = m_state;
-        m_state = newState;
-        IEMIT stateChanged(previous, newState);
-    }
+    if (m_state == newState) return;
+
+    State previous = m_state;
+    m_state = newState;
+    IEMIT stateChanged(previous, newState);
 }
 
 bool iINCStream::attach(Mode mode)
@@ -72,15 +69,9 @@ bool iINCStream::attach(Mode mode)
         return false;
     }
     
-    if (!m_context) {
-        ilog_error("No context available");
-        IEMIT error(INC_ERROR_CONNECTION_FAILED);
-        return false;
-    }
-    
     // Check if context is connected
-    if (m_context->state() != iINCContext::STATE_READY) {
-        ilog_error("Context not ready, state=%d", m_context->state());
+    if (!m_context || m_context->state() != iINCContext::STATE_READY) {
+        ilog_error("Context not ready, state=%d", m_context ? m_context->state() : -1);
         IEMIT error(INC_ERROR_CONNECTION_FAILED);
         return false;
     }
@@ -130,8 +121,7 @@ void iINCStream::detach()
     // Disconnect from protocol signals first
     iINCProtocol* proto = protocol();
     if (proto) {
-        iObject::disconnect(proto, &iINCProtocol::binaryDataReceived, 
-                          this, &iINCStream::onBinaryDataReceived);
+        iObject::disconnect(proto, &iINCProtocol::binaryDataReceived, this, &iINCStream::onBinaryDataReceived);
     }
     
     // Clear receive queue
@@ -146,80 +136,52 @@ void iINCStream::detach()
     setState(STATE_DETACHING);
     
     // Send async release request to server
-    if (m_context) {
-        auto op = m_context->releaseChannel(m_channelId);
-        if (op) {
-            op->setFinishedCallback(&iINCStream::onChannelReleased, this);
-            
-            ilog_info("Stream entering DETACHING state, channelId=%u", m_channelId);
-        } else {
-            // Failed to send release request, force detach
-            ilog_error("Failed to send release request, force detach");
-            m_channelId = 0;
-            setState(STATE_DETACHED);
-        }
-    } else {
+    if (!m_context) {
         // No context, force detach
         m_channelId = 0;
         setState(STATE_DETACHED);
+        return;
+    }
+        
+    auto op = m_context->releaseChannel(m_channelId);
+    if (op) {
+        op->setFinishedCallback(&iINCStream::onChannelReleased, this);
+        ilog_info("Stream entering DETACHING state, channelId=%u", m_channelId);
+    } else {
+        // Failed to send release request, force detach
+        m_channelId = 0;
+        setState(STATE_DETACHED);
+        ilog_error("Failed to send release request, force detach");
     }
 }
 
 iSharedDataPointer<iINCOperation> iINCStream::write(const iByteArray& data)
 {
-    if (m_state != STATE_ATTACHED) {
-        ilog_warn("Stream not attached");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_INVALID_STATE, iByteArray());
-        return op;
-    }
-
-    if (!(m_mode & MODE_WRITE)) {
-        ilog_warn("Stream is read-only");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_INVALID_ARGS, iByteArray());
-        return op;
+    if (m_state != STATE_ATTACHED || !(m_mode & MODE_WRITE)) {
+        ilog_warn("Stream not ready for writing");
+        return iSharedDataPointer<iINCOperation>();
     }
     
     iINCProtocol* proto = protocol();
     if (!proto) {
         ilog_error("No protocol available");
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_CONNECTION_FAILED, iByteArray());
-        return op;
+        return iSharedDataPointer<iINCOperation>();
     }
     
     // Delegate to protocol for zero-copy binary data transfer
     // sendBinaryData now returns seqNum for tracking
-    xuint32 seqNum = proto->sendBinaryData(m_channelId, data);
-    if (seqNum == 0) {
-        ilog_error("Failed to send binary data on channel %u", m_channelId);
-        iSharedDataPointer<iINCOperation> op(new iINCOperation(this, 0));
-        op->setState(iINCOperation::STATE_FAILED);
-        op->setResult(INC_ERROR_CONNECTION_FAILED, iByteArray());
-        return op;
+    auto op = proto->sendBinaryData(m_channelId, data);
+    if (op) {
+         op->setTimeout(m_context->m_config.operationTimeoutMs());  // Use configured timeout
     }
-    
-    // Create operation to track server ACK
-    // Note: Context will track this operation for the reply
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-    op->setTimeout(5000);  // 5 second timeout for ACK
     
     return op;
 }
 
 iByteArray iINCStream::read()
 {
-    if (m_state != STATE_ATTACHED) {
-        ilog_warn("Stream not attached");
-        return iByteArray();
-    }
-    
-    if (!(m_mode & MODE_READ)) {
-        ilog_warn("Stream is write-only");
+    if (m_state != STATE_ATTACHED || !(m_mode & MODE_READ)) {
+        ilog_warn("Stream not ready for reading");
         return iByteArray();
     }
     
@@ -297,27 +259,22 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
             
             // Connect to protocol signals if in read mode
             if (stream->m_mode & MODE_READ) {
-                iINCProtocol* proto = stream->protocol();
-                if (proto) {
-                    iObject::connect(proto, &iINCProtocol::binaryDataReceived, 
-                                   stream, &iINCStream::onBinaryDataReceived);
-                }
+                iObject::connect(stream->protocol(), &iINCProtocol::binaryDataReceived, stream, &iINCStream::onBinaryDataReceived, iShell::DirectConnection);
             }
             
             // Transition to ATTACHED state
-            stream->setState(STATE_ATTACHED);
-
+            iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
             ilog_info("Stream attached to channel %u, mode=%d", stream->m_channelId, stream->m_mode);
         } else {
             ilog_error("Invalid channel allocation result");
-            stream->setState(STATE_ERROR);
-            IEMIT stream->error(INC_ERROR_INVALID_MESSAGE);
+            iObject::invokeMethod(stream, &iINCStream::setState, STATE_ERROR);
+            iObject::invokeMethod(stream, &iINCStream::error, INC_ERROR_INVALID_MESSAGE);
         }
     } else {
         // Operation failed/timeout/cancelled
         ilog_error("Channel allocation failed with error code: %d", op->errorCode());
-        stream->setState(STATE_ERROR);
-        IEMIT stream->error(op->errorCode());
+        iObject::invokeMethod(stream, &iINCStream::setState, STATE_ERROR);
+        iObject::invokeMethod(stream, &iINCStream::error, op->errorCode());
     }
 }
 
@@ -330,18 +287,9 @@ void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
         return;
     }
     
-    // Check operation state
-    if (op->getState() == iINCOperation::STATE_DONE) {
-        ilog_info("Channel released confirmed");
-    } else {
-        // Operation failed/timeout - still complete detach
-        ilog_warn("Channel release failed/timeout with error code: %d", op->errorCode());
-    }
-    
     // Complete detach regardless of operation result
-    stream->setState(STATE_DETACHED);
     stream->m_channelId = 0;
-
+    iObject::invokeMethod(stream, &iINCStream::setState, STATE_DETACHED);
     ilog_info("Stream fully detached");
 }
 
@@ -363,10 +311,7 @@ void iINCStream::onContextStateChanged(int state)
     ilog_warn("Context state changed to %d, stream channelId=%u transitioning to ERROR", contextState, m_channelId);
     
     // Disconnect from protocol signals
-    iINCProtocol* proto = protocol();
-    if (proto) {
-        iObject::disconnect(proto, &iINCProtocol::binaryDataReceived, this, &iINCStream::onBinaryDataReceived);
-    }
+    iObject::disconnect(protocol(), &iINCProtocol::binaryDataReceived, this, &iINCStream::onBinaryDataReceived);
     
     // Clear receive queue
     {
@@ -382,7 +327,6 @@ void iINCStream::onContextStateChanged(int state)
     m_channelId = 0;
     
     IEMIT error(INC_ERROR_DISCONNECTED);
-    
     ilog_info("Stream transitioned from %d to ERROR due to context state change", oldState);
 }
 

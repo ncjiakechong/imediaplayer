@@ -52,7 +52,7 @@ void iINCOperation::setTimeout(xint64 timeout)
     
     m_timeout = timeout;
     if (timeout > 0) {
-        m_timer.start(timeout);
+        iObject::invokeMethod(&m_timer, static_cast<void (iTimer::*)(int, xintptr)>(&iTimer::start), timeout, 0);
     }
 }
 
@@ -68,6 +68,9 @@ void iINCOperation::setFinishedCallback(FinishedCallback callback, void* userDat
 {
     m_finishedCallback = callback;
     m_finishedUserData = userData;
+    if (m_state != STATE_RUNNING && m_finishedCallback) {
+        m_finishedCallback(this, m_finishedUserData);
+    }
 }
 
 void iINCOperation::setState(State st)

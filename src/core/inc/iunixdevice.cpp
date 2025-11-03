@@ -427,9 +427,9 @@ void iUnixDevice::close()
         return;
     }
 
-    IEMIT disconnected();
     // Call base class close (resets m_openMode to NotOpen)
     iIODevice::close();
+    IEMIT disconnected();
 }
 
 bool iUnixDevice::startEventMonitoring(iEventDispatcher* dispatcher)

@@ -4,6 +4,11 @@
 /////////////////////////////////////////////////////////////////
 /// @file    iincprotocol.h
 /// @brief   Protocol layer with message queuing and flow control
+/// 
+/// @par Lock-Free Features:
+/// - Lock-free message queue for high-performance RPC
+/// - Zero-copy binary transfer via shared memory references
+/// - Atomic sequence number generation
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -11,10 +16,12 @@
 #define IINCPROTOCOL_H
 
 #include <queue>
+#include <unordered_map>
 
-#include <core/inc/iincmessage.h>
-#include <core/kernel/iobject.h>
 #include <core/io/imemblock.h>
+#include <core/kernel/iobject.h>
+#include <core/inc/iincmessage.h>
+#include <core/inc/iincoperation.h>
 
 #include "inc/iincdevice.h"
 
@@ -24,6 +31,11 @@ namespace iShell {
 /// @details Unified for both client and server.
 ///          Manages sequence numbers, message queuing, and flow control.
 ///          Supports zero-copy binary data transfer via shared memory when possible.
+/// 
+/// @par Architecture Features:
+/// - **Lock-Free**: Atomic sequence number generation, lock-free message queuing
+/// - **Shared Memory**: Zero-copy binary transfer via iMemBlock/iMemExport
+/// - **Asynchronous**: Non-blocking sendMessage() with iINCOperation tracking
 class IX_CORE_EXPORT iINCProtocol : public iObject
 {
     IX_OBJECT(iINCProtocol)
@@ -39,16 +51,16 @@ public:
     xuint32 nextSequence();
 
     /// Send message (queued if device not ready)
-    /// @return true if sent/queued, false on error
-    bool sendMessage(const iINCMessage& msg);
+    /// @return iINCOperation pointer for tracking the request, or nullptr on error
+    iSharedDataPointer<iINCOperation> sendMessage(const iINCMessage& msg);
 
     /// Send binary data with zero-copy optimization via shared memory
     /// @param channel Channel identifier for routing
     /// @param data Binary data to send (uses SHM reference if backed by mempool)
-    /// @return Sequence number for tracking server ACK, 0 on error
+    /// @return iINCOperation pointer for tracking the request, or nullptr on error
     /// @note Attempts zero-copy via iMemExport if data is backed by iMemBlock,
     ///       falls back to data copy if shared memory export fails
-    xuint32 sendBinaryData(xuint32 channel, const iByteArray& data);
+    iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, const iByteArray& data);
 
     /// Read next message (non-blocking)
     /// @return true if message read successfully
@@ -59,9 +71,6 @@ public:
 
     /// Get underlying transport device
     iINCDevice* device() const { return m_device; }
-
-    /// Get send queue size
-    xint32 sendQueueSize() const;
 
     /// Get associated memory pool for zero-copy operations
     /// @return Memory pool pointer if configured, nullptr otherwise
@@ -86,16 +95,16 @@ private:
     void onReadyRead();
     void onReadyWrite();
     void onDeviceConnected();  // Handle device connected signal
+    void sendMessageImpl(const iINCMessage& msg, iINCOperation* op);
     
     /// Process received binary data message
     void processBinaryDataMessage(const iINCMessage& msg);
 
     iINCDevice*             m_device;
-    xuint32                 m_seqCounter;
+    iAtomicCounter<xuint32> m_seqCounter;
     
     // Message queuing
     std::queue<iINCMessage> m_sendQueue;
-    iMutex                  m_sendMutex;
     
     // Partial write buffer (for incomplete writes)
     iByteArray              m_partialSendBuffer;  ///< Unsent portion of current message
@@ -108,6 +117,9 @@ private:
     iSharedDataPointer<iMemPool> m_memPool;
     iMemExport*             m_memExport;
     iMemImport*             m_memImport;
+    
+    // Operation tracking (centralized in protocol layer)
+    std::unordered_map<xuint32, iINCOperation*> m_operations;  ///< Maps seqNum -> operation
     
     IX_DISABLE_COPY(iINCProtocol)
 };

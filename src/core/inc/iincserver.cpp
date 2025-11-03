@@ -35,6 +35,7 @@ iINCServer::iINCServer(const iStringView& name, iObject *parent)
     , m_serverName(name)
     , m_listening(false)
     , m_nextConnId(1)
+    , m_nextChannelId(1)  // Start from 1, 0 is reserved for invalid
 {
     // Create and initialize engine
     m_engine = new iINCEngine(this);
@@ -71,10 +72,10 @@ int iINCServer::listen(const iStringView& url)
     }
     
     // Connect the device signal FIRST - use base class signal (works for both TCP and Pipe)
-    iObject::connect(m_listenDevice, &iINCDevice::newConnection, this, &iINCServer::handleNewConnection);
-    iObject::connect(m_listenDevice, &iINCDevice::disconnected, this, &iINCServer::handleListenDeviceDisconnected);
-    iObject::connect(m_listenDevice, &iINCDevice::errorOccurred, this, &iINCServer::handleListenDeviceError);
-    
+    iObject::connect(m_listenDevice, &iINCDevice::newConnection, this, &iINCServer::handleNewConnection, iShell::DirectConnection);
+    iObject::connect(m_listenDevice, &iINCDevice::disconnected, this, &iINCServer::handleListenDeviceDisconnected, iShell::DirectConnection);
+    iObject::connect(m_listenDevice, &iINCDevice::errorOccurred, this, &iINCServer::handleListenDeviceError, iShell::DirectConnection);
+
     // NOW start EventSource monitoring (attach to EventDispatcher)
     // This ensures no race condition - signal is connected before events can arrive
     iEventDispatcher* dispatcher = iEventDispatcher::instance();
@@ -98,19 +99,16 @@ void iINCServer::close()
     }
     
     // Close all client connections
-    {
-        iScopedLock<iMutex> locker(m_connMutex);
-        for (auto& pair : m_connections) {
-            pair.second->close();
-            delete pair.second;
-        }
-        m_connections.clear();
+    for (auto& pair : m_connections) {
+        pair.second->close();
+        delete pair.second;
     }
+    m_connections.clear();
     
     // Close listening device
     if (m_listenDevice) {
         m_listenDevice->close();
-        delete m_listenDevice;
+        m_listenDevice->deleteLater();
         m_listenDevice = IX_NULLPTR;
     }
     
@@ -118,41 +116,17 @@ void iINCServer::close()
     ilog_info("Server", m_serverName, "closed");
 }
 
-std::vector<iINCConnection*> iINCServer::connections() const
-{
-    iScopedLock<iMutex> locker(const_cast<iINCServer*>(this)->m_connMutex);
-    
-    std::vector<iINCConnection*> result;
-    result.reserve(m_connections.size());
-    
-    for (const auto& pair : m_connections) {
-        result.push_back(pair.second);
-    }
-    
-    return result;
-}
-
-iINCConnection* iINCServer::connection(xuint64 connId) const
-{
-    iScopedLock<iMutex> locker(const_cast<iINCServer*>(this)->m_connMutex);
-    
-    auto it = m_connections.find(connId);
-    if (it != m_connections.end()) {
-        return it->second;
-    }
-    
-    return IX_NULLPTR;
-}
-
 void iINCServer::broadcastEvent(const iStringView& eventName, xuint16 version, const iByteArray& data)
 {
-    iScopedLock<iMutex> locker(m_connMutex);
-    
-    iString eventStr = eventName.toString();
+    invokeMethod(this, &iINCServer::broadcastEventImp, eventName.toString(), version, data);
+}
+
+void iINCServer::broadcastEventImp(const iString& eventName, xuint16 version, const iByteArray& data)
+{
     for (auto& pair : m_connections) {
         iINCConnection* conn = pair.second;
-        if (conn->isSubscribed(eventStr)) {
-            conn->sendEvent(eventStr, version, data);
+        if (conn->isSubscribed(eventName)) {
+            conn->sendEvent(eventName, version, data);
         }
     }
 }
@@ -172,15 +146,11 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     }
     
     // Check max connections limit from config
-    {
-        iScopedLock<iMutex> locker(m_connMutex);
-        if (m_config.maxConnections() > 0 && 
-            m_connections.size() >= static_cast<size_t>(m_config.maxConnections())) {
-            ilog_warn("Max connections limit reached:", m_config.maxConnections());
-            incDevice->close();
-            delete incDevice;
-            return;
-        }
+    if (m_config.maxConnections() > 0 && m_connections.size() >= static_cast<size_t>(m_config.maxConnections())) {
+        ilog_warn("Max connections limit reached:", m_config.maxConnections());
+        incDevice->close();
+        delete incDevice;
+        return;
     }
     
     // Create connection object (it will create protocol internally)
@@ -199,10 +169,10 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     conn->setHandshakeHandler(handshake);
     
     // Connect all forwarding signals from connection
-    iObject::connect(conn, &iINCConnection::disconnected, this, &iINCServer::onClientDisconnected);
-    iObject::connect(conn, &iINCConnection::binaryDataReceived, this, &iINCServer::onConnectionBinaryData);
-    iObject::connect(conn, &iINCConnection::errorOccurred, this, &iINCServer::onConnectionErrorOccurred);
-    iObject::connect(conn, &iINCConnection::messageReceived, this, &iINCServer::onConnectionMessageReceived);
+    iObject::connect(conn, &iINCConnection::disconnected, this, &iINCServer::onClientDisconnected, iShell::DirectConnection);
+    iObject::connect(conn, &iINCConnection::binaryDataReceived, this, &iINCServer::onConnectionBinaryData, iShell::DirectConnection);
+    iObject::connect(conn, &iINCConnection::errorOccurred, this, &iINCServer::onConnectionErrorOccurred, iShell::DirectConnection);
+    iObject::connect(conn, &iINCConnection::messageReceived, this, &iINCServer::onConnectionMessageReceived, iShell::DirectConnection);
 
     // AFTER EventSource is attached, configure event monitoring
     // Accepted connections are already established, monitor read events only
@@ -218,10 +188,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     }
 
     // Store connection
-    {
-        iScopedLock<iMutex> locker(m_connMutex);
-        m_connections[connId] = conn;
-    }
+    m_connections[connId] = conn;
     
     IEMIT clientConnected(conn);
     ilog_info("New client connected, ID:", connId);
@@ -261,25 +228,15 @@ void iINCServer::onClientDisconnected()
         ilog_error("Invalid sender in onClientDisconnected");
         return;
     }
-    
-    xuint64 connId = conn->connectionId();
-    
-    bool found = false;
-    {
-        iScopedLock<iMutex> locker(m_connMutex);
-        auto it = m_connections.find(connId);
-        if (it != m_connections.end()) {
-            m_connections.erase(it);
-            found = true;
-        }
-    }
-    
-    if (found) {
+
+    auto it = m_connections.find(conn->connectionId());
+    if (it != m_connections.end()) {
+        m_connections.erase(it);
         IEMIT clientDisconnected(conn);
-        
-        delete conn;
-        ilog_info("Client", connId, "disconnected");
     }
+
+    conn->deleteLater();
+    ilog_info("Client", conn->connectionId(), "disconnected");
 }
 
 void iINCServer::onConnectionBinaryData(xuint32 channelId, xuint32 seqNum, const iByteArray& data)
@@ -487,12 +444,10 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
             conn->sendMessage(pong);
             break;
         }
-        
-        case INC_MSG_PONG: {
-            // Client responded to our PING - complete the operation
-            conn->handlePongResponse(msg.sequenceNumber());
+
+        case INC_MSG_METHOD_REPLY:
+        case INC_MSG_PONG:
             break;
-        }
         
         default:
             ilog_warn("Unhandled message type:", msg.type());
@@ -501,6 +456,9 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
     }
 }
 
-
+xuint32 iINCServer::allocateChannelId()
+{
+    return m_nextChannelId++;
+}
 
 } // namespace iShell

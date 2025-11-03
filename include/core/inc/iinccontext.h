@@ -4,6 +4,10 @@
 /////////////////////////////////////////////////////////////////
 /// @file    iinccontext.h
 /// @brief   Client connection context with auto-reconnect
+/// @details INC (Inter Node Communication) Framework - Core Features:
+///          - Asynchronous Operations: Non-blocking async RPC with callback
+///          - Shared Memory: Zero-copy large data transfer via shared memory streams
+///          - Lock-Free: Lock-free queue for high-performance message passing
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
@@ -23,12 +27,15 @@ class iINCEngine;
 class iINCProtocol;
 class iINCHandshake;
 class iINCMessage;
-class iTimer;
-class iMutex;
 
 /// @brief Client-side connection context
 /// @details Manages connection lifecycle, async operations, and auto-reconnect.
 ///          Owns its own iINCEngine instance.
+/// 
+/// @par Key Features:
+/// - **Asynchronous**: Non-blocking async RPC calls with callbacks
+/// - **Shared Memory**: Zero-copy binary data transfer via iINCStream
+/// - **Lock-Free**: High-performance lock-free message queues
 class IX_CORE_EXPORT iINCContext : public iObject
 {
     IX_OBJECT(iINCContext)
@@ -111,14 +118,11 @@ private:
     void onDeviceError(xint32 errorCode);
     void handleHandshake(const iINCMessage& msg);
     void handleHandshakeAck(const iINCMessage& msg);
-    void handleMethodReply(const iINCMessage& msg);
     void handleEvent(const iINCMessage& msg);
     void scheduleReconnect();
     void onReconnectTimeout();
     void attemptReconnect();
     void cleanupOperations();
-    void handleStreamOpenReply(const iINCMessage& msg);
-    void handleStreamCloseReply(const iINCMessage& msg);
     
     /// Request channel allocation from server (async, non-blocking)
     /// @param mode Channel mode (MODE_READ, MODE_WRITE, or both)
@@ -147,10 +151,6 @@ private:
     iString         m_serverName;
     iString         m_serverUrl;
     xuint32         m_serverProtocol;
-    
-    // Operation tracking (seq -> operation)
-    std::unordered_map<xuint32, iSharedDataPointer<iINCOperation>> m_operations;
-    iMutex          m_opMutex;          ///< Mutex for operation tracking
     
     // Auto-reconnect timer ID (using iObject::startTimer/killTimer)
     int             m_reconnectTimerId;

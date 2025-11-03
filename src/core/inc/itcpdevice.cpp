@@ -457,8 +457,8 @@ void iTcpDevice::close()
         return;
     }
 
-    IEMIT disconnected(); 
     iIODevice::close();
+    IEMIT disconnected(); 
 }
 
 bool iTcpDevice::startEventMonitoring(iEventDispatcher* dispatcher)

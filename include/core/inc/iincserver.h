@@ -4,18 +4,22 @@
 /////////////////////////////////////////////////////////////////
 /// @file    iincserver.h
 /// @brief   Server base class for INC framework
+/// @details INC Framework Core Features:
+///          - Asynchronous: Event-driven async message processing
+///          - Shared Memory: Zero-copy data streams for large payloads
+///          - Lock-Free: Lock-free queues for concurrent client handling
 /// @version 1.0
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #ifndef IINCSERVER_H
 #define IINCSERVER_H
 
+#include <unordered_map>
+
 #include <core/inc/iincserverconfig.h>
 #include <core/kernel/iobject.h>
 #include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
-#include <unordered_map>
-#include <vector>
 
 namespace iShell {
 
@@ -27,6 +31,11 @@ class iINCDevice;
 /// @brief Server base class for handling client connections
 /// @details Subclass should override handleMethod() to implement service logic.
 ///          Owns its own iINCEngine instance.
+/// 
+/// @par Performance Features:
+/// - **Asynchronous**: Non-blocking event-driven architecture
+/// - **Shared Memory**: iINCStream for efficient large data transfer
+/// - **Lock-Free**: Lock-free protocol queues for multi-client concurrency
 class IX_CORE_EXPORT iINCServer : public iObject
 {
     IX_OBJECT(iINCServer)
@@ -49,13 +58,14 @@ public:
     /// Check if server is listening
     bool isListening() const { return m_listening; }
 
-    /// Get all active connections
-    std::vector<iINCConnection*> connections() const;
-
     /// Get connection by ID
     /// @param connId Connection identifier
     /// @return Connection object, or nullptr if not found
-    iINCConnection* connection(xuint64 connId) const;
+    // iINCConnection* connection(xuint64 connId) const;
+
+    /// Allocate unique channel ID (thread-safe, server-wide unique for debugging)
+    /// @return Allocated channel ID (starts from 1, 0 is reserved for invalid)
+    xuint32 allocateChannelId();
 
 // signals:
     /// Emitted when new client connects
@@ -123,16 +133,18 @@ private:
     /// @param msg Received message
     void processMessage(iINCConnection* conn, const iINCMessage& msg);
 
+    void broadcastEventImp(const iString& eventName, xuint16 version, const iByteArray& data);
+
     iINCServerConfig m_config;          ///< Server configuration
     iINCEngine*     m_engine;           ///< Owned engine instance
     iINCDevice*     m_listenDevice;     ///< Listening socket
     iString         m_serverName;
     bool            m_listening;
-    xuint64         m_nextConnId;       ///< Connection ID generator
+    iAtomicCounter<xuint64> m_nextConnId;       ///< Connection ID generator (thread-safe atomic)
+    iAtomicCounter<xuint32> m_nextChannelId;    ///< Global channel ID generator (server-wide unique, thread-safe atomic)
     
     // Connection tracking
     std::unordered_map<xuint64, iINCConnection*> m_connections;
-    iMutex  m_connMutex;        ///< Mutex for connection tracking
     
     IX_DISABLE_COPY(iINCServer)
 };
