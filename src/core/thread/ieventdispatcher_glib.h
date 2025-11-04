@@ -41,6 +41,7 @@ public:
     virtual void interrupt();
 
     void runTimersOnceWithNormalPriority();
+    xuint32 sequence() const { return m_nextSeq; }
 
 protected:
     virtual int addEventSource(iEventSource* source);
@@ -55,6 +56,8 @@ protected:
       iPollFD *fd;
       int priority;
     };
+
+    xuint32 m_nextSeq;
 
     GMainContext* m_mainContext;
     GPostEventSource* m_postEventSource;

@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 
     iShell::iPollFD wakeupFd = {};
     iShell::iWakeup wakeup;
-    iShell::iEventSource* source = new iShell::iEventSource(0);
+    iShell::iEventSource* source = new iShell::iEventSource(iShell::iLatin1StringView("TestSource"), 0);
 
     wakeup.getPollfd(&wakeupFd);
     source->addPoll(&wakeupFd);

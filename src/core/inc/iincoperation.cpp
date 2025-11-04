@@ -40,7 +40,6 @@ void iINCOperation::cancel()
 {
     if (m_state == STATE_RUNNING) {
         setState(STATE_CANCELLED);
-        m_timer.stop();
     }
 }
 
@@ -80,7 +79,10 @@ void iINCOperation::setState(State st)
     }
     
     m_state = st;
-    
+    if (st != STATE_RUNNING) {
+        m_timer.stop();
+    }
+
     // Invoke finished callback if operation completed
     if (st != STATE_RUNNING && m_finishedCallback) {
         m_finishedCallback(this, m_finishedUserData);

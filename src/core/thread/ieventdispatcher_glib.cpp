@@ -188,6 +188,7 @@ struct iEventSourceWraper
 {
     GSource source;
     iEventSource* imp;
+    iEventDispatcher_Glib* dispatcher;
     std::map<GPollFD*, iPollFD*> gfd2fdMap;
 };
 
@@ -234,7 +235,27 @@ static gboolean eventSourceWraperCheck(GSource *s)
 static gboolean eventSourceWraperDispatch(GSource *s, GSourceFunc, gpointer)
 {
     iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
-    return source->imp->dispatch();
+    bool continue_dispatch = source->imp->detectableDispatch(source->dispatcher->sequence());
+    xuint32 comboCount = source->imp->comboCount();
+    
+    // Warn every 16 dispatches after hitting 200
+    if (comboCount > 200 && !(comboCount & 0x0F)) {
+        ilog_warn("source ", source->imp->name(), " combo count ", comboCount, 
+                  " many times and maybe detach later to avoid CPU HANG");
+        // Give source a chance to optimize itself
+        source->imp->comboDetected(comboCount);
+    }
+
+    // Auto-detach at 1000 to prevent CPU hang
+    // GLib convention: return FALSE to remove source, TRUE to keep it
+    if (comboCount >= 1000) {
+        ilog_error("source ", source->imp->name(), " combo count reached ", comboCount,
+                   ", force detaching to prevent CPU HANG");
+        return FALSE;  // Remove source
+    }
+
+    // Return TRUE if dispatch wants to continue, FALSE if it wants to detach
+    return continue_dispatch ? TRUE : FALSE;
 }
 
 static GSourceFuncs eventSourceWraperFuncs = {
@@ -248,6 +269,7 @@ static GSourceFuncs eventSourceWraperFuncs = {
 
 iEventDispatcher_Glib::iEventDispatcher_Glib(iObject *parent)
     : iEventDispatcher(parent)
+    , m_nextSeq(0)
     , m_mainContext(IX_NULLPTR)
     , m_postEventSource(IX_NULLPTR)
     , m_timerSource(IX_NULLPTR)
@@ -317,6 +339,7 @@ iEventDispatcher_Glib::~iEventDispatcher_Glib()
 
 bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
 {
+    bool result = false;
     const bool canWait = (flags & iEventLoop::WaitForMoreEvents);
 
     if (!(flags & iEventLoop::EventLoopExec)) {
@@ -324,9 +347,10 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
         m_timerSource->runWithIdlePriority = false;
     }
 
-    bool result = g_main_context_iteration(m_mainContext, canWait);
-    while (!result && canWait)
+    do {
+        ++m_nextSeq;
         result = g_main_context_iteration(m_mainContext, canWait);
+    } while (!result && canWait);
 
     return result;
 }
@@ -417,6 +441,7 @@ int iEventDispatcher_Glib::addEventSource(iEventSource* source)
                                                                         sizeof(iEventSourceWraper)));
     (void) new (&wraper->gfd2fdMap) std::map<GPollFD*, iPollFD*>();
     wraper->imp = source;
+    wraper->dispatcher = this;
     g_source_attach(&wraper->source, m_mainContext);
     m_wraperMap.insert(std::pair<iEventSource*, iEventSourceWraper*>(source, wraper));
 

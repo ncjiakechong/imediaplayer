@@ -65,17 +65,17 @@ public:
     /// @note Server-side operation tracking - returns iINCOperation for async monitoring
     iSharedDataPointer<iINCOperation> pingpong();
 
-    /// Check if client is subscribed to event pattern
+    /// Check if client is subscribed to event pattern call from IO thread
     /// @param eventName Event name to check
     bool isSubscribed(const iStringView& eventName) const;
 
-    /// Close this connection
+    /// Close this connection call from IO thread
     void close();
 
     /// Check if connection is still active
     bool isConnected() const;
 
-    /// Check if channel is allocated
+    /// Check if channel is allocated call from IO thread
     bool isChannelAllocated(xuint32 channelId) const;
 
 private: // signals

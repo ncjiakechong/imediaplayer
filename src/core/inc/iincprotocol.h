@@ -95,7 +95,7 @@ private:
     void onReadyRead();
     void onReadyWrite();
     void onDeviceConnected();  // Handle device connected signal
-    void sendMessageImpl(const iINCMessage& msg, iINCOperation* op);
+    void sendMessageImpl(iINCMessage msg, iINCOperation* op);
     
     /// Process received binary data message
     void processBinaryDataMessage(const iINCMessage& msg);

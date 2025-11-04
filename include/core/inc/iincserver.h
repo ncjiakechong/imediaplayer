@@ -17,7 +17,7 @@
 #include <unordered_map>
 
 #include <core/inc/iincserverconfig.h>
-#include <core/kernel/iobject.h>
+#include <core/thread/ithread.h>
 #include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
 
@@ -58,6 +58,11 @@ public:
     /// Check if server is listening
     bool isListening() const { return m_listening; }
 
+    /// Set server configuration
+    /// @param config Configuration object
+    /// @note Must be called before listen() to take effect
+    void setConfig(const iINCServerConfig& config) { m_config = config; }
+
     /// Get connection by ID
     /// @param connId Connection identifier
     /// @return Connection object, or nullptr if not found
@@ -65,7 +70,7 @@ public:
 
     /// Allocate unique channel ID (thread-safe, server-wide unique for debugging)
     /// @return Allocated channel ID (starts from 1, 0 is reserved for invalid)
-    xuint32 allocateChannelId();
+    xuint32 allocateChannelId() { return m_nextChannelId++; }
 
 // signals:
     /// Emitted when new client connects
@@ -97,7 +102,7 @@ protected:
     ///       1. Store seqNum and conn for later
     ///       2. Return empty iByteArray immediately
     ///       3. When done, call conn->sendReply(seqNum, result)
-    virtual iByteArray handleMethod(iINCConnection* conn, xuint32 seqNum, const iString& method, xuint16 version, const iByteArray& args) = 0;
+    virtual void handleMethod(iINCConnection* conn, xuint32 seqNum, const iString& method, xuint16 version, const iByteArray& args) = 0;
 
     /// Override this to handle binary data received from a client on a channel
     /// @param conn Client connection that sent the data
@@ -120,31 +125,32 @@ protected:
     void broadcastEvent(const iStringView& eventName, xuint16 version, const iByteArray& data);
 
 private:
-    void handleNewConnection(iINCDevice* clientDevice);
+    void handleCustomer(xintptr action);
     void handleListenDeviceDisconnected();
     void handleListenDeviceError(int errorCode);
+    void handleNewConnection(iINCDevice* clientDevice);
     void onClientDisconnected();
     void onConnectionBinaryData(xuint32 channelId, xuint32 seqNum, const iByteArray& data);
     void onConnectionErrorOccurred(int errorCode);
     void onConnectionMessageReceived(const iINCMessage& msg);
-    
+
     /// Process message from client connection (called by iINCConnection)
     /// @param conn Client connection
     /// @param msg Received message
     void processMessage(iINCConnection* conn, const iINCMessage& msg);
 
-    void broadcastEventImp(const iString& eventName, xuint16 version, const iByteArray& data);
-
     iINCServerConfig m_config;          ///< Server configuration
     iINCEngine*     m_engine;           ///< Owned engine instance
-    iINCDevice*     m_listenDevice;     ///< Listening socket
+    iINCDevice*     m_listenDevice;     ///< Listening socket in ioThread
     iString         m_serverName;
     bool            m_listening;
     iAtomicCounter<xuint64> m_nextConnId;       ///< Connection ID generator (thread-safe atomic)
     iAtomicCounter<xuint32> m_nextChannelId;    ///< Global channel ID generator (server-wide unique, thread-safe atomic)
     
     // Connection tracking
-    std::unordered_map<xuint64, iINCConnection*> m_connections;
+    std::unordered_map<xuint64, iINCConnection*> m_connections; ///< work in ioThread
+
+    iThread         m_ioThread;       ///< Thread for handling I/O operations
     
     IX_DISABLE_COPY(iINCServer)
 };

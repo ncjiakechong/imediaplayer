@@ -41,6 +41,8 @@ iINCContext::iINCContext(const iStringView& name, iObject *parent)
     , m_state(STATE_UNCONNECTED)
     , m_reconnectTimerId(0)
 {
+    m_ioThread.setObjectName("iINCContext.IOThread");
+    
     // Create engine - each context owns its own engine
     m_engine = new iINCEngine(this);
     m_engine->initialize();
@@ -49,7 +51,6 @@ iINCContext::iINCContext(const iStringView& name, iObject *parent)
 void iINCContext::setState(State newState)
 {
     if (m_state == newState) return;
-
 
     State previous = m_state;
     m_state = newState;
@@ -103,30 +104,24 @@ int iINCContext::connect(const iStringView& url)
         return INC_ERROR_CONNECTION_FAILED;
     }
     
-    // Create protocol handler (role is derived from device)
-    m_protocol = new iINCProtocol(device, this);
+    // Create protocol handler without parent (will be managed manually)
+    // This allows moveToThread() if needed
+    m_protocol = new iINCProtocol(device, IX_NULLPTR);
     
     // Connect protocol/device signals FIRST
-    iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCContext::onDeviceError, iShell::DirectConnection);
-    iObject::connect(m_protocol, &iINCProtocol::errorOccurred, this, &iINCContext::onProtocolError, iShell::DirectConnection);
+    iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCContext::onDeviceError);
+    iObject::connect(m_protocol, &iINCProtocol::errorOccurred, this, &iINCContext::onProtocolError);
     iObject::connect(m_protocol, &iINCProtocol::messageReceived, this, &iINCContext::onProtocolMessage, iShell::DirectConnection);
-        
-    // NOW start EventSource monitoring (attach to EventDispatcher)
-    // This ensures no race condition - signals are connected before events can arrive
-    iEventDispatcher* dispatcher = iEventDispatcher::instance();
-    if (!dispatcher || !device->startEventMonitoring(dispatcher)) {
-        ilog_error("Failed to start EventSource monitoring");
-        m_protocol->deleteLater();
-        device->deleteLater();
-
-        m_protocol = IX_NULLPTR;
-        setState(STATE_FAILED);
-        
-        if (m_config.autoReconnect()) {
-            scheduleReconnect();
-        }
-        
-        return INC_ERROR_CONNECTION_FAILED;
+    
+    // Start IO thread if enabled in config
+    if (m_config.enableIOThread()) {
+        m_ioThread.start();
+        m_protocol->moveToThread(&m_ioThread);
+        device->moveToThread(&m_ioThread);
+        invokeMethod(device, &iINCDevice::startEventMonitoring, IX_NULLPTR);
+    } else {
+        // Run in main thread (single-threaded mode)
+        device->startEventMonitoring(iEventDispatcher::instance());
     }
 
     // Start handshake
@@ -159,6 +154,13 @@ void iINCContext::disconnect()
     if (m_reconnectTimerId != 0) {
         killTimer(m_reconnectTimerId);
         m_reconnectTimerId = 0;
+    }
+
+    // Stop IO thread if it was started
+    if (m_config.enableIOThread()) {
+        ilog_debug("Stopping IO thread...");
+        m_ioThread.exit();
+        m_ioThread.yieldCurrentThread();
     }
     
     // Cleanup protocol
@@ -193,8 +195,6 @@ iSharedDataPointer<iINCOperation> iINCContext::callMethod(iStringView method, xu
     
     // Protocol creates and tracks the operation
     auto op = m_protocol->sendMessage(msg);
-    
-    // Set timeout if operation was created
     if (op) {
         op->setTimeout(timeout > 0 ? timeout : m_config.operationTimeoutMs());
     }
@@ -238,8 +238,6 @@ iSharedDataPointer<iINCOperation> iINCContext::pingpong()
     // Create PING message and send it - protocol handles operation tracking
     iINCMessage msg(INC_MSG_PING, m_protocol->nextSequence());
     auto op = m_protocol->sendMessage(msg);
-    
-    // Set timeout
     if (op) {
         op->setTimeout(m_config.operationTimeoutMs());
     }
@@ -294,7 +292,6 @@ void iINCContext::onProtocolError(xint32 errorCode)
 void iINCContext::onDeviceError(xint32 errorCode)
 {
     ilog_warn("Device error occurred in context, error:", errorCode);
-    m_protocol->device()->close();
     
     // Disconnect (will cleanup protocol and device)
     disconnect();
@@ -338,7 +335,6 @@ void iINCContext::handleHandshakeAck(const iINCMessage& msg)
     m_serverProtocol = remote.protocolVersion;
     
     setState(STATE_READY);
-    
     ilog_info("Handshake completed with", m_serverName, "protocol version", m_serverProtocol);
 }
 
@@ -420,7 +416,6 @@ iSharedDataPointer<iINCOperation> iINCContext::requestChannel(xuint32 mode)
     
     // Send request - protocol creates and tracks operation
     auto op = m_protocol->sendMessage(msg);
-    // Set timeout
     if (op) {
         op->setTimeout(m_config.operationTimeoutMs());
         ilog_info("Sent async channel request, seqNum=%u, mode=%u", op->sequenceNumber(), mode);
@@ -442,8 +437,6 @@ iSharedDataPointer<iINCOperation> iINCContext::releaseChannel(xuint32 channelId)
     
     // Protocol creates and tracks operation
     auto op = m_protocol->sendMessage(msg);
-    
-    // Set timeout
     if (op) {
         op->setTimeout(m_config.operationTimeoutMs());
         ilog_info("Sent async channel release request: channelId=%u, seqNum=%u", channelId, op->sequenceNumber());

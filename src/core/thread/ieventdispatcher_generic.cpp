@@ -28,7 +28,7 @@ class iPostEventSource : public iEventSource
 {
 public:
     iPostEventSource(int priority)
-        : iEventSource(priority)
+        : iEventSource(iLatin1StringView("iPostEventSource"), priority)
         , serialNumber(1)
         , lastSerialNumber(0) {}
 
@@ -61,7 +61,7 @@ public:
 class iTimerEventSource : public iEventSource
 {
 public:
-    iTimerEventSource(int priority) : iEventSource(priority) {}
+    iTimerEventSource(int priority) : iEventSource(iLatin1StringView("iTimerEventSource"), priority) {}
 
     virtual bool prepare(xint64 *timeout)
     {
@@ -98,6 +98,7 @@ iEventDispatcher_generic::iEventDispatcher_generic(iObject *parent)
     , m_wakeup(IX_NULLPTR)
     , m_cachedPollArray(IX_NULLPTR)
     , m_cachedPollArraySize(0)
+    , m_nextSeq(0)
     , m_postSource(IX_NULLPTR)
     , m_timerSource(IX_NULLPTR)
 {
@@ -164,14 +165,13 @@ void iEventDispatcher_generic::interrupt()
 
 bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flags)
 {
-    iThreadData* data = iThread::get2(thread());
-    IX_ASSERT(data == iThreadData::current());
-
+    bool result = false;
     const bool canWait = (flags & iEventLoop::WaitForMoreEvents);
 
-    bool result = eventIterate(canWait, true);
-    while (!result && canWait)
+    do {
+        ++m_nextSeq;
         result = eventIterate(canWait, true);
+    } while (!result && canWait);
 
     return result;
 }
@@ -532,12 +532,21 @@ void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingD
         source->setFlags(source->flags() & ~IX_EVENT_SOURCE_READY);
         source->ref();
 
-        need_deattch = !source->dispatch();
+        need_deattch = !source->detectableDispatch(m_nextSeq);
+
+        if (source->comboCount() > 200 && !(source->comboCount() & 0x0F) 
+            && (m_postSource != source) && (m_timerSource != source)) {
+            ilog_warn("source ", source->name(), " combo count ", source->comboCount(), " many times and maybe detach later to avoid CPU HANG");
+            source->comboDetected(source->comboCount());
+        }
 
         /* Note: this depends on the fact that we can't switch
          * sources from one main context to another
          */
-        if (need_deattch)
+        if (need_deattch 
+            || ((source->comboCount() >= 1000) 
+                && (m_postSource != source) 
+                && (m_timerSource != source)))
             source->detach();
 
         source->deref();

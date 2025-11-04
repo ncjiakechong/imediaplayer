@@ -18,10 +18,13 @@
 
 namespace iShell {
 
-iEventSource::iEventSource(int priority)
-    : m_priority(priority)
+iEventSource::iEventSource(iLatin1StringView name, int priority)
+    : m_name(name)
+    , m_priority(priority)
     , m_refCount(1)
     , m_flags(0)
+    , m_nextSeq(0)
+    , m_comboCount(0)
     , m_dispatcher(IX_NULLPTR)
 {}
 
@@ -140,5 +143,21 @@ bool iEventSource::check()
 
 bool iEventSource::dispatch()
 { return true; }
+
+void iEventSource::comboDetected(xuint32 count)
+{}
+
+bool iEventSource::detectableDispatch(xuint32 sequence)
+{
+    if ((sequence == m_nextSeq) || (sequence == (m_nextSeq + 1))) {
+        ++m_comboCount;
+    } else {
+        m_comboCount = 0;
+    }
+
+    m_nextSeq = sequence;
+    return dispatch();
+}
+
 
 } // namespace iShell

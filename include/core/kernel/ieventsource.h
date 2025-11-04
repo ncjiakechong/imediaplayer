@@ -12,6 +12,7 @@
 
 #include <list>
 #include <core/kernel/ipoll.h>
+#include <core/utils/ilatin1stringview.h>
 
 namespace iShell {
 
@@ -27,7 +28,7 @@ typedef enum
 class IX_CORE_EXPORT iEventSource
 {
 public:
-    iEventSource(int priority);
+    iEventSource(iLatin1StringView name, int priority);
 
     bool ref();
     bool deref();
@@ -44,6 +45,9 @@ public:
     int flags() const { return m_flags; }
     void setFlags(int flags) { m_flags = flags; }
 
+    iLatin1StringView name() const { return m_name; }
+    xuint32 comboCount() const { return m_comboCount; }
+    iEventDispatcher* dispatcher() const { return m_dispatcher; }
 
     /**
      * Called before all the file descriptors are polled. If the
@@ -73,16 +77,27 @@ public:
      * user data. The return value of the @dispatch function
      * should be removed(%FALSE) or continue to keep it(%TRUE).
      */
-    virtual bool dispatch();
+    bool detectableDispatch(xuint32 sequence);
+
+    /**
+     * to deal combo count warning, children source can change it in this callback
+     */
+    virtual void comboDetected(xuint32 count);
 
 protected:
     virtual ~iEventSource();
 
+    virtual bool dispatch();
+
 private:
+    iLatin1StringView m_name;
     int m_priority;
     int m_refCount;
 
     int m_flags;
+
+    xuint32 m_nextSeq;
+    xuint32 m_comboCount;
 
     iEventDispatcher*   m_dispatcher;
     std::list<iPollFD*> m_pollFds;

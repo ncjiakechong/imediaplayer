@@ -72,6 +72,8 @@ private:
     iPollFD* m_cachedPollArray;
     uint m_cachedPollArraySize;
 
+    xuint32 m_nextSeq;
+
     std::map<int, std::list<iEventSource*>> m_sources;
 
     iPostEventSource* m_postSource;

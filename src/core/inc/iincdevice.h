@@ -66,6 +66,8 @@ public:
     void disconnected() ISIGNAL(disconnected);
     void errorOccurred(int errorCode) ISIGNAL(errorOccurred, errorCode);
 
+    void customer(xintptr action) ISIGNAL(customer, action);
+
 private:
     Role m_role;  ///< Device role (client or server)
     

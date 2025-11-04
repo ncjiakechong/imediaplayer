@@ -36,7 +36,9 @@ iINCServer::iINCServer(const iStringView& name, iObject *parent)
     , m_listening(false)
     , m_nextConnId(1)
     , m_nextChannelId(1)  // Start from 1, 0 is reserved for invalid
-{
+{    
+    m_ioThread.setObjectName("iINCServer.IOThread");
+
     // Create and initialize engine
     m_engine = new iINCEngine(this);
     if (!m_engine->initialize()) {
@@ -72,22 +74,22 @@ int iINCServer::listen(const iStringView& url)
     }
     
     // Connect the device signal FIRST - use base class signal (works for both TCP and Pipe)
+    iObject::connect(m_listenDevice, &iINCDevice::errorOccurred, this, &iINCServer::handleListenDeviceError);
+    iObject::connect(m_listenDevice, &iINCDevice::disconnected, this, &iINCServer::handleListenDeviceDisconnected);
+    iObject::connect(m_listenDevice, &iINCDevice::customer, this, &iINCServer::handleCustomer, iShell::DirectConnection);
     iObject::connect(m_listenDevice, &iINCDevice::newConnection, this, &iINCServer::handleNewConnection, iShell::DirectConnection);
-    iObject::connect(m_listenDevice, &iINCDevice::disconnected, this, &iINCServer::handleListenDeviceDisconnected, iShell::DirectConnection);
-    iObject::connect(m_listenDevice, &iINCDevice::errorOccurred, this, &iINCServer::handleListenDeviceError, iShell::DirectConnection);
 
-    // NOW start EventSource monitoring (attach to EventDispatcher)
-    // This ensures no race condition - signal is connected before events can arrive
-    iEventDispatcher* dispatcher = iEventDispatcher::instance();
-    if (!dispatcher || !m_listenDevice->startEventMonitoring(dispatcher)) {
-        ilog_error("Failed to start EventSource monitoring");
-        delete m_listenDevice;
-        m_listenDevice = IX_NULLPTR;
-        return INC_ERROR_CONNECTION_FAILED;
-    }
-    
     m_listening = true;
-    ilog_info("Server", m_serverName, "listening on", listenUrl);
+    
+    // Start IO thread if enabled in config
+    if (m_config.enableIOThread()) {
+        m_ioThread.start();
+        m_listenDevice->moveToThread(&m_ioThread);
+        invokeMethod(m_listenDevice, &iINCDevice::startEventMonitoring, IX_NULLPTR);
+    } else {
+        // Run in main thread (single-threaded mode)
+        m_listenDevice->startEventMonitoring(iEventDispatcher::instance());
+    }
     
     return INC_OK;
 }
@@ -98,10 +100,17 @@ void iINCServer::close()
         return;
     }
     
+    // Stop IO thread if it was started
+    if (m_config.enableIOThread()) {
+        ilog_debug("Stopping IO thread...");
+        m_ioThread.exit();
+        m_ioThread.yieldCurrentThread();
+    }
+
     // Close all client connections
     for (auto& pair : m_connections) {
         pair.second->close();
-        delete pair.second;
+        pair.second->deleteLater();
     }
     m_connections.clear();
     
@@ -116,19 +125,35 @@ void iINCServer::close()
     ilog_info("Server", m_serverName, "closed");
 }
 
+struct __Action
+{
+    iString eventName;
+    xuint16 version;
+    iByteArray data;
+};
+
 void iINCServer::broadcastEvent(const iStringView& eventName, xuint16 version, const iByteArray& data)
 {
-    invokeMethod(this, &iINCServer::broadcastEventImp, eventName.toString(), version, data);
+    __Action* action = new __Action;
+    action->eventName = eventName.toString();
+    action->version = version;
+    action->data = data;
+
+    invokeMethod(m_listenDevice, &iINCDevice::customer, reinterpret_cast<xintptr>(action));
 }
 
-void iINCServer::broadcastEventImp(const iString& eventName, xuint16 version, const iByteArray& data)
+void iINCServer::handleCustomer(xintptr action)
 {
+    __Action* evt = reinterpret_cast<__Action*>(action);
+
     for (auto& pair : m_connections) {
         iINCConnection* conn = pair.second;
-        if (conn->isSubscribed(eventName)) {
-            conn->sendEvent(eventName, version, data);
+        if (conn->isSubscribed(evt->eventName)) {
+            conn->sendEvent(evt->eventName, evt->version, evt->data);
         }
     }
+
+    delete evt;
 }
 
 bool iINCServer::handleSubscribe(iINCConnection* conn, const iString& pattern)
@@ -149,7 +174,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     if (m_config.maxConnections() > 0 && m_connections.size() >= static_cast<size_t>(m_config.maxConnections())) {
         ilog_warn("Max connections limit reached:", m_config.maxConnections());
         incDevice->close();
-        delete incDevice;
+        incDevice->deleteLater();
         return;
     }
     
@@ -169,10 +194,10 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     conn->setHandshakeHandler(handshake);
     
     // Connect all forwarding signals from connection
-    iObject::connect(conn, &iINCConnection::disconnected, this, &iINCServer::onClientDisconnected, iShell::DirectConnection);
-    iObject::connect(conn, &iINCConnection::binaryDataReceived, this, &iINCServer::onConnectionBinaryData, iShell::DirectConnection);
-    iObject::connect(conn, &iINCConnection::errorOccurred, this, &iINCServer::onConnectionErrorOccurred, iShell::DirectConnection);
-    iObject::connect(conn, &iINCConnection::messageReceived, this, &iINCServer::onConnectionMessageReceived, iShell::DirectConnection);
+    iObject::connect(conn, &iINCConnection::disconnected, this, &iINCServer::onClientDisconnected);
+    iObject::connect(conn, &iINCConnection::binaryDataReceived, this, &iINCServer::onConnectionBinaryData);
+    iObject::connect(conn, &iINCConnection::errorOccurred, this, &iINCServer::onConnectionErrorOccurred);
+    iObject::connect(conn, &iINCConnection::messageReceived, this, &iINCServer::onConnectionMessageReceived);
 
     // AFTER EventSource is attached, configure event monitoring
     // Accepted connections are already established, monitor read events only
@@ -183,7 +208,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     iEventDispatcher* dispatcher = iEventDispatcher::instance();
     if (!dispatcher || !incDevice->startEventMonitoring(dispatcher)) {
         ilog_error("Failed to start event monitoring for client device");
-        delete conn;  // Will also delete protocol and device
+        conn->deleteLater();  // Will also delete protocol and device
         return;
     }
 
@@ -195,29 +220,25 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
 }
 
 void iINCServer::handleListenDeviceDisconnected()
-{
-    ilog_warn("Listen device disconnected unexpectedly");
-    
+{   
+    if (!m_listening) return;
+
     // Server socket should not disconnect in normal operation
     // This typically indicates a serious error condition
     // Close the server to prevent inconsistent state
-    if (m_listening) {
-        ilog_error("Forcing server close due to listen device disconnection");
-        close();
-    }
+    ilog_error("Forcing server close due to listen device disconnection");
+    iINCServer::close();
 }
 
 void iINCServer::handleListenDeviceError(int errorCode)
 {
-    ilog_error("Listen device error occurred:", errorCode);
-    
+if (!m_listening) return;
+
     // Listen socket errors are usually fatal for the server
     // Examples: EADDRINUSE, EACCES, port conflicts, etc.
     // Close the server to allow proper cleanup and potential restart
-    if (m_listening) {
-        ilog_error("Closing server due to listen device error");
-        close();
-    }
+    ilog_error("Closing server due to listen device error");
+    iINCServer::close();
 }
 
 void iINCServer::onClientDisconnected()
@@ -275,44 +296,43 @@ void iINCServer::onConnectionMessageReceived(const iINCMessage& msg)
     }
     
     // Check if this is a handshake message
-    if (msg.type() == INC_MSG_HANDSHAKE) {
-        ilog_debug("Received handshake message for connection", conn->connectionId());
-        
-        iINCHandshake* handshake = conn->m_handshake;
-        if (handshake) {
-            // Process handshake - uses custom binary protocol, access raw data
-            iByteArray response = handshake->processHandshake(msg.payload().data());
-            ilog_debug("Handshake state after processing:", (int)handshake->state());
-            
-            if (handshake->state() == iINCHandshake::STATE_COMPLETED) {
-                // Send handshake ACK with raw binary response
-                iINCMessage ackMsg(INC_MSG_HANDSHAKE_ACK, 0);
-                ackMsg.payload().setData(response);  // Handshake uses custom binary protocol
-                ilog_debug("Sending handshake ACK, payload size:", response.size());
-                conn->sendMessage(ackMsg);
-                
-                // Store client info
-                const iINCHandshakeData& remote = handshake->remoteData();
-                conn->setClientName(remote.nodeName);
-                conn->setClientProtocolVersion(remote.protocolVersion);
-                
-                ilog_info("Handshake completed with", remote.nodeName);
-                
-                // Cleanup handshake
-                conn->clearHandshake();
-            } else {
-                // Handshake failed
-                ilog_error("Handshake failed:", handshake->errorMessage());
-                conn->clearHandshake();
-                conn->close();
-                return;
-            }
-        } else {
-            ilog_warn("Received handshake message but no handshake handler set");
-        }
-    } else {
-        // Normal message processing
+    if (msg.type() != INC_MSG_HANDSHAKE) {
         processMessage(conn, msg);
+        return;
+    }
+
+    ilog_debug("Received handshake message for connection", conn->connectionId());
+    iINCHandshake* handshake = conn->m_handshake;
+    if (!handshake) {
+        ilog_warn("Received handshake message but no handshake handler set");
+        return;
+    }
+
+    // Process handshake - uses custom binary protocol, access raw data
+    iByteArray response = handshake->processHandshake(msg.payload().data());
+    ilog_debug("Handshake state after processing:", (int)handshake->state());
+    
+    if (handshake->state() == iINCHandshake::STATE_COMPLETED) {
+        // Send handshake ACK with raw binary response
+        iINCMessage ackMsg(INC_MSG_HANDSHAKE_ACK, 0);
+        ackMsg.payload().setData(response);  // Handshake uses custom binary protocol
+        ilog_debug("Sending handshake ACK, payload size:", response.size());
+        conn->sendMessage(ackMsg);
+        
+        // Store client info
+        const iINCHandshakeData& remote = handshake->remoteData();
+        conn->setClientName(remote.nodeName);
+        conn->setClientProtocolVersion(remote.protocolVersion);
+        
+        ilog_info("Handshake completed with", remote.nodeName);
+        
+        // Cleanup handshake
+        conn->clearHandshake();
+    } else {
+        // Handshake failed
+        ilog_error("Handshake failed:", handshake->errorMessage());
+        conn->clearHandshake();
+        conn->close();
     }
 }
 
@@ -344,13 +364,7 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
             }
             
             // Call handler (may be async!)
-            iByteArray result = handleMethod(conn, msg.sequenceNumber(), method, version, args);
-            
-            // If result is not empty, send immediate reply
-            if (!result.isEmpty()) {
-                conn->sendReply(msg.sequenceNumber(), INC_OK, result);
-            }
-            // Otherwise, handleMethod stored conn and seqNum for async reply
+            handleMethod(conn, msg.sequenceNumber(), method, version, args);
             break;
         }
         
@@ -454,11 +468,6 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
             conn->sendReply(msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
             break;
     }
-}
-
-xuint32 iINCServer::allocateChannelId()
-{
-    return m_nextChannelId++;
 }
 
 } // namespace iShell

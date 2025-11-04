@@ -34,7 +34,7 @@ class iTcpEventSource : public iEventSource
 {
 public:
     iTcpEventSource(iTcpDevice* device, int priority = 0)
-        : iEventSource(priority)
+        : iEventSource(iLatin1StringView("iTcpEventSource"), priority)
         , m_device(device)
     {
         m_pollFd.fd = -1;
@@ -463,17 +463,12 @@ void iTcpDevice::close()
 
 bool iTcpDevice::startEventMonitoring(iEventDispatcher* dispatcher)
 {
-    if (!dispatcher) {
-        ilog_warn("EventDispatcher cannot be null");
-        return false;
-    }
-
     if (!m_eventSource) {
         ilog_warn("No EventSource to start monitoring");
         return false;
     }
 
-    m_eventSource->attach(dispatcher);
+    m_eventSource->attach(dispatcher ? dispatcher : iEventDispatcher::instance());
     ilog_debug("EventSource monitoring started");
     return true;
 }

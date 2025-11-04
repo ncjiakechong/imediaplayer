@@ -83,13 +83,13 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& m
     // Create operation for tracking this request
     xuint32 seqNum = msg.sequenceNumber();
     iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
-
     op->ref(true);
+
     invokeMethod(this, &iINCProtocol::sendMessageImpl, msg, op.data());
     return op;
 }
 
-void iINCProtocol::sendMessageImpl(const iINCMessage& msg, iINCOperation* op)
+void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
 {   
     // Check queue size limit
     if (m_sendQueue.size() >= INC_MAX_SEND_QUEUE) {
@@ -274,7 +274,7 @@ bool iINCProtocol::readMessage(iINCMessage& msg)
 
 void iINCProtocol::flush()
 {
-    onReadyWrite();
+    invokeMethod(this, &iINCProtocol::onReadyWrite);
 }
 
 void iINCProtocol::onReadyRead()

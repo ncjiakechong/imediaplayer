@@ -8,8 +8,6 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <unordered_map>
-
 #include <core/inc/iincconnection.h>
 #include <core/inc/iincserver.h>
 #include <core/inc/iincoperation.h>
@@ -26,8 +24,7 @@
 namespace iShell {
 
 iINCConnection::iINCConnection(iINCServer* server, iINCDevice* device, xuint64 connId)
-    : iObject(server)
-    , m_server(server)
+    : m_server(server)
     , m_protocol(IX_NULLPTR)
     , m_connId(connId)
     , m_clientProtocol(0)
@@ -91,7 +88,7 @@ iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
     iINCMessage msg(INC_MSG_PING, 0);  // Protocol assigns sequence number
     auto op = m_protocol->sendMessage(msg);
     if (op) {
-        op->setTimeout(5000);  // 5 seconds
+        op->setTimeout(2000);  // 2 seconds
         ilog_debug("Sent PING to client", m_connId, "seq:", op->sequenceNumber());
     }
     

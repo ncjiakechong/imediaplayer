@@ -32,7 +32,7 @@ class iUnixEventSource : public iEventSource
 {
 public:
     iUnixEventSource(iUnixDevice* device, int priority = 0)
-        : iEventSource(priority)
+        : iEventSource(iLatin1StringView("iUnixEventSource"), priority)
         , m_device(device)
     {
         m_pollFd.fd = -1;
@@ -434,17 +434,12 @@ void iUnixDevice::close()
 
 bool iUnixDevice::startEventMonitoring(iEventDispatcher* dispatcher)
 {
-    if (!dispatcher) {
-        ilog_error("EventDispatcher cannot be null");
-        return false;
-    }
-
     if (!m_eventSource) {
         ilog_error("No EventSource to start monitoring");
         return false;
     }
 
-    m_eventSource->attach(dispatcher);
+    m_eventSource->attach(dispatcher ? dispatcher : iEventDispatcher::instance());
     ilog_debug("EventSource monitoring started");
     return true;
 }

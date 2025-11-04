@@ -44,53 +44,64 @@ public:
     
     // ===== Connection Settings =====
     
-    iString defaultServer() const;
-    void setDefaultServer(const iString& server);
+    iString defaultServer() const { return m_defaultServer; }
+    void setDefaultServer(const iString& server) { m_defaultServer = server; }
     
     // ===== Protocol Version Negotiation =====
     
-    xuint16 protocolVersionCurrent() const;
-    xuint16 protocolVersionMin() const;
-    xuint16 protocolVersionMax() const;
-    void setProtocolVersionRange(xuint16 current, xuint16 min, xuint16 max);
+    xuint16 protocolVersionCurrent() const { return m_protocolVersionCurrent; }
+    xuint16 protocolVersionMin() const { return m_protocolVersionMin; }
+    xuint16 protocolVersionMax() const { return m_protocolVersionMax; }
+    void setProtocolVersionRange(xuint16 current, xuint16 min, xuint16 max) {
+        m_protocolVersionCurrent = current;
+        m_protocolVersionMin = min;
+        m_protocolVersionMax = max;
+    }
     
     // ===== Transport Options =====
     
-    bool disableSharedMemory() const;
-    void setDisableSharedMemory(bool disable);
+    bool disableSharedMemory() const { return m_disableSharedMemory; }
+    void setDisableSharedMemory(bool disable) { m_disableSharedMemory = disable; }
     
-    size_t sharedMemorySize() const;
-    void setSharedMemorySize(size_t size);
+    size_t sharedMemorySize() const { return m_sharedMemorySize; }
+    void setSharedMemorySize(size_t size) { m_sharedMemorySize = size; }
     
-    bool disableMemfd() const;
-    void setDisableMemfd(bool disable);
+    bool disableMemfd() const { return m_disableMemfd; }
+    void setDisableMemfd(bool disable) { m_disableMemfd = disable; }
     
     // ===== Encryption Settings =====
     
-    EncryptionMethod encryptionMethod() const;
-    void setEncryptionMethod(EncryptionMethod method);
+    EncryptionMethod encryptionMethod() const { return m_encryptionMethod; }
+    void setEncryptionMethod(EncryptionMethod method) { m_encryptionMethod = method; }
     
-    iString certificatePath() const;
-    void setCertificatePath(const iString& path);
+    iString certificatePath() const { return m_certificatePath; }
+    void setCertificatePath(const iString& path) { m_certificatePath = path; }
     
     // ===== Auto-Connect Behavior =====
     
-    bool autoReconnect() const;
-    void setAutoReconnect(bool enable);
+    bool autoReconnect() const { return m_autoReconnect; }
+    void setAutoReconnect(bool enable) { m_autoReconnect = enable; }
     
-    int reconnectIntervalMs() const;
-    void setReconnectIntervalMs(int interval);
+    int reconnectIntervalMs() const { return m_reconnectIntervalMs; }
+    void setReconnectIntervalMs(int interval) { m_reconnectIntervalMs = interval; }
     
-    int maxReconnectAttempts() const;
-    void setMaxReconnectAttempts(int attempts);
+    int maxReconnectAttempts() const { return m_maxReconnectAttempts; }
+    void setMaxReconnectAttempts(int attempts) { m_maxReconnectAttempts = attempts; }
     
     // ===== Timeouts =====
     
-    int connectTimeoutMs() const;
-    void setConnectTimeoutMs(int timeout);
+    int connectTimeoutMs() const { return m_connectTimeoutMs; }
+    void setConnectTimeoutMs(int timeout) { m_connectTimeoutMs = timeout; }
     
-    int operationTimeoutMs() const;
-    void setOperationTimeoutMs(int timeout);
+    int operationTimeoutMs() const { return m_operationTimeoutMs; }
+    void setOperationTimeoutMs(int timeout) { m_operationTimeoutMs = timeout; }
+    
+    // ===== Threading =====
+    
+    /// Enable IO thread for network operations (default: true)
+    /// @note If disabled, all operations run in main thread (single-threaded mode)
+    bool enableIOThread() const { return m_enableIOThread; }
+    void setEnableIOThread(bool enable) { m_enableIOThread = enable; }
     
 private:
     // Connection settings
@@ -118,6 +129,9 @@ private:
     // Timeouts
     int m_connectTimeoutMs = 3000;
     int m_operationTimeoutMs = 2000;
+    
+    // Threading
+    bool m_enableIOThread = true;  // Enable IO thread by default
 };
 
 } // namespace iShell

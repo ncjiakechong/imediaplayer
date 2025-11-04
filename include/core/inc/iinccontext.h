@@ -16,7 +16,7 @@
 
 #include <core/inc/iinccontextconfig.h>
 #include <core/inc/iincoperation.h>
-#include <core/kernel/iobject.h>
+#include <core/thread/ithread.h>
 #include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
 #include <unordered_map>
@@ -57,6 +57,11 @@ public:
     /// @note Creates its own iINCEngine internally
     explicit iINCContext(const iStringView& name, iObject *parent = IX_NULLPTR);
     virtual ~iINCContext();
+
+    /// Set context configuration
+    /// @param config Configuration object
+    /// @note Must be called before connect() to take effect
+    void setConfig(const iINCContextConfig& config) { m_config = config; }
 
     /// Connect to server at specified URL
     /// @param url Format: "tcp://host:port" or "pipe:///path/to/socket"
@@ -154,6 +159,9 @@ private:
     
     // Auto-reconnect timer ID (using iObject::startTimer/killTimer)
     int             m_reconnectTimerId;
+    
+    // IO Thread (optional, controlled by config)
+    iThread         m_ioThread;     ///< IO thread for network operations
     
     friend class iINCStream;  // Allow iINCStream to access protocol()
     

@@ -50,71 +50,72 @@ public:
     iString dump() const;
     
     // ===== Listen Settings =====
+    iString listenAddress() const { return m_listenAddress; }
+    void setListenAddress(const iString& address) { m_listenAddress = address; }
     
-    iString listenAddress() const;
-    void setListenAddress(const iString& address);
-    
-    bool systemInstance() const;
-    void setSystemInstance(bool system);
+    bool systemInstance() const { return m_systemInstance; }
+    void setSystemInstance(bool system) { m_systemInstance = system; }
     
     // ===== Protocol Version Policy =====
+    VersionPolicy versionPolicy() const { return m_versionPolicy; }
+    void setVersionPolicy(VersionPolicy policy) { m_versionPolicy = policy; }
     
-    VersionPolicy versionPolicy() const;
-    void setVersionPolicy(VersionPolicy policy);
-    
-    xuint16 protocolVersionCurrent() const;
-    xuint16 protocolVersionMin() const;
-    xuint16 protocolVersionMax() const;
-    void setProtocolVersionRange(xuint16 current, xuint16 min, xuint16 max);
+    xuint16 protocolVersionCurrent() const { return m_protocolVersionCurrent; }
+    xuint16 protocolVersionMin() const { return m_protocolVersionMin; }
+    xuint16 protocolVersionMax() const { return m_protocolVersionMax; }
+    void setProtocolVersionRange(xuint16 current, xuint16 min, xuint16 max) {
+        m_protocolVersionCurrent = current;
+        m_protocolVersionMin = min;
+        m_protocolVersionMax = max;
+    }
     
     // ===== Connection Limits =====
+    int maxConnections() const { return m_maxConnections; }
+    void setMaxConnections(int max) { m_maxConnections = max; }
     
-    int maxConnections() const;
-    void setMaxConnections(int max);
-    
-    int maxConnectionsPerClient() const;
-    void setMaxConnectionsPerClient(int max);
+    int maxConnectionsPerClient() const { return m_maxConnectionsPerClient; }
+    void setMaxConnectionsPerClient(int max) { m_maxConnectionsPerClient = max; }
     
     // ===== Resource Limits =====
+    size_t sharedMemorySize() const { return m_sharedMemorySize; }
+    void setSharedMemorySize(size_t size) { m_sharedMemorySize = size; }
     
-    size_t sharedMemorySize() const;
-    void setSharedMemorySize(size_t size);
+    bool disableSharedMemory() const { return m_disableSharedMemory; }
+    void setDisableSharedMemory(bool disable) { m_disableSharedMemory = disable; }
     
-    bool disableSharedMemory() const;
-    void setDisableSharedMemory(bool disable);
+    bool disableMemfd() const { return m_disableMemfd; }
+    void setDisableMemfd(bool disable) { m_disableMemfd = disable; }
     
-    bool disableMemfd() const;
-    void setDisableMemfd(bool disable);
-    
-    size_t maxMessageSize() const;
-    void setMaxMessageSize(size_t size);
+    size_t maxMessageSize() const { return m_maxMessageSize; }
+    void setMaxMessageSize(size_t size) { m_maxMessageSize = size; }
     
     // ===== Security =====
+    EncryptionRequirement encryptionRequirement() const { return m_encryptionRequirement; }
+    void setEncryptionRequirement(EncryptionRequirement req) { m_encryptionRequirement = req; }
     
-    EncryptionRequirement encryptionRequirement() const;
-    void setEncryptionRequirement(EncryptionRequirement req);
+    iString certificatePath() const { return m_certificatePath; }
+    void setCertificatePath(const iString& path) { m_certificatePath = path; }
     
-    iString certificatePath() const;
-    void setCertificatePath(const iString& path);
-    
-    iString privateKeyPath() const;
-    void setPrivateKeyPath(const iString& path);
+    iString privateKeyPath() const { return m_privateKeyPath; }
+    void setPrivateKeyPath(const iString& path) { m_privateKeyPath = path; }
     
     // ===== Timeouts =====
+    int clientTimeoutMs() const { return m_clientTimeoutMs; }
+    void setClientTimeoutMs(int timeout) { m_clientTimeoutMs = timeout; }
     
-    int clientTimeoutMs() const;
-    void setClientTimeoutMs(int timeout);
-    
-    int exitIdleTimeMs() const;
-    void setExitIdleTimeMs(int time);
+    int exitIdleTimeMs() const { return m_exitIdleTimeMs; }
+    void setExitIdleTimeMs(int time) { m_exitIdleTimeMs = time; }
     
     // ===== Performance =====
+    bool highPriority() const { return m_highPriority; }
+    void setHighPriority(bool enable) { m_highPriority = enable; }
     
-    bool highPriority() const;
-    void setHighPriority(bool enable);
+    int niceLevel() const { return m_niceLevel; }
+    void setNiceLevel(int level) { m_niceLevel = level; }
     
-    int niceLevel() const;
-    void setNiceLevel(int level);
+    // ===== Threading =====
+    bool enableIOThread() const { return m_enableIOThread; }
+    void setEnableIOThread(bool enable) { m_enableIOThread = enable; }
     
 private:
     // Listen settings
@@ -149,6 +150,9 @@ private:
     // Performance
     bool m_highPriority = false;
     int m_niceLevel = -11;
+    
+    // Threading
+    bool m_enableIOThread = true;  // Default: enabled for thread safety
 };
 
 } // namespace iShell
