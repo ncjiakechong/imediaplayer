@@ -100,21 +100,23 @@ public:
     }
 
     bool check() override {
+        bool hasError = (m_pollFd.revents & (IX_IO_ERR | IX_IO_HUP)) != 0;
+        return (m_pollFd.revents & m_pollFd.events) || hasError;
+    }
+
+    bool dispatch() override {
+        if (!isAttached()) return true;
+
+        iTcpDevice* tcp = tcpDevice();
+        if (!tcp) return false;
+
         bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
         bool hasError = (m_pollFd.revents & (IX_IO_ERR | IX_IO_HUP)) != 0;
 
-        return readReady || writeReady || hasError;
-    }
-
-    bool dispatch() override {
-        iTcpDevice* tcp = tcpDevice();
-        if (!tcp) {
-            return false;
+        if (hasError) {
+            ilog_warn("Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
         }
-
-        bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
-        bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
 
         if (tcp->role() == iINCDevice::ROLE_CLIENT && writeReady) {
             m_pollFd.revents = 0;
@@ -208,10 +210,12 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
 
-    // Convert hostname to IP
+    // Convert IP address string to binary form
+    // LIMITATION: Only numeric IPv4 addresses supported (e.g., "127.0.0.1")
+    // Hostnames like "localhost" or domain names will fail here
     if (inet_pton(AF_INET, host.toUtf8().constData(), &serverAddr.sin_addr) <= 0) {
-        // TODO: DNS resolution with getaddrinfo()
-        ilog_error("Invalid address:", host);
+        // FIXME: DNS resolution not implemented - use getaddrinfo() to support hostnames
+        ilog_error("Invalid IP address (only numeric IPv4 supported, no DNS):", host);
         close();
         return INC_ERROR_CONNECTION_FAILED;
     }
@@ -317,7 +321,9 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     }
     
     // Create new EventSource (constructor sets refCount to 1)
-    // NOTE: Don't attach yet! Caller must connect signals first, then call startEventMonitoring()
+    // NOTE: Event loop not attached yet. Caller must:
+    //       1. Connect to newConnection() signal
+    //       2. Call startEventMonitoring() to attach to event loop for accept() notifications
     m_eventSource = new iTcpEventSource(this);
     configEventAbility(true, false);
     
@@ -365,7 +371,9 @@ void iTcpDevice::acceptConnection()
     clientDevice->iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
     
     // Create EventSource for accepted client connection
-    // NOTE: Don't attach yet! Caller must connect signals first, then call startEventMonitoring()
+    // NOTE: Event loop not attached yet. Caller must:
+    //       1. Connect to readyRead()/disconnected() signals
+    //       2. Call startEventMonitoring() to attach to event loop
     clientDevice->m_eventSource = new iTcpEventSource(clientDevice);
     
     // Accepted connections are already established, monitor read events only
@@ -374,7 +382,7 @@ void iTcpDevice::acceptConnection()
     ilog_info("Accepted connection from ", clientDevice->m_peerAddr, ":", clientDevice->m_peerPort);
 
     // Emit newConnection signal with the client device
-    // NOTE: Caller (iINCServer) must call startEventMonitoring() and configure events
+    // NOTE: Caller (e.g., iINCServer) must call startEventMonitoring() on client device
     IEMIT newConnection(clientDevice);
 }
 

@@ -1416,7 +1416,7 @@ static void insert_helper(iString &str, xsizetype i, const T &toInsert)
     if (difference == 0)
         std::move_backward(insert_start, old_end, str_d.end());
 
-    using Char = typename remove_cv<T>::type;
+    using Char = typename remove_cv<typename T::value_type>::type;
     if (is_same<Char, iChar>::value)
         std::copy_n(reinterpret_cast<const xuint16 *>(toInsert.data()), insert_size, insert_start);
     else if (is_same<Char, xuint16>::value)

@@ -29,3 +29,6 @@ add_executable(${PROJECT_NAME} ${Source})
 target_link_libraries(${PROJECT_NAME} ${Depend_Libs})
 
 add_test(${PROJECT_NAME} ${PROJECT_NAME})
+
+# Add Unit Test subdirectory
+add_subdirectory(UT)

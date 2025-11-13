@@ -24,8 +24,6 @@
 
 namespace iShell {
 
-class iByteArray;
-
 class iString;
 
 class IX_CORE_EXPORT iByteArray
@@ -140,10 +138,10 @@ public:
     void truncate(xsizetype pos);
     void chop(xsizetype n);
 
-    iByteArray toLower() const;
-    iByteArray toUpper() const;
-    iByteArray trimmed() const;
-    iByteArray simplified() const;
+    iByteArray toLower() const { return toLower_helper(*this); }
+    iByteArray toUpper() const { return toUpper_helper(*this); }
+    iByteArray trimmed() const { return trimmed_helper(*this); }
+    iByteArray simplified() const { return simplified_helper(*this); }
 
     iByteArray leftJustified(xsizetype width, char fill = ' ', bool truncate = false) const;
     iByteArray rightJustified(xsizetype width, char fill = ' ', bool truncate = false) const;

@@ -181,11 +181,13 @@ iByteArray iINCHandshake::start()
 {
     if (m_role != ROLE_CLIENT) {
         // Handshake error: Only client can start
+        ilog_error("start() called on server-side handshake, role:", m_role);
         return iByteArray();
     }
     
     if (m_state != STATE_IDLE) {
-        // Handshake warning: already started
+        // Already in progress (SENDING/COMPLETED/FAILED), return empty to indicate error
+        ilog_warn("start() called but handshake already in progress, state:", m_state);
         return iByteArray();
     }
     

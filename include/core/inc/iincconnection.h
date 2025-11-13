@@ -80,17 +80,17 @@ public:
 
 private: // signals
     /// Emitted when connection is closed
-    void disconnected() ISIGNAL(disconnected);
+    void disconnected(iINCConnection* conn) ISIGNAL(disconnected, conn);
     
     /// Emitted when protocol message received (forwarded to server for handling)
-    void messageReceived(const iINCMessage& msg) ISIGNAL(messageReceived, msg);
+    void messageReceived(iINCConnection* conn, const iINCMessage& msg) ISIGNAL(messageReceived, conn, msg);
 
     /// Emitted when binary data received on a channel
     /// @note Private signal - server uses handleBinaryData virtual method instead
-    void binaryDataReceived(xuint32 channelId, xuint32 seqNum, const iByteArray& data) ISIGNAL(binaryDataReceived, channelId, seqNum, data);
+    void binaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iByteArray& data) ISIGNAL(binaryDataReceived, conn, channelId, seqNum, data);
 
     /// Emitted when device error occurs (forwarded to server for handling)
-    void errorOccurred(int errorCode) ISIGNAL(errorOccurred, errorCode);
+    void errorOccurred(iINCConnection* conn, int errorCode) ISIGNAL(errorOccurred, conn, errorCode);
 
 private:
     iINCConnection(iINCServer* server, iINCDevice* device, xuint64 connId);
@@ -125,6 +125,11 @@ private:
     
     /// Clear handshake handler (server-side only)
     void clearHandshake();
+
+    void onErrorOccurred(int errorCode);
+    void onMessageReceived(const iINCMessage& msg);
+    void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, const iByteArray& data);
+
 
     iINCServer*             m_server;
     iINCProtocol*           m_protocol;         // Owned protocol instance

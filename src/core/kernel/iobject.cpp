@@ -840,7 +840,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         if ((AutoConnection == _type && receiverInSameThread)
             || (DirectConnection == _type)) {
             locker.unlock();
-            _iSender sender(receiver, this);
+            _iSender sender(receiver, this, receiverInSameThread);
             conn->emits(argHelper.arg(*conn, false).data(), ret);
 
             if (connectionLists->orphaned)
@@ -981,7 +981,7 @@ bool iObject::event(iEvent *e)
     switch (e->type()) {
     case iEvent::MetaCall: {
         iMetaCallEvent* event = static_cast<iMetaCallEvent*>(e);
-        _iSender sender(const_cast<iObject*>(this), const_cast<iObject*>(event->connection->_sender));
+        _iSender sender(const_cast<iObject*>(this), const_cast<iObject*>(event->connection->_sender), true);
         event->connection->emits(event->arguments.data(), IX_NULLPTR);
         break;
     }
@@ -1045,7 +1045,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
     uint _type = c._type & Connection_PrimaryMask;
     if ((AutoConnection == _type && receiverInSameThread)
         || (DirectConnection == _type)) {
-        _iSender sender(const_cast<iObject*>(receiver), const_cast<iObject*>(c._sender));
+        _iSender sender(const_cast<iObject*>(receiver), const_cast<iObject*>(c._sender), receiverInSameThread);
         c.emits(args, IX_NULLPTR);
         return true;
     } else if (_type == BlockingQueuedConnection) {
@@ -1137,12 +1137,12 @@ size_t iConKeyHashFunc::operator()(const _iMemberFunction& key) const
     return __adapoter.key;
 }
 
-iObject::_iSender::_iSender(iObject *receiver, iObject *sender)
-    : _receiver(receiver), _sender(sender), _previous(IX_NULLPTR)
+iObject::_iSender::_iSender(iObject *receiver, iObject *sender, bool record)
+    : _receiver(record ? receiver : IX_NULLPTR), _sender(sender), _previous(IX_NULLPTR)
 {
     if (IX_NULLPTR != _receiver) {
         _previous = _receiver->m_currentSender;
-        receiver->m_currentSender = this;
+        _receiver->m_currentSender = this;
     }
 }
 iObject::_iSender::~_iSender()
@@ -1156,6 +1156,7 @@ void iObject::_iSender::receiverDeleted()
     while (IX_NULLPTR != s) {
         s->_receiver = IX_NULLPTR;
         s = s->_previous;
+        IX_ASSERT(s != this);
     }
 }
 

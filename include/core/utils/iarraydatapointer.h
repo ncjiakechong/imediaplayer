@@ -276,7 +276,9 @@ public:
         xsizetype minimalCapacity = std::max<xsizetype>(from.size, from.allocatedCapacity()) + newSize;
         // subtract the free space at the side we want to allocate. This ensures that the total size requested is
         // the existing allocation at the other side + size + n.
-        minimalCapacity -= (options & Data::GrowsForward) ? from.freeSpaceAtEnd() : from.freeSpaceAtBegin();
+        // Note: for GrowsBackwards, we should subtract freeSpaceAtEnd (the side we're NOT growing),
+        // for GrowsForward, subtract freeSpaceAtBegin
+        minimalCapacity -= (options & Data::GrowsBackwards) ? from.freeSpaceAtEnd() : from.freeSpaceAtBegin();
         xsizetype capacity = from.detachCapacity(minimalCapacity);
         return allocateGrow(from, capacity, newSize, options);
     }
@@ -290,20 +292,28 @@ public:
 
         // when growing, special rules apply to memory layout
         T* dataPtr = static_cast<T*>(d->data().value());
-        if (from.needsDetach()) {
-            // When detaching: the free space reservation is biased towards
-            // append. If we're growing backwards, put the data
-            // in the middle instead of at the end - assuming that prepend is
-            // uncommon and even initial prepend will eventually be followed by
-            // at least some appends.
-            if (options & Data::GrowsBackwards)
+        
+        // Check if we actually reallocated (capacity grew significantly due to memory pool)
+        bool actuallyReallocated = (d->allocatedCapacity() > capacity * 1.5);
+        if (from.needsDetach() || actuallyReallocated) {
+            // When detaching or over-allocating: position data strategically
+            // For GrowsBackwards with over-allocation, don't call updatePtr to preserve dataStart
+            if (options & Data::GrowsBackwards && actuallyReallocated) {
+                // Calculate offset to leave space for prepend
+                // desiredFreeSpace should be >= newSize to allow the prepend operation
+                dataPtr += newSize + (d->allocatedCapacity() - newSize - from.size) / 2;
+                // Don't call updatePtr - return with offset pointer directly
+                // This keeps dataStart unchanged so freeSpaceAtBegin() calculates correctly
+                return iArrayDataPointer(d, dataPtr);
+            } else if (options & Data::GrowsBackwards) {
+                // Normal detach: put data in middle
                 dataPtr += (d->allocatedCapacity() - newSize) / 2;
+            }
         } else {
-            // When not detaching ::realloc() policy - preserve existing
-            // free space at beginning.
+            // When not detaching: ::realloc() policy - preserve existing free space at beginning
             dataPtr += from.freeSpaceAtBegin();
         }
-
+    
         d->updatePtr(dataPtr);
         return iArrayDataPointer(d, dataPtr);
     }

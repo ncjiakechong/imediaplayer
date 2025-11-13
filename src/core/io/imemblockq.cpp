@@ -40,7 +40,7 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1StringView& name, xint64 idx, size_t
     , m_maxRewind(maxrewind)
     , m_readIndex(idx)
     , m_writeIndex(idx)
-    , m_inPreBuf(true)
+    , m_inPreBuf(false)
     , m_mcalign(IX_NULLPTR)
     , m_missing(0)
     , m_requested(0)
@@ -635,6 +635,9 @@ int iMemBlockQueue::pushAlign(const iByteArray& chunk)
     if (!canPush(m_mcalign->csize(chunk.length())))
         return -1;
 
+    /* Note: m_mcalign->push() uses zero-copy optimization.
+     * Caller must not use 'chunk' after this call, as iMCAlign may
+     * directly manipulate the underlying data without detaching. */
     m_mcalign->push(chunk);
 
     iByteArray rchunk;
@@ -780,7 +783,7 @@ int iMemBlockQueue::splice(iMemBlockQueue* source)
             seek((xint64) chunk.length(), SEEK_RELATIVE, true);
         }
 
-        drop(chunk.length());
+        source->drop(chunk.length());
     }
 }
 

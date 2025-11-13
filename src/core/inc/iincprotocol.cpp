@@ -53,14 +53,16 @@ iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
 iINCProtocol::~iINCProtocol()
 {
     // Cancel all pending operations
-    for (auto& pair : m_operations) {
-        iINCOperation* op = pair.second;
+    while (!m_operations.empty()) {
+        auto pair = m_operations.begin();
+        iINCOperation* op = pair->second;
+        m_operations.erase(pair);
+
         if (op && op->getState() == iINCOperation::STATE_RUNNING) {
             op->cancel();
         }
         op->deref();  // Release reference held by map
     }
-    m_operations.clear();
     
     // Clean up shared memory resources
     if (m_memExport) {
@@ -71,6 +73,8 @@ iINCProtocol::~iINCProtocol()
         delete m_memImport;
         m_memImport = IX_NULLPTR;
     }
+
+    delete m_device;
 }
 
 xuint32 iINCProtocol::nextSequence()

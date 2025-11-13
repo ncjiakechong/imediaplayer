@@ -21,9 +21,14 @@ iINCServerConfig::iINCServerConfig()
 
 void iINCServerConfig::load(const iString& configFile)
 {
-    // TODO: Implement configuration file parsing
+    // Configuration structure is fully defined with 14+ fields (see dump() method).
+    // File parsing is not yet implemented - currently using default values.
+    // Supported fields: listenAddress, systemInstance, versionPolicy, protocolVersion*,
+    // maxConnections*, sharedMemory settings, maxMessageSize, encryptionRequirement,
+    // clientTimeout, exitIdleTime, priority settings, enableIOThread
+    // TODO: Add JSON/INI/YAML parser to load configuration from file
     if (!configFile.isEmpty()) {
-        ilog_info(ILOG_TAG, "Loading server config from:", configFile);
+        ilog_warn(ILOG_TAG, "Config file specified but parsing not implemented:", configFile);
     }
 }
 
@@ -32,15 +37,13 @@ iString iINCServerConfig::dump() const
     static const char* policyNames[] = { "Strict", "Compatible", "Permissive" };
     static const char* encryptNames[] = { "Optional", "Preferred", "Required" };
     
-    iString result;
-    result += "=== INC Server Configuration ===\n";
-    result += iString::asprintf("Listen Address: %s\n", m_listenAddress.constData());
+    iString result = "=== INC Server Configuration ===\n";
+    
+    result += iString::asprintf("Listen Address: %s\n", m_listenAddress.toUtf8().constData());
     result += iString::asprintf("System Instance: %s\n", m_systemInstance ? "true" : "false");
     result += iString::asprintf("Version Policy: %s\n", policyNames[m_versionPolicy]);
-    result += iString::asprintf("Protocol Version: %u (range: %u-%u)\n",
-                                m_protocolVersionCurrent,
-                                m_protocolVersionMin,
-                                m_protocolVersionMax);
+    result += iString::asprintf("Protocol Version: %d (range: %d-%d)\n", 
+                                m_protocolVersionCurrent, m_protocolVersionMin, m_protocolVersionMax);
     result += iString::asprintf("Max Connections: %d\n", m_maxConnections);
     result += iString::asprintf("Max Connections Per Client: %d\n", m_maxConnectionsPerClient);
     result += iString::asprintf("Disable SHM: %s\n", m_disableSharedMemory ? "true" : "false");
@@ -52,6 +55,7 @@ iString iINCServerConfig::dump() const
     result += iString::asprintf("High Priority: %s\n", m_highPriority ? "true" : "false");
     result += iString::asprintf("Nice Level: %d\n", m_niceLevel);
     result += iString::asprintf("Enable IO Thread: %s\n", m_enableIOThread ? "true" : "false");
+    
     return result;
 }
 

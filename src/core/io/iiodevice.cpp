@@ -409,14 +409,20 @@ struct _PeekMaxData {
 static bool _PeekMaxFunc(const iByteArray& chunk, xint64, xint64 distance, void* userdata)
 {
     _PeekMaxData* data = static_cast<_PeekMaxData*>(userdata);
+    
+    // Skip empty chunks
+    if (chunk.isEmpty())
+        return true;
+    
     if (distance + chunk.length() <= data->offset)
         return true;
     if ((data->maxLength > 0) && (distance >= data->maxLength + data->offset))
         return false;
 
     int curMax = data->maxLength > 0 ? data->maxLength : chunk.length();
-    IX_ASSERT(data->lastDistance = distance && !chunk.isEmpty());
+    IX_ASSERT(data->lastDistance == distance);
     if (distance >= data->offset) {
+        data->chunk = chunk;
         xint64 beginOffset = (distance < data->offset) ? data->offset - distance: 0;
         data->chunk.data_ptr().setBegin(data->chunk.data_ptr().begin() + beginOffset);
         data->chunk.data_ptr().size = (beginOffset + curMax > chunk.length()) ? chunk.length() - beginOffset : curMax;
@@ -431,11 +437,10 @@ iByteArray iIODevice::iMBQueueRef::peek(xint64 maxLength, xint64 offset) const
     if (!m_buf)
         return iByteArray();
 
-    iByteArray chunk;
-    _PeekMaxData userdata = {offset, maxLength, 0, chunk};
+    _PeekMaxData userdata = {offset, maxLength, 0, iByteArray()};
     m_buf->peekIterator(_PeekMaxFunc, &userdata);
 
-    return chunk;
+    return userdata.chunk;  // Return the chunk from userdata, not the local variable
 }
 
 void iIODevice::iMBQueueRef::append(const iByteArray& chunk)
@@ -529,7 +534,19 @@ iIODevice::iIODevice(iObject *parent)
   destroying the iIODevice.
 */
 iIODevice::~iIODevice()
-{}
+{
+    // Clean up all read channels
+    for (auto& pair : m_readBuffers) {
+        delete pair.second;
+    }
+    m_readBuffers.clear();
+    
+    // Clean up all write channels
+    for (auto& pair : m_writeBuffers) {
+        delete pair.second;
+    }
+    m_writeBuffers.clear();
+}
 
 /*!
     Returns \c true if this device is sequential; otherwise returns
@@ -1123,7 +1140,7 @@ iByteArray iIODevice::readLine(xint64 maxSize, xint64* readErr)
                     chunk[chunk.length() - 1] = '\n';
                 }
             }
-            chunk[chunk.length()] = '\0';
+            // iByteArray doesn't need explicit null terminator
             return chunk;
         }
     }
@@ -1139,7 +1156,7 @@ iByteArray iIODevice::readLine(xint64 maxSize, xint64* readErr)
     xint64 readBytes = otherChunk.length();
 
     if (readBytes < 0) {
-        chunk[chunk.length()] = '\0';
+        // iByteArray doesn't need explicit null terminator
         return chunk;
     }
 
@@ -1159,12 +1176,12 @@ iByteArray iIODevice::readLine(xint64 maxSize, xint64* readErr)
         // assume the device position is invalid and force a seek.
         m_devicePos = xint64(-1);
     }
-    chunk[chunk.length()] = '\0';
 
     if (m_openMode & Text) {
         if (chunk.length() > 1 && chunk[chunk.length() - 1] == '\n' && chunk[chunk.length() - 2] == '\r') {
-            chunk[chunk.length() - 2] = '\n';
-            chunk[chunk.length() - 1] = '\0';
+            // Remove \r and keep \n
+            chunk.resize(chunk.length() - 1);
+            chunk[chunk.length() - 1] = '\n';
         }
     }
 

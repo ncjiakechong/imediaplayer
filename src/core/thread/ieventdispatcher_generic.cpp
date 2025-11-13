@@ -509,8 +509,10 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
 
             ++n_ready;
             max_priority = source->priority();
-            if (pendingDispatches)
+            if (pendingDispatches) {
                 pendingDispatches->push_back(source);
+                source->ref();
+            }
         }
 
         if (iterBreak)
@@ -530,7 +532,6 @@ void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingD
         iEventSource* source = *it;
 
         source->setFlags(source->flags() & ~IX_EVENT_SOURCE_READY);
-        source->ref();
 
         need_deattch = !source->detectableDispatch(m_nextSeq);
 

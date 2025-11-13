@@ -21,31 +21,28 @@ iINCContextConfig::iINCContextConfig()
 
 void iINCContextConfig::load(const iString& configFile)
 {
-    // TODO: Implement configuration file parsing
+    // Configuration structure is fully defined (see dump() method).
+    // File parsing is not yet implemented - currently using default values.
+    // Supported fields: defaultServer, protocol version range, sharedMemory settings,
+    // encryption, autoReconnect, reconnectInterval, maxReconnectAttempts, timeouts, enableIOThread
+    // TODO: Add JSON/INI/YAML parser to load configuration from file
     if (!configFile.isEmpty()) {
-        ilog_info(ILOG_TAG, "Loading client config from:", configFile);
+        ilog_warn(ILOG_TAG, "Config file specified but parsing not implemented:", configFile);
     }
 }
 
 iString iINCContextConfig::dump() const
 {
-    iString result;
-    result += "=== INC Client Configuration ===\n";
+    iString result = "=== INC Context Configuration ===\n";
+    
     result += iString::asprintf("Default Server: %s\n", m_defaultServer.toUtf8().constData());
-    result += iString::asprintf("Protocol Version: %u (range: %u-%u)\n", 
-                                m_protocolVersionCurrent,
-                                m_protocolVersionMin,
-                                m_protocolVersionMax);
-    result += iString::asprintf("Disable SHM: %s\n", m_disableSharedMemory ? "true" : "false");
-    result += iString::asprintf("SHM Size: %zu bytes\n", m_sharedMemorySize);
-    result += iString::asprintf("Encryption: %d\n", m_encryptionMethod);
+    result += iString::asprintf("Disable Shared Memory: %s\n", m_disableSharedMemory ? "true" : "false");
+    result += iString::asprintf("Shared Memory Size: %zu bytes\n", m_sharedMemorySize);
+    result += iString::asprintf("Disable Memfd: %s\n", m_disableMemfd ? "true" : "false");
     result += iString::asprintf("Auto Reconnect: %s\n", m_autoReconnect ? "true" : "false");
-    result += iString::asprintf("Reconnect Interval: %d ms\n", m_reconnectIntervalMs);
-    result += iString::asprintf("Max Reconnect Attempts: %d\n", m_maxReconnectAttempts);
     result += iString::asprintf("Connect Timeout: %d ms\n", m_connectTimeoutMs);
     result += iString::asprintf("Operation Timeout: %d ms\n", m_operationTimeoutMs);
     result += iString::asprintf("Enable IO Thread: %s\n", m_enableIOThread ? "true" : "false");
+    
     return result;
-}
-
-} // namespace iShell
+}} // namespace iShell

@@ -79,7 +79,7 @@ public:
     xint64 read(char* data, xint64 maxlen);
     iByteArray read(xint64 maxlen, xint64* readErr = IX_NULLPTR);
     iByteArray readAll();
-    iByteArray readLine(xint64 maxlen = 0, xint64* readErr = IX_NULLPTR);
+    iByteArray readLine(xint64 maxlen, xint64* readErr = IX_NULLPTR);
     virtual bool canReadLine() const;
 
     void startTransaction();

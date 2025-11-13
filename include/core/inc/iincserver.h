@@ -129,10 +129,10 @@ private:
     void handleListenDeviceDisconnected();
     void handleListenDeviceError(int errorCode);
     void handleNewConnection(iINCDevice* clientDevice);
-    void onClientDisconnected();
-    void onConnectionBinaryData(xuint32 channelId, xuint32 seqNum, const iByteArray& data);
-    void onConnectionErrorOccurred(int errorCode);
-    void onConnectionMessageReceived(const iINCMessage& msg);
+    void onClientDisconnected(iINCConnection* conn);
+    void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iByteArray& data);
+    void onConnectionErrorOccurred(iINCConnection* conn, int errorCode);
+    void onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg);
 
     /// Process message from client connection (called by iINCConnection)
     /// @param conn Client connection
@@ -142,6 +142,7 @@ private:
     iINCServerConfig m_config;          ///< Server configuration
     iINCEngine*     m_engine;           ///< Owned engine instance
     iINCDevice*     m_listenDevice;     ///< Listening socket in ioThread
+    iThread*        m_ioThread;         ///< Thread for handling I/O operations
     iString         m_serverName;
     bool            m_listening;
     iAtomicCounter<xuint64> m_nextConnId;       ///< Connection ID generator (thread-safe atomic)
@@ -149,8 +150,6 @@ private:
     
     // Connection tracking
     std::unordered_map<xuint64, iINCConnection*> m_connections; ///< work in ioThread
-
-    iThread         m_ioThread;       ///< Thread for handling I/O operations
     
     IX_DISABLE_COPY(iINCServer)
 };

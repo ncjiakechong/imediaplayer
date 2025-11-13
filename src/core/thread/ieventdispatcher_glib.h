@@ -41,6 +41,7 @@ public:
     virtual void interrupt();
 
     void runTimersOnceWithNormalPriority();
+    bool inProcess() const { return m_inProcess; }
     xuint32 sequence() const { return m_nextSeq; }
 
 protected:
@@ -57,6 +58,7 @@ protected:
       int priority;
     };
 
+    bool    m_inProcess;
     xuint32 m_nextSeq;
 
     GMainContext* m_mainContext;

@@ -37,12 +37,11 @@ iINCContext::iINCContext(const iStringView& name, iObject *parent)
     : iObject(name.toString(), parent)
     , m_engine(IX_NULLPTR)
     , m_protocol(IX_NULLPTR)
+    , m_ioThread(IX_NULLPTR)
     , m_handshake(IX_NULLPTR)
     , m_state(STATE_UNCONNECTED)
     , m_reconnectTimerId(0)
-{
-    m_ioThread.setObjectName("iINCContext.IOThread");
-    
+{   
     // Create engine - each context owns its own engine
     m_engine = new iINCEngine(this);
     m_engine->initialize();
@@ -59,7 +58,7 @@ void iINCContext::setState(State newState)
 
 iINCContext::~iINCContext()
 {
-    disconnect();
+    close();
     
     // Cleanup handshake
     if (m_handshake) {
@@ -74,7 +73,7 @@ iINCContext::~iINCContext()
     }
 }
 
-int iINCContext::connect(const iStringView& url)
+int iINCContext::connectTo(const iStringView& url)
 {
     if (m_state == STATE_CONNECTING || m_state == STATE_READY) {
         ilog_warn("already connecting or connected");
@@ -115,9 +114,12 @@ int iINCContext::connect(const iStringView& url)
     
     // Start IO thread if enabled in config
     if (m_config.enableIOThread()) {
-        m_ioThread.start();
-        m_protocol->moveToThread(&m_ioThread);
-        device->moveToThread(&m_ioThread);
+        m_ioThread = new iThread();
+        m_ioThread->setObjectName("iINCContext.IOThread-" + objectName());
+
+        m_ioThread->start();
+        m_protocol->moveToThread(m_ioThread);
+        device->moveToThread(m_ioThread);
         invokeMethod(device, &iINCDevice::startEventMonitoring, IX_NULLPTR);
     } else {
         // Run in main thread (single-threaded mode)
@@ -136,7 +138,7 @@ int iINCContext::connect(const iStringView& url)
     iByteArray handshakeData = m_handshake->start();
     
     // Send handshake message - handshake uses custom binary protocol
-    iINCMessage handshakeMsg(INC_MSG_HANDSHAKE, 0);  // seq=0 for handshake
+    iINCMessage handshakeMsg(INC_MSG_HANDSHAKE, m_protocol->nextSequence());
     handshakeMsg.payload().setData(handshakeData);
     m_protocol->sendMessage(handshakeMsg);
     
@@ -144,7 +146,7 @@ int iINCContext::connect(const iStringView& url)
     return INC_OK;
 }
 
-void iINCContext::disconnect()
+void iINCContext::close()
 {
     if (m_state == STATE_UNCONNECTED) {
         return;
@@ -157,16 +159,21 @@ void iINCContext::disconnect()
     }
 
     // Stop IO thread if it was started
-    if (m_config.enableIOThread()) {
+    if (IX_NULLPTR != m_ioThread) {
         ilog_debug("Stopping IO thread...");
-        m_ioThread.exit();
-        m_ioThread.yieldCurrentThread();
+        m_ioThread->exit();
+        m_ioThread->wait();
+        delete m_ioThread;
     }
     
-    // Cleanup protocol
+    // Cleanup protocol - delete directly instead of deleteLater
+    // since IO thread has exited and can't process deleteLater events
     if (m_protocol) {
-        m_protocol->device()->deleteLater();
-        m_protocol->deleteLater();
+        iObject::disconnect(m_protocol, IX_NULLPTR, this, IX_NULLPTR);
+        iObject::disconnect(m_protocol->device(), IX_NULLPTR, this, IX_NULLPTR);
+        m_protocol->moveToThread(thread());
+
+        delete m_protocol;
         m_protocol = IX_NULLPTR;
     }
     
@@ -188,7 +195,7 @@ iSharedDataPointer<iINCOperation> iINCContext::callMethod(iStringView method, xu
     }
     
     // Create and send method call message
-    iINCMessage msg(INC_MSG_METHOD_CALL, m_protocol->nextSequence());  // Protocol will assign sequence number
+    iINCMessage msg(INC_MSG_METHOD_CALL, m_protocol->nextSequence());
     msg.payload().putUint16(version);
     msg.payload().putString(method);
     msg.payload().putBytes(args);
@@ -282,7 +289,7 @@ void iINCContext::onProtocolError(xint32 errorCode)
     ilog_error("Protocol error:", errorCode);
     
     // Disconnect and potentially reconnect
-    disconnect();
+    close();
     
     if (m_config.autoReconnect() && !m_serverUrl.isEmpty()) {
         scheduleReconnect();
@@ -294,7 +301,7 @@ void iINCContext::onDeviceError(xint32 errorCode)
     ilog_warn("Device error occurred in context, error:", errorCode);
     
     // Disconnect (will cleanup protocol and device)
-    disconnect();
+    close();
     
     // Schedule reconnect if auto-reconnect is enabled
     if (m_config.autoReconnect() && !m_serverUrl.isEmpty()) {
@@ -320,8 +327,8 @@ void iINCContext::handleHandshakeAck(const iINCMessage& msg)
     
     if (m_handshake->state() == iINCHandshake::STATE_FAILED) {
         ilog_error("Handshake failed:", m_handshake->errorMessage());
-        setState(STATE_FAILED);
-        disconnect();
+        invokeMethod(this, &iINCContext::setState, STATE_FAILED);
+        invokeMethod(this, &iINCContext::close);
         
         if (m_config.autoReconnect()) {
             scheduleReconnect();
@@ -333,8 +340,8 @@ void iINCContext::handleHandshakeAck(const iINCMessage& msg)
     const iINCHandshakeData& remote = m_handshake->remoteData();
     m_serverName = remote.nodeName;
     m_serverProtocol = remote.protocolVersion;
-    
-    setState(STATE_READY);
+
+    invokeMethod(this, &iINCContext::setState, STATE_READY);
     ilog_info("Handshake completed with", m_serverName, "protocol version", m_serverProtocol);
 }
 
@@ -371,13 +378,14 @@ void iINCContext::scheduleReconnect()
         m_reconnectTimerId = 0;
     }
     
-    // Use reconnect interval from config
+    // Use reconnect interval from config (default: 500ms)
     xint64 delay = m_config.reconnectIntervalMs();
     
     // Start timer using iObject::startTimer (returns timer ID)
     m_reconnectTimerId = startTimer(static_cast<int>(delay), 0, CoarseTimer);
     
-    // TODO: Implement exponential backoff using maxReconnectAttempts from config
+    // TODO: Implement exponential backoff by tracking attempt count
+    //       and using maxReconnectAttempts from config to limit retries
 }
 
 bool iINCContext::event(iEvent* e)
@@ -390,7 +398,7 @@ bool iINCContext::event(iEvent* e)
 
         // Handle reconnect timer
         ilog_info("Attempting reconnection to", m_serverUrl);
-        int result = connect(m_serverUrl);
+        int result = connectTo(m_serverUrl);
 
         // Failed, schedule another reconnect if enabled
         if (result != INC_OK && m_config.autoReconnect() && !m_serverUrl.isEmpty()) {

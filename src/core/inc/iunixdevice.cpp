@@ -98,21 +98,22 @@ public:
     }
 
     bool check() override {
-        bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
-        bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
         bool hasError = (m_pollFd.revents & (IX_IO_ERR | IX_IO_HUP)) != 0;
-
-        return readReady || writeReady || hasError;
+        return (m_pollFd.revents & m_pollFd.events) || hasError;
     }
 
     bool dispatch() override {
+        if (!isAttached()) return true;
+
         iUnixDevice* unixDev = unixDevice();
-        if (!unixDev) {
-            return false;
-        }
+        if (!unixDev) return false;
 
         bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
+        bool hasError = (m_pollFd.revents & (IX_IO_ERR | IX_IO_HUP)) != 0;
+        if (hasError) {
+            ilog_warn("Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
+        }
 
         if (unixDev->role() == iINCDevice::ROLE_CLIENT && writeReady) {
             m_pollFd.revents = 0;
@@ -295,7 +296,9 @@ int iUnixDevice::listenOn(const iString& path)
     }
     
     // Create new EventSource (constructor sets refCount to 1)
-    // NOTE: Don't attach yet! Caller must connect signals first, then call startEventMonitoring()
+    // NOTE: Event loop not attached yet. Caller must:
+    //       1. Connect to newConnection() signal
+    //       2. Call startEventMonitoring() to attach to event loop for accept() notifications
     m_eventSource = new iUnixEventSource(this);
     configEventAbility(true, false);
     
@@ -331,7 +334,9 @@ void iUnixDevice::acceptConnection()
     clientDevice->iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
     
     // Create EventSource for accepted client connection
-    // NOTE: Don't attach yet! Caller must connect signals first, then call startEventMonitoring()
+    // NOTE: Event loop not attached yet. Caller must:
+    //       1. Connect to readyRead()/disconnected() signals
+    //       2. Call startEventMonitoring() to attach to event loop
     clientDevice->m_eventSource = new iUnixEventSource(clientDevice);
     
     // Accepted connections are already established, monitor read events only
@@ -340,7 +345,7 @@ void iUnixDevice::acceptConnection()
     ilog_info("Accepted connection on ", m_socketPath);
     
     // Emit newConnection signal with the client device
-    // NOTE: Caller (iINCServer) must call startEventMonitoring() and configure events
+    // NOTE: Caller (e.g., iINCServer) must call startEventMonitoring() on client device
     IEMIT newConnection(clientDevice);
 }
 

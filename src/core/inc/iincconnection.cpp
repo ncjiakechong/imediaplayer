@@ -34,15 +34,17 @@ iINCConnection::iINCConnection(iINCServer* server, iINCDevice* device, xuint64 c
     m_protocol = new iINCProtocol(device, this);
     
     // Forward signals to server for handling (connection does not process, only forwards)
-    iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCConnection::errorOccurred);
-    iObject::connect(m_protocol, &iINCProtocol::messageReceived, this, &iINCConnection::messageReceived);
-    iObject::connect(m_protocol, &iINCProtocol::binaryDataReceived, this, &iINCConnection::binaryDataReceived);
+    iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCConnection::onErrorOccurred);
+    iObject::connect(m_protocol, &iINCProtocol::messageReceived, this, &iINCConnection::onMessageReceived);
+    iObject::connect(m_protocol, &iINCProtocol::binaryDataReceived, this, &iINCConnection::onBinaryDataReceived);
 }
 
 iINCConnection::~iINCConnection()
 {
-    m_protocol->device()->deleteLater();
-    m_protocol->deleteLater();
+    iObject::disconnect(m_protocol, IX_NULLPTR, this, IX_NULLPTR);
+    iObject::disconnect(m_protocol->device(), IX_NULLPTR, this, IX_NULLPTR);
+
+    delete m_protocol;
     clearHandshake();
 }
 
@@ -138,7 +140,7 @@ void iINCConnection::close()
 {
     if (m_protocol && m_protocol->device() && m_protocol->device()->isOpen()) {
         m_protocol->device()->close();
-        IEMIT disconnected();
+        IEMIT disconnected(this);
     }
 }
 
@@ -193,6 +195,21 @@ void iINCConnection::releaseChannel(xuint32 channelId)
 bool iINCConnection::isChannelAllocated(xuint32 channelId) const
 {
     return m_channels.find(channelId) != m_channels.end();
+}
+
+void iINCConnection::onErrorOccurred(int errorCode)
+{
+    IEMIT errorOccurred(this, errorCode);
+}
+
+void iINCConnection::onMessageReceived(const iINCMessage& msg)
+{
+    IEMIT messageReceived(this, msg);
+}
+
+void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, const iByteArray& data)
+{
+    IEMIT binaryDataReceived(this, channelId, seqNum, data);
 }
 
 } // namespace iShell

@@ -1914,7 +1914,7 @@ iByteArray iByteArray::repeated(xsizetype times) const
 
     iByteArray result;
     result.reserve(resultSize);
-    if (result.capacity() != resultSize)
+    if (result.capacity() < resultSize)
         return iByteArray(); // not enough memory
 
     memcpy(result.d.data(), data(), size());

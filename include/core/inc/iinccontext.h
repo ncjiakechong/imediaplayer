@@ -66,10 +66,10 @@ public:
     /// Connect to server at specified URL
     /// @param url Format: "tcp://host:port" or "pipe:///path/to/socket"
     /// @return 0 on success, negative on error
-    int connect(const iStringView& url);
+    int connectTo(const iStringView& url);
 
-    /// Disconnect from server immediately
-    void disconnect();
+    /// Close connection and disconnect from server immediately
+    void close();
 
     /// Get current connection state
     State state() const { return m_state; }
@@ -150,6 +150,7 @@ private:
     iINCContextConfig m_config;     ///< Context configuration
     iINCEngine*     m_engine;       ///< Owned engine
     iINCProtocol*   m_protocol;     ///< Protocol handler
+    iThread*        m_ioThread;     ///< IO thread for network operations
     iINCHandshake*  m_handshake;    ///< Handshake handler
     State           m_state;
     iString         m_clientName;
@@ -159,9 +160,6 @@ private:
     
     // Auto-reconnect timer ID (using iObject::startTimer/killTimer)
     int             m_reconnectTimerId;
-    
-    // IO Thread (optional, controlled by config)
-    iThread         m_ioThread;     ///< IO thread for network operations
     
     friend class iINCStream;  // Allow iINCStream to access protocol()
     

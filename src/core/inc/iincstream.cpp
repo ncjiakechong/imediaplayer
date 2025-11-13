@@ -9,6 +9,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include <algorithm>
 #include <core/io/ilog.h>
 #include <core/inc/iincstream.h>
 #include <core/inc/iinccontext.h>
@@ -45,7 +46,23 @@ iINCStream::iINCStream(const iStringView& name, iINCContext* context, iObject* p
 
 iINCStream::~iINCStream()
 {
+    // CRITICAL: First detach to trigger graceful channel release
     detach();
+    
+    // Cancel all pending operations - this will trigger callbacks
+    // which will automatically remove operations from m_pendingOps
+    // Make a copy of the list since callbacks will modify it
+    while (!m_pendingOps.empty()) {
+        iINCOperation* op = m_pendingOps.back();
+        m_pendingOps.pop_back();
+        if (op->getState() == iINCOperation::STATE_RUNNING) {
+            // Clear callback first to prevent re-entry
+            op->setFinishedCallback(IX_NULLPTR, IX_NULLPTR);
+            // Now cancel - won't trigger callback
+            op->cancel();
+        }
+        op->deref();
+    }
 }
 
 iINCProtocol* iINCStream::protocol() const
@@ -88,7 +105,10 @@ bool iINCStream::attach(Mode mode)
         return false;
     }
     
-    // Set callback for operation completion
+    // Track this operation and set callback for completion
+    // Manually manage refcount - add ref when tracking
+    op->ref();
+    m_pendingOps.push_back(op.data());
     op->setFinishedCallback(&iINCStream::onChannelAllocated, this);
     
     ilog_info("Stream entering ATTACHING state, waiting for server allocation");
@@ -145,6 +165,10 @@ void iINCStream::detach()
         
     auto op = m_context->releaseChannel(m_channelId);
     if (op) {
+        // Track this operation and set callback
+        // Manually manage refcount - add ref when tracking
+        op->ref();
+        m_pendingOps.push_back(op.data());
         op->setFinishedCallback(&iINCStream::onChannelReleased, this);
         ilog_info("Stream entering DETACHING state, channelId=%u", m_channelId);
     } else {
@@ -244,6 +268,14 @@ void iINCStream::onBinaryDataReceived(xuint32 channel, xuint32 seqNum, const iBy
 void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
 {
     iINCStream* stream = static_cast<iINCStream*>(userData);
+    
+    // Remove from pending operations list and release reference
+    auto it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
+    if (it != stream->m_pendingOps.end()) {
+        stream->m_pendingOps.erase(it);
+        op->deref();  // Release our reference
+    }
+    
     // Check if we're still in ATTACHING state (might have been cancelled)
     if (stream->m_state != STATE_ATTACHING) {
         ilog_info("Attach completed but stream no longer attaching, ignoring");
@@ -281,6 +313,14 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
 void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
 {
     iINCStream* stream = static_cast<iINCStream*>(userData);
+    
+    // Remove from pending operations list and release reference
+    auto it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
+    if (it != stream->m_pendingOps.end()) {
+        stream->m_pendingOps.erase(it);
+        op->deref();  // Release our reference
+    }
+    
     // Check if we're still in DETACHING state
     if (stream->m_state != STATE_DETACHING) {
         ilog_info("Detach completed but stream no longer detaching, ignoring");

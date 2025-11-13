@@ -21,6 +21,7 @@
 #include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
 #include <queue>
+#include <list>
 
 namespace iShell {
 
@@ -168,6 +169,9 @@ private:
     // Receive queue (only used in read mode)
     std::queue<iByteArray>  m_recvQueue;    ///< Queued received data chunks
     mutable iMutex          m_queueMutex;   ///< Protects receive queue (mutable for const methods)
+    
+    // Pending operations tracking (manually manage refcount)
+    std::list<iINCOperation*> m_pendingOps; ///< Track operations with our callbacks
     
     friend class iINCContext;
     

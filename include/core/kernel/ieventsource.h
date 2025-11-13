@@ -33,6 +33,7 @@ public:
     bool ref();
     bool deref();
 
+    bool isAttached() const { return (IX_NULLPTR != m_dispatcher); }
     int attach(iEventDispatcher* dispatcher);
     int detach();
 

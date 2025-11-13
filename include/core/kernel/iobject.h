@@ -382,7 +382,7 @@ protected:
 private:
     struct _iSender
     {
-        _iSender(iObject *receiver, iObject *sender);
+        _iSender(iObject *receiver, iObject *sender, bool record);
         ~_iSender();
         void receiverDeleted();
 

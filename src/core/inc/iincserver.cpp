@@ -32,13 +32,12 @@ iINCServer::iINCServer(const iStringView& name, iObject *parent)
     : iObject(parent)
     , m_engine(IX_NULLPTR)
     , m_listenDevice(IX_NULLPTR)
+    , m_ioThread(IX_NULLPTR)
     , m_serverName(name)
     , m_listening(false)
     , m_nextConnId(1)
     , m_nextChannelId(1)  // Start from 1, 0 is reserved for invalid
 {    
-    m_ioThread.setObjectName("iINCServer.IOThread");
-
     // Create and initialize engine
     m_engine = new iINCEngine(this);
     if (!m_engine->initialize()) {
@@ -83,8 +82,11 @@ int iINCServer::listen(const iStringView& url)
     
     // Start IO thread if enabled in config
     if (m_config.enableIOThread()) {
-        m_ioThread.start();
-        m_listenDevice->moveToThread(&m_ioThread);
+        m_ioThread = new iThread();
+        m_ioThread->setObjectName("iINCServer.IOThread-" + objectName());
+    
+        m_ioThread->start();
+        m_listenDevice->moveToThread(m_ioThread);
         invokeMethod(m_listenDevice, &iINCDevice::startEventMonitoring, IX_NULLPTR);
     } else {
         // Run in main thread (single-threaded mode)
@@ -101,23 +103,30 @@ void iINCServer::close()
     }
     
     // Stop IO thread if it was started
-    if (m_config.enableIOThread()) {
+    if (IX_NULLPTR != m_ioThread) {
         ilog_debug("Stopping IO thread...");
-        m_ioThread.exit();
-        m_ioThread.yieldCurrentThread();
+        m_ioThread->exit();
+        m_ioThread->wait();
+        delete m_ioThread;
     }
 
-    // Close all client connections
-    for (auto& pair : m_connections) {
-        pair.second->close();
-        pair.second->deleteLater();
+    // Now delete all connections - IO thread has stopped
+    while (!m_connections.empty()) {
+        auto it = m_connections.begin();
+        iINCConnection* conn = it->second;
+        m_connections.erase(it);
+        
+        iObject::disconnect(conn, IX_NULLPTR, this, IX_NULLPTR);
+        conn->moveToThread(thread());
+        conn->close();
+        delete conn;
     }
-    m_connections.clear();
     
-    // Close listening device
+    // Close listening device - delete directly
     if (m_listenDevice) {
-        m_listenDevice->close();
-        m_listenDevice->deleteLater();
+        iObject::disconnect(m_listenDevice, IX_NULLPTR, this, IX_NULLPTR);
+        m_listenDevice->moveToThread(thread());
+        delete m_listenDevice;
         m_listenDevice = IX_NULLPTR;
     }
     
@@ -194,10 +203,10 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     conn->setHandshakeHandler(handshake);
     
     // Connect all forwarding signals from connection
-    iObject::connect(conn, &iINCConnection::disconnected, this, &iINCServer::onClientDisconnected);
-    iObject::connect(conn, &iINCConnection::binaryDataReceived, this, &iINCServer::onConnectionBinaryData);
-    iObject::connect(conn, &iINCConnection::errorOccurred, this, &iINCServer::onConnectionErrorOccurred);
-    iObject::connect(conn, &iINCConnection::messageReceived, this, &iINCServer::onConnectionMessageReceived);
+    iObject::connect(conn, &iINCConnection::disconnected, this, &iINCServer::onClientDisconnected, iShell::DirectConnection);
+    iObject::connect(conn, &iINCConnection::binaryDataReceived, this, &iINCServer::onConnectionBinaryData, iShell::DirectConnection);
+    iObject::connect(conn, &iINCConnection::errorOccurred, this, &iINCServer::onConnectionErrorOccurred, iShell::DirectConnection);
+    iObject::connect(conn, &iINCConnection::messageReceived, this, &iINCServer::onConnectionMessageReceived, iShell::DirectConnection);
 
     // AFTER EventSource is attached, configure event monitoring
     // Accepted connections are already established, monitor read events only
@@ -241,15 +250,8 @@ if (!m_listening) return;
     iINCServer::close();
 }
 
-void iINCServer::onClientDisconnected()
+void iINCServer::onClientDisconnected(iINCConnection* conn)
 {
-    // Get connection from sender
-    iINCConnection* conn = iobject_cast<iINCConnection*>(sender());
-    if (!conn) {
-        ilog_error("Invalid sender in onClientDisconnected");
-        return;
-    }
-
     auto it = m_connections.find(conn->connectionId());
     if (it != m_connections.end()) {
         m_connections.erase(it);
@@ -260,41 +262,20 @@ void iINCServer::onClientDisconnected()
     ilog_info("Client", conn->connectionId(), "disconnected");
 }
 
-void iINCServer::onConnectionBinaryData(xuint32 channelId, xuint32 seqNum, const iByteArray& data)
+void iINCServer::onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iByteArray& data)
 {
-    // Get the connection from sender
-    iINCConnection* conn = iobject_cast<iINCConnection*>(sender());
-    if (!conn) {
-        ilog_error("Invalid sender in onConnectionBinaryData");
-        return;
-    }
-    
     // Call virtual function for subclass to handle
     handleBinaryData(conn, channelId, seqNum, data);
 }
 
-void iINCServer::onConnectionErrorOccurred(int errorCode)
+void iINCServer::onConnectionErrorOccurred(iINCConnection* conn, int errorCode)
 {
-    // Get connection from sender
-    iINCConnection* conn = iobject_cast<iINCConnection*>(sender());
-    if (!conn) {
-        ilog_error("Invalid sender in onConnectionErrorOccurred");
-        return;
-    }
-    
     ilog_warn("Device error occurred for connection", conn->connectionId(), "error:", errorCode);
     conn->close();
 }
 
-void iINCServer::onConnectionMessageReceived(const iINCMessage& msg)
+void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg)
 {
-    // Get connection from sender
-    iINCConnection* conn = iobject_cast<iINCConnection*>(sender());
-    if (!conn) {
-        ilog_error("Invalid sender in onConnectionMessageReceived");
-        return;
-    }
-    
     // Check if this is a handshake message
     if (msg.type() != INC_MSG_HANDSHAKE) {
         processMessage(conn, msg);

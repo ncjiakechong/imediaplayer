@@ -33,7 +33,8 @@ iINCOperation::iINCOperation(iObject* parent, xuint32 seqNum)
 
 iINCOperation::~iINCOperation()
 {
-    m_timer.stop();
+    iObject::disconnect(&m_timer, &iTimer::timeout, this, &iINCOperation::onTimeout);
+    iObject::invokeMethod(&m_timer, &iTimer::stop);
 }
 
 void iINCOperation::cancel()
@@ -80,7 +81,7 @@ void iINCOperation::setState(State st)
     
     m_state = st;
     if (st != STATE_RUNNING) {
-        m_timer.stop();
+        iObject::invokeMethod(&m_timer, &iTimer::stop);
     }
 
     // Invoke finished callback if operation completed

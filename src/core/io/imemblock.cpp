@@ -434,7 +434,7 @@ iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t elementCount, size_t e
     size_t headerSize = sizeof(AlignedMemBlock);
     xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
     allocSize = reserveExtraBytes(allocSize);
-    if (((allocSize - headerSize) < 0) || (allocSize > block->m_pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
+    if (((allocSize - headerSize) < 0) /*|| (allocSize > block->m_pool->m_blockSize)*/) {  // handle overflow. cannot allocate reliably
         return IX_NULLPTR;
     }
 

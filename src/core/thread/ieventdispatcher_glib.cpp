@@ -235,7 +235,7 @@ static gboolean eventSourceWraperCheck(GSource *s)
 static gboolean eventSourceWraperDispatch(GSource *s, GSourceFunc, gpointer)
 {
     iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
-    bool continue_dispatch = source->imp->detectableDispatch(source->dispatcher->sequence());
+    bool continue_dispatch = source->imp->detectableDispatch(source->dispatcher->inProcess() ? source->dispatcher->sequence() : 0);
     xuint32 comboCount = source->imp->comboCount();
     
     // Warn every 16 dispatches after hitting 200
@@ -269,6 +269,7 @@ static GSourceFuncs eventSourceWraperFuncs = {
 
 iEventDispatcher_Glib::iEventDispatcher_Glib(iObject *parent)
     : iEventDispatcher(parent)
+    , m_inProcess(false)
     , m_nextSeq(0)
     , m_mainContext(IX_NULLPTR)
     , m_postEventSource(IX_NULLPTR)
@@ -339,6 +340,7 @@ iEventDispatcher_Glib::~iEventDispatcher_Glib()
 
 bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
 {
+    m_inProcess = true;
     bool result = false;
     const bool canWait = (flags & iEventLoop::WaitForMoreEvents);
 
@@ -352,6 +354,7 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
         result = g_main_context_iteration(m_mainContext, canWait);
     } while (!result && canWait);
 
+    m_inProcess = false;
     return result;
 }
 

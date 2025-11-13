@@ -59,9 +59,9 @@ struct iINCMessageHeader {
     xuint32 flags;              ///< Message flags (iINCMessageFlags)
     
     /// Magic number for INC messages: "INC\0"
-    static const xuint32 MAGIC = 0x494E4300;
-    static const xint32 HEADER_SIZE = 24;
-    static const xint32 MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
+    static const xuint32 MAGIC;
+    static const xint32 HEADER_SIZE;
+    static const xint32 MAX_MESSAGE_SIZE;
 };
 #pragma pack(pop)
 

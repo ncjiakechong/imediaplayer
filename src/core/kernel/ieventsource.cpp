@@ -95,9 +95,8 @@ int iEventSource::detach()
         m_dispatcher->removePoll(*it, this);
     }
 
-    m_dispatcher->removeEventSource(this);
-
     // deref();
+    m_dispatcher->removeEventSource(this);
     m_dispatcher = IX_NULLPTR;
     return 0;
 }
@@ -149,7 +148,9 @@ void iEventSource::comboDetected(xuint32 count)
 
 bool iEventSource::detectableDispatch(xuint32 sequence)
 {
-    if ((sequence == m_nextSeq) || (sequence == (m_nextSeq + 1))) {
+    if (!sequence) {
+        // always to ignore sequence 0 to avoid external dispatch which like glib
+    } else if ((sequence == m_nextSeq) || (sequence == (m_nextSeq + 1))) {
         ++m_comboCount;
     } else {
         m_comboCount = 0;
