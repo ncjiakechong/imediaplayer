@@ -133,7 +133,7 @@ protected:
     void safeReservePtr(void* ptr) { m_data = ptr; }
 
 private:
-    void doFree();
+    virtual void doFree();
     void statAdd();
     void statRemove();
     void wait();

@@ -45,6 +45,7 @@ enum iINCError {
     INC_ERROR_HANDSHAKE_FAILED  = INC_ERROR_CATEGORY_CONNECTION + 6,     ///< Handshake failed
     INC_ERROR_NOT_CONNECTED     = INC_ERROR_CATEGORY_CONNECTION + 7,     ///< Not connected to server
     INC_ERROR_ALREADY_CONNECTED = INC_ERROR_CATEGORY_CONNECTION + 8,     ///< Already connected
+    INC_ERROR_CHANNEL           = INC_ERROR_CATEGORY_CONNECTION + 9,     ///< Channel error
 
     // Protocol errors (0xC000 + 1~99)
     INC_ERROR_INVALID_MESSAGE   = INC_ERROR_CATEGORY_PROTOCOL + 1,     ///< Malformed message

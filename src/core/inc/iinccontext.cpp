@@ -164,6 +164,7 @@ void iINCContext::close()
         m_ioThread->exit();
         m_ioThread->wait();
         delete m_ioThread;
+        m_ioThread = IX_NULLPTR;
     }
     
     // Cleanup protocol - delete directly instead of deleteLater

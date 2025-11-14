@@ -16,16 +16,16 @@ namespace iShell {
 iSharedData::~iSharedData()
 {}
 
+void iSharedData::doFree()
+{
+    delete this;
+}
+
 bool iSharedData::deref() {
     if (_ref.deref())
         return true;
 
-    if (IX_NULLPTR != _freeCb) {
-        (this->*_freeCb)();
-        return false;
-    }
-
-    delete this;
+    doFree();
     return false;
 }
 

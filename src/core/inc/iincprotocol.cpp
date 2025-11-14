@@ -41,17 +41,16 @@ iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
     
     // Set device as child so it's deleted automatically
     device->setParent(this);
-    
-    // Connect device signals
+
     iObject::connect(m_device, &iINCDevice::readyRead, this, &iINCProtocol::onReadyRead);
-    
-    // Defer bytesWritten connection until device is connected
-    // This prevents premature write attempts during connection establishment
+    iObject::connect(m_device, &iINCDevice::bytesWritten, this, &iINCProtocol::onReadyWrite);
     iObject::connect(m_device, &iINCDevice::connected, this, &iINCProtocol::onDeviceConnected);
 }
 
 iINCProtocol::~iINCProtocol()
 {
+    iObject::disconnect(m_device, IX_NULLPTR, this, IX_NULLPTR);
+
     // Cancel all pending operations
     while (!m_operations.empty()) {
         auto pair = m_operations.begin();
@@ -406,8 +405,6 @@ void iINCProtocol::processBinaryDataMessage(const iINCMessage& msg)
 
 void iINCProtocol::onDeviceConnected()
 {
-    iObject::connect(m_device, &iINCDevice::bytesWritten, this, &iINCProtocol::onReadyWrite, ConnectionType(AutoConnection | UniqueConnection));
-
     // Enable write event monitoring to trigger sending
     m_device->configEventAbility(true, true);
     onReadyWrite();
@@ -415,10 +412,8 @@ void iINCProtocol::onDeviceConnected()
 
 void iINCProtocol::onReadyWrite()
 {
-    if (!m_device->isWritable()) {
-        // Connection not yet established, wait for connected() signal
-        return;
-    }
+    // Connection not yet established, wait for connected() signal
+    if (!m_device->isWritable()) return;
 
     // State machine loop: process all sendable data
     while (true) {

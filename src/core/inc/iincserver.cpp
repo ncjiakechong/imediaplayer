@@ -21,8 +21,6 @@
 #include "inc/iincengine.h"
 #include "inc/iincprotocol.h"
 #include "inc/iinchandshake.h"
-#include "inc/itcpdevice.h"
-#include "inc/iunixdevice.h"
 
 #define ILOG_TAG "ix_inc"
 
@@ -108,6 +106,7 @@ void iINCServer::close()
         m_ioThread->exit();
         m_ioThread->wait();
         delete m_ioThread;
+        m_ioThread = IX_NULLPTR;
     }
 
     // Now delete all connections - IO thread has stopped

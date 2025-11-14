@@ -236,23 +236,6 @@ static gboolean eventSourceWraperDispatch(GSource *s, GSourceFunc, gpointer)
 {
     iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
     bool continue_dispatch = source->imp->detectableDispatch(source->dispatcher->inProcess() ? source->dispatcher->sequence() : 0);
-    xuint32 comboCount = source->imp->comboCount();
-    
-    // Warn every 16 dispatches after hitting 200
-    if (comboCount > 200 && !(comboCount & 0x0F)) {
-        ilog_warn("source ", source->imp->name(), " combo count ", comboCount, 
-                  " many times and maybe detach later to avoid CPU HANG");
-        // Give source a chance to optimize itself
-        source->imp->comboDetected(comboCount);
-    }
-
-    // Auto-detach at 1000 to prevent CPU hang
-    // GLib convention: return FALSE to remove source, TRUE to keep it
-    if (comboCount >= 1000) {
-        ilog_error("source ", source->imp->name(), " combo count reached ", comboCount,
-                   ", force detaching to prevent CPU HANG");
-        return FALSE;  // Remove source
-    }
 
     // Return TRUE if dispatch wants to continue, FALSE if it wants to detach
     return continue_dispatch ? TRUE : FALSE;
@@ -329,6 +312,14 @@ iEventDispatcher_Glib::~iEventDispatcher_Glib()
     g_source_destroy(&m_postEventSource->source);
     g_source_unref(&m_postEventSource->source);
     m_postEventSource = IX_NULLPTR;
+
+    while (!m_wraperMap.empty()) {
+        std::map<iEventSource*, iEventSourceWraper*>::iterator it = m_wraperMap.begin();
+        iEventSource* source = it->second->imp;
+        int result = source->detach();
+        IX_ASSERT(result == 0);
+        (void) result;
+    }
 
     IX_ASSERT(m_mainContext != IX_NULLPTR);
     #if GLIB_CHECK_VERSION (2, 22, 0)
@@ -436,13 +427,14 @@ int iEventDispatcher_Glib::addEventSource(iEventSource* source)
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
     if (it != m_wraperMap.cend()) {
-        ilog_warn("source has added->", source);
+        ilog_warn("source has added->", source->name());
         return -1;
     }
 
     iEventSourceWraper* wraper = reinterpret_cast<iEventSourceWraper *>(g_source_new(&eventSourceWraperFuncs,
                                                                         sizeof(iEventSourceWraper)));
     (void) new (&wraper->gfd2fdMap) std::map<GPollFD*, iPollFD*>();
+    source->ref();
     wraper->imp = source;
     wraper->dispatcher = this;
     g_source_attach(&wraper->source, m_mainContext);
@@ -456,16 +448,16 @@ int iEventDispatcher_Glib::removeEventSource(iEventSource* source)
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
     if (it == m_wraperMap.cend()) {
-        ilog_warn("source has removed->", source);
+        ilog_warn("source has removed->", source->name());
         return -1;
     }
 
     iEventSourceWraper* wraper = it->second;
     m_wraperMap.erase(it);
-
     wraper->gfd2fdMap.~map<GPollFD*, iPollFD*>();
     g_source_destroy(&wraper->source);
     g_source_unref(&wraper->source);
+    source->deref();
 
     return 0;
 }

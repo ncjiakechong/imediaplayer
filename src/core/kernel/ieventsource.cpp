@@ -72,11 +72,12 @@ int iEventSource::attach(iEventDispatcher* dispatcher)
     }
 
     // ref();
-    m_dispatcher = dispatcher;
-    dispatcher->addEventSource(this);
+    if (dispatcher->addEventSource(this) < 0) {
+        return -1;
+    }
 
-    std::list<iPollFD*>::const_iterator it;
-    for (it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+    m_dispatcher = dispatcher;
+    for (std::list<iPollFD*>::const_iterator it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
         dispatcher->addPoll(*it, this);
     }
 
@@ -86,17 +87,18 @@ int iEventSource::attach(iEventDispatcher* dispatcher)
 int iEventSource::detach()
 {
     if (IX_NULLPTR == m_dispatcher) {
-        ilog_warn("invalid");
         return -1;
     }
 
-    std::list<iPollFD*>::const_iterator it;
-    for (it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+    // deref();
+    if (m_dispatcher->removeEventSource(this) < 0) {
+        return -1;
+    }
+
+    for (std::list<iPollFD*>::const_iterator it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
         m_dispatcher->removePoll(*it, this);
     }
 
-    // deref();
-    m_dispatcher->removeEventSource(this);
     m_dispatcher = IX_NULLPTR;
     return 0;
 }
@@ -154,6 +156,16 @@ bool iEventSource::detectableDispatch(xuint32 sequence)
         ++m_comboCount;
     } else {
         m_comboCount = 0;
+    }
+
+    if (m_comboCount >= 512 && !(m_comboCount & 0x1FF)) {
+        ilog_info("source ", name(), " combo count ", m_comboCount, " many times at ", sequence, " and maybe detach later to avoid CPU HANG");
+        comboDetected(m_comboCount);
+    }
+
+    if (m_comboCount > 10000) {
+        ilog_warn("source ", name(), " combo count ", m_comboCount, " exceeded limit at ", sequence, ", detaching to avoid CPU HANG");
+        return false;
     }
 
     m_nextSeq = sequence;

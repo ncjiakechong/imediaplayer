@@ -273,6 +273,7 @@ public:
         // Delete objects in order
         if (client) {
             ilog_info("[Worker] Deleting client");
+            client->close();
             delete client;
             client = nullptr;
             

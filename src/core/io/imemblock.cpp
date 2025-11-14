@@ -198,8 +198,7 @@ static inline xsizetype calculateBlockSize(size_t elementCount, size_t elementSi
 }
 
 iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data, size_t length, size_t capacity)
-    : iSharedData(FreeCb(&iMemBlock::doFree))
-    , m_readOnly(false)
+    : m_readOnly(false)
     , m_isSilence(false)
     , m_type(type)
     , m_options(options)

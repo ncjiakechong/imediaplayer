@@ -47,7 +47,6 @@ public:
     void setFlags(int flags) { m_flags = flags; }
 
     iLatin1StringView name() const { return m_name; }
-    xuint32 comboCount() const { return m_comboCount; }
     iEventDispatcher* dispatcher() const { return m_dispatcher; }
 
     /**
@@ -80,15 +79,13 @@ public:
      */
     bool detectableDispatch(xuint32 sequence);
 
-    /**
-     * to deal combo count warning, children source can change it in this callback
-     */
-    virtual void comboDetected(xuint32 count);
-
 protected:
     virtual ~iEventSource();
 
     virtual bool dispatch();
+
+    /// to deal combo count warning, children source can change it in this callback
+    virtual void comboDetected(xuint32 count);
 
 private:
     iLatin1StringView m_name;
@@ -102,6 +99,9 @@ private:
 
     iEventDispatcher*   m_dispatcher;
     std::list<iPollFD*> m_pollFds;
+
+    IX_DISABLE_COPY(iEventSource)
+
 };
 
 } // namespace iShell

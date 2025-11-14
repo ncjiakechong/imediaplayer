@@ -112,6 +112,7 @@ iObject::iObject(iObject *parent)
     , m_connectionLists(IX_NULLPTR)
     , m_senders(IX_NULLPTR)
     , m_currentSender(IX_NULLPTR)
+    , m_signalSlotLock(iMutex::Recursive)
 {
     m_threadData->ref();
 
@@ -132,6 +133,7 @@ iObject::iObject(const iString& name, iObject* parent)
     , m_connectionLists(IX_NULLPTR)
     , m_senders(IX_NULLPTR)
     , m_currentSender(IX_NULLPTR)
+    , m_signalSlotLock(iMutex::Recursive)
 {
     m_threadData->ref();
 

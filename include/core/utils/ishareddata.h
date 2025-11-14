@@ -27,10 +27,8 @@ namespace iShell {
 class IX_CORE_EXPORT iSharedData
 {
 public:
-    typedef void (iSharedData::*FreeCb)();
-
-    inline iSharedData(FreeCb freeCb = IX_NULLPTR) : _ref(0), _freeCb(freeCb) {}
-    inline iSharedData(const iSharedData& other) : _ref(0), _freeCb(other._freeCb) {}
+    inline iSharedData() : _ref(0) {}
+    inline iSharedData(const iSharedData& other) : _ref(0) {}
     virtual ~iSharedData();
 
     inline int count() const { return _ref.value(); }
@@ -38,8 +36,9 @@ public:
     bool deref();
 
 protected:
+    virtual void doFree();
+
     mutable iRefCount _ref;
-    FreeCb  _freeCb;
 
     // using the assignment operator would lead to corruption in the ref-counting
     iSharedData &operator=(const iSharedData &);

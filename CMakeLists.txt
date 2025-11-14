@@ -14,5 +14,4 @@ if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LDFLAGS)
     add_subdirectory(src/multimedia)
 endif()
 
-add_subdirectory(examples)
 add_subdirectory(test)

@@ -84,16 +84,7 @@ public:
     }
 
     bool prepare(xint64 *timeout) override {
-        iUnixDevice* unixDev = unixDevice();
-        if (unixDev && unixDev->role() == iINCDevice::ROLE_CLIENT && unixDev->bytesAvailable() > 0) {
-            *timeout = 0;
-            return true;
-        }
-
-        if (*timeout < 0 || *timeout > 100 * 1000000) {
-            *timeout = 100 * 1000000;
-        }
-
+        *timeout = 10 * 1000000;
         return false;
     }
 
@@ -106,35 +97,21 @@ public:
         if (!isAttached()) return true;
 
         iUnixDevice* unixDev = unixDevice();
-        if (!unixDev) return false;
+        IX_ASSERT(unixDev);
 
         bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
         bool hasError = (m_pollFd.revents & (IX_IO_ERR | IX_IO_HUP)) != 0;
-        if (hasError) {
-            ilog_warn("Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
-        }
 
-        if (unixDev->role() == iINCDevice::ROLE_CLIENT && writeReady) {
-            m_pollFd.revents = 0;
-            int sockError = unixDev->getSocketError();
-
-            if (0 == sockError) {
-                unixDev->handleConnectionComplete();
-            } else {
-                ilog_error("Connection failed:", strerror(sockError));
-                IEMIT unixDev->errorOccurred(INC_ERROR_CONNECTION_FAILED);
-                return false;
-            }
-
-            return true;
+        if (unixDev->role() == iINCDevice::ROLE_CLIENT && writeReady && !unixDev->isOpen()) {
+            unixDev->handleConnectionComplete();
         }
 
         if (unixDev->role() == iINCDevice::ROLE_SERVER && readReady) {
             unixDev->acceptConnection();
         }
 
-        if (unixDev->role() == iINCDevice::ROLE_CLIENT && readReady) {
+        if (readReady) {
             IEMIT unixDev->readyRead();
         }
 
@@ -143,6 +120,12 @@ public:
         }
 
         m_pollFd.revents = 0;
+
+        if (hasError) {
+            ilog_warn("Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
+            IEMIT unixDev->errorOccurred(INC_ERROR_CHANNEL);
+            return false;
+        }
 
         return true;
     }

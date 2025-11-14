@@ -125,11 +125,16 @@ add_executable(${UT_TARGET} ${ALL_TEST_SOURCES})
 # Note: NOT linking gtest_main because we have custom main in ut_main.cpp
 target_link_libraries(${UT_TARGET}
     icore
-    imultimedia
     GTest::gmock
     GTest::gtest
     pthread
 )
+
+# Link multimedia library if available (depends on GStreamer)
+pkg_check_modules(GST_PKG gstreamer-1.0)
+if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LDFLAGS)
+    target_link_libraries(${UT_TARGET} imultimedia)
+endif()
 
 # Enable testing
 enable_testing()

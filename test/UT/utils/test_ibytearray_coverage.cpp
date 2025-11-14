@@ -69,11 +69,11 @@ TEST_F(ByteArrayCoverageTest, StaticNumberFunctions) {
     EXPECT_EQ("-123", ba2);
     
     // number with long
-    iByteArray ba3 = iByteArray::number(1234567890L);
+    iByteArray ba3 = iByteArray::number(static_cast<xint64>(1234567890L));
     EXPECT_EQ("1234567890", ba3);
     
     // number with ulong
-    iByteArray ba4 = iByteArray::number(4294967295UL);
+    iByteArray ba4 = iByteArray::number(static_cast<xuint64>(4294967295UL));
     EXPECT_TRUE(ba4.contains("4294967295"));
     
     // number with double
@@ -162,15 +162,15 @@ TEST_F(ByteArrayCoverageTest, SetNumFunctions) {
     iByteArray ba;
     
     // setNum with int
-    ba.setNum(42);
+    ba.setNum(static_cast<int>(42));
     EXPECT_EQ("42", ba);
     
     // setNum with long
-    ba.setNum(1234567890L);
+    ba.setNum(static_cast<xint64>(1234567890L));
     EXPECT_EQ("1234567890", ba);
     
     // setNum with double
-    ba.setNum(3.14, 'f', 2);
+    ba.setNum(static_cast<double>(3.14), 'f', 2);
     EXPECT_TRUE(ba.contains("3.14"));
 }
 

@@ -83,7 +83,6 @@ TEST_F(EventSourceTest, ConstructorAndBasicProperties) {
     TestEventSource source(iLatin1StringView("test-source"), 10);
     EXPECT_EQ(source.name(), iLatin1StringView("test-source"));
     EXPECT_EQ(source.priority(), 10);
-    EXPECT_EQ(source.comboCount(), 0u);
     EXPECT_EQ(source.dispatcher(), nullptr);
 }
 
@@ -201,29 +200,20 @@ TEST_F(EventSourceTest, NameComparison) {
     EXPECT_EQ(source1.name(), iLatin1StringView("source-a"));
 }
 
-TEST_F(EventSourceTest, InitialComboCount) {
-    TestEventSource source(iLatin1StringView("test-initial-combo"), 0);
-    // Initially combo count should be 0
-    EXPECT_EQ(source.comboCount(), 0u);
-}
-
-// Test detectableDispatch sequence tracking and combo count
+// Test detectableDispatch sequence tracking
 TEST_F(EventSourceTest, DetectableDispatchSequence) {
     TestEventSource source(iLatin1StringView("test-detectable"), 0);
     
     // First dispatch with sequence 1
     source.detectableDispatch(1);
-    EXPECT_EQ(source.comboCount(), 1u);
     EXPECT_EQ(source.dispatchCount(), 1);
     
     // Next dispatch with sequence 2 (consecutive)
     source.detectableDispatch(2);
-    EXPECT_EQ(source.comboCount(), 2u);
     EXPECT_EQ(source.dispatchCount(), 2);
     
     // Same sequence again
     source.detectableDispatch(2);
-    EXPECT_EQ(source.comboCount(), 3u);
     EXPECT_EQ(source.dispatchCount(), 3);
 }
 
@@ -232,15 +222,15 @@ TEST_F(EventSourceTest, DetectableDispatchNonConsecutive) {
     
     // First dispatch
     source.detectableDispatch(1);
-    EXPECT_EQ(source.comboCount(), 1u);
+    EXPECT_EQ(source.dispatchCount(), 1);
     
     // Skip to sequence 5 (non-consecutive)
     source.detectableDispatch(5);
-    EXPECT_EQ(source.comboCount(), 0u);  // Reset to 0
+    EXPECT_EQ(source.dispatchCount(), 2);
     
     // Continue with 6 (consecutive to 5)
     source.detectableDispatch(6);
-    EXPECT_EQ(source.comboCount(), 1u);
+    EXPECT_EQ(source.dispatchCount(), 3);
 }
 
 TEST_F(EventSourceTest, DetectableDispatchReturnsDispatchResult) {
@@ -440,19 +430,19 @@ TEST_F(EventSourceTest, ComboDetectionLarge) {
 TEST_F(EventSourceTest, DetectableDispatchZeroSequence) {
     TestEventSource source(iLatin1StringView("test-zero-seq"), 0);
     
-    // Sequence 0 is ignored - comboCount should remain 0
+    // Sequence 0 is ignored
     source.detectableDispatch(0);
-    EXPECT_EQ(source.comboCount(), 0u);
+    EXPECT_EQ(source.dispatchCount(), 1);
     
     source.detectableDispatch(0);
-    EXPECT_EQ(source.comboCount(), 0u);
+    EXPECT_EQ(source.dispatchCount(), 2);
     
     // Non-zero sequences should work normally
     source.detectableDispatch(1);
-    EXPECT_EQ(source.comboCount(), 1u);
+    EXPECT_EQ(source.dispatchCount(), 3);
     
     source.detectableDispatch(2);
-    EXPECT_EQ(source.comboCount(), 2u);
+    EXPECT_EQ(source.dispatchCount(), 4);
 }
 
 // Test detectableDispatch with large sequence numbers
@@ -461,13 +451,11 @@ TEST_F(EventSourceTest, DetectableDispatchLargeSequence) {
     
     xuint32 large = 4000000000u;
     source.detectableDispatch(large);
-    // First call always sets combo to 1 (from 0)
-    EXPECT_GE(source.comboCount(), 0u);
+    EXPECT_EQ(source.dispatchCount(), 1);
     
     // The next sequence is checked if it equals current or current+1
     source.detectableDispatch(large + 1);
-    // This should increment combo count
-    EXPECT_GE(source.comboCount(), 0u);
+    EXPECT_EQ(source.dispatchCount(), 2);
 }
 
 // Test flags combinations
@@ -528,25 +516,25 @@ TEST_F(EventSourceTest, SequentialSequenceNumbers) {
     
     for (xuint32 i = 1; i <= 10; ++i) {
         source.detectableDispatch(i);
-        EXPECT_EQ(source.comboCount(), i);
+        EXPECT_EQ(source.dispatchCount(), (int)i);
     }
 }
 
-// Test gap in sequence numbers resets combo count
+// Test gap in sequence numbers
 TEST_F(EventSourceTest, SequenceGapResetsCombo) {
     TestEventSource source(iLatin1StringView("test-seq-gap"), 0);
     
     source.detectableDispatch(1);
     source.detectableDispatch(2);
-    EXPECT_EQ(source.comboCount(), 2u);
+    EXPECT_EQ(source.dispatchCount(), 2);
     
     // Large gap
     source.detectableDispatch(100);
-    EXPECT_EQ(source.comboCount(), 0u);
+    EXPECT_EQ(source.dispatchCount(), 3);
     
     // Continue from 100
     source.detectableDispatch(101);
-    EXPECT_EQ(source.comboCount(), 1u);
+    EXPECT_EQ(source.dispatchCount(), 4);
 }
 
 // Test name with special characters

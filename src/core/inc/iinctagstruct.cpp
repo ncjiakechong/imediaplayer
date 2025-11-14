@@ -524,7 +524,7 @@ iString iINCTagStruct::dump() const
                     
                     if (tag == TAG_STRING && tempIndex + length <= static_cast<xsizetype>(m_data.size())) {
                         iString str = iString::fromUtf8(iByteArrayView(m_data).mid(tempIndex, length));
-                        result += iString::asprintf("\"%s\"\n", str.constData());
+                        result += iString::asprintf("\"%s\"\n", str.toUtf8().constData());
                         tempIndex += length;
                     } else if (tag == TAG_BYTES) {
                         result += iString::asprintf("<%u bytes>\n", length);

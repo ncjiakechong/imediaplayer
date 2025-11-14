@@ -204,8 +204,8 @@ void iThread::exit(int retCode)
     m_returnCode = retCode;
     m_data->quitNow = true;
 
-    for (std::list<iEventLoop *>::iterator it = m_data->eventLoops.begin();
-         it != m_data->eventLoops.end(); ++it) {
+    iMutex::ScopedLock  _lockData(m_data->postEventList.mutex);
+    for (std::list<iEventLoop *>::iterator it = m_data->eventLoops.begin(); it != m_data->eventLoops.end(); ++it) {
         iEventLoop* eventLoop = *it;
         eventLoop->exit(retCode);
     }

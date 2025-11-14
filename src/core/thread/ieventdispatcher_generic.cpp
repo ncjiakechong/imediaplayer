@@ -128,12 +128,11 @@ iEventDispatcher_generic::~iEventDispatcher_generic()
     for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
         std::list<iEventSource*>& list = mapIt->second;
 
-        std::list<iEventSource*>::iterator listIt = list.begin();
-        while (listIt != list.end()) {
-            iEventSource* source = *listIt;
-            listIt = list.erase(listIt);
-            source->detach();
-            source->deref();
+        while (!list.empty()) {
+            iEventSource* source = list.front();
+            int result = source->detach();
+            IX_ASSERT(result == 0);
+            (void) result;
         }
     }
 
@@ -236,7 +235,7 @@ xint64 iEventDispatcher_generic::remainingTimeNSecs(int timerId)
 int iEventDispatcher_generic::addEventSource(iEventSource* source)
 {
     if (thread() != iThread::currentThread()) {
-        ilog_warn("source cannot be added from another thread");
+        ilog_warn("source ", source->name(), " cannot be added from another thread");
         return -1;
     }
 
@@ -257,7 +256,7 @@ int iEventDispatcher_generic::addEventSource(iEventSource* source)
 int iEventDispatcher_generic::removeEventSource(iEventSource* source)
 {
     if (thread() != iThread::currentThread()) {
-        ilog_warn("source cannot be removed from another thread");
+        ilog_warn("source ", source->name(), " cannot be removed from another thread");
         return -1;
     }
 
@@ -532,22 +531,11 @@ void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingD
         iEventSource* source = *it;
 
         source->setFlags(source->flags() & ~IX_EVENT_SOURCE_READY);
-
-        need_deattch = !source->detectableDispatch(m_nextSeq);
-
-        if (source->comboCount() > 200 && !(source->comboCount() & 0x0F) 
-            && (m_postSource != source) && (m_timerSource != source)) {
-            ilog_warn("source ", source->name(), " combo count ", source->comboCount(), " many times and maybe detach later to avoid CPU HANG");
-            source->comboDetected(source->comboCount());
-        }
+        need_deattch = !source->detectableDispatch(((source == m_postSource) || (source == m_timerSource)) ? 0 : m_nextSeq);
 
         /* Note: this depends on the fact that we can't switch
-         * sources from one main context to another
-         */
-        if (need_deattch 
-            || ((source->comboCount() >= 1000) 
-                && (m_postSource != source) 
-                && (m_timerSource != source)))
+         * sources from one main context to another */
+        if (need_deattch)
             source->detach();
 
         source->deref();

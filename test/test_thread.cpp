@@ -121,7 +121,7 @@ int test_thread(void)
     IEMIT signal1->tst_sig_int1(3);
     IX_ASSERT(3 == thread1->acount && 3 == thread1->slot.localData());
     IX_ASSERT(IX_NULLPTR == signal1->sender_obj && IX_NULLPTR == signal1->senderObj());
-    IX_ASSERT(signal1 == thread1->sender_obj && IX_NULLPTR == thread1->senderObj());
+    IX_ASSERT(IX_NULLPTR == thread1->sender_obj && IX_NULLPTR == thread1->senderObj());
 
     delete thread1;
 

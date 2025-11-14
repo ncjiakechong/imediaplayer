@@ -2,9 +2,6 @@
 // Tests cover: Unicode operations, advanced string manipulation, performance
 
 #include <gtest/gtest.h>
-
-#define ILOG_TAG "iStringExtendedTest"
-
 #include "core/utils/istring.h"
 #include <core/utils/ichar.h>
 
