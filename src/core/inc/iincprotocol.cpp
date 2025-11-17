@@ -85,7 +85,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& m
 {
     // Create operation for tracking this request
     xuint32 seqNum = msg.sequenceNumber();
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(this, seqNum));
+    iSharedDataPointer<iINCOperation> op(new iINCOperation(seqNum, this));
     op->ref(true);
 
     invokeMethod(this, &iINCProtocol::sendMessageImpl, msg, op.data());

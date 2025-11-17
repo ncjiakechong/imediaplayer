@@ -17,7 +17,7 @@
 
 namespace iShell {
 
-iINCOperation::iINCOperation(iObject* parent, xuint32 seqNum)
+iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent)
     : iSharedData()
     , m_seqNum(seqNum)
     , m_state(STATE_RUNNING)

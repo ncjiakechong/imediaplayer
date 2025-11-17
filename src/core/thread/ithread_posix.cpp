@@ -256,12 +256,13 @@ void iThreadImpl::internalThreadFunc()
         thread->m_finished = true;
         thread->m_isInFinish = false;
         thread->m_doneCond.broadcast();
+
+        // Clear thread-local data before thread exits to prevent
+        // dangling pointers when thread stack is reused
+        clear_thread_data();
+        data->deref();
         thread->m_mutex.unlock();
     }
-    
-    // Clear thread-local data before thread exits to prevent
-    // dangling pointers when thread stack is reused
-    clear_thread_data();
 }
 
 static void* __internal_thread_func(void *userdata)

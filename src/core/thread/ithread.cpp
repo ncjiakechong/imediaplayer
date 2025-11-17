@@ -43,9 +43,8 @@ iThreadData::~iThreadData()
         iPostEvent& pe = *it;
         iEvent* event = pe.event;
         pe.event = IX_NULLPTR;
-        if (pe.receiver) --pe.receiver->m_postedEvents;
+        if (event && pe.receiver) --pe.receiver->m_postedEvents;
         delete event;
-
     }
 }
 

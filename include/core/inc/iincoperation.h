@@ -70,7 +70,7 @@ public:
     void setFinishedCallback(FinishedCallback callback, void* userData = IX_NULLPTR);
 
 private:
-    iINCOperation(iObject* parent, xuint32 seqNum);
+    iINCOperation(xuint32 seqNum, iObject* parent);
     virtual ~iINCOperation();
 
     void setState(State st);
