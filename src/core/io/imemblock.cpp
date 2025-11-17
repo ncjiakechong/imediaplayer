@@ -333,6 +333,7 @@ iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t element
     IX_ASSERT(headerSize > 0);
 
     xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
+    xsizetype capacity = (allocSize - headerSize) / elementSize;   // Element capacity (without extra bytes)
     allocSize = reserveExtraBytes(allocSize);
     if ((allocSize < 0) || (allocSize - (xsizetype)headerSize) < 0) {  // handle overflow. cannot allocate reliably
         return IX_NULLPTR;
@@ -340,7 +341,7 @@ iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t element
 
     void* slot = ::malloc(allocSize);
     void* ptr = reinterpret_cast<void*>((xuintptr(slot) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1));
-    block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, options, ptr, allocSize - headerSize, (allocSize - headerSize) / elementSize);
+    block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, options, ptr, allocSize - headerSize, capacity);
 
     return block;
 }
@@ -366,6 +367,7 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t eleme
     IX_ASSERT(headerSize > 0);
 
     xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
+    xsizetype capacity = (allocSize - headerSize) / elementSize;   // Element capacity (without extra bytes)
     allocSize = reserveExtraBytes(allocSize);
     if ((allocSize < 0) || ((allocSize - (xsizetype)headerSize) < 0) || (allocSize > pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
         return IX_NULLPTR;
@@ -378,7 +380,7 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t eleme
 
         void* ptr = reinterpret_cast<void*>((xuintptr(slot) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1));
         iMemBlock* block = new (pool->slotData(slot)) iMemBlock(pool, MEMBLOCK_POOL, DefaultAllocationFlags,
-                                                        ptr, allocSize - headerSize, (allocSize - headerSize) / elementSize);
+                                                        ptr, allocSize - headerSize, capacity);
         return block;
     } else if (pool->m_blockSize >= (allocSize - headerSize)) {
         iMemPool::Slot* slot = pool->allocateSlot();
@@ -432,6 +434,7 @@ iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t elementCount, size_t e
 
     size_t headerSize = sizeof(AlignedMemBlock);
     xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
+    xsizetype capacity = (allocSize - headerSize) / elementSize;   // Element capacity (without extra bytes)
     allocSize = reserveExtraBytes(allocSize);
     if (((allocSize - headerSize) < 0) /*|| (allocSize > block->m_pool->m_blockSize)*/) {  // handle overflow. cannot allocate reliably
         return IX_NULLPTR;
@@ -445,7 +448,7 @@ iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t elementCount, size_t e
     newBlock->m_data = reinterpret_cast<char *>(newBlock) + offset;
     newBlock->m_options = options;
     newBlock->m_length = allocSize - headerSize;
-	newBlock->m_capacity = (allocSize - headerSize) / elementSize;
+	newBlock->m_capacity = capacity;
     newBlock->statAdd();
 
     return newBlock;
