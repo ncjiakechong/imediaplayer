@@ -52,6 +52,7 @@ public:
         std::unique_lock<std::mutex> lk(_mutex);
         mutex.unlock();
         _cond.wait(lk);
+        lk.unlock();
         mutex.lock();
 
         return 0;
@@ -64,6 +65,7 @@ public:
         std::unique_lock<std::mutex> lk(_mutex);
         mutex.unlock();
         retValue = _cond.wait_for(lk, std::chrono::milliseconds(milliseconds));
+        lk.unlock();
         mutex.lock();
 
         return (std::cv_status::no_timeout == retValue) ? 0 : -1;
@@ -125,8 +127,8 @@ public:
         pthread_mutex_lock(&_mutex);
         mutex.unlock();
         retValue = pthread_cond_wait(&_cond, &_mutex);
-        mutex.lock();
         pthread_mutex_unlock(&_mutex);
+        mutex.lock();
 
         return retValue;
     }
@@ -149,9 +151,8 @@ public:
             abstime.tv_sec++;
         }
         retValue = pthread_cond_timedwait(&_cond, &_mutex, &abstime);
-
-        mutex.lock();
         pthread_mutex_unlock(&_mutex);
+        mutex.lock();
 
         return retValue;
     }

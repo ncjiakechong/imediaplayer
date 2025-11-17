@@ -9,6 +9,7 @@
 #include <core/thread/ithread.h>
 #include <thread>
 #include <chrono>
+#include <atomic>
 
 using namespace iShell;
 
@@ -177,11 +178,11 @@ TEST_F(SemaphoreTest, ProducerConsumer) {
  */
 TEST_F(SemaphoreTest, MultipleThreads) {
     iSemaphore sem(3);
-    int counter = 0;
+    std::atomic<int> counter(0);  // Use atomic to prevent data race
     
     auto worker = [&]() {
         sem.acquire();
-        ++counter;
+        counter.fetch_add(1, std::memory_order_relaxed);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         sem.release();
     };
@@ -196,7 +197,7 @@ TEST_F(SemaphoreTest, MultipleThreads) {
     t3.join();
     t4.join();
     
-    EXPECT_EQ(counter, 4);
+    EXPECT_EQ(counter.load(), 4);
     EXPECT_EQ(sem.available(), 3);
 }
 

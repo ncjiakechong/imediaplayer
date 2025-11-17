@@ -118,14 +118,14 @@ void iINCServer::close()
         iObject::disconnect(conn, IX_NULLPTR, this, IX_NULLPTR);
         conn->moveToThread(thread());
         conn->close();
-        delete conn;
+        conn->deleteLater();
     }
     
     // Close listening device - delete directly
     if (m_listenDevice) {
         iObject::disconnect(m_listenDevice, IX_NULLPTR, this, IX_NULLPTR);
         m_listenDevice->moveToThread(thread());
-        delete m_listenDevice;
+        m_listenDevice->deleteLater();
         m_listenDevice = IX_NULLPTR;
     }
     

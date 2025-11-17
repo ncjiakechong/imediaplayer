@@ -174,7 +174,7 @@ void iINCContext::close()
         iObject::disconnect(m_protocol->device(), IX_NULLPTR, this, IX_NULLPTR);
         m_protocol->moveToThread(thread());
 
-        delete m_protocol;
+        m_protocol->deleteLater();
         m_protocol = IX_NULLPTR;
     }
     

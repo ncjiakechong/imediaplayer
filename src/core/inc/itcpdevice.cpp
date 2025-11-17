@@ -626,9 +626,6 @@ void iTcpDevice::handleConnectionComplete()
     
     ilog_info("Connected to", m_peerAddr, ":", m_peerPort);
     IEMIT connected();
-    
-    // Don't manually trigger bytesWritten here
-    // Let the EventLoop naturally trigger POLLOUT event to send queued messages
 }
 
 } // namespace iShell
