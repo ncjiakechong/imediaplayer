@@ -51,7 +51,7 @@ public:
     // --- Common Methods ---
     
     /// Get peer address (returns socket path)
-    iString peerAddress() const override { return m_socketPath; }
+    iString peerAddress() const IX_OVERRIDE { return m_socketPath; }
     
     /// Get socket path
     iString socketPath() const { return m_socketPath; }
@@ -62,12 +62,12 @@ public:
     /// Start EventSource monitoring
     /// Must be called AFTER connecting signals to avoid race conditions
     /// @param dispatcher The EventDispatcher to attach to. Must not be nullptr
-    bool startEventMonitoring(iEventDispatcher* dispatcher) override;
+    bool startEventMonitoring(iEventDispatcher* dispatcher) IX_OVERRIDE;
 
     /// Configure event monitoring capabilities
     /// @param read Enable/disable read event monitoring
     /// @param write Enable/disable write event monitoring
-    void configEventAbility(bool read, bool write) override;
+    void configEventAbility(bool read, bool write) IX_OVERRIDE;
 
     /// Set socket to non-blocking mode
     bool setNonBlocking(bool nonBlocking);
@@ -79,13 +79,13 @@ public:
     void handleConnectionComplete();
 
     // iIODevice interface
-    bool isSequential() const override { return true; }
-    xint64 bytesAvailable() const override;
-    void close() override;
+    bool isSequential() const IX_OVERRIDE { return true; }
+    xint64 bytesAvailable() const IX_OVERRIDE;
+    void close() IX_OVERRIDE;
 
 protected:
-    iByteArray readData(xint64 maxlen, xint64* readErr) override;
-    xint64 writeData(const iByteArray& data) override;
+    iByteArray readData(xint64 maxlen, xint64* readErr) IX_OVERRIDE;
+    xint64 writeData(const iByteArray& data) IX_OVERRIDE;
 
 private:
     bool createSocket();

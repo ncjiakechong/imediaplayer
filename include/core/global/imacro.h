@@ -304,6 +304,12 @@
 #define IX_CONSTEXPR const
 #endif
 
+#ifdef IX_HAVE_CXX11
+#define IX_OVERRIDE override
+#else
+#define IX_OVERRIDE
+#endif
+
 /** Avoid "unused parameter" warnings */
 #define IX_UNUSED(x) (void)x
 

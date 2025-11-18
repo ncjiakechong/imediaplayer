@@ -66,7 +66,7 @@ public:
 protected:
     iCoreApplication(iCoreApplicationPrivate* priv);
 
-    virtual bool event(iEvent *);
+    virtual bool event(iEvent *) IX_OVERRIDE;
     virtual bool notify(iObject *, iEvent *);
 
     virtual bool compressEvent(iEvent *, iObject *receiver, std::list<iPostEvent> *);

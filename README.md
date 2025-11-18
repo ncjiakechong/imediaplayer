@@ -10,7 +10,7 @@
 A lightweight, high-performance C++ multimedia framework inspired by Qt, designed **without Qt dependencies**.
 Features a complete object system with signals/slots, zero-copy IPC networking, and GStreamer-based media playback.
 
-**Status**: Production Ready | **Test Coverage**: 51.56% (Core Module) | **Test Pass Rate**: 99.7% (1776/1781)
+**Status**: Production Ready | **Test Coverage**: 61.07% (Core Module) | **Test Pass Rate**: 99.7% (1778/1781)
 
 ## 🌟 Key Features
 

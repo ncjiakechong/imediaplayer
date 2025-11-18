@@ -6782,4 +6782,25 @@ iString iString::toHtmlEscaped() const
     return rich;
 }
 
+bool iLatin1StringView::operator==(const iString &s) const
+{ return s == *this; }
+bool iLatin1StringView::operator>(const iString &s) const
+{ return s < *this; }
+bool iLatin1StringView::operator<(const iString &s) const
+{ return s > *this; }
+
+bool iLatin1StringView::operator==(const char *s) const
+{ return iString::fromUtf8(s, -1) == *this; }
+bool iLatin1StringView::operator<(const char *s) const
+{ return iString::fromUtf8(s, -1) > *this; }
+bool iLatin1StringView::operator>(const char *s) const
+{ return iString::fromUtf8(s, -1) < *this; }
+
+bool iLatin1StringView::operator==(const iByteArray &s) const
+{ return iString::fromUtf8(s) == *this; }
+bool iLatin1StringView::operator<(const iByteArray &s) const
+{ return iString::fromUtf8(s) > *this; }
+bool iLatin1StringView::operator>(const iByteArray &s) const
+{ return iString::fromUtf8(s) < *this; }
+
 } // namespace iShell

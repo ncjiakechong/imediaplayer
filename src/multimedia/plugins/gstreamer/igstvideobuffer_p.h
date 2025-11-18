@@ -45,20 +45,20 @@ public:
                     HandleType handleType, const iVariant &handle);
 #endif
 
-    ~iGstVideoBuffer() override;
+    ~iGstVideoBuffer() IX_OVERRIDE;
 
     GstBuffer *buffer() const { return m_buffer; }
-    MapMode mapMode() const override;
+    MapMode mapMode() const IX_OVERRIDE;
 
     #if GST_CHECK_VERSION(1,0,0)
-    int map(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) override;
+    int map(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) IX_OVERRIDE;
     #else
-    uchar *map(MapMode mode, int *numBytes, int *bytesPerLine) override;
+    uchar *map(MapMode mode, int *numBytes, int *bytesPerLine) IX_OVERRIDE;
     #endif
 
-    void unmap() override;
+    void unmap() IX_OVERRIDE;
 
-    iVariant handle() const override { return m_handle; }
+    iVariant handle() const IX_OVERRIDE { return m_handle; }
 private:
     #if GST_CHECK_VERSION(1,0,0)
     GstVideoInfo m_videoInfo;

@@ -28,28 +28,28 @@ public:
     explicit iEventDispatcher_Glib(iObject *parent = IX_NULLPTR);
     ~iEventDispatcher_Glib();
 
-    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags);
+    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags) IX_OVERRIDE;
 
-    virtual void reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata);
-    virtual bool unregisterTimer(int timerId);
-    virtual bool unregisterTimers(iObject *object, bool releaseId);
-    virtual std::list<TimerInfo> registeredTimers(iObject *object) const;
+    virtual void reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata) IX_OVERRIDE;
+    virtual bool unregisterTimer(int timerId) IX_OVERRIDE;
+    virtual bool unregisterTimers(iObject *object, bool releaseId) IX_OVERRIDE;
+    virtual std::list<TimerInfo> registeredTimers(iObject *object) const IX_OVERRIDE;
 
-    virtual xint64 remainingTimeNSecs(int timerId);
+    virtual xint64 remainingTimeNSecs(int timerId) IX_OVERRIDE;
 
-    virtual void wakeUp();
-    virtual void interrupt();
+    virtual void wakeUp() IX_OVERRIDE;
+    virtual void interrupt() IX_OVERRIDE;
 
     void runTimersOnceWithNormalPriority();
     bool inProcess() const { return m_inProcess; }
     xuint32 sequence() const { return m_nextSeq; }
 
 protected:
-    virtual int addEventSource(iEventSource* source);
-    virtual int removeEventSource(iEventSource* source);
-    virtual int addPoll(iPollFD* fd, iEventSource* source);
-    virtual int removePoll(iPollFD* fd, iEventSource* source);
-    virtual int updatePoll(iPollFD* fd, iEventSource* source);
+    virtual int addEventSource(iEventSource* source) IX_OVERRIDE;
+    virtual int removeEventSource(iEventSource* source) IX_OVERRIDE;
+    virtual int addPoll(iPollFD* fd, iEventSource* source) IX_OVERRIDE;
+    virtual int removePoll(iPollFD* fd, iEventSource* source) IX_OVERRIDE;
+    virtual int updatePoll(iPollFD* fd, iEventSource* source) IX_OVERRIDE;
 
 protected:
     struct iPollRec

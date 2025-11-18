@@ -106,7 +106,7 @@ public:
     void reconnecting(xint32 attemptCount) ISIGNAL(reconnecting, attemptCount);
 
 protected:
-    bool event(iEvent* e) override;
+    bool event(iEvent* e) IX_OVERRIDE;
 
     /// Call remote method asynchronously (protected - for subclass use)
     /// @param method Method name

@@ -101,7 +101,7 @@ public:
     iSingleShotTimer(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn);
 
 protected:
-    bool event(iEvent *e);
+    bool event(iEvent *e) IX_OVERRIDE;
 };
 
 iSingleShotTimer::iSingleShotTimer(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn)

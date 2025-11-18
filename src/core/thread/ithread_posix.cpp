@@ -85,7 +85,7 @@ public:
     ~iAdoptedThread();
 
 protected:
-    void run() {
+    void run() IX_OVERRIDE {
         // this function should never be called
         ilog_error("Internal error, this implementation should never be called.");
     }

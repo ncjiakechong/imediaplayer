@@ -129,15 +129,15 @@ public:
             free(mBuffer);
     }
 
-    void release() override {delete this;}
-    iAudioFormat format() const override {return mFormat;}
-    xint64 startTime() const override {return mStartTime;}
-    int frameCount() const override {return mFrameCount;}
+    void release() IX_OVERRIDE {delete this;}
+    iAudioFormat format() const IX_OVERRIDE {return mFormat;}
+    xint64 startTime() const IX_OVERRIDE {return mStartTime;}
+    int frameCount() const IX_OVERRIDE {return mFrameCount;}
 
-    void *constData() const override {return mBuffer;}
+    void *constData() const IX_OVERRIDE {return mBuffer;}
 
-    void *writableData() override {return mBuffer;}
-    iAbstractAudioBuffer *clone() const override
+    void *writableData() IX_OVERRIDE {return mBuffer;}
+    iAbstractAudioBuffer *clone() const IX_OVERRIDE
     {
         return new iMemoryAudioBufferProvider(mBuffer, mFrameCount, mFormat, mStartTime);
     }

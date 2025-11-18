@@ -62,7 +62,7 @@ public:
         IX_ASSERT(10 == userdata);
     }
 
-    virtual bool event(iEvent *e) {
+    virtual bool event(iEvent *e) IX_OVERRIDE {
         if (e->type() != iEvent::Timer) {
             return iObject::event(e);
         }

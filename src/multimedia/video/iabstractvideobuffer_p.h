@@ -41,7 +41,7 @@ class iAbstractPlanarVideoBufferPrivate : iAbstractVideoBufferPrivate
 public:
     iAbstractPlanarVideoBufferPrivate() {}
 
-    int map(iAbstractVideoBuffer::MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) override;
+    int map(iAbstractVideoBuffer::MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) IX_OVERRIDE;
 
 private:
     friend class iAbstractPlanarVideoBuffer;
