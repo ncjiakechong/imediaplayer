@@ -35,7 +35,7 @@ public:
     void exit(int returnCode = 0);
 
 protected:
-    virtual bool event(iEvent *e);
+    virtual bool event(iEvent *e) IX_OVERRIDE;
 
     bool m_inExec;
     iAtomicCounter<int> m_exit; // bool

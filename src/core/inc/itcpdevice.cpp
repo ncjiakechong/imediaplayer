@@ -85,17 +85,17 @@ public:
         updatePoll(&m_pollFd);
     }
 
-    bool prepare(xint64 *timeout) override {
+    bool prepare(xint64 *timeout) IX_OVERRIDE {
         *timeout = 10 * 1000000;
         return false;
     }
 
-    bool check() override {
+    bool check() IX_OVERRIDE {
         bool hasError = (m_pollFd.revents & (IX_IO_ERR | IX_IO_HUP)) != 0;
         return (m_pollFd.revents & m_pollFd.events) || hasError;
     }
 
-    bool dispatch() override {
+    bool dispatch() IX_OVERRIDE {
         if (!isAttached()) return true;
 
         iTcpDevice* tcp = tcpDevice();

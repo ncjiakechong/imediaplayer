@@ -86,7 +86,7 @@ public: //slot
     void timeout(xintptr userdata) ISIGNAL(timeout, userdata);
 
 protected:
-    virtual bool event(iEvent *);
+    virtual bool event(iEvent *) IX_OVERRIDE;
 
 private:
     static void singleShotImpl(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn);

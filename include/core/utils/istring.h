@@ -828,27 +828,6 @@ inline bool operator<=(iLatin1StringView s1, iLatin1StringView s2)
 inline bool operator>=(iLatin1StringView s1, iLatin1StringView s2)
 { return !operator<(s1, s2); }
 
-inline bool iLatin1StringView::operator==(const iString &s) const
-{ return s == *this; }
-inline bool iLatin1StringView::operator>(const iString &s) const
-{ return s < *this; }
-inline bool iLatin1StringView::operator<(const iString &s) const
-{ return s > *this; }
-
-inline bool iLatin1StringView::operator==(const char *s) const
-{ return iString::fromUtf8(s, -1) == *this; }
-inline bool iLatin1StringView::operator<(const char *s) const
-{ return iString::fromUtf8(s, -1) > *this; }
-inline bool iLatin1StringView::operator>(const char *s) const
-{ return iString::fromUtf8(s, -1) < *this; }
-
-inline bool iLatin1StringView::operator==(const iByteArray &s) const
-{ return iString::fromUtf8(s) == *this; }
-inline bool iLatin1StringView::operator<(const iByteArray &s) const
-{ return iString::fromUtf8(s) > *this; }
-inline bool iLatin1StringView::operator>(const iByteArray &s) const
-{ return iString::fromUtf8(s) < *this; }
-
 inline bool iString::operator==(const char *s) const
 { return iString::compare_helper(constData(), size(), s, -1) == 0; }
 inline bool iString::operator<(const char *s) const

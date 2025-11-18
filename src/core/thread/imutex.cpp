@@ -92,10 +92,10 @@ public:
     virtual ~platform_lock_imp()
     {}
 
-    virtual int lockImpl()
+    virtual int lockImpl() IX_OVERRIDE
     { return m_mutex->lock(); }
 
-    virtual int tryLockImpl(long milliseconds)
+    virtual int tryLockImpl(long milliseconds) IX_OVERRIDE
     {
         if (0 == milliseconds) {
             return m_mutex->tryLock();
@@ -104,7 +104,7 @@ public:
         return m_mutex->tryLock(milliseconds);
     }
 
-    virtual int unlockImpl()
+    virtual int unlockImpl() IX_OVERRIDE
     { return m_mutex->unlock(); }
 
 private:
@@ -135,12 +135,12 @@ public:
         pthread_mutex_destroy(&m_mutex);
     }
 
-    virtual int lockImpl()
+    virtual int lockImpl() IX_OVERRIDE
     {
         return pthread_mutex_lock(&m_mutex);
     }
 
-    virtual int tryLockImpl(long milliseconds)
+    virtual int tryLockImpl(long milliseconds) IX_OVERRIDE
     {
         if (0 == milliseconds) {
             return pthread_mutex_trylock(&m_mutex);
@@ -166,7 +166,7 @@ public:
         return rc;
     }
 
-    virtual int unlockImpl()
+    virtual int unlockImpl() IX_OVERRIDE
     {
         return pthread_mutex_unlock(&m_mutex);
     }

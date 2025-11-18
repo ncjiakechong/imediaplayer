@@ -32,10 +32,10 @@ public:
     iMemoryVideoBuffer(const iByteArray &data, int bytesPerLine);
     ~iMemoryVideoBuffer();
 
-    MapMode mapMode() const override;
+    MapMode mapMode() const IX_OVERRIDE;
 
-    uchar *map(MapMode mode, int *numBytes, int *bytesPerLine) override;
-    void unmap() override;
+    uchar *map(MapMode mode, int *numBytes, int *bytesPerLine) IX_OVERRIDE;
+    void unmap() IX_OVERRIDE;
 
 protected:
     int m_bytesPerLine;

@@ -32,7 +32,7 @@ public:
         , serialNumber(1)
         , lastSerialNumber(0) {}
 
-    virtual bool prepare(xint64 *)
+    virtual bool prepare(xint64 *) IX_OVERRIDE
     {
         iThreadData *data = iThreadData::current();
         if (!data)
@@ -42,12 +42,12 @@ public:
         return ((!canWait) || (serialNumber.value() != lastSerialNumber));
     }
 
-    virtual bool check()
+    virtual bool check() IX_OVERRIDE
     {
         return prepare(IX_NULLPTR);
     }
 
-    virtual bool dispatch()
+    virtual bool dispatch() IX_OVERRIDE
     {
         lastSerialNumber = serialNumber.value();
         iCoreApplication::sendPostedEvents(IX_NULLPTR, 0);
@@ -63,7 +63,7 @@ class iTimerEventSource : public iEventSource
 public:
     iTimerEventSource(int priority) : iEventSource(iLatin1StringView("iTimerEventSource"), priority) {}
 
-    virtual bool prepare(xint64 *timeout)
+    virtual bool prepare(xint64 *timeout) IX_OVERRIDE
     {
         xint64 __dummy_timeout = -1;
         if (timerList.timerWait(__dummy_timeout)) {
@@ -75,13 +75,13 @@ public:
         return (*timeout == 0);
     }
 
-    virtual bool check()
+    virtual bool check() IX_OVERRIDE
     {
         timerList.updateCurrentTime();
         return timerList.existTimeout();
     }
 
-    virtual bool dispatch()
+    virtual bool dispatch() IX_OVERRIDE
     {
         timerList.activateTimers();
         return true;

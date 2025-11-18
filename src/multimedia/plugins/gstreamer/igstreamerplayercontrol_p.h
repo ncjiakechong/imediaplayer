@@ -38,40 +38,40 @@ public:
 
     iGstreamerPlayerSession *session() { return m_session; }
 
-    iMediaPlayer::State state() const override;
-    iMediaPlayer::MediaStatus mediaStatus() const override;
+    iMediaPlayer::State state() const IX_OVERRIDE;
+    iMediaPlayer::MediaStatus mediaStatus() const IX_OVERRIDE;
 
-    xint64 position() const override;
-    xint64 duration() const override;
+    xint64 position() const IX_OVERRIDE;
+    xint64 duration() const IX_OVERRIDE;
 
-    int bufferStatus() const override;
+    int bufferStatus() const IX_OVERRIDE;
 
-    int volume() const override;
-    bool isMuted() const override;
+    int volume() const IX_OVERRIDE;
+    bool isMuted() const IX_OVERRIDE;
 
-    bool isAudioAvailable() const override;
-    bool isVideoAvailable() const override;
-    void setVideoOutput(iObject *output) override;
+    bool isAudioAvailable() const IX_OVERRIDE;
+    bool isVideoAvailable() const IX_OVERRIDE;
+    void setVideoOutput(iObject *output) IX_OVERRIDE;
 
-    bool isSeekable() const override;
-    iMediaTimeRange availablePlaybackRanges() const override;
+    bool isSeekable() const IX_OVERRIDE;
+    iMediaTimeRange availablePlaybackRanges() const IX_OVERRIDE;
 
-    xreal playbackRate() const override;
-    void setPlaybackRate(xreal rate) override;
+    xreal playbackRate() const IX_OVERRIDE;
+    void setPlaybackRate(xreal rate) IX_OVERRIDE;
 
-    iUrl media() const override;
-    const iIODevice *mediaStream() const override;
-    void setMedia(const iUrl&, iIODevice *) override;
+    iUrl media() const IX_OVERRIDE;
+    const iIODevice *mediaStream() const IX_OVERRIDE;
+    void setMedia(const iUrl&, iIODevice *) IX_OVERRIDE;
 
 public: // slot
-    void setPosition(xint64 pos) override;
+    void setPosition(xint64 pos) IX_OVERRIDE;
 
-    void play() override;
-    void pause() override;
-    void stop() override;
+    void play() IX_OVERRIDE;
+    void pause() IX_OVERRIDE;
+    void stop() IX_OVERRIDE;
 
-    void setVolume(int volume) override;
-    void setMuted(bool muted) override;
+    void setVolume(int volume) IX_OVERRIDE;
+    void setMuted(bool muted) IX_OVERRIDE;
 
 private: // slot
     void updateSessionState(iMediaPlayer::State state);

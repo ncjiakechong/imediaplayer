@@ -115,23 +115,23 @@ public:
 
     iLatin1StringView trimmed() const { return iPrivate::trimmed(*this); }
 
-    inline bool operator==(const iString &s) const;
-    inline bool operator>(const iString &s) const;
-    inline bool operator<(const iString &s) const;
+    bool operator==(const iString &s) const;
+    bool operator>(const iString &s) const;
+    bool operator<(const iString &s) const;
     inline bool operator!=(const iString &s) const { return !operator==(s); }
     inline bool operator>=(const iString &s) const { return !operator<(s); }
     inline bool operator<=(const iString &s) const { return !operator>(s); }
 
-    inline bool operator==(const char *s) const;
-    inline bool operator<(const char *s) const;
-    inline bool operator>(const char *s) const;
+    bool operator==(const char *s) const;
+    bool operator<(const char *s) const;
+    bool operator>(const char *s) const;
     inline bool operator!=(const char *s) const { return !operator==(s); }
     inline bool operator<=(const char *s) const { return !operator>(s); }
     inline bool operator>=(const char *s) const { return !operator<(s); }
 
-    inline bool operator==(const iByteArray &s) const;
-    inline bool operator<(const iByteArray &s) const;
-    inline bool operator>(const iByteArray &s) const;
+    bool operator==(const iByteArray &s) const;
+    bool operator<(const iByteArray &s) const;
+    bool operator>(const iByteArray &s) const;
     inline bool operator!=(const iByteArray &s) const { return !operator==(s); }
     inline bool operator<=(const iByteArray &s) const { return !operator>(s); }
     inline bool operator>=(const iByteArray &s) const { return !operator<(s); }

@@ -76,7 +76,7 @@ public:
 protected:
     iThread(iThreadData* data, iObject *parent = IX_NULLPTR);
 
-    virtual bool event(iEvent *e);
+    virtual bool event(iEvent *e) IX_OVERRIDE;
     virtual void run();
     int exec();
 

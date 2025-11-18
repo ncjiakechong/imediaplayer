@@ -69,13 +69,13 @@ class IX_MULTIMEDIA_EXPORT iAbstractPlanarVideoBuffer : public iAbstractVideoBuf
 {
 public:
     iAbstractPlanarVideoBuffer(HandleType type);
-    virtual ~iAbstractPlanarVideoBuffer() override;
+    virtual ~iAbstractPlanarVideoBuffer() IX_OVERRIDE;
 
-    uchar *map(MapMode mode, int *numBytes, int *bytesPerLine) override;
+    uchar *map(MapMode mode, int *numBytes, int *bytesPerLine) IX_OVERRIDE;
     virtual int map(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) = 0;
 
 protected:
-    virtual int mapImpl(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) override;
+    virtual int mapImpl(MapMode mode, int *numBytes, int bytesPerLine[4], uchar *data[4]) IX_OVERRIDE;
 
 private:
     IX_DISABLE_COPY(iAbstractPlanarVideoBuffer)
