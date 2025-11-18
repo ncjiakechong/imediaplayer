@@ -234,6 +234,10 @@ static gboolean eventSourceWraperCheck(GSource *s)
 
 static gboolean eventSourceWraperDispatch(GSource *s, GSourceFunc, gpointer)
 {
+    if (g_source_is_destroyed(s)) {
+        return FALSE;
+    }
+
     iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
     bool continue_dispatch = source->imp->detectableDispatch(source->dispatcher->inProcess() ? source->dispatcher->sequence() : 0);
 
@@ -437,6 +441,7 @@ int iEventDispatcher_Glib::addEventSource(iEventSource* source)
     source->ref();
     wraper->imp = source;
     wraper->dispatcher = this;
+    g_source_set_can_recurse(&wraper->source, true);
     g_source_attach(&wraper->source, m_mainContext);
     m_wraperMap.insert(std::pair<iEventSource*, iEventSourceWraper*>(source, wraper));
 

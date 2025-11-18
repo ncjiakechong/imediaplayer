@@ -20,6 +20,7 @@
 #include <core/thread/ithread.h>
 #include <core/thread/imutex.h>
 #include <core/thread/icondition.h>
+#include <core/utils/idatetime.h>
 
 #define ILOG_TAG "INCIntegrationTest"
 
@@ -203,11 +204,10 @@ public:
         if (op->errorCode() != INC_OK) {
             helper->errorCode = op->errorCode();
         }
-        // If this is the last expected operation, mark test as completed
-        if (helper->callCount >= 3) {
-            helper->testCompleted = true;
-            helper->condition.broadcast();
-        }
+        // Don't mark as completed here - let the test decide when to check
+        // The test will wait for the expected number of callbacks
+        // For now, always broadcast so the waiter can check the count
+        helper->condition.broadcast();
     }
     
     bool waitForCondition(int timeoutMs = 5000) {
@@ -218,6 +218,29 @@ public:
         ilog_info("[Helper] waitForCondition returned:", result, 
                   "(0=success, non-zero=timeout)");
         return result == 0;
+    }
+    
+    bool waitForCallCount(int expectedCount, int timeoutMs = 8000) {
+        ilog_info("[Helper] waitForCallCount called, expecting:", expectedCount, 
+                  "timeout:", timeoutMs, "ms");
+        iScopedLock<iMutex> lock(mutex);
+        int64_t startTime = iDateTime::currentMSecsSinceEpoch();
+        
+        while (callCount < expectedCount) {
+            int64_t elapsed = iDateTime::currentMSecsSinceEpoch() - startTime;
+            int64_t remaining = timeoutMs - elapsed;
+            
+            if (remaining <= 0) {
+                ilog_warn("[Helper] waitForCallCount timeout, got:", callCount, 
+                          "expected:", expectedCount);
+                return false;
+            }
+            
+            condition.wait(mutex, static_cast<int>(remaining));
+        }
+        
+        ilog_info("[Helper] waitForCallCount succeeded, count:", callCount);
+        return true;
     }
 };
 
@@ -314,7 +337,7 @@ public:
         // Try ports from 19000-19100
         for (int port = 19000; port < 19100; port++) {
             iString url = iString("tcp://127.0.0.1:") + iString::number(port);
-            if (server->listen(url) == 0) {
+            if (server->listenOn(url) == 0) {
                 serverPort = port;
                 ilog_info("[Worker] Server started on port:", port);
                 helper->testCompleted = true;
@@ -670,7 +693,7 @@ public:
         
         // Try to listen on invalid address
         ilog_info("[Worker] Attempting to listen on:", invalidAddr);
-        int result = server->listen(invalidAddr);
+        int result = server->listenOn(invalidAddr);
         
         if (result != 0) {
             ilog_info("[Worker] Failed to listen on invalid address (expected)");
@@ -732,13 +755,14 @@ public:
         ilog_info("[Worker] Stopping server");
         server->close();
         
-        // Wait a bit
-        iThread::msleep(100);
+        // Wait longer for port to be released on macOS
+        // macOS may take longer to release TCP sockets, especially with TIME_WAIT state
+        iThread::msleep(500);
         
         // Restart the server on same port
         iString url = iString("tcp://127.0.0.1:") + iString::number(serverPort);
         ilog_info("[Worker] Restarting server on:", url);
-        int result = server->listen(url);
+        int result = server->listenOn(url);
         
         iScopedLock<iMutex> lock(helper->mutex);
         helper->errorCode = result;
@@ -1098,7 +1122,7 @@ TEST_P(INCIntegrationTest, MultipleMethodCalls) {
     iObject::invokeMethod(worker, &INCTestWorker::sendMultipleSequentialCalls);
     
     // Wait for all 5 callbacks
-    ASSERT_TRUE(helper->waitForCondition(8000));
+    ASSERT_TRUE(helper->waitForCallCount(5, 8000));
     
     // Verify all 5 completed
     EXPECT_EQ(5, helper->callCount);
@@ -1276,8 +1300,8 @@ TEST_P(INCIntegrationTest, DifferentMethodNamesTest) {
     // This ensures all operations are created in the correct thread context
     iObject::invokeMethod(worker, &INCTestWorker::sendDifferentMethodCalls);
     
-    // Wait for completion (callbacks execute in work thread's event loop)
-    ASSERT_TRUE(helper->waitForCondition(8000));
+    // Wait for all 3 callbacks
+    ASSERT_TRUE(helper->waitForCallCount(3, 8000));
     
     // Verify all 3 calls completed
     iScopedLock<iMutex> lock(helper->mutex);

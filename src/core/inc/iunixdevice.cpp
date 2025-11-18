@@ -102,6 +102,7 @@ public:
         bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
         bool hasError = (m_pollFd.revents & (IX_IO_ERR | IX_IO_HUP)) != 0;
+        m_pollFd.revents = 0;
 
         if (unixDev->role() == iINCDevice::ROLE_CLIENT && writeReady && !unixDev->isOpen()) {
             unixDev->handleConnectionComplete();
@@ -118,8 +119,6 @@ public:
         if (writeReady) {
             IEMIT unixDev->bytesWritten(0);
         }
-
-        m_pollFd.revents = 0;
 
         if (hasError) {
             ilog_warn("Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);

@@ -50,7 +50,7 @@ public:
     /// Start listening on specified URL
     /// @param url Format: "tcp://0.0.0.0:port" or "pipe:///path/to/socket"
     /// @return 0 on success, negative on error
-    int listen(const iStringView& url);
+    int listenOn(const iStringView& url);
 
     /// Stop server and close all connections
     void close();
@@ -70,7 +70,7 @@ public:
 
     /// Allocate unique channel ID (thread-safe, server-wide unique for debugging)
     /// @return Allocated channel ID (starts from 1, 0 is reserved for invalid)
-    xuint32 allocateChannelId() { return m_nextChannelId++; }
+    xuint32 allocateChannelId() { return ++m_nextChannelId; }
 
 // signals:
     /// Emitted when new client connects

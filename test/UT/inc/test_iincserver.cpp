@@ -20,7 +20,7 @@ public:
     MOCK_METHOD4(handleBinaryData, void(iShell::iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iShell::iByteArray& data));
 
     // --- Mock other virtual functions needed for testing ---
-    MOCK_METHOD1(listen, int(const iShell::iStringView& url));
+    MOCK_METHOD1(listenOn, int(const iShell::iStringView& url));
     MOCK_METHOD0(close, void());
     MOCK_METHOD1(setConfig, void(const iShell::iINCServerConfig& config));
     MOCK_METHOD0(allocateChannelId, xuint32());
@@ -61,10 +61,10 @@ TEST_F(INCServerTest, SetConfig) {
 
 TEST_F(INCServerTest, ListenAndClose) {
     // Use a Unicode string literal for the URL
-    EXPECT_CALL(*server, listen(testing::Eq(iShell::iStringView(u"pipe:///tmp/test_socket"))))
+    EXPECT_CALL(*server, listenOn(testing::Eq(iShell::iStringView(u"pipe:///tmp/test_socket"))))
         .WillOnce(testing::Return(0));
     
-    int result = server->listen(u"pipe:///tmp/test_socket");
+    int result = server->listenOn(u"pipe:///tmp/test_socket");
     ASSERT_EQ(result, 0);
 
     EXPECT_CALL(*server, close()).Times(1);

@@ -90,13 +90,13 @@ int iEventSource::detach()
         return -1;
     }
 
+    for (std::list<iPollFD*>::const_iterator it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+        m_dispatcher->removePoll(*it, this);
+    }
+
     // deref();
     if (m_dispatcher->removeEventSource(this) < 0) {
         return -1;
-    }
-
-    for (std::list<iPollFD*>::const_iterator it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
-        m_dispatcher->removePoll(*it, this);
     }
 
     m_dispatcher = IX_NULLPTR;

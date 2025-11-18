@@ -20,7 +20,6 @@ bool g_testIO = false;
 
 // Parse custom module filtering arguments
 void parseCustomArgs(int argc, char** argv) {
-    std::cout << "[DEBUG] parseCustomArgs START: g_testINC=" << g_testINC << std::endl;
     for (int i = 1; i < argc; ++i) {
         if (strncmp(argv[i], "--module=", 9) == 0) {
             const char* module = argv[i] + 9;
@@ -55,13 +54,9 @@ void parseCustomArgs(int argc, char** argv) {
     }
     
     // If no module specified, test all
-    std::cout << "[DEBUG] parseCustomArgs BEFORE if: g_testINC=" << g_testINC << std::endl;
     if (!g_testKernel && !g_testThread && !g_testINC && !g_testUtils && !g_testIO) {
-        std::cout << "[DEBUG] Entering if block, setting all to true" << std::endl;
         g_testKernel = g_testThread = g_testINC = g_testUtils = g_testIO = true;
     }
-    std::cout << "[DEBUG] parseCustomArgs END: g_testINC=" << g_testINC 
-              << " address=" << (void*)&g_testINC << std::endl;
 }
 
 // Test environment setup

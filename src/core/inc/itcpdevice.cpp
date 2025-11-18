@@ -48,7 +48,6 @@ public:
     }
 
     ~iTcpEventSource() {
-        ilog_info("~iTcpEventSource");
         if (m_pollFd.events) {
             removePoll(&m_pollFd);
         }
@@ -105,6 +104,7 @@ public:
         bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
         bool hasError = (m_pollFd.revents & (IX_IO_ERR | IX_IO_HUP)) != 0;
+        m_pollFd.revents = 0;
 
         if (tcp->role() == iINCDevice::ROLE_CLIENT && writeReady && !tcp->isOpen()) {
             tcp->handleConnectionComplete();
@@ -121,8 +121,6 @@ public:
         if (writeReady) {
             IEMIT tcp->bytesWritten(0);
         }
-
-        m_pollFd.revents = 0;
 
         if (hasError) {
             ilog_warn("Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
@@ -204,7 +202,7 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
     }
 
     // Connect
-    ilog_info("Connection in progress to", host, ":", port);
+    ilog_info("Connection in progress to ", host, ":", port);
     int result = ::connect(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
     if (result < 0 && (errno != EINPROGRESS)) {
         close();
@@ -221,7 +219,7 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
     }
 
     // Only emit connected() if already connected (immediate connection)
-    ilog_info("Connected immediately to", host, ":", port);
+    ilog_info("Connected immediately to ", host, ":", port);
     // Open the device using base class (sets m_openMode for isOpen())
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
     configEventAbility(true, false);
@@ -255,6 +253,14 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     if (setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         ilog_warn("Failed to set SO_REUSEADDR");
     }
+
+    #ifdef SO_REUSEPORT
+    // On macOS and BSD, also set SO_REUSEPORT for immediate port reuse
+    // This allows binding to a port in TIME_WAIT state
+    if (setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+        ilog_warn("Failed to set SO_REUSEPORT");
+    }
+    #endif
 
     // Bind to address
     struct sockaddr_in serverAddr;
@@ -624,7 +630,7 @@ void iTcpDevice::handleConnectionComplete()
     // Protocol layer will adjust this after sending queued messages
     configEventAbility(true, false);
     
-    ilog_info("Connected to", m_peerAddr, ":", m_peerPort);
+    ilog_info("Connected to ", m_peerAddr, ":", m_peerPort);
     IEMIT connected();
 }
 

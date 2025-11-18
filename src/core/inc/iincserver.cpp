@@ -33,8 +33,8 @@ iINCServer::iINCServer(const iStringView& name, iObject *parent)
     , m_ioThread(IX_NULLPTR)
     , m_serverName(name)
     , m_listening(false)
-    , m_nextConnId(1)
-    , m_nextChannelId(1)  // Start from 1, 0 is reserved for invalid
+    , m_nextConnId(0)
+    , m_nextChannelId(0)
 {    
     // Create and initialize engine
     m_engine = new iINCEngine(this);
@@ -48,7 +48,7 @@ iINCServer::~iINCServer()
     close();
 }
 
-int iINCServer::listen(const iStringView& url)
+int iINCServer::listenOn(const iStringView& url)
 {
     if (m_listening) {
         ilog_warn("Already listening");
@@ -187,7 +187,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     }
     
     // Create connection object (it will create protocol internally)
-    xuint64 connId = m_nextConnId++;
+    xuint64 connId = ++m_nextConnId;
     iINCConnection* conn = new iINCConnection(this, incDevice, connId);
     
     // Create handshake handler for this connection
