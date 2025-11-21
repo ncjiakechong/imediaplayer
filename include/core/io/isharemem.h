@@ -20,9 +20,9 @@ namespace iShell {
 class IX_CORE_EXPORT iShareMem
 {
 public:
-    static iShareMem* create(MemType type, size_t size, mode_t mode);
+    static iShareMem* create(const char* name, MemType type, size_t size, mode_t mode);
 
-    iShareMem();
+    iShareMem(const char* name);
     ~iShareMem();
 
     int attach(MemType type, uint id, xintptr memfd, bool writable);
@@ -35,20 +35,21 @@ public:
     inline MemType type() const { return m_type; }
 
 private:
-    static iShareMem* createPrivateMem(size_t size);
-    static iShareMem* createSharedMem(MemType type, size_t size, mode_t mode);
-    static int cleanup();
+    static iShareMem* createPrivateMem(const char* name, size_t size);
+    static iShareMem* createSharedMem(const char* name, MemType type, size_t size, mode_t mode);
+    static int cleanup(const char* name);
 
     int doAttach(MemType type, uint id, xintptr memfd, bool writable, bool for_cleanup);
     void freePrivateMem();
 
-    MemType  m_type;
-    uint     m_id;
-    void*    m_ptr;
-    size_t   m_size;
+    const char* m_name;
+    MemType     m_type;
+    uint        m_id;
+    void*       m_ptr;
+    size_t      m_size;
 
     /* Only for type = MEMTYPE_SHARED_POSIX */
-    bool     m_doUnlink;
+    bool        m_doUnlink;
 
     /* Only for type = PA_MEM_TYPE_SHARED_MEMFD
      *
@@ -62,7 +63,7 @@ private:
      * For the special case of a global mempool, we keep this fd
      * always open. Check comments on top of pa_mempool_new() for
      * rationale. */
-    xintptr  m_memfd;
+    xintptr     m_memfd;
 };
 
 } // namespace iShell

@@ -37,16 +37,10 @@ public:
     iString peerAddress() const;
 
     /// Get client name (set during handshake)
-    iString clientName() const { return m_clientName; }
-
-    /// Set client name (called during handshake)
-    void setClientName(const iString& name) { m_clientName = name; }
+    iString peerName() const { return m_peerName; }
 
     /// Get client protocol version
-    xuint32 clientProtocolVersion() const { return m_clientProtocol; }
-
-    /// Set client protocol version (called during handshake)
-    void setClientProtocolVersion(xuint32 version) { m_clientProtocol = version; }
+    xuint32 peerProtocolVersion() const { return m_peerProtocol; }
 
     /// Send method reply to this client
     /// @param seqNum Sequence number from original request
@@ -75,6 +69,9 @@ public:
     /// Check if connection is still active
     bool isConnected() const;
 
+    /// Check if connection is to local
+    bool isLocal() const;
+
     /// Check if channel is allocated call from IO thread
     bool isChannelAllocated(xuint32 channelId) const;
 
@@ -93,8 +90,11 @@ private: // signals
     void errorOccurred(iINCConnection* conn, int errorCode) ISIGNAL(errorOccurred, conn, errorCode);
 
 private:
-    iINCConnection(iINCServer* server, iINCDevice* device, xuint64 connId);
+    iINCConnection(iINCDevice* device, xuint64 connId);
     virtual ~iINCConnection();
+
+    /// Enable shared memory
+    void enableMempool(const iByteArray& name, MemType type, size_t size);
 
     bool matchesPattern(const iString& eventName, const iString& pattern) const;
     
@@ -114,7 +114,7 @@ private:
     /// Allocate channel for stream (server-side only)
     /// @param mode Stream mode requested by client
     /// @return Allocated channel ID, or 0 if allocation failed
-    xuint32 allocateChannel(xuint32 mode);
+    xuint32 allocateChannel(xuint32 channelId, xuint32 mode);
     
     /// Release channel (server-side only)
     /// @param channelId Channel to release
@@ -126,16 +126,21 @@ private:
     /// Clear handshake handler (server-side only)
     void clearHandshake();
 
+    /// Set client name (called during handshake)
+    void setPeerName(const iString& name) { m_peerName = name; }
+
+    /// Set client protocol version (called during handshake)
+    void setPeerProtocolVersion(xuint32 version) { m_peerProtocol = version; }
+
     void onErrorOccurred(int errorCode);
     void onMessageReceived(const iINCMessage& msg);
     void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, const iByteArray& data);
 
 
-    iINCServer*             m_server;
     iINCProtocol*           m_protocol;         // Owned protocol instance
     xuint64                 m_connId;           // Unique connection ID
-    iString                 m_clientName;
-    xuint32                 m_clientProtocol;
+    iString                 m_peerName;
+    xuint32                 m_peerProtocol;
     iINCHandshake*          m_handshake;        // Handshake handler (server-side only)
     
     // Event subscription patterns

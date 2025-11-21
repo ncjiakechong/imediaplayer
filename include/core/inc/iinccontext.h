@@ -153,13 +153,13 @@ private:
     iThread*        m_ioThread;     ///< IO thread for network operations
     iINCHandshake*  m_handshake;    ///< Handshake handler
     State           m_state;
-    iString         m_clientName;
     iString         m_serverName;
     iString         m_serverUrl;
     xuint32         m_serverProtocol;
     
     // Auto-reconnect timer ID (using iObject::startTimer/killTimer)
     int             m_reconnectTimerId;
+    int             m_reconnectAttempts;
     
     friend class iINCStream;  // Allow iINCStream to access protocol()
     

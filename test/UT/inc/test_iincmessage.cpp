@@ -242,9 +242,8 @@ TEST_F(INCMessageTest, PayloadAccess) {
     const iINCTagStruct& constPayload = constMsg.payload();
     
     // Just verify we can access payload (detailed testing in test_iinctagstruct.cpp)
-    bool ok = false;
-    constPayload.getString(&ok);
-    EXPECT_TRUE(ok);
+    iString val;
+    EXPECT_TRUE(constPayload.getString(val));
 }
 
 TEST_F(INCMessageTest, SetPayload) {
@@ -258,9 +257,8 @@ TEST_F(INCMessageTest, SetPayload) {
     
     // Just verify payload was set (detailed payload operations tested separately)
     const iINCTagStruct& payload = msg.payload();
-    bool ok = false;
-    payload.getString(&ok);
-    EXPECT_TRUE(ok);
+    iString val;
+    EXPECT_TRUE(payload.getString(val));
 }
 
 // === Message Type Tests ===
@@ -305,8 +303,8 @@ TEST_F(INCMessageTest, HeaderConstants) {
     EXPECT_EQ(iINCMessageHeader::HEADER_SIZE, 24);
     EXPECT_EQ(sizeof(iINCMessageHeader), 24u);
     
-    // Verify max message size (1 MB)
-    EXPECT_EQ(iINCMessageHeader::MAX_MESSAGE_SIZE, 1024 * 1024);
+    // Verify max message size (1 KB - enforces use of shared memory for large data)
+    EXPECT_EQ(iINCMessageHeader::MAX_MESSAGE_SIZE, 1024);
 }
 
 /**

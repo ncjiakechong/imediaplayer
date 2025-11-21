@@ -66,8 +66,11 @@ public:
     size_t sharedMemorySize() const { return m_sharedMemorySize; }
     void setSharedMemorySize(size_t size) { m_sharedMemorySize = size; }
     
-    bool disableMemfd() const { return m_disableMemfd; }
-    void setDisableMemfd(bool disable) { m_disableMemfd = disable; }
+    xuint16 sharedMemoryType() const { return m_sharedMemoryType; }
+    void setSharedMemoryType(xuint16 type) { m_sharedMemoryType = type; }
+    
+    iByteArray sharedMemoryName() const { return m_sharedMemoryName; }
+    void setSharedMemoryName(const iByteArray& prefix) { m_sharedMemoryName = prefix; }
     
     // ===== Encryption Settings =====
     
@@ -114,8 +117,9 @@ private:
     
     // Transport options
     bool m_disableSharedMemory = false;
-    size_t m_sharedMemorySize = 64 * 1024 * 1024;  // 64 MB
-    bool m_disableMemfd = false;
+    size_t m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
+    xuint16 m_sharedMemoryType = MEMTYPE_SHARED_POSIX;
+    iByteArray m_sharedMemoryName = "ix-shm";
     
     // Encryption settings
     EncryptionMethod m_encryptionMethod = NoEncryption;

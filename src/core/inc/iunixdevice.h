@@ -83,6 +83,8 @@ public:
     xint64 bytesAvailable() const IX_OVERRIDE;
     void close() IX_OVERRIDE;
 
+    bool isLocal() const IX_OVERRIDE { return true; }
+
 protected:
     iByteArray readData(xint64 maxlen, xint64* readErr) IX_OVERRIDE;
     xint64 writeData(const iByteArray& data) IX_OVERRIDE;

@@ -24,9 +24,8 @@ TEST_F(INCServerConfigTest, DefaultConstruction) {
     EXPECT_EQ(config.protocolVersionMax(), 1);
     EXPECT_EQ(config.maxConnections(), 100);
     EXPECT_EQ(config.maxConnectionsPerClient(), 10);
-    EXPECT_EQ(config.sharedMemorySize(), 256 * 1024 * 1024);
+    EXPECT_EQ(config.sharedMemorySize(), 4 * 1024 * 1024);
     EXPECT_FALSE(config.disableSharedMemory());
-    EXPECT_FALSE(config.disableMemfd());
     EXPECT_EQ(config.maxMessageSize(), 16 * 1024 * 1024);
     EXPECT_EQ(config.encryptionRequirement(), iINCServerConfig::Optional);
     EXPECT_TRUE(config.certificatePath().isEmpty());
@@ -85,9 +84,6 @@ TEST_F(INCServerConfigTest, SetResourceLimits) {
     
     config.setDisableSharedMemory(true);
     EXPECT_TRUE(config.disableSharedMemory());
-    
-    config.setDisableMemfd(true);
-    EXPECT_TRUE(config.disableMemfd());
     
     config.setMaxMessageSize(32 * 1024 * 1024);
     EXPECT_EQ(config.maxMessageSize(), 32 * 1024 * 1024);
@@ -168,8 +164,7 @@ TEST_F(INCContextConfigTest, DefaultConstruction) {
     EXPECT_EQ(config.protocolVersionMin(), 1);
     EXPECT_EQ(config.protocolVersionMax(), 1);
     EXPECT_FALSE(config.disableSharedMemory());
-    EXPECT_EQ(config.sharedMemorySize(), 64 * 1024 * 1024);
-    EXPECT_FALSE(config.disableMemfd());
+    EXPECT_EQ(config.sharedMemorySize(), 4 * 1024 * 1024);
     EXPECT_EQ(config.encryptionMethod(), iINCContextConfig::NoEncryption);
     EXPECT_TRUE(config.certificatePath().isEmpty());
     EXPECT_TRUE(config.autoReconnect());
@@ -204,9 +199,6 @@ TEST_F(INCContextConfigTest, SetTransportOptions) {
     
     config.setSharedMemorySize(128 * 1024 * 1024);
     EXPECT_EQ(config.sharedMemorySize(), 128 * 1024 * 1024);
-    
-    config.setDisableMemfd(true);
-    EXPECT_TRUE(config.disableMemfd());
 }
 
 TEST_F(INCContextConfigTest, SetEncryptionSettings) {

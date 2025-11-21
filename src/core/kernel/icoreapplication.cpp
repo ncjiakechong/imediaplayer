@@ -405,7 +405,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
     // okay. here is the tricky loop. be careful about optimizing
     // this, it looks the way it does for good reasons.
     int startOffset = threadData->postEventList.startOffset;
-    int &i = (!event_type && !receiver) ? threadData->postEventList.startOffset : startOffset;
+    int &idx = (!event_type && !receiver) ? threadData->postEventList.startOffset : startOffset;
     threadData->postEventList.insertionOffset = threadData->postEventList.size();
 
     // Exception-safe cleaning up without the need for a try/catch block
@@ -445,14 +445,14 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
     CleanUp cleanup(receiver, event_type, threadData);
 
     iPostEventList::iterator it = threadData->postEventList.begin();
-    std::advance(it, i);
-    while ((i < int(threadData->postEventList.size())) && (it != threadData->postEventList.end())) {
+    std::advance(it, idx);
+    while ((idx < int(threadData->postEventList.size())) && (it != threadData->postEventList.end())) {
         // avoid live-lock
-        if (i >= threadData->postEventList.insertionOffset)
+        if (idx >= threadData->postEventList.insertionOffset)
             break;
 
         const iPostEvent &pe = *it;
-        ++i; ++it;
+        ++idx; ++it;
 
         if (!pe.event)
             continue;

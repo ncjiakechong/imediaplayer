@@ -17,13 +17,12 @@ TEST_F(INCProtocolTest, BasicTagStruct) {
     tags.putString(iShell::iString("test"));
     tags.putUint32(42);
     
-    bool ok = false;
-    iShell::iString str = tags.getString(&ok);
-    EXPECT_TRUE(ok);
+    iShell::iString str;
+    EXPECT_TRUE(tags.getString(str));
     EXPECT_EQ(str, iShell::iString("test"));
     
-    xuint32 num = tags.getUint32(&ok);
-    EXPECT_TRUE(ok);
+    xuint32 num;
+    EXPECT_TRUE(tags.getUint32(num));
     EXPECT_EQ(num, 42U);
 }
 
@@ -36,19 +35,29 @@ TEST_F(INCProtocolTest, MultipleTypes) {
     tags.putBool(true);
     tags.putString(iShell::iString("hello"));
     
-    bool ok = false;
-    EXPECT_EQ(tags.getUint8(&ok), 1);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getUint16(&ok), 256);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getUint32(&ok), 65536U);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getInt32(&ok), -100);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getBool(&ok), true);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getString(&ok), iShell::iString("hello"));
-    EXPECT_TRUE(ok);
+    xuint8 u8;
+    EXPECT_TRUE(tags.getUint8(u8));
+    EXPECT_EQ(u8, 1);
+    
+    xuint16 u16;
+    EXPECT_TRUE(tags.getUint16(u16));
+    EXPECT_EQ(u16, 256);
+    
+    xuint32 u32;
+    EXPECT_TRUE(tags.getUint32(u32));
+    EXPECT_EQ(u32, 65536U);
+    
+    xint32 i32;
+    EXPECT_TRUE(tags.getInt32(i32));
+    EXPECT_EQ(i32, -100);
+    
+    bool b;
+    EXPECT_TRUE(tags.getBool(b));
+    EXPECT_EQ(b, true);
+    
+    iShell::iString str;
+    EXPECT_TRUE(tags.getString(str));
+    EXPECT_EQ(str, iShell::iString("hello"));
 }
 
 TEST_F(INCProtocolTest, ByteArrayData) {
@@ -56,9 +65,8 @@ TEST_F(INCProtocolTest, ByteArrayData) {
     iShell::iByteArray data("binary\0data", 11);
     tags.putBytes(data);
     
-    bool ok = false;
-    iShell::iByteArray result = tags.getBytes(&ok);
-    EXPECT_TRUE(ok);
+    iShell::iByteArray result;
+    EXPECT_TRUE(tags.getBytes(result));
     EXPECT_EQ(result.size(), data.size());
 }
 
@@ -66,9 +74,8 @@ TEST_F(INCProtocolTest, EmptyString) {
     iShell::iINCTagStruct tags;
     tags.putString(iShell::iString(""));
     
-    bool ok = false;
-    iShell::iString str = tags.getString(&ok);
-    EXPECT_TRUE(ok);
+    iShell::iString str;
+    EXPECT_TRUE(tags.getString(str));
     EXPECT_TRUE(str.isEmpty());
 }
 
@@ -79,11 +86,13 @@ TEST_F(INCProtocolTest, CopySemantics) {
     
     iShell::iINCTagStruct tags2(tags1);
     
-    bool ok = false;
-    EXPECT_EQ(tags2.getUint32(&ok), 123U);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags2.getString(&ok), iShell::iString("test"));
-    EXPECT_TRUE(ok);
+    xuint32 num;
+    EXPECT_TRUE(tags2.getUint32(num));
+    EXPECT_EQ(num, 123U);
+    
+    iShell::iString str;
+    EXPECT_TRUE(tags2.getString(str));
+    EXPECT_EQ(str, iShell::iString("test"));
 }
 
 // Test 64-bit integer operations
@@ -95,13 +104,15 @@ TEST_F(INCProtocolTest, Uint64Operations) {
     tags.putUint64(0);
     tags.putUint64(12345678901234ULL);
     
-    bool ok = false;
-    EXPECT_EQ(tags.getUint64(&ok), bigValue);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getUint64(&ok), 0ULL);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getUint64(&ok), 12345678901234ULL);
-    EXPECT_TRUE(ok);
+    xuint64 val1, val2, val3;
+    EXPECT_TRUE(tags.getUint64(val1));
+    EXPECT_EQ(val1, bigValue);
+    
+    EXPECT_TRUE(tags.getUint64(val2));
+    EXPECT_EQ(val2, 0ULL);
+    
+    EXPECT_TRUE(tags.getUint64(val3));
+    EXPECT_EQ(val3, 12345678901234ULL);
 }
 
 TEST_F(INCProtocolTest, Int64Operations) {
@@ -113,13 +124,15 @@ TEST_F(INCProtocolTest, Int64Operations) {
     tags.putInt64(0);
     tags.putInt64(posValue);
     
-    bool ok = false;
-    EXPECT_EQ(tags.getInt64(&ok), negValue);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getInt64(&ok), 0LL);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags.getInt64(&ok), posValue);
-    EXPECT_TRUE(ok);
+    xint64 val1, val2, val3;
+    EXPECT_TRUE(tags.getInt64(val1));
+    EXPECT_EQ(val1, negValue);
+    
+    EXPECT_TRUE(tags.getInt64(val2));
+    EXPECT_EQ(val2, 0LL);
+    
+    EXPECT_TRUE(tags.getInt64(val3));
+    EXPECT_EQ(val3, posValue);
 }
 
 TEST_F(INCProtocolTest, DoubleOperations) {
@@ -129,13 +142,15 @@ TEST_F(INCProtocolTest, DoubleOperations) {
     tags.putDouble(-2.718281828459045);
     tags.putDouble(0.0);
     
-    bool ok = false;
-    EXPECT_DOUBLE_EQ(tags.getDouble(&ok), 3.141592653589793);
-    EXPECT_TRUE(ok);
-    EXPECT_DOUBLE_EQ(tags.getDouble(&ok), -2.718281828459045);
-    EXPECT_TRUE(ok);
-    EXPECT_DOUBLE_EQ(tags.getDouble(&ok), 0.0);
-    EXPECT_TRUE(ok);
+    double val1, val2, val3;
+    EXPECT_TRUE(tags.getDouble(val1));
+    EXPECT_DOUBLE_EQ(val1, 3.141592653589793);
+    
+    EXPECT_TRUE(tags.getDouble(val2));
+    EXPECT_DOUBLE_EQ(val2, -2.718281828459045);
+    
+    EXPECT_TRUE(tags.getDouble(val3));
+    EXPECT_DOUBLE_EQ(val3, 0.0);
 }
 
 TEST_F(INCProtocolTest, EOFCheck) {
@@ -144,9 +159,8 @@ TEST_F(INCProtocolTest, EOFCheck) {
     
     EXPECT_FALSE(tags.eof());
     
-    bool ok = false;
-    tags.getUint8(&ok);
-    EXPECT_TRUE(ok);
+    xuint8 val;
+    EXPECT_TRUE(tags.getUint8(val));
     
     EXPECT_TRUE(tags.eof());
 }
@@ -156,14 +170,14 @@ TEST_F(INCProtocolTest, RewindOperation) {
     tags.putUint32(123);
     tags.putString(iShell::iString("test"));
     
-    bool ok = false;
-    EXPECT_EQ(tags.getUint32(&ok), 123U);
-    EXPECT_TRUE(ok);
+    xuint32 num;
+    EXPECT_TRUE(tags.getUint32(num));
+    EXPECT_EQ(num, 123U);
     
     tags.rewind();
     
-    EXPECT_EQ(tags.getUint32(&ok), 123U);
-    EXPECT_TRUE(ok);
+    EXPECT_TRUE(tags.getUint32(num));
+    EXPECT_EQ(num, 123U);
 }
 
 TEST_F(INCProtocolTest, ClearOperation) {
@@ -189,11 +203,13 @@ TEST_F(INCProtocolTest, SetDataOperation) {
     iShell::iINCTagStruct tags2;
     tags2.setData(data);
     
-    bool ok = false;
-    EXPECT_EQ(tags2.getUint16(&ok), 0x1234);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(tags2.getUint32(&ok), 0x56789ABC);
-    EXPECT_TRUE(ok);
+    xuint16 val16;
+    xuint32 val32;
+    EXPECT_TRUE(tags2.getUint16(val16));
+    EXPECT_EQ(val16, 0x1234);
+    
+    EXPECT_TRUE(tags2.getUint32(val32));
+    EXPECT_EQ(val32, 0x56789ABC);
 }
 
 TEST_F(INCProtocolTest, BytesAvailableCheck) {
@@ -206,8 +222,8 @@ TEST_F(INCProtocolTest, BytesAvailableCheck) {
     
     xsizetype sizeBefore = tags.bytesAvailable();
     
-    bool ok = false;
-    tags.getUint32(&ok);
+    xuint32 val;
+    tags.getUint32(val);
     
     EXPECT_LT(tags.bytesAvailable(), sizeBefore);
 }

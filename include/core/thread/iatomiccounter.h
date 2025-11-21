@@ -309,7 +309,7 @@ inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
 {
     {
         iMutex::ScopedLock lock(m_counter.mutex);
-        m_counter.value += count;
+        m_counter.value -= count;
     }
 
     return *this;

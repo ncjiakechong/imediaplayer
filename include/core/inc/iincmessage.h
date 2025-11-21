@@ -19,24 +19,24 @@ namespace iShell {
 /// @brief Message types in INC protocol
 enum iINCMessageType {
     INC_MSG_INVALID         = 0,    ///< Invalid message type
-    INC_MSG_HANDSHAKE       = 1,    ///< Initial handshake
-    INC_MSG_HANDSHAKE_ACK   = 2,    ///< Handshake acknowledgement
-    INC_MSG_AUTH            = 3,    ///< Authentication request
-    INC_MSG_AUTH_ACK        = 4,    ///< Authentication response
-    INC_MSG_METHOD_CALL     = 10,   ///< Method invocation
-    INC_MSG_METHOD_REPLY    = 11,   ///< Method result (includes error code)
-    INC_MSG_EVENT           = 20,   ///< Event notification
-    INC_MSG_SUBSCRIBE       = 21,   ///< Subscribe to events
-    INC_MSG_SUBSCRIBE_ACK   = 23,   ///< Subscribe acknowledgement
-    INC_MSG_UNSUBSCRIBE     = 22,   ///< Unsubscribe from events
-    INC_MSG_UNSUBSCRIBE_ACK = 24,   ///< Unsubscribe acknowledgement
-    INC_MSG_STREAM_OPEN     = 30,   ///< Open shared memory stream
-    INC_MSG_STREAM_CLOSE    = 31,   ///< Close shared memory stream
-    INC_MSG_STREAM_DATA     = 32,   ///< Stream data notification (legacy)
-    INC_MSG_BINARY_DATA     = 33,   ///< Binary data with optional SHM reference
-    INC_MSG_MEMFD_ATTACH    = 34,   ///< Attach shared memory file descriptor
-    INC_MSG_PING            = 40,   ///< Keepalive ping
-    INC_MSG_PONG            = 41    ///< Keepalive pong
+    INC_MSG_HANDSHAKE       = (1 + 0) << 1,       ///< Initial handshake
+    INC_MSG_HANDSHAKE_ACK   = ((1 +0) << 1) + 1,  ///< Handshake acknowledgement
+    INC_MSG_AUTH            = ((1 + 1) << 1),     ///< Authentication request
+    INC_MSG_AUTH_ACK        = ((1 + 1) << 1) + 1, ///< Authentication response
+    INC_MSG_METHOD_CALL     = ((1 + 2) << 1),     ///< Method invocation
+    INC_MSG_METHOD_REPLY    = ((1 + 2) << 1) + 1, ///< Method result (includes error code)
+    INC_MSG_EVENT           = ((1 + 3) << 1),     ///< Event notification
+    INC_MSG_SUBSCRIBE       = ((1 + 4) << 1),     ///< Subscribe to events
+    INC_MSG_SUBSCRIBE_ACK   = ((1 + 4) << 1) + 1, ///< Subscribe acknowledgement
+    INC_MSG_UNSUBSCRIBE     = ((1 + 5) << 1),     ///< Unsubscribe from events
+    INC_MSG_UNSUBSCRIBE_ACK = ((1 + 5) << 1) + 1, ///< Unsubscribe acknowledgement
+    INC_MSG_STREAM_OPEN     = ((1 + 6) << 1),     ///< Open shared memory stream
+    INC_MSG_STREAM_OPEN_ACK = ((1 + 6) << 1) + 1, ///< Open shared memory stream acknowledgement
+    INC_MSG_STREAM_CLOSE    = ((1 + 7) << 1),     ///< Close shared memory stream
+    INC_MSG_BINARY_DATA     = ((1 + 8) << 1),     ///< Binary data with optional SHM reference
+    INC_MSG_BINARY_DATA_ACK = ((1 + 8) << 1) + 1, ///< Binary data with optional SHM reference acknowledgement
+    INC_MSG_PING            = ((1 + 9) << 1),     ///< Keepalive ping
+    INC_MSG_PONG            = ((1 + 10) << 1)    ///< Keepalive pong
 };
 
 /// @brief Message flags for binary data transfer

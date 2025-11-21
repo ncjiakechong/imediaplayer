@@ -83,8 +83,8 @@ public:
     bool disableSharedMemory() const { return m_disableSharedMemory; }
     void setDisableSharedMemory(bool disable) { m_disableSharedMemory = disable; }
     
-    bool disableMemfd() const { return m_disableMemfd; }
-    void setDisableMemfd(bool disable) { m_disableMemfd = disable; }
+    xuint16 sharedMemoryType() const { return m_sharedMemoryType; }
+    void setSharedMemoryType(xuint16 type) { m_sharedMemoryType = type; }
     
     size_t maxMessageSize() const { return m_maxMessageSize; }
     void setMaxMessageSize(size_t size) { m_maxMessageSize = size; }
@@ -133,9 +133,9 @@ private:
     int m_maxConnectionsPerClient = 10;
     
     // Resource limits
-    size_t m_sharedMemorySize = 256 * 1024 * 1024;  // 256 MB
+    size_t m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
     bool m_disableSharedMemory = false;
-    bool m_disableMemfd = false;
+    xuint16 m_sharedMemoryType = MEMTYPE_SHARED_POSIX | MEMTYPE_PRIVATE;  // Auto-select best type
     size_t m_maxMessageSize = 16 * 1024 * 1024;  // 16 MB
     
     // Security

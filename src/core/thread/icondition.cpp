@@ -123,19 +123,19 @@ public:
 
     int wait(iMutex& mutex)
     {
-        int retValue;
+        int retValue = 0;
         pthread_mutex_lock(&_mutex);
         mutex.unlock();
         retValue = pthread_cond_wait(&_cond, &_mutex);
         pthread_mutex_unlock(&_mutex);
         mutex.lock();
 
-        return retValue;
+        return -retValue;
     }
 
     virtual int tryWait(iMutex& mutex, long milliseconds)
     {
-        int retValue;
+        int retValue = 0;
         pthread_mutex_lock(&_mutex);
         mutex.unlock();
 
@@ -154,7 +154,7 @@ public:
         pthread_mutex_unlock(&_mutex);
         mutex.lock();
 
-        return retValue;
+        return -retValue;
     }
 
     virtual int signal()

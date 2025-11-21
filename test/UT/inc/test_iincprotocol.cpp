@@ -51,13 +51,12 @@ TEST_F(INCProtocolTest, ParseMessage) {
     ASSERT_EQ(parsedBytes, payload.size());
     EXPECT_EQ(msg.type, iIncProtocol::Response);
     
-    bool ok = false;
-    xint32 val = msg.tags.getInt32(&ok);
-    ASSERT_TRUE(ok);
+    xint32 val;
+    ASSERT_TRUE(msg.tags.getInt32(val));
     EXPECT_EQ(val, 54321);
 
-    iString str = msg.tags.getString(&ok);
-    ASSERT_TRUE(ok);
+    iString str;
+    ASSERT_TRUE(msg.tags.getString(str));
     EXPECT_EQ(str, u"response");
 }
 
@@ -105,15 +104,16 @@ TEST_F(INCProtocolTest, ParseMultipleMessages) {
     int parsedBytes1 = iIncProtocol::parseMessage(combinedPayload, msg1);
     ASSERT_EQ(parsedBytes1, payload1.size());
     EXPECT_EQ(msg1.type, iIncProtocol::Request);
-    bool ok = false;
-    EXPECT_EQ(msg1.tags.getInt32(&ok), 1);
-    ASSERT_TRUE(ok);
+    xint32 val1;
+    ASSERT_TRUE(msg1.tags.getInt32(val1));
+    EXPECT_EQ(val1, 1);
 
     // Parse second message
     iByteArray remainingPayload = combinedPayload.right(combinedPayload.size() - parsedBytes1);
     int parsedBytes2 = iIncProtocol::parseMessage(remainingPayload, msg2);
     ASSERT_EQ(parsedBytes2, payload2.size());
     EXPECT_EQ(msg2.type, iIncProtocol::Response);
-    EXPECT_EQ(msg2.tags.getString(&ok), u"two");
-    ASSERT_TRUE(ok);
+    iString str2;
+    ASSERT_TRUE(msg2.tags.getString(str2));
+    EXPECT_EQ(str2, u"two");
 }

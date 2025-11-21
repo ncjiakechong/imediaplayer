@@ -121,7 +121,7 @@ public:
         }
 
         if (hasError) {
-            ilog_warn("Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
+            ilog_warn("[", unixDev->peerAddress(), "] Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
             IEMIT unixDev->errorOccurred(INC_ERROR_CHANNEL);
             return false;
         }
@@ -149,12 +149,12 @@ iUnixDevice::~iUnixDevice()
 int iUnixDevice::connectToPath(const iString& path)
 {
     if (role() != ROLE_CLIENT) {
-        ilog_error("connectToPath only available in client mode");
+        ilog_error("[] connectToPath only available in client mode");
         return INC_ERROR_INVALID_STATE;
     }
 
     if (isOpen() || m_sockfd >= 0) {
-        ilog_warn("Already connected or connecting");
+        ilog_warn("[", peerAddress(), "] Already connected or connecting");
         return INC_ERROR_ALREADY_CONNECTED;
     }
 
@@ -184,19 +184,19 @@ int iUnixDevice::connectToPath(const iString& path)
     
     if (path.length() >= sizeof(serverAddr.sun_path)) {
         close();
-        ilog_error("Socket path too long:", path);
+        ilog_error("[] Socket path too long:", path);
         return INC_ERROR_CONNECTION_FAILED;
     }
     
     strncpy(serverAddr.sun_path, path.toUtf8().constData(), sizeof(serverAddr.sun_path) - 1);
 
     // Connect
-    ilog_info("Connection in progress to", path);
+    ilog_info("[] Connection in progress to", path);
     int result = ::connect(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
     if (result < 0) {
         if (errno != EINPROGRESS) {
             close();
-            ilog_error("Connect failed:", strerror(errno));
+            ilog_error("[] Connect failed:", strerror(errno));
             return INC_ERROR_CONNECTION_FAILED;
         }
 
@@ -206,7 +206,7 @@ int iUnixDevice::connectToPath(const iString& path)
     }
     
     // Only emit connected() if already connected (immediate connection)
-    ilog_info("Connected immediately to", path);
+    ilog_info("[] Connected immediately to", path);
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
     configEventAbility(true, false);
     IEMIT connected();
@@ -217,12 +217,12 @@ int iUnixDevice::connectToPath(const iString& path)
 int iUnixDevice::listenOn(const iString& path)
 {
     if (role() != ROLE_SERVER) {
-        ilog_error("listenOn only available in server mode");
+        ilog_error("[] listenOn only available in server mode ", path);
         return INC_ERROR_INVALID_STATE;
     }
 
     if (isOpen() || m_sockfd >= 0) {
-        ilog_warn("Already listening");
+        ilog_warn("[", peerAddress(), "] Already listening");
         return INC_ERROR_INVALID_STATE;
     }
 
@@ -241,7 +241,7 @@ int iUnixDevice::listenOn(const iString& path)
     
     if (path.length() >= sizeof(serverAddr.sun_path)) {
         close();
-        ilog_error("Socket path too long:", path);
+        ilog_error("[] Socket path too long:", path);
         return INC_ERROR_CONNECTION_FAILED;
     }
     
@@ -250,15 +250,15 @@ int iUnixDevice::listenOn(const iString& path)
     // Bind
     if (::bind(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
         close();
-        ilog_error("Bind failed:", strerror(errno));
+        ilog_error("[] Bind failed:", strerror(errno));
         return INC_ERROR_CONNECTION_FAILED;
     }
 
     // Listen
     if (::listen(m_sockfd, 128) < 0) {
-        ilog_error("Listen failed:", strerror(errno));
         close();
         removeSocketFile();
+        ilog_error("[] Listen failed:", strerror(errno));
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -283,22 +283,21 @@ int iUnixDevice::listenOn(const iString& path)
     //       2. Call startEventMonitoring() to attach to event loop for accept() notifications
     m_eventSource = new iUnixEventSource(this);
     configEventAbility(true, false);
-    
-    ilog_info("Listening on", path);
+    ilog_info("[] Listening on", path);
     return INC_OK;
 }
 
 void iUnixDevice::acceptConnection()
 {
     if (role() != ROLE_SERVER || !isOpen()) {
-        ilog_error("acceptConnection only available in listening server mode");
+        ilog_error("[", peerAddress(), "] acceptConnection only available in listening server mode");
         return;
     }
 
     int clientFd = ::accept(m_sockfd, IX_NULLPTR, IX_NULLPTR);
     if (clientFd < 0) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            ilog_error("Accept failed:", strerror(errno));
+            ilog_error("[", peerAddress(), "] Accept failed:", strerror(errno));
             IEMIT errorOccurred(INC_ERROR_CONNECTION_FAILED);
         }
         return;
@@ -324,7 +323,7 @@ void iUnixDevice::acceptConnection()
     // Accepted connections are already established, monitor read events only
     clientDevice->configEventAbility(true, false);
 
-    ilog_info("Accepted connection on ", m_socketPath);
+    ilog_info("[", peerAddress(), "] Accepted connection on ", m_socketPath);
     
     // Emit newConnection signal with the client device
     // NOTE: Caller (e.g., iINCServer) must call startEventMonitoring() on client device
@@ -356,7 +355,7 @@ iByteArray iUnixDevice::readData(xint64 maxlen, xint64* readErr)
     if (bytesRead == 0) {
         m_eventSource->detach();
         if (readErr) *readErr = 0;
-        ilog_info("Connection closed by peer");
+        ilog_info("[", peerAddress(), "] Connection closed by peer");
         IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
         return iByteArray();
     }
@@ -369,7 +368,7 @@ iByteArray iUnixDevice::readData(xint64 maxlen, xint64* readErr)
 
     m_eventSource->detach();
     if (readErr) *readErr = -1;
-    ilog_error("Read failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] Read failed:", strerror(errno));
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return iByteArray();
 }
@@ -387,7 +386,7 @@ xint64 iUnixDevice::writeData(const iByteArray& data)
     }
 
     m_eventSource->detach();
-    ilog_error("Write failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] Write failed:", strerror(errno));
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return -1;
 }
@@ -422,19 +421,19 @@ void iUnixDevice::close()
 bool iUnixDevice::startEventMonitoring(iEventDispatcher* dispatcher)
 {
     if (!m_eventSource) {
-        ilog_error("No EventSource to start monitoring");
+        ilog_error("[", peerAddress(), "] No EventSource to start monitoring");
         return false;
     }
 
     m_eventSource->attach(dispatcher ? dispatcher : iEventDispatcher::instance());
-    ilog_debug("EventSource monitoring started");
+    ilog_debug("[", peerAddress(), "] EventSource monitoring started");
     return true;
 }
 
 void iUnixDevice::configEventAbility(bool read, bool write)
 {
     if (!m_eventSource) {
-        ilog_warn("No EventSource to configure");
+        ilog_warn("[", peerAddress(), "]No EventSource to configure");
         return;
     }
 
@@ -493,7 +492,7 @@ void iUnixDevice::handleConnectionComplete()
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
     configEventAbility(true, false);
     
-    ilog_info("Connected to", m_socketPath);
+    ilog_info("[", peerAddress(), "] Connected to", m_socketPath);
     IEMIT connected();
 }
 

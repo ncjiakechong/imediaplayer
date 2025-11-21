@@ -53,39 +53,17 @@ bool iINCHandshake::deserializeHandshakeData(const iByteArray& bytes, iINCHandsh
     iINCTagStruct tags;
     tags.setData(bytes);
     
-    bool ok = false;
-    
     // Protocol version (required)
-    data.protocolVersion = tags.getUint32(&ok);
-    if (!ok) {
-        ilog_error(ILOG_TAG, "Failed to deserialize protocol_version");
+    if (!tags.getUint32(data.protocolVersion)
+        || !tags.getString(data.nodeName)
+        || !tags.getString(data.nodeId)
+        || !tags.getUint32(data.capabilities)) {
+        ilog_error(ILOG_TAG, "Failed to deserialize handshake");
         return false;
     }
-    
-    // Node name (required)
-    data.nodeName = tags.getString(&ok);
-    if (!ok) {
-        ilog_error(ILOG_TAG, "Failed to deserialize node_name");
-        return false;
-    }
-    
-    // Node ID (required)
-    data.nodeId = tags.getString(&ok);
-    if (!ok) {
-        ilog_error(ILOG_TAG, "Failed to deserialize node_id");
-        return false;
-    }
-    
-    // Capabilities (required)
-    data.capabilities = tags.getUint32(&ok);
-    if (!ok) {
-        ilog_error(ILOG_TAG, "Failed to deserialize capabilities");
-        return false;
-    }
-    
+
     // Auth token (optional - may be empty)
-    data.authToken = tags.getBytes(&ok);
-    if (!ok) {
+    if (!tags.getBytes(data.authToken)) {
         // Ignore error for optional field
         data.authToken.clear();
     }
@@ -184,15 +162,14 @@ iByteArray iINCHandshake::start()
         ilog_error("start() called on server-side handshake, role:", m_role);
         return iByteArray();
     }
-    
+
     if (m_state != STATE_IDLE) {
         // Already in progress (SENDING/COMPLETED/FAILED), return empty to indicate error
         ilog_warn("start() called but handshake already in progress, state:", m_state);
         return iByteArray();
     }
-    
+
     m_state = STATE_SENDING;
-    
     iByteArray data = serializeHandshakeData(m_localData);
     // Client starting handshake
     
@@ -208,31 +185,27 @@ iByteArray iINCHandshake::processHandshake(const iByteArray& data)
         // Error: handshake failed
         return iByteArray();
     }
-    
+
     // Received handshake from remote
-    
     // Validate remote data against configuration
     if (!validateRemoteData()) {
         m_state = STATE_FAILED;
         // Error message set by validateRemoteData()
         return iByteArray();
     }
-    
+
     if (m_role == ROLE_SERVER) {
         // Server: received client handshake, send response
         m_state = STATE_COMPLETED;
-        
+
         // Server handshake completed
-        
-        // Send server handshake data
         return serializeHandshakeData(m_localData);
         
     } else {
         // Client: received server response
         m_state = STATE_COMPLETED;
-        
-        // Client handshake completed
-        
+
+        // Client handshake completed        
         // No response needed
         return iByteArray();
     }
@@ -240,13 +213,14 @@ iByteArray iINCHandshake::processHandshake(const iByteArray& data)
 
 bool iINCHandshake::validateRemoteData()
 {
-    // Check version compatibility
-    if (m_role == ROLE_CLIENT && m_contextConfig) {
+    do {
+        if (m_role != ROLE_CLIENT || !m_contextConfig) break;
+
         // Client validating server version
         xuint16 serverVersion = m_remoteData.protocolVersion;
         
-        if (serverVersion < m_contextConfig->protocolVersionMin() ||
-            serverVersion > m_contextConfig->protocolVersionMax()) {
+        if (serverVersion < m_contextConfig->protocolVersionMin()
+            || serverVersion > m_contextConfig->protocolVersionMax()) {
             m_errorMessage = iString::asprintf(
                 "Incompatible server protocol version: server=%u, acceptable range=[%u, %u]",
                 serverVersion,
@@ -262,8 +236,13 @@ bool iINCHandshake::validateRemoteData()
                 return false;
             }
         }
-        
-    } else if (m_role == ROLE_SERVER && m_serverConfig) {
+
+        return true;
+    } while (false);
+    
+    do {
+        if (m_role != ROLE_SERVER || !m_serverConfig) break;
+
         // Server validating client version
         xuint16 clientVersion = m_remoteData.protocolVersion;
         
@@ -318,16 +297,18 @@ bool iINCHandshake::validateRemoteData()
             // Accept any encryption capability
             break;
         }
-    } else {
-        // No configuration provided, use legacy compatibility check
-        if (!isCompatible(m_localData.protocolVersion, m_remoteData.protocolVersion)) {
-            m_errorMessage = iString::asprintf("Incompatible protocol version: local=%u, remote=%u",
-                                               m_localData.protocolVersion,
-                                               m_remoteData.protocolVersion);
-            return false;
-        }
-    }
+
+        return true;
+    } while (false);
     
+    // No configuration provided, use legacy compatibility check
+    if (!isCompatible(m_localData.protocolVersion, m_remoteData.protocolVersion)) {
+        m_errorMessage = iString::asprintf("Incompatible protocol version: local=%u, remote=%u",
+                                            m_localData.protocolVersion,
+                                            m_remoteData.protocolVersion);
+        return false;
+    }
+
     return true;
 }
 

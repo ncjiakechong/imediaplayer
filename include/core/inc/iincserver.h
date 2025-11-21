@@ -68,10 +68,6 @@ public:
     /// @return Connection object, or nullptr if not found
     // iINCConnection* connection(xuint64 connId) const;
 
-    /// Allocate unique channel ID (thread-safe, server-wide unique for debugging)
-    /// @return Allocated channel ID (starts from 1, 0 is reserved for invalid)
-    xuint32 allocateChannelId() { return ++m_nextChannelId; }
-
 // signals:
     /// Emitted when new client connects
     void clientConnected(iINCConnection* conn) ISIGNAL(clientConnected, conn);

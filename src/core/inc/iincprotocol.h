@@ -72,14 +72,8 @@ public:
     /// Get underlying transport device
     iINCDevice* device() const { return m_device; }
 
-    /// Get associated memory pool for zero-copy operations
-    /// @return Memory pool pointer if configured, nullptr otherwise
-    iMemPool* memoryPool() const { return m_memPool.data(); }
-
-    /// Set memory pool for zero-copy shared memory operations
-    /// @param pool Memory pool instance (takes shared ownership)
-    /// @note Must be called before establishing connections for SHM support
-    void setMemoryPool(iMemPool* pool);
+    /// Enable shared memory
+    void enableMempool(const iByteArray& name, MemType type, size_t size);
 
 // signals:
     /// Emitted when binary data is received (routed by channel ID)
@@ -114,6 +108,7 @@ private:
     iByteArray              m_recvBuffer;
     
     // Shared memory support for zero-copy binary transfer
+    iByteArray              m_pollName;
     iSharedDataPointer<iMemPool> m_memPool;
     iMemExport*             m_memExport;
     iMemImport*             m_memImport;

@@ -172,116 +172,99 @@ iINCTagStruct::Tag iINCTagStruct::peekTag() const
     return static_cast<Tag>(static_cast<xuint8>(m_data.at(m_readIndex)));
 }
 
-xuint8 iINCTagStruct::getUint8(bool* ok) const
+bool iINCTagStruct::getUint8(xuint8& value) const
 {
     if (!readTag(TAG_UINT8)) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     if (m_readIndex >= static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
-    xuint8 value = static_cast<xuint8>(m_data.at(m_readIndex));
+    value = static_cast<xuint8>(m_data.at(m_readIndex));
     m_readIndex++;
-    if (ok) *ok = true;
-    return value;
+    return true;
 }
 
-xuint16 iINCTagStruct::getUint16(bool* ok) const
+bool iINCTagStruct::getUint16(xuint16& value) const
 {
     if (!readTag(TAG_UINT16)) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     if (m_readIndex + sizeof(xuint16) > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     xuint16 netValue;
     memcpy(&netValue, m_data.constData() + m_readIndex, sizeof(xuint16));
-    xuint16 value = ntohs(netValue);
+    value = ntohs(netValue);
     m_readIndex += sizeof(xuint16);
-    if (ok) *ok = true;
-    return value;
+    return true;
 }
 
-xuint32 iINCTagStruct::getUint32(bool* ok) const
+bool iINCTagStruct::getUint32(xuint32& value) const
 {
     if (!readTag(TAG_UINT32)) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     xuint32 netValue;
     memcpy(&netValue, m_data.constData() + m_readIndex, sizeof(xuint32));
-    xuint32 value = ntohl(netValue);
+    value = ntohl(netValue);
     m_readIndex += sizeof(xuint32);
-    if (ok) *ok = true;
-    return value;
+    return true;
 }
 
-xuint64 iINCTagStruct::getUint64(bool* ok) const
+bool iINCTagStruct::getUint64(xuint64& value) const
 {
     if (!readTag(TAG_UINT64)) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     if (m_readIndex + sizeof(xuint64) > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     xuint32 high, low;
     memcpy(&high, m_data.constData() + m_readIndex, sizeof(xuint32));
     memcpy(&low, m_data.constData() + m_readIndex + sizeof(xuint32), sizeof(xuint32));
     
-    xuint64 value = (static_cast<xuint64>(ntohl(high)) << 32) | ntohl(low);
+    value = (static_cast<xuint64>(ntohl(high)) << 32) | ntohl(low);
     m_readIndex += sizeof(xuint64);
-    if (ok) *ok = true;
-    return value;
+    return true;
 }
 
-xint32 iINCTagStruct::getInt32(bool* ok) const
+bool iINCTagStruct::getInt32(xint32& value) const
 {
     if (!readTag(TAG_INT32)) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     if (m_readIndex + sizeof(xint32) > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     xuint32 netValue;
     memcpy(&netValue, m_data.constData() + m_readIndex, sizeof(xuint32));
-    xint32 value = static_cast<xint32>(ntohl(netValue));
+    value = static_cast<xint32>(ntohl(netValue));
     m_readIndex += sizeof(xint32);
-    if (ok) *ok = true;
-    return value;
+    return true;
 }
 
-xint64 iINCTagStruct::getInt64(bool* ok) const
+bool iINCTagStruct::getInt64(xint64& value) const
 {
     if (!readTag(TAG_INT64)) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     if (m_readIndex + sizeof(xint64) > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return 0;
+        return false;
     }
     
     xuint32 high, low;
@@ -289,41 +272,35 @@ xint64 iINCTagStruct::getInt64(bool* ok) const
     memcpy(&low, m_data.constData() + m_readIndex + sizeof(xuint32), sizeof(xuint32));
     
     xuint64 uvalue = (static_cast<xuint64>(ntohl(high)) << 32) | ntohl(low);
-    xint64 value = static_cast<xint64>(uvalue);
+    value = static_cast<xint64>(uvalue);
     m_readIndex += sizeof(xint64);
-    if (ok) *ok = true;
-    return value;
+    return true;
 }
 
-bool iINCTagStruct::getBool(bool* ok) const
+bool iINCTagStruct::getBool(bool& value) const
 {
     if (!readTag(TAG_BOOL)) {
-        if (ok) *ok = false;
         return false;
     }
     
     if (m_readIndex >= static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
         return false;
     }
     
-    bool value = (m_data.at(m_readIndex) != '\x00');
+    value = (m_data.at(m_readIndex) != '\x00');
     m_readIndex++;
-    if (ok) *ok = true;
-    return value;
+    return true;
 }
 
-iString iINCTagStruct::getString(bool* ok) const
+bool iINCTagStruct::getString(iString& value) const
 {
     if (!readTag(TAG_STRING)) {
-        if (ok) *ok = false;
-        return iString();
+        return false;
     }
     
     // Read length
     if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return iString();
+        return false;
     }
     
     xuint32 netLength;
@@ -333,34 +310,30 @@ iString iINCTagStruct::getString(bool* ok) const
     
     // Read string data
     if (length <= 0) {
-        if (ok) *ok = true;
-        return iString();
+        value = iString();
+        return true;
     }
 
     if (m_readIndex + length > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return iString();
+        return false;
     }
 
     // Read from current position, then advance
-    iString str = iString::fromUtf8(iByteArrayView(m_data).mid(m_readIndex, length));
+    value = iString::fromUtf8(iByteArrayView(m_data).mid(m_readIndex, length));
     m_readIndex += length;
     
-    if (ok) *ok = true;
-    return str;
+    return true;
 }
 
-iByteArray iINCTagStruct::getBytes(bool* ok) const
+bool iINCTagStruct::getBytes(iByteArray& value) const
 {
     if (!readTag(TAG_BYTES)) {
-        if (ok) *ok = false;
-        return iByteArray();
+        return false;
     }
     
     // Read length
     if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return iByteArray();
+        return false;
     }
     
     xuint32 netLength;
@@ -370,13 +343,12 @@ iByteArray iINCTagStruct::getBytes(bool* ok) const
     
     // Read binary data
     if (length <= 0) {
-        if (ok) *ok = true;
-        return iByteArray();
+        value = iByteArray();
+        return true;
     }
 
     if (m_readIndex + length > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return iByteArray();
+        return false;
     }
     
     // Wrap imported block in iByteArray for safe reference counting (zero-copy)
@@ -385,20 +357,18 @@ iByteArray iINCTagStruct::getBytes(bool* ok) const
                                 length);
     m_readIndex += length;
 
-    if (ok) *ok = true;
-    return iByteArray(dp);
+    value = iByteArray(dp);
+    return true;
 }
 
-double iINCTagStruct::getDouble(bool* ok) const
+bool iINCTagStruct::getDouble(double& value) const
 {
     if (!readTag(TAG_DOUBLE)) {
-        if (ok) *ok = false;
-        return 0.0;
+        return false;
     }
     
     if (m_readIndex + sizeof(double) > static_cast<xsizetype>(m_data.size())) {
-        if (ok) *ok = false;
-        return 0.0;
+        return false;
     }
     
     xuint32 high, low;
@@ -406,12 +376,10 @@ double iINCTagStruct::getDouble(bool* ok) const
     memcpy(&low, m_data.constData() + m_readIndex + sizeof(xuint32), sizeof(xuint32));
     
     xuint64 bits = (static_cast<xuint64>(ntohl(high)) << 32) | ntohl(low);
-    double value;
     memcpy(&value, &bits, sizeof(double));
     
     m_readIndex += sizeof(double);
-    if (ok) *ok = true;
-    return value;
+    return true;
 }
 
 // === Utility Methods ===

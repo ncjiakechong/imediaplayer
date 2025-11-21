@@ -54,9 +54,9 @@ public:
     
     /// Stream mode
     enum Mode {
-        MODE_READ,          ///< Read-only (receive binary data)
-        MODE_WRITE,         ///< Write-only (send binary data)
-        MODE_READWRITE      ///< Bidirectional
+        MODE_READ   = 0x01 << 0,    ///< Read-only (receive binary data)
+        MODE_WRITE  = 0x01 << 1,    ///< Write-only (send binary data)
+        MODE_READWRITE = MODE_READ | MODE_WRITE ///< Bidirectional
     };
     
     /// @brief Constructor
@@ -69,9 +69,6 @@ public:
     
     /// Get stream state
     State state() const { return m_state; }
-    
-    /// Get channel ID (unique identifier for data routing)
-    xuint32 channelId() const { return m_channelId; }
     
     /// Attach to channel for data transfer (async, returns immediately)
     /// @param mode Stream mode (read/write/bidirectional)
@@ -124,7 +121,7 @@ public:
     xint32 chunksAvailable() const;
     
     /// Check if stream is ready for writing
-    bool canWrite() const;
+    bool canWrite() const { return (m_state == STATE_ATTACHED) && (m_mode & MODE_WRITE); }
     
     /// Peek at next data chunk without removing it
     /// @return Next chunk (empty if no data available)

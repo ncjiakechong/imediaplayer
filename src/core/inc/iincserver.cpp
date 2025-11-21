@@ -15,12 +15,15 @@
 #include <core/thread/iscopedlock.h>
 #include <core/kernel/ieventsource.h>
 #include <core/kernel/ieventdispatcher.h>
+#include <core/utils/ialgorithms.h>
 #include <core/io/ilog.h>
 #include <core/io/iurl.h>
 
 #include "inc/iincengine.h"
 #include "inc/iincprotocol.h"
 #include "inc/iinchandshake.h"
+#include "inc/itcpdevice.h"
+#include "inc/iunixdevice.h"
 
 #define ILOG_TAG "ix_inc"
 
@@ -39,7 +42,7 @@ iINCServer::iINCServer(const iStringView& name, iObject *parent)
     // Create and initialize engine
     m_engine = new iINCEngine(this);
     if (!m_engine->initialize()) {
-        ilog_error("Failed to initialize engine");
+        ilog_error("[", objectName(), "] Failed to initialize engine");
     }
 }
 
@@ -51,14 +54,14 @@ iINCServer::~iINCServer()
 int iINCServer::listenOn(const iStringView& url)
 {
     if (m_listening) {
-        ilog_warn("Already listening");
+        ilog_warn("[", objectName(), "] Already listening");
         return INC_ERROR_INVALID_STATE;
     }
     
     // Use url parameter if provided, otherwise use config listen address
     iString listenUrl = url.isEmpty() ? m_config.listenAddress() : url.toString();
     if (listenUrl.isEmpty()) {
-        ilog_error("No listen URL specified and no listen address in config");
+        ilog_error("[", objectName(), "] No listen URL specified and no listen address in config");
         return INC_ERROR_INVALID_ARGS;
     }
     
@@ -66,7 +69,7 @@ int iINCServer::listenOn(const iStringView& url)
     // Create server transport using engine (EventSource is created but NOT attached yet)
     m_listenDevice = m_engine->createServerTransport(listenUrl);
     if (!m_listenDevice) {
-        ilog_error("Failed to create listen device for", listenUrl);
+        ilog_error("[", objectName(), "] Failed to create listen device for", listenUrl);
         return INC_ERROR_CONNECTION_FAILED;
     }
     
@@ -102,7 +105,7 @@ void iINCServer::close()
     
     // Stop IO thread if it was started
     if (IX_NULLPTR != m_ioThread) {
-        ilog_debug("Stopping IO thread...");
+        ilog_debug("[", objectName(), "] Stopping IO thread...");
         m_ioThread->exit();
         m_ioThread->wait();
         delete m_ioThread;
@@ -130,7 +133,7 @@ void iINCServer::close()
     }
     
     m_listening = false;
-    ilog_info("Server", m_serverName, "closed");
+    ilog_info("[", objectName(), "] Server closed");
 }
 
 struct __Action
@@ -180,7 +183,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     
     // Check max connections limit from config
     if (m_config.maxConnections() > 0 && m_connections.size() >= static_cast<size_t>(m_config.maxConnections())) {
-        ilog_warn("Max connections limit reached:", m_config.maxConnections());
+        ilog_warn("[", objectName(), "] Max connections limit reached:", m_config.maxConnections());
         incDevice->close();
         incDevice->deleteLater();
         return;
@@ -188,7 +191,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     
     // Create connection object (it will create protocol internally)
     xuint64 connId = ++m_nextConnId;
-    iINCConnection* conn = new iINCConnection(this, incDevice, connId);
+    iINCConnection* conn = new iINCConnection(incDevice, connId);
     
     // Create handshake handler for this connection
     iINCHandshake* handshake = new iINCHandshake(iINCHandshake::ROLE_SERVER);
@@ -215,7 +218,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     // This ensures no race condition - signals are connected before events can arrive
     iEventDispatcher* dispatcher = iEventDispatcher::instance();
     if (!dispatcher || !incDevice->startEventMonitoring(dispatcher)) {
-        ilog_error("Failed to start event monitoring for client device");
+        ilog_error("[", objectName(), "] Failed to start event monitoring for client device");
         conn->deleteLater();  // Will also delete protocol and device
         return;
     }
@@ -224,7 +227,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     m_connections[connId] = conn;
     
     IEMIT clientConnected(conn);
-    ilog_info("New client connected, ID:", connId);
+    ilog_info("[", objectName(), "] New client connected, ID:", connId);
 }
 
 void iINCServer::handleListenDeviceDisconnected()
@@ -234,7 +237,7 @@ void iINCServer::handleListenDeviceDisconnected()
     // Server socket should not disconnect in normal operation
     // This typically indicates a serious error condition
     // Close the server to prevent inconsistent state
-    ilog_error("Forcing server close due to listen device disconnection");
+    ilog_error("[", objectName(), "] Forcing server close due to listen device disconnection");
     iINCServer::close();
 }
 
@@ -245,7 +248,7 @@ if (!m_listening) return;
     // Listen socket errors are usually fatal for the server
     // Examples: EADDRINUSE, EACCES, port conflicts, etc.
     // Close the server to allow proper cleanup and potential restart
-    ilog_error("Closing server due to listen device error");
+    ilog_error("[", objectName(), "] Closing server due to listen device error");
     iINCServer::close();
 }
 
@@ -254,11 +257,11 @@ void iINCServer::onClientDisconnected(iINCConnection* conn)
     auto it = m_connections.find(conn->connectionId());
     if (it != m_connections.end()) {
         m_connections.erase(it);
-        IEMIT clientDisconnected(conn);
+        iObject::invokeMethod(this, &iINCServer::clientDisconnected, conn);
     }
 
+    ilog_info("[", conn->peerName(), "] Client disconnected, ID:", conn->connectionId());
     conn->deleteLater();
-    ilog_info("Client", conn->connectionId(), "disconnected");
 }
 
 void iINCServer::onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iByteArray& data)
@@ -269,7 +272,7 @@ void iINCServer::onConnectionBinaryData(iINCConnection* conn, xuint32 channelId,
 
 void iINCServer::onConnectionErrorOccurred(iINCConnection* conn, int errorCode)
 {
-    ilog_warn("Device error occurred for connection", conn->connectionId(), "error:", errorCode);
+    ilog_warn("[", conn->peerName(), "] Device error occurred, connection ID:", conn->connectionId(), "error:", errorCode);
     conn->close();
 }
 
@@ -281,36 +284,40 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMes
         return;
     }
 
-    ilog_debug("Received handshake message for connection", conn->connectionId());
+    ilog_debug("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                "] Received handshake message");
     iINCHandshake* handshake = conn->m_handshake;
     if (!handshake) {
-        ilog_warn("Received handshake message but no handshake handler set");
+        ilog_warn("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                "] Received handshake message but no handshake handler set");
         return;
     }
 
     // Process handshake - uses custom binary protocol, access raw data
     iByteArray response = handshake->processHandshake(msg.payload().data());
-    ilog_debug("Handshake state after processing:", (int)handshake->state());
+    ilog_debug("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                "] Handshake state after processing:", (int)handshake->state());
     
     if (handshake->state() == iINCHandshake::STATE_COMPLETED) {
         // Send handshake ACK with raw binary response
         iINCMessage ackMsg(INC_MSG_HANDSHAKE_ACK, 0);
         ackMsg.payload().setData(response);  // Handshake uses custom binary protocol
-        ilog_debug("Sending handshake ACK, payload size:", response.size());
+        ilog_debug("[", conn->peerName(), "][", msg.channelID(), "][", ackMsg.sequenceNumber(), 
+                    "] Sending handshake ACK, payload size:", response.size());
         conn->sendMessage(ackMsg);
         
         // Store client info
         const iINCHandshakeData& remote = handshake->remoteData();
-        conn->setClientName(remote.nodeName);
-        conn->setClientProtocolVersion(remote.protocolVersion);
+        conn->setPeerName(remote.nodeName);
+        conn->setPeerProtocolVersion(remote.protocolVersion);
         
-        ilog_info("Handshake completed with", remote.nodeName);
-        
-        // Cleanup handshake
+        ilog_info("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                    "] Handshake completed with", remote.nodeName);        
         conn->clearHandshake();
     } else {
         // Handshake failed
-        ilog_error("Handshake failed:", handshake->errorMessage());
+        ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                    "] Handshake failed:", handshake->errorMessage());
         conn->clearHandshake();
         conn->close();
     }
@@ -321,28 +328,19 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
     switch (msg.type()) {
         case INC_MSG_METHOD_CALL: {
             // Parse payload with type-safe API: version + method name + args
-            bool ok;
-            xuint16 version = msg.payload().getUint16(&ok);
-            if (!ok) {
-                ilog_error("Failed to read version from payload");
+            xuint16 version;
+            iString method;
+            iByteArray args;
+            if (!msg.payload().getUint16(version)
+                || !msg.payload().getString(method)
+                || !msg.payload().getBytes(args)
+                || !msg.payload().eof()) {
+                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                            "] Failed to parser method call");
                 conn->sendReply(msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
                 return;
             }
-            
-            iString method = msg.payload().getString(&ok);
-            if (!ok) {
-                ilog_error("Failed to read method name from payload");
-                conn->sendReply(msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
-                return;
-            }
-            
-            iByteArray args = msg.payload().getBytes(&ok);
-            if (!ok) {
-                ilog_error("Failed to read method args from payload");
-                conn->sendReply(msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
-                return;
-            }
-            
+
             // Call handler (may be async!)
             handleMethod(conn, msg.sequenceNumber(), method, version, args);
             break;
@@ -350,34 +348,71 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
         
         case INC_MSG_STREAM_OPEN: {
             // Client requesting channel allocation
-            bool ok;
-            xuint32 mode = msg.payload().getUint32(&ok);
-            if (!ok) {
-                ilog_error("Failed to read stream mode from payload");
-                mode = 0;  // Default mode
+            xuint32 mode = 0;
+            bool peerWantsShmNegotiation = false;
+
+            if (!msg.payload().getUint32(mode)
+                || !msg.payload().getBool(peerWantsShmNegotiation)) {
+                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                            "] Failed to parser STREAM_OPEN");
+                break;
             }
-            
+
+            // If client requested SHM negotiation, decide and reply
+            xuint16 negotiontedShmType = 0;
+            xuint16 clientSupportedTypes = 0;
+            iByteArray clientShmName;
+            if (peerWantsShmNegotiation) {
+                if (!msg.payload().getUint16(clientSupportedTypes)
+                    || !msg.payload().getBytes(clientShmName)
+                    || !msg.payload().eof()) {
+                    ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                            "] Failed to parser STREAM_OPEN SHM info");
+                    break;
+                }
+
+                // Check if we should enable shared memory:
+                // 1. Server config allows shared memory
+                // 2. Connection is local (same machine)
+                // 3. Client and server have compatible memory types
+                negotiontedShmType = clientSupportedTypes & m_config.sharedMemoryType();
+                if (!m_config.disableSharedMemory() && conn->isLocal() && negotiontedShmType) {
+                    // Select the highest priority bit (lowest bit position) using iCountTrailingZeroBits
+                    // MEMFD (0x02, bit 1) has higher priority than POSIX (0x04, bit 2)
+                    negotiontedShmType = static_cast<xuint16>(1) << iCountTrailingZeroBits(negotiontedShmType);
+                }
+
+                if (negotiontedShmType != 0) {
+                    conn->enableMempool(clientShmName, static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize());
+                }
+                ilog_info("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                            "] Negotiont SHM: client support", clientSupportedTypes, ", and server support ", m_config.sharedMemoryType(), ", result ", negotiontedShmType);
+            }
+
             // Allocate channel
-            xuint32 channelId = conn->allocateChannel(mode);
-            
+            xuint32 channelId = conn->allocateChannel(++m_nextChannelId, mode);
+
             // Send reply with allocated channel ID using type-safe API
-            iINCMessage reply(INC_MSG_STREAM_OPEN, msg.sequenceNumber());
+            iINCMessage reply(INC_MSG_STREAM_OPEN_ACK, msg.sequenceNumber());
             reply.payload().putUint32(channelId);
-            
+            reply.payload().putBool(peerWantsShmNegotiation);
+            if (peerWantsShmNegotiation) {
+                reply.payload().putUint16(negotiontedShmType);
+            }
+
+            ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), 
+                        "] Allocated channel, mode=", mode);
             conn->sendMessage(reply);
-            ilog_info("Allocated channel %u for client, mode=%u", channelId, mode);
-            
-            // Emit signal for stream opened
-            IEMIT streamOpened(conn, channelId, mode);
+            iObject::invokeMethod(this, &iINCServer::streamOpened, conn, channelId, mode);
             break;
         }
         
         case INC_MSG_STREAM_CLOSE: {
             // Client releasing channel - parse from payload with type-safe API
-            bool ok;
-            xuint32 channelId = msg.payload().getUint32(&ok);
-            if (!ok) {
-                ilog_error("Failed to read channel ID from STREAM_CLOSE payload");
+            xuint32 channelId;
+            if (!msg.payload().getUint32(channelId) || !msg.payload().eof()) {
+                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                    "] Failed to parser STREAM_CLOSE");
                 break;
             }
             
@@ -385,23 +420,20 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
             conn->releaseChannel(channelId);
             
             // Send confirmation reply using type-safe API
+            ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Channel released and confirmed");
             iINCMessage reply(INC_MSG_STREAM_CLOSE, msg.sequenceNumber());
             reply.payload().putUint32(channelId);
             conn->sendMessage(reply);
-            
-            ilog_info("Channel %u released and confirmed", channelId);
-            
-            // Emit signal for stream closed
             IEMIT streamClosed(conn, channelId);
             break;
         }
         
         case INC_MSG_SUBSCRIBE: {
             // Parse payload with type-safe API: event pattern
-            bool ok;
-            iString pattern = msg.payload().getString(&ok);
-            if (!ok) {
-                ilog_error("Failed to read subscription pattern from payload");
+            iString pattern;
+            if (!msg.payload().getString(pattern) || !msg.payload().eof()) {
+                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                "] Failed to parser SUBSCRIBE");
                 conn->sendReply(msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
                 break;
             }
@@ -419,10 +451,10 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
         
         case INC_MSG_UNSUBSCRIBE: {
             // Parse payload with type-safe API: event pattern
-            bool ok;
-            iString pattern = msg.payload().getString(&ok);
-            if (!ok) {
-                ilog_error("Failed to read unsubscription pattern from payload");
+            iString pattern;
+            if (!msg.payload().getString(pattern) || !msg.payload().eof()) {
+                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                            "] Failed to parser UNSUBSCRIBE");
                 break;
             }
             conn->removeSubscription(pattern);
@@ -444,7 +476,7 @@ void iINCServer::processMessage(iINCConnection* conn, const iINCMessage& msg)
             break;
         
         default:
-            ilog_warn("Unhandled message type:", msg.type());
+            ilog_warn("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), "] Unhandled message type:", msg.type());
             conn->sendReply(msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
             break;
     }

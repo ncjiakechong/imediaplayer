@@ -92,7 +92,7 @@ struct iTypeInfoQuery : public iTypeInfo<T>
 
 // if iTypeInfo<T>::isRelocatable exists, use it
 template <typename T>
-struct iTypeInfoQuery<T, typename enable_if<iTypeInfo<T>::isRelocatable || true>::type> : public iTypeInfo<T>
+struct iTypeInfoQuery<T, typename enable_if<iTypeInfo<T>::isRelocatable>::type> : public iTypeInfo<T>
 {};
 
 /*!

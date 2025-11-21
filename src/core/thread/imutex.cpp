@@ -143,7 +143,7 @@ public:
     virtual int tryLockImpl(long milliseconds) IX_OVERRIDE
     {
         if (0 == milliseconds) {
-            return pthread_mutex_trylock(&m_mutex);
+            return - pthread_mutex_trylock(&m_mutex);
         }
 
         struct timespec abstime;
@@ -158,7 +158,7 @@ public:
             abstime.tv_sec++;
         }
 
-        int rc = pthread_mutex_timedlock(&m_mutex, &abstime);
+        int rc = - pthread_mutex_timedlock(&m_mutex, &abstime);
         if (rc < 0) {
             ilog_error("pthread_mutex_timedlock error ", rc);
         }
@@ -168,7 +168,7 @@ public:
 
     virtual int unlockImpl() IX_OVERRIDE
     {
-        return pthread_mutex_unlock(&m_mutex);
+        return - pthread_mutex_unlock(&m_mutex);
     }
 
 private:

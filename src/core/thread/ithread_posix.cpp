@@ -138,13 +138,13 @@ void iThreadData::clearCurrentThreadData()
 // sched_priority is OUT only
 static bool calculateUnixPriority(int priority, int *sched_policy, int *sched_priority)
 {
-#ifdef SCHED_IDLE
+    #ifdef SCHED_IDLE
     if (priority == iThread::IdlePriority) {
         *sched_policy = SCHED_IDLE;
         *sched_priority = 0;
         return true;
     }
-#endif
+    #endif
 
     const int lowestPriority = iThread::LowestPriority;
     const int highestPriority = iThread::TimeCriticalPriority;
@@ -195,7 +195,7 @@ void iThreadImpl::setPriority()
     param.sched_priority = prio;
     int status = pthread_setschedparam((pthread_t)m_thread->m_data->threadHd.value(), sched_policy, &param);
 
-#ifdef SCHED_IDLE
+    #ifdef SCHED_IDLE
     // were we trying to set to idle priority and failed?
     if (status == -1 && sched_policy == SCHED_IDLE && errno == EINVAL) {
         // reset to lowest priority possible
@@ -203,7 +203,7 @@ void iThreadImpl::setPriority()
         param.sched_priority = sched_get_priority_min(sched_policy);
         pthread_setschedparam((pthread_t)m_thread->m_data->threadHd.value(), sched_policy, &param);
     }
-#endif
+    #endif
 }
 
 void iThreadImpl::internalThreadFunc()

@@ -167,18 +167,6 @@ TEST_F(INCProtocolEnhancedTest, MessageQueueingWhenNotReady) {
     EXPECT_GT(sentData.size(), 0);
 }
 
-// Test: Memory pool configuration
-TEST_F(INCProtocolEnhancedTest, MemoryPoolConfiguration) {
-    EXPECT_EQ(m_protocol->memoryPool(), nullptr);
-    
-    // Create and set memory pool
-    iMemPool* pool = new iMemPool("TestPool", new iShareMem(), 1024, 10, false);
-    m_protocol->setMemoryPool(pool);
-    
-    EXPECT_NE(m_protocol->memoryPool(), nullptr);
-    EXPECT_EQ(m_protocol->memoryPool(), pool);
-}
-
 // Test: Send binary data
 TEST_F(INCProtocolEnhancedTest, SendBinaryData) {
     m_mockDevice->simulateConnect();

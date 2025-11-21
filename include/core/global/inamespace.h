@@ -85,10 +85,10 @@ enum EventPriority {
     LowEventPriority = -1
 };
 
-enum MemType {
-    MEMTYPE_SHARED_POSIX,         /* Data is shared and created using POSIX shm_open() */
-    MEMTYPE_SHARED_MEMFD,         /* Data is shared and created using Linux memfd_create() */
-    MEMTYPE_PRIVATE,              /* Data is private and created using classic memory allocation
+enum MemType {    
+    MEMTYPE_SHARED_MEMFD = 0x01 << 0,   /* Data is shared and created using Linux memfd_create() */
+    MEMTYPE_SHARED_POSIX = 0x01 << 1,   /* Data is shared and created using POSIX shm_open() */
+    MEMTYPE_PRIVATE      = 0x01 << 2,   /* Data is private and created using classic memory allocation
                                          (posix_memalign(), malloc() or anonymous mmap()) */
 };
 

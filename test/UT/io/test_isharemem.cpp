@@ -27,7 +27,7 @@ protected:
 // === Private Memory Tests ===
 
 TEST_F(ShareMemTest, CreatePrivateMemBasic) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     
     ASSERT_NE(shm, nullptr);
     EXPECT_EQ(shm->type(), MEMTYPE_PRIVATE);
@@ -38,7 +38,7 @@ TEST_F(ShareMemTest, CreatePrivateMemBasic) {
 }
 
 TEST_F(ShareMemTest, CreatePrivateMemSmallSize) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 128, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 128, 0600);
     
     ASSERT_NE(shm, nullptr);
     EXPECT_EQ(shm->type(), MEMTYPE_PRIVATE);
@@ -49,7 +49,7 @@ TEST_F(ShareMemTest, CreatePrivateMemSmallSize) {
 
 TEST_F(ShareMemTest, CreatePrivateMemLargeSize) {
     // 1 MB
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 1024 * 1024, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 1024 * 1024, 0600);
     
     ASSERT_NE(shm, nullptr);
     EXPECT_EQ(shm->type(), MEMTYPE_PRIVATE);
@@ -59,7 +59,7 @@ TEST_F(ShareMemTest, CreatePrivateMemLargeSize) {
 }
 
 TEST_F(ShareMemTest, PrivateMemReadWrite) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     // Write data
@@ -74,7 +74,7 @@ TEST_F(ShareMemTest, PrivateMemReadWrite) {
 }
 
 TEST_F(ShareMemTest, PrivateMemDetach) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     void* ptr = shm->data();
@@ -91,7 +91,7 @@ TEST_F(ShareMemTest, PrivateMemDetach) {
 }
 
 TEST_F(ShareMemTest, PrivateMemDoubleDetach) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     int ret = shm->detach();
@@ -107,7 +107,7 @@ TEST_F(ShareMemTest, PrivateMemDoubleDetach) {
 // === POSIX Shared Memory Tests ===
 
 TEST_F(ShareMemTest, CreatePosixSharedMemBasic) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_SHARED_POSIX, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 4096, 0600);
     
     ASSERT_NE(shm, nullptr);
     EXPECT_EQ(shm->type(), MEMTYPE_SHARED_POSIX);
@@ -118,7 +118,7 @@ TEST_F(ShareMemTest, CreatePosixSharedMemBasic) {
 }
 
 TEST_F(ShareMemTest, PosixSharedMemReadWrite) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_SHARED_POSIX, 8192, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 8192, 0600);
     ASSERT_NE(shm, nullptr);
     
     // Write data
@@ -133,10 +133,10 @@ TEST_F(ShareMemTest, PosixSharedMemReadWrite) {
 }
 
 TEST_F(ShareMemTest, PosixSharedMemMultipleInstances) {
-    iShareMem* shm1 = iShareMem::create(MEMTYPE_SHARED_POSIX, 4096, 0600);
+    iShareMem* shm1 = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 4096, 0600);
     ASSERT_NE(shm1, nullptr);
     
-    iShareMem* shm2 = iShareMem::create(MEMTYPE_SHARED_POSIX, 4096, 0600);
+    iShareMem* shm2 = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 4096, 0600);
     ASSERT_NE(shm2, nullptr);
     
     // Should have different IDs
@@ -147,10 +147,10 @@ TEST_F(ShareMemTest, PosixSharedMemMultipleInstances) {
 }
 
 TEST_F(ShareMemTest, PosixSharedMemDifferentSizes) {
-    iShareMem* shm1 = iShareMem::create(MEMTYPE_SHARED_POSIX, 4096, 0600);
+    iShareMem* shm1 = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 4096, 0600);
     ASSERT_NE(shm1, nullptr);
     
-    iShareMem* shm2 = iShareMem::create(MEMTYPE_SHARED_POSIX, 8192, 0600);
+    iShareMem* shm2 = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 8192, 0600);
     ASSERT_NE(shm2, nullptr);
     
     EXPECT_LT(shm1->size(), shm2->size());
@@ -162,7 +162,7 @@ TEST_F(ShareMemTest, PosixSharedMemDifferentSizes) {
 // === Memory Punch (Hole Punching) Tests ===
 
 TEST_F(ShareMemTest, PunchPrivateMem) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 16384, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 16384, 0600);
     ASSERT_NE(shm, nullptr);
     
     // Fill with data
@@ -181,7 +181,7 @@ TEST_F(ShareMemTest, PunchPosixSharedMem) {
     // Clean up any stale shm segments first
     shm_unlink("0");
     
-    iShareMem* shm = iShareMem::create(MEMTYPE_SHARED_POSIX, 16384, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 16384, 0600);
     ASSERT_NE(shm, nullptr);
     
     // Fill with data
@@ -201,7 +201,7 @@ TEST_F(ShareMemTest, PunchPosixSharedMem) {
 
 TEST_F(ShareMemTest, SizeAlignment) {
     // Sizes should be page-aligned
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 100, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 100, 0600);
     ASSERT_NE(shm, nullptr);
     
     // Size should be rounded up to page boundary
@@ -221,7 +221,7 @@ TEST_F(ShareMemTest, ZeroSizeNotAllowed) {
 // === Accessor Tests ===
 
 TEST_F(ShareMemTest, AccessorGetters) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     EXPECT_EQ(shm->type(), MEMTYPE_PRIVATE);
@@ -236,7 +236,7 @@ TEST_F(ShareMemTest, PosixAccessorGetters) {
     // Clean up any stale shm segment
     shm_unlink("0");
     
-    iShareMem* shm = iShareMem::create(MEMTYPE_SHARED_POSIX, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     EXPECT_EQ(shm->type(), MEMTYPE_SHARED_POSIX);
@@ -255,17 +255,17 @@ TEST_F(ShareMemTest, CreateWithDifferentModes) {
     // POSIX shared memory in test environment has persistent naming issues
     
     // Read/write owner
-    iShareMem* shm1 = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm1 = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm1, nullptr);
     delete shm1;
     
     // Read/write owner + group  
-    iShareMem* shm2 = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0660);
+    iShareMem* shm2 = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0660);
     ASSERT_NE(shm2, nullptr);
     delete shm2;
     
     // Read/write all
-    iShareMem* shm3 = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0666);
+    iShareMem* shm3 = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0666);
     ASSERT_NE(shm3, nullptr);
     delete shm3;
 }
@@ -273,7 +273,7 @@ TEST_F(ShareMemTest, CreateWithDifferentModes) {
 // === Data Integrity Tests ===
 
 TEST_F(ShareMemTest, DataIntegrityPrivate) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     // Write pattern
@@ -291,7 +291,7 @@ TEST_F(ShareMemTest, DataIntegrityPrivate) {
 }
 
 TEST_F(ShareMemTest, DataIntegrityPosix) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_SHARED_POSIX, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     // Write pattern
@@ -312,7 +312,7 @@ TEST_F(ShareMemTest, DataIntegrityPosix) {
 
 TEST_F(ShareMemTest, SmallestAllocation) {
     // 1 byte should work
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 1, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 1, 0600);
     ASSERT_NE(shm, nullptr);
     EXPECT_GE(shm->size(), 1u);
     delete shm;
@@ -320,7 +320,7 @@ TEST_F(ShareMemTest, SmallestAllocation) {
 
 TEST_F(ShareMemTest, PageSizeAllocation) {
     // Exactly one page
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     EXPECT_GE(shm->size(), 4096u);
     delete shm;
@@ -328,7 +328,7 @@ TEST_F(ShareMemTest, PageSizeAllocation) {
 
 TEST_F(ShareMemTest, MultiPageAllocation) {
     // Multiple pages
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 12288, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 12288, 0600);
     ASSERT_NE(shm, nullptr);
     EXPECT_GE(shm->size(), 12288u);
     delete shm;
@@ -337,7 +337,7 @@ TEST_F(ShareMemTest, MultiPageAllocation) {
 // === Cleanup Tests ===
 
 TEST_F(ShareMemTest, DestructorCleanup) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     void* ptr = shm->data();
@@ -350,7 +350,7 @@ TEST_F(ShareMemTest, DestructorCleanup) {
 }
 
 TEST_F(ShareMemTest, ManualDetachBeforeDestroy) {
-    iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
     ASSERT_NE(shm, nullptr);
     
     int ret = shm->detach();
@@ -364,7 +364,7 @@ TEST_F(ShareMemTest, ManualDetachBeforeDestroy) {
 
 TEST_F(ShareMemTest, MultipleAllocationsAndDeallocations) {
     for (int i = 0; i < 10; i++) {
-        iShareMem* shm = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
+        iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
         ASSERT_NE(shm, nullptr);
         
         // Write some data
@@ -376,10 +376,10 @@ TEST_F(ShareMemTest, MultipleAllocationsAndDeallocations) {
 }
 
 TEST_F(ShareMemTest, MixedTypeAllocations) {
-    iShareMem* private1 = iShareMem::create(MEMTYPE_PRIVATE, 4096, 0600);
-    iShareMem* posix1 = iShareMem::create(MEMTYPE_SHARED_POSIX, 4096, 0600);
-    iShareMem* private2 = iShareMem::create(MEMTYPE_PRIVATE, 8192, 0600);
-    iShareMem* posix2 = iShareMem::create(MEMTYPE_SHARED_POSIX, 8192, 0600);
+    iShareMem* private1 = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 4096, 0600);
+    iShareMem* posix1 = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 4096, 0600);
+    iShareMem* private2 = iShareMem::create("ix_test", MEMTYPE_PRIVATE, 8192, 0600);
+    iShareMem* posix2 = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 8192, 0600);
     
     ASSERT_NE(private1, nullptr);
     ASSERT_NE(posix1, nullptr);

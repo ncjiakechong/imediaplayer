@@ -23,11 +23,10 @@
 
 namespace iShell {
 
-iINCConnection::iINCConnection(iINCServer* server, iINCDevice* device, xuint64 connId)
-    : m_server(server)
-    , m_protocol(IX_NULLPTR)
+iINCConnection::iINCConnection(iINCDevice* device, xuint64 connId)
+    : m_protocol(IX_NULLPTR)
     , m_connId(connId)
-    , m_clientProtocol(0)
+    , m_peerProtocol(0)
     , m_handshake(IX_NULLPTR)
 {
     // Create protocol handler for this device
@@ -62,6 +61,19 @@ bool iINCConnection::isConnected() const
     return m_protocol && m_protocol->device() && m_protocol->device()->isOpen();
 }
 
+
+bool iINCConnection::isLocal() const
+{
+    return m_protocol && m_protocol->device() && m_protocol->device()->isLocal();
+}
+
+void iINCConnection::enableMempool(const iByteArray& name, MemType type, size_t size)
+{
+    if (!m_protocol) return;
+
+    m_protocol->enableMempool(name, type, size);
+}
+
 void iINCConnection::sendReply(xuint32 seqNum, xint32 errorCode, const iByteArray& result)
 {
     IX_ASSERT(m_protocol);
@@ -89,11 +101,10 @@ iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
     // Create PING message and send it - protocol creates and tracks operation
     iINCMessage msg(INC_MSG_PING, 0);  // Protocol assigns sequence number
     auto op = m_protocol->sendMessage(msg);
-    if (op) {
-        op->setTimeout(2000);  // 2 seconds
-        ilog_debug("Sent PING to client", m_connId, "seq:", op->sequenceNumber());
-    }
-    
+    if (!op) return op;
+
+    ilog_debug("[", m_peerName, "][", msg.channelID(), "][", op->sequenceNumber(), "] Sent PING to client");
+    op->setTimeout(2000);  // 2 seconds
     return op;
 }
 
@@ -124,7 +135,7 @@ void iINCConnection::addSubscription(const iString& pattern)
     }
     
     m_subscriptions.push_back(pattern);
-    ilog_info("Client", m_connId, "subscribed to", pattern);
+    ilog_info("[", m_peerName, "] Subscribed to: ", pattern);
 }
 
 void iINCConnection::removeSubscription(const iString& pattern)
@@ -132,7 +143,7 @@ void iINCConnection::removeSubscription(const iString& pattern)
     auto it = std::find(m_subscriptions.begin(), m_subscriptions.end(), pattern);
     if (it != m_subscriptions.end()) {
         m_subscriptions.erase(it);
-        ilog_info("Client", m_connId, "unsubscribed from", pattern);
+        ilog_info("[", m_peerName, "] Unsubscribed from: ", pattern);
     }
 }
 
@@ -147,15 +158,15 @@ void iINCConnection::close()
 void iINCConnection::setHandshakeHandler(iINCHandshake* handshake)
 {
     m_handshake = handshake;
-    ilog_debug("Set handshake handler for connection", m_connId);
+    ilog_debug("[", m_peerName, "] Set handshake handler for connection");
 }
 
 void iINCConnection::clearHandshake()
 {
-    if (m_handshake) {
-        delete m_handshake;
-        m_handshake = IX_NULLPTR;
-    }
+    if (IX_NULLPTR == m_handshake) return;
+
+    delete m_handshake;
+    m_handshake = IX_NULLPTR;
 }
 
 bool iINCConnection::matchesPattern(const iString& eventName, const iString& pattern) const
@@ -170,13 +181,10 @@ bool iINCConnection::matchesPattern(const iString& eventName, const iString& pat
     return eventName == pattern;
 }
 
-xuint32 iINCConnection::allocateChannel(xuint32 mode)
+xuint32 iINCConnection::allocateChannel(xuint32 channelId, xuint32 mode)
 {
-    // Get server-wide unique channel ID
-    xuint32 channelId = m_server->allocateChannelId();
-    m_channels[channelId] = mode;
-    
-    ilog_info("Client", m_connId, "Allocated channel %u for connection %llu, mode=%u", channelId, m_connId, mode);
+    m_channels[channelId] = mode;    
+    ilog_info("[", m_peerName, "][", channelId, "] Allocated channel, mode=", mode);
     return channelId;
 }
 
@@ -184,12 +192,12 @@ void iINCConnection::releaseChannel(xuint32 channelId)
 {
     auto it = m_channels.find(channelId);
     if (it == m_channels.end()) {
-        ilog_warn("Client", m_connId, "Channel %u not found for connection %llu", channelId, m_connId);
+        ilog_warn("[", m_peerName, "][", channelId, "] Channel not found for connection");
         return;
     }
     
     m_channels.erase(it);
-    ilog_info("Client", m_connId, "Released channel %u for connection %llu", channelId, m_connId);
+    ilog_info("[", m_peerName, "][", channelId, "] Released channel");
 }
 
 bool iINCConnection::isChannelAllocated(xuint32 channelId) const

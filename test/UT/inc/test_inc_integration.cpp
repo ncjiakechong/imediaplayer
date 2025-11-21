@@ -1157,20 +1157,20 @@ TEST_P(INCIntegrationTest, PingPong) {
 TEST_P(INCIntegrationTest, DISABLED_LargePayload) {
     // NOTE: This test is disabled because it tests behavior beyond protocol limits.
     // 
-    // INC Protocol has MAX_MESSAGE_SIZE = 1MB (defined in iincmessage.cpp).
-    // This limit applies to the ENTIRE message (header + payload).
-    // Message header is 24 bytes, so max payload = 1MB - 24 bytes = 1,048,552 bytes.
+    // INC Protocol has MAX_MESSAGE_SIZE = 1KB (defined in iincmessage.cpp).
+    // This small limit enforces the use of shared memory for large data transfers.
+    // Message header is 24 bytes, so max payload = 1KB - 24 bytes = 1000 bytes.
     //
-    // Attempting to send 1MB payload (1,048,576 bytes) results in:
-    //   Total message size = 24 + 1,048,576 = 1,048,600 bytes
-    //   This exceeds MAX_MESSAGE_SIZE, causing INC_ERROR_MESSAGE_TOO_LARGE
+    // For large data transfer (>1KB), you MUST use iINCStream with shared memory.
+    // Stream channels support arbitrary data sizes with zero-copy shared memory.
     //
-    // For large data transfer, use iINCStream instead of method calls.
-    // Stream channels support arbitrary data sizes with automatic chunking.
+    // Design philosophy:
+    //   - Small messages (<1KB): Use regular INC messages
+    //   - Large data (>1KB): Use iINCStream with shared memory for efficiency
     //
     // To test maximum payload capacity, see MaxPayloadSize test below.
     
-    GTEST_SKIP() << "1MB payload exceeds protocol limit (1MB total message size). "
+    GTEST_SKIP() << "Large payloads exceed 1KB protocol limit. "
                  << "Use iINCStream for large data transfer.";
 }
 
@@ -1183,9 +1183,10 @@ TEST_P(INCIntegrationTest, MaxPayloadSize) {
     ASSERT_TRUE(connectClient());
     
     // Calculate maximum payload size
-    // MAX_MESSAGE_SIZE applies to entire message (header + payload)
-    // Header is 24 bytes, so max payload = MAX_MESSAGE_SIZE - HEADER_SIZE
-    const int maxPayload = 1024 * 1024 - 24;  // 1,048,552 bytes
+    // MAX_MESSAGE_SIZE = 1KB applies to entire message (header + payload)
+    // Header is 24 bytes, so max payload = 1KB - 24 bytes = 1000 bytes
+    // This enforces using shared memory for large data (>1KB)
+    const int maxPayload = 1024 - 24;  // 1000 bytes
     
     // Reset test completion flags
     helper->testCompleted = false;
@@ -1322,7 +1323,6 @@ TEST_P(INCIntegrationTest, StreamCreationAndState) {
     
     // Check initial state
     EXPECT_EQ(iINCStream::STATE_DETACHED, stream->state());
-    EXPECT_EQ(0u, stream->channelId());
     EXPECT_EQ(0, stream->chunksAvailable());
     EXPECT_FALSE(stream->canWrite());
     

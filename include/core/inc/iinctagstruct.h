@@ -31,16 +31,15 @@ namespace iShell {
 ///   payload.putUint32(userId);
 ///   payload.putBytes(binaryData);
 /// 
-///   // Reading (modern C++ style - return values with optional status)
-///   bool ok;
-///   iString method = payload.getString(&ok);
-///   if (!ok) { /* handle error */ }
+///   // Reading (modern C++ style - bool return for success/failure)
+///   iString method;
+///   if (!payload.getString(method)) { /* handle error */ }
 ///   
-///   xuint32 userId = payload.getUint32(&ok);
-///   if (!ok) { /* handle error */ }
+///   xuint32 userId;
+///   if (!payload.getUint32(userId)) { /* handle error */ }
 ///   
-///   iByteArray data = payload.getBytes(&ok);
-///   if (!ok) { /* handle error */ }
+///   iByteArray data;
+///   if (!payload.getBytes(data)) { /* handle error */ }
 /// @endcode
 class IX_CORE_EXPORT iINCTagStruct
 {
@@ -88,54 +87,54 @@ public:
     // === Read Methods (modern C++ style - return values with optional status) ===
     
     /// Read unsigned 8-bit integer
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The value read, or 0 if error occurred
-    xuint8 getUint8(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the value read
+    /// @return true if read successfully, false on error
+    bool getUint8(xuint8& value) const;
     
     /// Read unsigned 16-bit integer
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The value read, or 0 if error occurred
-    xuint16 getUint16(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the value read
+    /// @return true if read successfully, false on error
+    bool getUint16(xuint16& value) const;
     
     /// Read unsigned 32-bit integer
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The value read, or 0 if error occurred
-    xuint32 getUint32(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the value read
+    /// @return true if read successfully, false on error
+    bool getUint32(xuint32& value) const;
     
     /// Read unsigned 64-bit integer
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The value read, or 0 if error occurred
-    xuint64 getUint64(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the value read
+    /// @return true if read successfully, false on error
+    bool getUint64(xuint64& value) const;
     
     /// Read signed 32-bit integer
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The value read, or 0 if error occurred
-    xint32 getInt32(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the value read
+    /// @return true if read successfully, false on error
+    bool getInt32(xint32& value) const;
     
     /// Read signed 64-bit integer
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The value read, or 0 if error occurred
-    xint64 getInt64(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the value read
+    /// @return true if read successfully, false on error
+    bool getInt64(xint64& value) const;
     
     /// Read boolean value
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The value read, or false if error occurred
-    bool getBool(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the value read
+    /// @return true if read successfully, false on error
+    bool getBool(bool& value) const;
     
     /// Read UTF-8 string
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The string read, or empty string if error occurred
-    iString getString(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the string read
+    /// @return true if read successfully, false on error
+    bool getString(iString& value) const;
     
     /// Read arbitrary binary data
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The data read, or empty array if error occurred
-    iByteArray getBytes(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the data read
+    /// @return true if read successfully, false on error
+    bool getBytes(iByteArray& value) const;
     
     /// Read double-precision float
-    /// @param ok Optional pointer to receive success status (true if valid, false on error)
-    /// @return The value read, or 0.0 if error occurred
-    double getDouble(bool* ok = IX_NULLPTR) const;
+    /// @param value Reference to receive the value read
+    /// @return true if read successfully, false on error
+    bool getDouble(double& value) const;
     
     // === Utility Methods ===
     

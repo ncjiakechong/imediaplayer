@@ -83,11 +83,21 @@ xuint32 iINCProtocol::nextSequence()
 
 iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& msg)
 {
-    // Create operation for tracking this request
-    xuint32 seqNum = msg.sequenceNumber();
-    iSharedDataPointer<iINCOperation> op(new iINCOperation(seqNum, this));
-    op->ref(true);
+    if (msg.type() & 0x1) {
+        invokeMethod(this, &iINCProtocol::sendMessageImpl, msg, IX_NULLPTR);
+        return iSharedDataPointer<iINCOperation>();
+    }
 
+    // Create operation for tracking this request
+    iSharedDataPointer<iINCOperation> op(new iINCOperation(msg.sequenceNumber(), this));
+    if (msg.payload().size() > iINCMessageHeader::MAX_MESSAGE_SIZE) {
+        ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                    "] Message payload too large: ", msg.payload().size());
+        op->setResult(INC_ERROR_MESSAGE_TOO_LARGE, iByteArray());
+        return op;
+    }
+
+    op->ref(true);
     invokeMethod(this, &iINCProtocol::sendMessageImpl, msg, op.data());
     return op;
 }
@@ -96,85 +106,66 @@ void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
 {   
     // Check queue size limit
     if (m_sendQueue.size() >= INC_MAX_SEND_QUEUE) {
-        ilog_warn("Send queue full, dropping message");
-        
+        ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                    "] Send queue full, dropping message");
+        IX_ASSERT(op);
         op->setResult(INC_ERROR_QUEUE_FULL, iByteArray());
         op->deref();  // Release map reference
         return;
     }
     
-    // Always queue the message first
-    m_operations[msg.sequenceNumber()] = op;
-    m_sendQueue.push(msg);
-    
-    // Trigger immediate send attempt
-    onReadyWrite();
-}
-
-void iINCProtocol::setMemoryPool(iMemPool* pool)
-{
-    m_memPool = pool;
-    
-    if (pool) {
-        // Create memory import/export for zero-copy transfer
-        if (!m_memImport) {
-            m_memImport = new iMemImport(pool, IX_NULLPTR, IX_NULLPTR);
-        }
-        if (!m_memExport) {
-            m_memExport = new iMemExport(pool, IX_NULLPTR, IX_NULLPTR);
-        }
-        
-        ilog_info("Shared memory pool configured for zero-copy transfer");
+    if (op) {
+        m_operations[msg.sequenceNumber()] = op;
     }
+
+    m_sendQueue.push(msg);    
+    onReadyWrite();
 }
 
 iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, const iByteArray& data)
 {
-    xuint32 seqNum = nextSequence();  // Allocate sequence number first
+    xuint32 seqNum = nextSequence();
     iINCMessage msg(INC_MSG_BINARY_DATA, seqNum);
-    msg.setChannelID(channel);  // Set channel for routing
+    msg.setChannelID(channel);
     
-    // Attempt zero-copy via shared memory if pool is configured
-    // Access underlying iMemBlock through iArrayDataPointer chain:
-    // data.data_ptr() returns iArrayDataPointer<char>&
-    // .d_ptr() returns iTypedArrayData<char>* which inherits from iMemBlock
-    auto* typedData = data.data_ptr().d_ptr();
-    iMemBlock* block = typedData ? const_cast<iMemBlock*>(static_cast<const iMemBlock*>(typedData)) : nullptr;
-    bool usedSHM = false;
+    do {
+        // Attempt zero-copy via shared memory if pool is configured
+        // Access underlying iMemBlock through iArrayDataPointer chain:
+        // data.data_ptr() returns iArrayDataPointer<char>&
+        // .d_ptr() returns iTypedArrayData<char>* which inherits from iMemBlock
+        auto* typedData = data.data_ptr().d_ptr();
+        iMemBlock* block = typedData ? const_cast<iMemBlock*>(static_cast<const iMemBlock*>(typedData)) : nullptr;
     
-    if (m_memExport && block && block->isOurs()) {
+        if (!m_memExport || !block || !block->isOurs()) {
+            ilog_info("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Current data can not send via SHM");
+            break;
+        }
+    
         // Try to export memblock for zero-copy transfer
         MemType memType;
         xuint32 blockId, shmId;
         size_t offset, size;
-        
         int exportResult = m_memExport->put(block, &memType, &blockId, &shmId, &offset, &size);
-        
-        if (exportResult == 0) {
-            // Success - build SHM reference payload with type-safe API
-            msg.payload().putUint32(static_cast<xuint32>(memType));
-            msg.payload().putUint32(blockId);
-            msg.payload().putUint32(shmId);
-            msg.payload().putUint64(static_cast<xuint64>(offset));
-            msg.payload().putUint64(static_cast<xuint64>(size));
-            
-            msg.setFlags(INC_MSG_FLAG_SHM_DATA);
-            usedSHM = true;
-            
-            ilog_debug("Sending binary data via SHM reference: seqNum=%u, channel=%u, blockId=%u, shmId=%u, size=%zu", 
-                       seqNum, channel, blockId, shmId, size);
+        if (exportResult != 0) {
+            ilog_info("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Failed to put binary via SHM");
+            break;
         }
-    }
-    
-    if (!usedSHM) {
-        // Fallback to data copy using type-safe API
-        msg.payload().putBytes(data);
-        msg.setFlags(INC_MSG_FLAG_NONE);
-        
-        ilog_debug("Sending binary data via copy: seqNum=%u, channel=%u, size=%d bytes", 
-                   seqNum, channel, data.size());
-    }
-    
+
+        // Success - build SHM reference payload with type-safe API
+        ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via SHM reference: blockId=", blockId, ", shmId=", shmId, ", size=", size);
+        msg.payload().putUint32(static_cast<xuint32>(memType));
+        msg.payload().putUint32(blockId);
+        msg.payload().putUint32(shmId);
+        msg.payload().putUint64(static_cast<xuint64>(offset));
+        msg.payload().putUint64(static_cast<xuint64>(size));
+        msg.setFlags(INC_MSG_FLAG_SHM_DATA);
+        return sendMessage(msg);
+    } while (false);
+
+    // Fallback to data copy using type-safe API
+    msg.setFlags(INC_MSG_FLAG_NONE);
+    msg.payload().putBytes(iByteArrayView(data.constData(), std::min<xsizetype>(data.size(), iINCMessageHeader::MAX_MESSAGE_SIZE - 5)));
+    ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via copy: size=", msg.payload().size(), " bytes");
     return sendMessage(msg);
 }
 
@@ -204,9 +195,8 @@ bool iINCProtocol::readMessage(iINCMessage& msg)
     // Magic number at offset 0
     xuint32 magic;
     std::memcpy(&magic, headerData, sizeof(magic));
-
     if (magic != iINCMessageHeader::MAGIC) {
-        ilog_error("Invalid message magic: 0x%08X", magic);
+        ilog_error("[", m_device->peerAddress(), "] Invalid message magic: ", iHexUInt32(magic));
         IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
         m_recvBuffer.clear();
         return false;
@@ -215,9 +205,8 @@ bool iINCProtocol::readMessage(iINCMessage& msg)
     // Length at offset 8
     xuint32 length;
     std::memcpy(&length, headerData + 8, sizeof(length));
-    
     if (length > iINCMessageHeader::MAX_MESSAGE_SIZE) {
-        ilog_error("Message too large:", length);
+        ilog_error("[", m_device->peerAddress(), "] Message too large: ", length);
         IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
         m_recvBuffer.clear();
         return false;
@@ -248,7 +237,8 @@ bool iINCProtocol::readMessage(iINCMessage& msg)
     
     // Validate header again (defensive)
     if (header.magic != iINCMessageHeader::MAGIC) {
-        ilog_error("Invalid message magic after reading complete data");
+        ilog_error("[", m_device->peerAddress(), "][", header.channelID, "][", header.seqNum, 
+                    "] Invalid message magic after reading complete data");
         IEMIT errorOccurred(INC_ERROR_INVALID_MESSAGE);
         m_recvBuffer.clear();
         return false;
@@ -280,47 +270,61 @@ void iINCProtocol::flush()
     invokeMethod(this, &iINCProtocol::onReadyWrite);
 }
 
+/// Callback for memory export revoke notification
+static void memExportRevokeCallback(iMemExport* exp, uint blockId, void* userdata)
+{
+    // Called when a memory block is being revoked by the exporter
+    // This happens when the memory block is no longer valid for sharing
+    // For INC protocol, we don't need to do anything special here
+    // The protocol layer will handle cleanup automatically
+    IX_UNUSED(exp);
+    IX_UNUSED(blockId);
+    IX_UNUSED(userdata);
+}
+
+/// Callback for memory import revoke notification
+static void memImportRevokeCallback(iMemImport* imp, uint blockId, void* userdata)
+{
+    // Called when a memory block is being revoked by the importer
+    // For INC protocol, we don't need to do anything special here
+    IX_UNUSED(imp);
+    IX_UNUSED(blockId);
+    IX_UNUSED(userdata);
+}
+
+void iINCProtocol::enableMempool(const iByteArray& name, MemType type, size_t size)
+{
+    if (m_memPool) {
+        ilog_warn("[", m_device->peerAddress(), "] Existing memory pool, ignoring");
+        return;
+    }
+
+    m_pollName = iByteArray(name.data(), name.size()); // ensure \0 at the end
+    m_memPool = iMemPool::create(m_pollName.constData(), type, size, true);
+    m_memExport = new iMemExport(m_memPool.data(), memExportRevokeCallback, this);
+    m_memImport = new iMemImport(m_memPool.data(), memImportRevokeCallback, this);
+}
+
 void iINCProtocol::onReadyRead()
 {
     // Read messages, readMessage() will populate type and seqNum
     iINCMessage msg(INC_MSG_INVALID, 0);
     while (readMessage(msg)) {
         // Check if this is a reply message that completes an operation
-        bool isReply = false;
         xuint32 seqNum = msg.sequenceNumber();
-        
-        switch (msg.type()) {
-            case INC_MSG_PONG:
-            case INC_MSG_METHOD_REPLY:
-            case INC_MSG_SUBSCRIBE_ACK:
-            case INC_MSG_UNSUBSCRIBE_ACK:
-            case INC_MSG_STREAM_OPEN:  // Reply to requestChannel
-                isReply = true;
-                break;
-            default:
-                break;
-        }
-        
-        if (isReply && seqNum > 0) {
+        if ((msg.type() & 0x1) && seqNum > 0) {
             // Find and complete the corresponding operation
             auto it = m_operations.find(seqNum);
             if (it != m_operations.end()) {
                 iINCOperation* op = it->second;
                 m_operations.erase(it);
                 
-                // Extract error code and result data from payload
-                bool ok;
-                xint32 errorCode = msg.payload().getInt32(&ok);
-                if (!ok) {
-                    errorCode = 0;  // Default to success if no error code in payload
-                }
-                
-                iByteArray resultData = msg.payload().data();
-                
                 // Complete the operation
-                op->setResult(errorCode, resultData);
+                op->setResult(INC_OK, msg.payload().data());
                 op->deref();  // Release reference held by map
             }
+
+            continue;
         }
         
         // Handle binary data messages specially
@@ -329,78 +333,90 @@ void iINCProtocol::onReadyRead()
         } else {
             IEMIT messageReceived(msg);
         }
-        
-        // Reset for next message
-        msg = iINCMessage(INC_MSG_INVALID, 0);
     }
 }
 
 void iINCProtocol::processBinaryDataMessage(const iINCMessage& msg)
 {
-    xuint32 channel = msg.channelID();  // Now using dedicated channelID field
-    xuint32 seqNum = msg.sequenceNumber();  // Get sequence number
-    
-    // Check if this is a SHM reference or direct data
-    if (msg.flags() & INC_MSG_FLAG_SHM_DATA) {
-        // Parse SHM reference from payload using type-safe API
-        bool ok;
-        xuint32 memTypeU32 = msg.payload().getUint32(&ok);
-        if (!ok) {
-            ilog_error("Failed to read memory type from payload");
-            return;
-        }
-        
-        xuint32 blockId = msg.payload().getUint32(&ok);
-        xuint32 shmId = msg.payload().getUint32(&ok);
-        xuint64 offset64 = msg.payload().getUint64(&ok);
-        xuint64 size64 = msg.payload().getUint64(&ok);
-        
-        if (!ok) {
-            ilog_error("Invalid SHM reference payload");
-            return;
-        }
-        
-        MemType memType = static_cast<MemType>(memTypeU32);
-        size_t offset = static_cast<size_t>(offset64);
-        size_t size = static_cast<size_t>(size64);
-        
-        if (!m_memImport) {
-            ilog_error("Received SHM reference but memory import not configured");
-            return;
-        }
-        
-        // Import the memory block
-        iMemBlock* importedBlock = m_memImport->get(memType, blockId, shmId, offset, size, false);
-        if (!importedBlock) {
-            ilog_error("Failed to import memory block: blockId=%u, shmId=%u", blockId, shmId);
-            return;
-        }
-        
-        // iMemBlock is base class, cast to iTypedArrayData<char> for DataPointer
-        auto* typedData = static_cast<iTypedArrayData<char>*>(importedBlock);
-        
-        // Wrap imported block in iByteArray for safe reference counting
-        iByteArray::DataPointer dp(typedData, 
-                                    static_cast<char*>(importedBlock->data().value()), 
-                                    static_cast<xsizetype>(size));
-        iByteArray importedData(dp);
-        
-        ilog_debug("Received binary data via SHM: channel=%u, blockId=%u, size=%zu", channel, blockId, size);
-        
-        IEMIT binaryDataReceived(channel, seqNum, importedData);
-    } else {
+    xuint32 channel = msg.channelID();
+    xuint32 seqNum = msg.sequenceNumber();
+
+    do {
+        if (msg.flags() & INC_MSG_FLAG_SHM_DATA) break;
+
         // Direct data - read as bytes
-        bool ok;
-        iByteArray data = msg.payload().getBytes(&ok);
-        if (!ok) {
-            ilog_error("Failed to read binary data from payload");
+        iByteArray data;
+        if (!msg.payload().getBytes(data)
+            || !msg.payload().eof()) {
+            ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum, 
+                        "] Failed to read binary data from payload");
+
+            iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.sequenceNumber());
+            reply.payload().putInt32(-1);
+            sendMessage(reply);
             return;
-        }
+        }        
         
-        ilog_debug("Received binary data via copy: channel=%u, size=%d", channel, data.size());
-        
+        ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, 
+                    "] Received binary data via copy: size=", data.size());
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.sequenceNumber());
+        reply.payload().putInt32(data.size());
+        sendMessage(reply);
+
         IEMIT binaryDataReceived(channel, seqNum, data);
+        return;
+    } while (false);
+    
+
+    if (!m_memImport) {
+        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum, 
+                    "] Received SHM reference but memory import not configured");
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.sequenceNumber());
+        reply.payload().putInt32(-1);
+        sendMessage(reply);
+        return;
     }
+
+    // Parse SHM reference from payload using type-safe API
+    xuint32 memTypeU32, blockId, shmId;
+    xuint64 offset64, size64;
+    if (!msg.payload().getUint32(memTypeU32)
+        || !msg.payload().getUint32(blockId)
+        || !msg.payload().getUint32(shmId)
+        || !msg.payload().getUint64(offset64)
+        || !msg.payload().getUint64(size64)
+        || !msg.payload().eof()) {
+        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum, 
+                    "] Invalid SHM reference payload");
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.sequenceNumber());
+        reply.payload().putInt32(-1);
+        sendMessage(reply);
+        return;
+    }
+    
+    // Import the memory block
+    iMemBlock* importedBlock = m_memImport->get(static_cast<MemType>(memTypeU32), blockId, shmId, 
+                                                static_cast<size_t>(offset64), static_cast<size_t>(size64), false);
+    if (!importedBlock) {
+        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum, 
+                    "] Failed to import memory block: blockId=", blockId, ", shmId=", shmId);
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.sequenceNumber());
+        reply.payload().putInt32(-1);
+        sendMessage(reply);
+        return;
+    }
+    
+    ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, 
+                "] Received binary data via SHM: blockId=", blockId, ", size=", size64);
+
+    iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.sequenceNumber());
+    reply.payload().putInt32(static_cast<int32_t>(size64));
+    sendMessage(reply);
+
+    iByteArray::DataPointer dp(static_cast<iTypedArrayData<char>*>(importedBlock), 
+                                static_cast<char*>(importedBlock->data().value()), 
+                                static_cast<xsizetype>(size64));
+    IEMIT binaryDataReceived(channel, seqNum, iByteArray(dp));
 }
 
 void iINCProtocol::onDeviceConnected()
@@ -412,8 +428,10 @@ void iINCProtocol::onDeviceConnected()
 
 void iINCProtocol::onReadyWrite()
 {
-    // Connection not yet established, wait for connected() signal
-    if (!m_device->isWritable()) return;
+    if (!m_device->isWritable()) {
+        // Connection not yet established, wait for connected() signal
+        return;
+    }
 
     // State machine loop: process all sendable data
     while (true) {
@@ -427,7 +445,7 @@ void iINCProtocol::onReadyWrite()
             
             if (written < 0) {
                 // Write error
-                ilog_error("Failed to write partial data");
+                ilog_error("[", m_device->peerAddress(), "] Failed to write partial data");
                 IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
                 m_partialSendBuffer.clear();
                 m_partialSendOffset = 0;
@@ -468,7 +486,8 @@ void iINCProtocol::onReadyWrite()
         xint64 written = m_device->write(header.constData(), header.size());
         
         if (written < 0) {
-            ilog_error("Failed to write message header");
+            ilog_error("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                        "] Failed to write message header");
             IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
             return;
         }
@@ -490,7 +509,8 @@ void iINCProtocol::onReadyWrite()
             written = m_device->write(payload.constData(), payload.size());
             
             if (written < 0) {
-                ilog_error("Failed to write message payload");
+                ilog_error("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(), 
+                            "] Failed to write message payload");
                 IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
                 return;
             }

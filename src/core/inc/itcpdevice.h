@@ -92,6 +92,8 @@ public:
     xint64 bytesAvailable() const IX_OVERRIDE;
     void close() IX_OVERRIDE;
 
+    bool isLocal() const IX_OVERRIDE;
+
     int getSocketError();
     void handleConnectionComplete();
 

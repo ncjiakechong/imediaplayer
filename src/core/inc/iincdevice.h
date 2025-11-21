@@ -41,6 +41,9 @@ public:
     /// @return Peer address string (format depends on transport: "IP:port" for TCP, "path" for Unix socket)
     virtual iString peerAddress() const = 0;
 
+    /// get connction is in local domain
+    virtual bool isLocal() const = 0;
+
     /// Start async event monitoring (attach EventSource to dispatcher)
     /// @details Must be called AFTER connecting signals to ensure no events are missed.
     ///          This separates device creation from event monitoring activation.

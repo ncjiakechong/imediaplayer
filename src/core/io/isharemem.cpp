@@ -25,6 +25,7 @@
 #include "core/io/isharemem.h"
 #include "core/thread/iatomiccounter.h"
 #include "core/kernel/icoreapplication.h"
+#include "core/kernel/ideadlinetimer.h"
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
 
@@ -37,13 +38,10 @@
  * /dev/shm. We can use that information to list all blocks and
  * cleanup unused ones */
 #define SHM_PATH "/dev/shm/"
-#define SHM_ID_LEN 10
 #elif defined(IX_OS_SOLARIS)
 #define SHM_PATH "/tmp"
-#define SHM_ID_LEN 15
 #else
 #undef SHM_PATH
-#undef SHM_ID_LEN
 #endif
 
 #ifdef IX_OS_UNIX
@@ -85,16 +83,16 @@ static inline size_t SHMMarkerSize(MemType type)
     return 0;
 }
 
-static char* segmentName(char *fn, size_t l, unsigned id)
+static char* segmentName(char *fn, size_t l, const char* name, unsigned id)
 {
-    snprintf(fn, l, "/ix-shm-%u", id);
+    snprintf(fn, l, "/%s-%u", name, id);
     return fn;
 }
 
-iShareMem* iShareMem::createPrivateMem(size_t size)
+iShareMem* iShareMem::createPrivateMem(const char* name, size_t size)
 {
     IX_ASSERT(size > 0);
-    iShareMem* shm = new iShareMem();
+    iShareMem* shm = new iShareMem(name);
     shm->m_type = MEMTYPE_PRIVATE;
     shm->m_size = size;
 
@@ -126,23 +124,23 @@ static void ix_random(void *ret_data, size_t length) {
 
     size_t l = length;
     xuint8* p = (xuint8*)ret_data;
+    srand(iDeadlineTimer::current().deadlineNSecs());
     for (p = (xuint8*)ret_data, l = length; l > 0; p++, l--)
         *p = (xuint8) rand();
 }
 
-iShareMem* iShareMem::createSharedMem(MemType type, size_t size, mode_t mode)
+iShareMem* iShareMem::createSharedMem(const char* name, MemType type, size_t size, mode_t mode)
 {
-    /* Each time we create a new SHM area, let's first drop all stale
-     * ones */
-    cleanup();
+    /* Each time we create a new SHM area, let's first drop all stale ones */
+    cleanup(name);
 
-    iShareMem* shm = new iShareMem();
+    iShareMem* shm = new iShareMem(name);
     ix_random(&(shm->m_id), sizeof(shm->m_id));
 
     switch (type) {
     case MEMTYPE_SHARED_POSIX: {
         char fn[32] = { 0 };
-        segmentName(fn, sizeof(fn), shm->m_id);
+        segmentName(fn, sizeof(fn), shm->m_name, shm->m_id);
         shm->m_memfd = shm_open(fn, O_RDWR|O_CREAT|O_EXCL, mode);
         shm->m_doUnlink = true;
         break;
@@ -150,7 +148,7 @@ iShareMem* iShareMem::createSharedMem(MemType type, size_t size, mode_t mode)
 
     #ifdef IX_HAVE_MEMFD
     case MEMTYPE_SHARED_MEMFD: {
-        shm->m_memfd = memfd_create("ishell", MFD_ALLOW_SEALING);
+        shm->m_memfd = memfd_create(name, MFD_ALLOW_SEALING);
         break;
     }
     #endif
@@ -204,20 +202,21 @@ iShareMem* iShareMem::createSharedMem(MemType type, size_t size, mode_t mode)
     return shm;
 }
 
-iShareMem* iShareMem::create(MemType type, size_t size, mode_t mode) {
+iShareMem* iShareMem::create(const char* name, MemType type, size_t size, mode_t mode) {
     IX_ASSERT((size > 0) && (size <= MAX_SHM_SIZE));
     IX_ASSERT(!(mode & ~0777) && (mode >= 0600));
 
     /* Round up to make it page aligned */
     size = ix_page_align(size);
     if (type == MEMTYPE_PRIVATE)
-        return createPrivateMem(size);
+        return createPrivateMem(name, size);
 
-    return createSharedMem(type, size, mode);
+    return createSharedMem(name, type, size, mode);
 }
 
-iShareMem::iShareMem()
-    : m_type(MEMTYPE_PRIVATE)
+iShareMem::iShareMem(const char* name)
+    : m_name(name)
+    , m_type(MEMTYPE_PRIVATE)
     , m_id(0)
     , m_ptr(IX_NULLPTR)
     , m_size(0)
@@ -247,7 +246,7 @@ int iShareMem::detach()
 
         if ((MEMTYPE_SHARED_POSIX == m_type) && m_doUnlink) {
             char fn[32] = { 0 };
-            segmentName(fn, sizeof(fn), m_id);
+            segmentName(fn, sizeof(fn), m_name, m_id);
             if (shm_unlink(fn) < 0)
                 ilog_warn(" shm_unlink(", fn, ") failed: ", errno);
         }
@@ -324,7 +323,7 @@ int iShareMem::doAttach(MemType type, uint id, xintptr memfd, bool writable, boo
     case MEMTYPE_SHARED_POSIX: {
         IX_ASSERT(-1 == memfd);
         char fn[32] = { 0 };
-        segmentName(fn, sizeof(fn), id);
+        segmentName(fn, sizeof(fn), m_name, id);
         fd = shm_open(fn, writable ? O_RDWR : O_RDONLY, 0);
 
         if (fd < 0) {
@@ -448,7 +447,7 @@ static int ix_atou(const char *s, xuint32 *ret_u)
     return 0;
 }
 
-int iShareMem::cleanup()
+int iShareMem::cleanup(const char* name)
 {
     #if defined(SHM_PATH)
     DIR *d = opendir(SHM_PATH);
@@ -457,54 +456,59 @@ int iShareMem::cleanup()
         return -1;
     }
 
+    #if defined(__sun)
+    const int shm_id_len = 11;
+    #else
+    const int shm_id_len = strlen(name);
+    #endif
+
     struct dirent *de;
     while ((de = readdir(d))) {
-        iShareMem seg;
+        iShareMem seg(name);
 
         #if defined(__sun)
-        if (strncmp(de->d_name, ".SHMDIX-shm-", SHM_ID_LEN))
+        if (strncmp(de->d_name, ".SHMDIX-shm-", shm_id_len))
         #else
-        if (strncmp(de->d_name, "ix-shm-", SHM_ID_LEN))
+        if (strncmp(de->d_name, name, shm_id_len))
         #endif
+        {
             continue;
+        }
 
         unsigned id;
-        if (ix_atou(de->d_name + SHM_ID_LEN, &id) < 0)
+        if (ix_atou(de->d_name + shm_id_len + 1, &id) < 0) {
             continue;
+        }
 
-        if (seg.doAttach(MEMTYPE_SHARED_POSIX, id, -1, false, true) < 0)
+        if (seg.doAttach(MEMTYPE_SHARED_POSIX, id, -1, false, true) < 0) {
             continue;
+        }
 
         if (seg.m_size < SHMMarkerSize(seg.m_type)) {
-            // delete seg
             continue;
         }
 
         SHMMarker* m = (SHMMarker*) ((uint8_t*) seg.m_ptr + seg.m_size - SHMMarkerSize(seg.m_type));
         if (m->marker != SHM_MARKER) {
-            // delete seg
             continue;
         }
 
         pid_t pid = (pid_t) m->pid;
         if (!pid) {
-            // delete seg
             continue;
         }
 
         if (kill(pid, 0) == 0 || errno != ESRCH) {
-            // delete seg
             continue;
         }
 
-        // delete seg
-
         /* Ok, the owner of this shms segment is dead, so, let's remove the segment */
         char fn[128] = { 0 };
-        segmentName(fn, sizeof(fn), id);
+        segmentName(fn, sizeof(fn), seg.m_name, id);
 
-        if (shm_unlink(fn) < 0 && errno != EACCES && errno != ENOENT)
+        if (shm_unlink(fn) < 0 && errno != EACCES && errno != ENOENT) {
             ilog_warn("Failed to remove SHM segment ", fn, ": ", errno);
+        }
     }
 
     closedir(d);

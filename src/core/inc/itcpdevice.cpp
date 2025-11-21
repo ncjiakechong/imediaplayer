@@ -123,7 +123,7 @@ public:
         }
 
         if (hasError) {
-            ilog_warn("Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
+            ilog_warn("[", tcp->peerAddress(), "] Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
             IEMIT tcp->errorOccurred(INC_ERROR_CHANNEL);
             return false;
         }
@@ -150,15 +150,41 @@ iTcpDevice::~iTcpDevice()
     close();
 }
 
+bool iTcpDevice::isLocal() const
+{
+    // Check if peer address is a loopback address
+    // IPv4: 127.0.0.0/8 (127.0.0.1 is most common)
+    // IPv6: ::1
+    
+    if (m_peerAddr.isEmpty()) {
+        // No peer address yet, assume local for safety
+        return true;
+    }
+    
+    // Check for IPv4 loopback (127.x.x.x)
+    if (m_peerAddr.startsWith("127.")) {
+        return true;
+    }
+    
+    // Check for IPv6 loopback (::1)
+    if (m_peerAddr == "::1") {
+        return true;
+    }
+    
+    // TODO: Could also check if peer address matches any local interface address
+    // For now, non-loopback addresses are considered non-local
+    return false;
+}
+
 int iTcpDevice::connectToHost(const iString& host, xuint16 port)
 {
     if (role() != ROLE_CLIENT) {
-        ilog_error("connectToHost only available in client mode");
+        ilog_error("[] connectToHost only available in client mode ", host);
         return INC_ERROR_INVALID_STATE;
     }
 
     if (isOpen() || m_sockfd >= 0) {
-        ilog_warn("Already connected or connecting");
+        ilog_warn("[", peerAddress(), "] Already connected or connecting");
         return INC_ERROR_ALREADY_CONNECTED;
     }
 
@@ -196,17 +222,17 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
     // Hostnames like "localhost" or domain names will fail here
     if (inet_pton(AF_INET, host.toUtf8().constData(), &serverAddr.sin_addr) <= 0) {
         // FIXME: DNS resolution not implemented - use getaddrinfo() to support hostnames
-        ilog_error("Invalid IP address (only numeric IPv4 supported, no DNS):", host);
+        ilog_error("[] Invalid IP address (only numeric IPv4 supported, no DNS) :", host);
         close();
         return INC_ERROR_CONNECTION_FAILED;
     }
 
     // Connect
-    ilog_info("Connection in progress to ", host, ":", port);
+    ilog_info("[] Connection in progress to ", host, ":", port);
     int result = ::connect(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
     if (result < 0 && (errno != EINPROGRESS)) {
         close();
-        ilog_error("Connect failed:", strerror(errno));
+        ilog_error("[] Connect failed: ", strerror(errno), " to ", host);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -219,7 +245,7 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
     }
 
     // Only emit connected() if already connected (immediate connection)
-    ilog_info("Connected immediately to ", host, ":", port);
+    ilog_info("[", peerAddress(), "] Connected immediately to ", host, ":", port);
     // Open the device using base class (sets m_openMode for isOpen())
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
     configEventAbility(true, false);
@@ -231,12 +257,12 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
 int iTcpDevice::listenOn(const iString& address, xuint16 port)
 {
     if (role() != ROLE_SERVER) {
-        ilog_error("listenOn() can only be called on server mode device");
+        ilog_error("[] listenOn() can only be called on server mode device");
         return INC_ERROR_INVALID_STATE;
     }
 
     if (isOpen() || m_sockfd >= 0) {
-        ilog_warn("Already listening");
+        ilog_warn("[", peerAddress(), "] Already listening");
         return INC_ERROR_INVALID_STATE;
     }
 
@@ -251,14 +277,14 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     // Enable address reuse
     int opt = 1;
     if (setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        ilog_warn("Failed to set SO_REUSEADDR");
+        ilog_warn("[", peerAddress(), "] Failed to set SO_REUSEADDR");
     }
 
     #ifdef SO_REUSEPORT
     // On macOS and BSD, also set SO_REUSEPORT for immediate port reuse
     // This allows binding to a port in TIME_WAIT state
     if (setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-        ilog_warn("Failed to set SO_REUSEPORT");
+        ilog_warn("[] Failed to set SO_REUSEPORT");
     }
     #endif
 
@@ -273,21 +299,21 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     } else {
         if (inet_pton(AF_INET, address.toUtf8().constData(), &serverAddr.sin_addr) <= 0) {
             close();
-            ilog_error("Invalid bind address:", address);
+            ilog_error("[] Invalid bind address:", address);
             return INC_ERROR_CONNECTION_FAILED;
         }
     }
 
     if (::bind(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
-        ilog_error("Bind failed:", strerror(errno));
         close();
+        ilog_error("[] Bind failed:", strerror(errno));
         return INC_ERROR_CONNECTION_FAILED;
     }
 
     // Listen for connections (backlog = 128)
     if (::listen(m_sockfd, 128) < 0) {
         close();
-        ilog_error("Listen failed:", strerror(errno));
+        ilog_error("[] Listen failed:", strerror(errno));
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -316,14 +342,14 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     m_eventSource = new iTcpEventSource(this);
     configEventAbility(true, false);
     
-    ilog_info("Listening on", m_localAddr, ":", m_localPort);
+    ilog_info("[] Listening on", m_localAddr, ":", m_localPort);
     return INC_OK;
 }
 
 void iTcpDevice::acceptConnection()
 {
     if (role() != ROLE_SERVER || !isOpen()) {
-        ilog_error("acceptConnection only available in listening server mode");
+        ilog_error("[] acceptConnection only available in listening server mode");
         return;
     }
 
@@ -333,7 +359,7 @@ void iTcpDevice::acceptConnection()
     int clientFd = ::accept(m_sockfd, (struct sockaddr*)&clientAddr, &addrLen);
     if (clientFd < 0) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            ilog_error("Accept failed:", strerror(errno));
+            ilog_error("[] Accept failed:", strerror(errno));
             IEMIT errorOccurred(INC_ERROR_CONNECTION_FAILED);
         }
         return;
@@ -368,10 +394,7 @@ void iTcpDevice::acceptConnection()
     // Accepted connections are already established, monitor read events only
     clientDevice->configEventAbility(true, false);
 
-    ilog_info("Accepted connection from ", clientDevice->m_peerAddr, ":", clientDevice->m_peerPort);
-
-    // Emit newConnection signal with the client device
-    // NOTE: Caller (e.g., iINCServer) must call startEventMonitoring() on client device
+    ilog_info("[] Accepted connection from ", clientDevice->m_peerAddr, ":", clientDevice->m_peerPort);
     IEMIT newConnection(clientDevice);
 }
 
@@ -401,7 +424,7 @@ iByteArray iTcpDevice::readData(xint64 maxlen, xint64* readErr)
     if (bytesRead == 0) {
         m_eventSource->detach();
         if (readErr) *readErr = 0;
-        ilog_info("Connection closed by peer");
+        ilog_info("[", peerAddress(), "] Connection closed by peer");
         IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
         return iByteArray();
     }
@@ -414,7 +437,7 @@ iByteArray iTcpDevice::readData(xint64 maxlen, xint64* readErr)
 
     m_eventSource->detach();
     if (readErr) *readErr = -1;
-    ilog_error("Read failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] Read failed:", strerror(errno));
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return iByteArray();
 }
@@ -432,7 +455,7 @@ xint64 iTcpDevice::writeData(const iByteArray& data)
     }
 
     m_eventSource->detach();
-    ilog_error("Write failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] Write failed:", strerror(errno));
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return -1;    
 }
@@ -461,19 +484,19 @@ void iTcpDevice::close()
 bool iTcpDevice::startEventMonitoring(iEventDispatcher* dispatcher)
 {
     if (!m_eventSource) {
-        ilog_warn("No EventSource to start monitoring");
+        ilog_warn("[", peerAddress(), "] No EventSource to start monitoring");
         return false;
     }
 
     m_eventSource->attach(dispatcher ? dispatcher : iEventDispatcher::instance());
-    ilog_debug("EventSource monitoring started");
+    ilog_debug("[", peerAddress(), "] EventSource monitoring started");
     return true;
 }
 
 void iTcpDevice::configEventAbility(bool read, bool write)
 {
     if (!m_eventSource) {
-        ilog_warn("No EventSource to configure");
+        ilog_warn("[", peerAddress(), "] No EventSource to configure");
         return;
     }
 
@@ -630,7 +653,7 @@ void iTcpDevice::handleConnectionComplete()
     // Protocol layer will adjust this after sending queued messages
     configEventAbility(true, false);
     
-    ilog_info("Connected to ", m_peerAddr, ":", m_peerPort);
+    ilog_info("[] Connected to ", m_peerAddr, ":", m_peerPort);
     IEMIT connected();
 }
 
