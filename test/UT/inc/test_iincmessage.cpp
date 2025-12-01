@@ -26,8 +26,8 @@ protected:
 // === Constructor Tests ===
 
 TEST_F(INCMessageTest, ConstructorBasic) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 123);
-    
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 123);
+
     EXPECT_EQ(msg.type(), INC_MSG_METHOD_CALL);
     EXPECT_EQ(msg.sequenceNumber(), 123u);
     EXPECT_EQ(msg.protocolVersion(), 0u);
@@ -37,27 +37,27 @@ TEST_F(INCMessageTest, ConstructorBasic) {
 }
 
 TEST_F(INCMessageTest, ConstructorDifferentTypes) {
-    iINCMessage msg1(INC_MSG_HANDSHAKE, 1);
+    iINCMessage msg1(INC_MSG_HANDSHAKE, 0, 1);
     EXPECT_EQ(msg1.type(), INC_MSG_HANDSHAKE);
-    
-    iINCMessage msg2(INC_MSG_EVENT, 2);
+
+    iINCMessage msg2(INC_MSG_EVENT, 0, 2);
     EXPECT_EQ(msg2.type(), INC_MSG_EVENT);
-    
-    iINCMessage msg3(INC_MSG_BINARY_DATA, 3);
+
+    iINCMessage msg3(INC_MSG_BINARY_DATA, 0, 3);
     EXPECT_EQ(msg3.type(), INC_MSG_BINARY_DATA);
 }
 
 // === Copy Constructor and Assignment Tests ===
 
 TEST_F(INCMessageTest, CopyConstructor) {
-    iINCMessage original(INC_MSG_METHOD_CALL, 100);
+    iINCMessage original(INC_MSG_METHOD_CALL, 0, 100);
     original.setProtocolVersion(1);
     original.setPayloadVersion(2);
     original.setChannelID(5);
     original.setFlags(INC_MSG_FLAG_SHM_DATA);
-    
+
     iINCMessage copy(original);
-    
+
     EXPECT_EQ(copy.type(), original.type());
     EXPECT_EQ(copy.sequenceNumber(), original.sequenceNumber());
     EXPECT_EQ(copy.protocolVersion(), original.protocolVersion());
@@ -67,13 +67,13 @@ TEST_F(INCMessageTest, CopyConstructor) {
 }
 
 TEST_F(INCMessageTest, AssignmentOperator) {
-    iINCMessage original(INC_MSG_EVENT, 200);
+    iINCMessage original(INC_MSG_EVENT, 0, 200);
     original.setProtocolVersion(3);
     original.setChannelID(10);
-    
-    iINCMessage assigned(INC_MSG_INVALID, 0);
+
+    iINCMessage assigned(INC_MSG_INVALID, 0, 0);
     assigned = original;
-    
+
     EXPECT_EQ(assigned.type(), original.type());
     EXPECT_EQ(assigned.sequenceNumber(), original.sequenceNumber());
     EXPECT_EQ(assigned.protocolVersion(), original.protocolVersion());
@@ -81,11 +81,11 @@ TEST_F(INCMessageTest, AssignmentOperator) {
 }
 
 TEST_F(INCMessageTest, SelfAssignment) {
-    iINCMessage msg(INC_MSG_PING, 42);
+    iINCMessage msg(INC_MSG_PING, 0, 42);
     msg.setProtocolVersion(1);
-    
+
     msg = msg;  // Self-assignment
-    
+
     EXPECT_EQ(msg.type(), INC_MSG_PING);
     EXPECT_EQ(msg.sequenceNumber(), 42u);
     EXPECT_EQ(msg.protocolVersion(), 1u);
@@ -94,21 +94,21 @@ TEST_F(INCMessageTest, SelfAssignment) {
 // === Header Generation Tests ===
 
 TEST_F(INCMessageTest, HeaderGeneration) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 500);
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 500);
     msg.setProtocolVersion(1);
     msg.setPayloadVersion(2);
     msg.setChannelID(7);
     msg.setFlags(INC_MSG_FLAG_SHM_DATA);
-    
+
     iByteArray header = msg.header();
-    
-    // Header should be 24 bytes
+
+    // Header should be 32 bytes (with dts field)
     EXPECT_EQ(header.size(), iINCMessageHeader::HEADER_SIZE);
-    EXPECT_EQ(header.size(), 24);
-    
+    EXPECT_EQ(header.size(), 32);
+
     // Parse header to verify content
     const iINCMessageHeader* headerPtr = reinterpret_cast<const iINCMessageHeader*>(header.constData());
-    
+
     EXPECT_EQ(headerPtr->magic, iINCMessageHeader::MAGIC);
     EXPECT_EQ(headerPtr->protocolVersion, 1u);
     EXPECT_EQ(headerPtr->payloadVersion, 2u);
@@ -119,16 +119,16 @@ TEST_F(INCMessageTest, HeaderGeneration) {
 }
 
 TEST_F(INCMessageTest, HeaderWithPayload) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 600);
-    
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 600);
+
     // Add payload
     iINCTagStruct& payload = msg.payload();
     payload.putUint32(12345);
     payload.putString(iString(u"test"));
-    
+
     iByteArray header = msg.header();
     const iINCMessageHeader* headerPtr = reinterpret_cast<const iINCMessageHeader*>(header.constData());
-    
+
     // Header should contain valid data
     EXPECT_EQ(headerPtr->magic, iINCMessageHeader::MAGIC);
     EXPECT_EQ(headerPtr->seqNum, 600u);
@@ -137,23 +137,23 @@ TEST_F(INCMessageTest, HeaderWithPayload) {
 // === Validation Tests ===
 
 TEST_F(INCMessageTest, IsValidBasic) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 100);
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 100);
     EXPECT_TRUE(msg.isValid());
 }
 
 TEST_F(INCMessageTest, IsValidInvalidType) {
-    iINCMessage msg(INC_MSG_INVALID, 100);
+    iINCMessage msg(INC_MSG_INVALID, 0, 100);
     EXPECT_FALSE(msg.isValid());
 }
 
 TEST_F(INCMessageTest, IsValidWithPayload) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 100);
-    
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 100);
+
     // Add reasonable payload
     iINCTagStruct& payload = msg.payload();
     payload.putString(iString(u"testMethod"));
     payload.putUint32(42);
-    
+
     // Message with payload should still be valid
     EXPECT_TRUE(msg.isValid());
 }
@@ -161,18 +161,18 @@ TEST_F(INCMessageTest, IsValidWithPayload) {
 // === Clear Operation Tests ===
 
 TEST_F(INCMessageTest, ClearOperation) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 300);
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 300);
     msg.setProtocolVersion(5);
     msg.setPayloadVersion(6);
     msg.setChannelID(8);
     msg.setFlags(INC_MSG_FLAG_COMPRESSED);
-    
+
     // Add some payload data
     msg.payload().putUint32(999);
-    
+
     // Clear should reset everything
     msg.clear();
-    
+
     EXPECT_EQ(msg.type(), INC_MSG_INVALID);
     EXPECT_EQ(msg.sequenceNumber(), 0u);
     EXPECT_EQ(msg.protocolVersion(), 0u);
@@ -184,45 +184,45 @@ TEST_F(INCMessageTest, ClearOperation) {
 // === Accessor and Mutator Tests ===
 
 TEST_F(INCMessageTest, SetAndGetType) {
-    iINCMessage msg(INC_MSG_HANDSHAKE, 1);
-    
+    iINCMessage msg(INC_MSG_HANDSHAKE, 0, 1);
+
     msg.setType(INC_MSG_HANDSHAKE_ACK);
     EXPECT_EQ(msg.type(), INC_MSG_HANDSHAKE_ACK);
 }
 
 TEST_F(INCMessageTest, SetAndGetSequenceNumber) {
-    iINCMessage msg(INC_MSG_PING, 1);
-    
+    iINCMessage msg(INC_MSG_PING, 0, 1);
+
     msg.setSequenceNumber(999);
     EXPECT_EQ(msg.sequenceNumber(), 999u);
 }
 
 TEST_F(INCMessageTest, SetAndGetVersions) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 1);
-    
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 1);
+
     msg.setProtocolVersion(10);
     msg.setPayloadVersion(20);
-    
+
     EXPECT_EQ(msg.protocolVersion(), 10u);
     EXPECT_EQ(msg.payloadVersion(), 20u);
 }
 
 TEST_F(INCMessageTest, SetAndGetChannelID) {
-    iINCMessage msg(INC_MSG_BINARY_DATA, 1);
-    
+    iINCMessage msg(INC_MSG_BINARY_DATA, 0, 1);
+
     msg.setChannelID(15);
     EXPECT_EQ(msg.channelID(), 15u);
 }
 
 TEST_F(INCMessageTest, SetAndGetFlags) {
-    iINCMessage msg(INC_MSG_BINARY_DATA, 1);
-    
+    iINCMessage msg(INC_MSG_BINARY_DATA, 0, 1);
+
     msg.setFlags(INC_MSG_FLAG_SHM_DATA);
     EXPECT_EQ(msg.flags(), INC_MSG_FLAG_SHM_DATA);
-    
+
     msg.setFlags(INC_MSG_FLAG_COMPRESSED);
     EXPECT_EQ(msg.flags(), INC_MSG_FLAG_COMPRESSED);
-    
+
     msg.setFlags(INC_MSG_FLAG_SHM_DATA | INC_MSG_FLAG_COMPRESSED);
     EXPECT_EQ(msg.flags(), INC_MSG_FLAG_SHM_DATA | INC_MSG_FLAG_COMPRESSED);
 }
@@ -230,31 +230,31 @@ TEST_F(INCMessageTest, SetAndGetFlags) {
 // === Payload Tests ===
 
 TEST_F(INCMessageTest, PayloadAccess) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 1);
-    
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 1);
+
     // Mutable access
     iINCTagStruct& payload = msg.payload();
     payload.putString(iString(u"testMethod"));
     payload.putUint32(123);
-    
+
     // Const access
     const iINCMessage& constMsg = msg;
     const iINCTagStruct& constPayload = constMsg.payload();
-    
+
     // Just verify we can access payload (detailed testing in test_iinctagstruct.cpp)
     iString val;
     EXPECT_TRUE(constPayload.getString(val));
 }
 
 TEST_F(INCMessageTest, SetPayload) {
-    iINCMessage msg(INC_MSG_METHOD_CALL, 1);
-    
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 1);
+
     iINCTagStruct newPayload;
     newPayload.putString(iString(u"value"));
     newPayload.putUint64(456789);
-    
+
     msg.setPayload(newPayload);
-    
+
     // Just verify payload was set (detailed payload operations tested separately)
     const iINCTagStruct& payload = msg.payload();
     iString val;
@@ -268,7 +268,7 @@ TEST_F(INCMessageTest, AllMessageTypes) {
         iINCMessageType type;
         const char* name;
     };
-    
+
     TypeTest types[] = {
         {INC_MSG_INVALID, "INVALID"},
         {INC_MSG_HANDSHAKE, "HANDSHAKE"},
@@ -286,9 +286,9 @@ TEST_F(INCMessageTest, AllMessageTypes) {
         {INC_MSG_PING, "PING"},
         {INC_MSG_PONG, "PONG"},
     };
-    
+
     for (const auto& test : types) {
-        iINCMessage msg(test.type, 1);
+        iINCMessage msg(test.type, 0, 1);
         EXPECT_EQ(msg.type(), test.type) << "Failed for type: " << test.name;
     }
 }
@@ -298,11 +298,11 @@ TEST_F(INCMessageTest, AllMessageTypes) {
 TEST_F(INCMessageTest, HeaderConstants) {
     // Verify magic number
     EXPECT_EQ(iINCMessageHeader::MAGIC, 0x494E4300u);  // "INC\0"
-    
-    // Verify header size
-    EXPECT_EQ(iINCMessageHeader::HEADER_SIZE, 24);
-    EXPECT_EQ(sizeof(iINCMessageHeader), 24u);
-    
+
+    // Verify header size (32 bytes with dts field)
+    EXPECT_EQ(iINCMessageHeader::HEADER_SIZE, 32);
+    EXPECT_EQ(sizeof(iINCMessageHeader), 32u);
+
     // Verify max message size (1 KB - enforces use of shared memory for large data)
     EXPECT_EQ(iINCMessageHeader::MAX_MESSAGE_SIZE, 1024);
 }
@@ -311,11 +311,11 @@ TEST_F(INCMessageTest, HeaderConstants) {
  * Test: Payload exceeding MAX_MESSAGE_SIZE should be invalid
  */
 TEST_F(INCMessageTest, PayloadExceedsMaxSize) {
-    iINCMessage msg(INC_MSG_BINARY_DATA, 1);
-    
+    iINCMessage msg(INC_MSG_BINARY_DATA, 0, 1);
+
     // Create payload larger than 1MB using iINCTagStruct
     iINCTagStruct largePayload;
-    
+
     // Add a large byte array to exceed 1MB
     iByteArray largeData;
     largeData.resize(iINCMessageHeader::MAX_MESSAGE_SIZE + 100);
@@ -323,9 +323,9 @@ TEST_F(INCMessageTest, PayloadExceedsMaxSize) {
         largeData[i] = static_cast<char>(i % 256);
     }
     largePayload.putBytes(largeData);
-    
+
     msg.setPayload(largePayload);
-    
+
     // Message should be invalid due to oversized payload
     EXPECT_FALSE(msg.isValid());
     EXPECT_GT(msg.payload().size(), iINCMessageHeader::MAX_MESSAGE_SIZE);
@@ -335,12 +335,12 @@ TEST_F(INCMessageTest, PayloadExceedsMaxSize) {
  * Test: Payload at exactly MAX_MESSAGE_SIZE should still be valid
  */
 TEST_F(INCMessageTest, PayloadAtMaxSize) {
-    iINCMessage msg(INC_MSG_BINARY_DATA, 1);
-    
+    iINCMessage msg(INC_MSG_BINARY_DATA, 0, 1);
+
     // Create payload exactly at max size using iINCTagStruct
     // Note: iINCTagStruct adds tag bytes, so we need to account for that
     iINCTagStruct maxPayload;
-    
+
     // putBytes adds a tag byte + 4 bytes for length, so payload should be MAX - 5
     iByteArray maxData;
     const int tagOverhead = 5; // 1 byte tag + 4 bytes length
@@ -349,11 +349,100 @@ TEST_F(INCMessageTest, PayloadAtMaxSize) {
         maxData[i] = static_cast<char>(i % 256);
     }
     maxPayload.putBytes(maxData);
-    
+
     msg.setPayload(maxPayload);
-    
+
     // Message should be valid - at or below limit
     EXPECT_TRUE(msg.isValid());
     EXPECT_LE(msg.payload().size(), iINCMessageHeader::MAX_MESSAGE_SIZE);
 }
+
+// === DTS (Duration Timestamp) Tests ===
+
+/**
+ * Test: Default DTS should be Forever (messages永久有效)
+ */
+TEST_F(INCMessageTest, DTSDefaultForever) {
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 123);
+
+    // Default DTS should be Forever (0x7FFFFFFFFFFFFFFF)
+    iDeadlineTimer dts = msg.dts();
+    EXPECT_TRUE(dts.isForever());
+    EXPECT_EQ(dts.deadlineNSecs(), std::numeric_limits<xint64>::max());
+}
+
+/**
+ * Test: Setting DTS with specific timeout value
+ */
+TEST_F(INCMessageTest, DTSSetTimeout) {
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 123);
+
+    // Set DTS to 5000ms from now (similar to callMethod implementation)
+    iDeadlineTimer dts = iDeadlineTimer::current();
+    dts.setDeadline(5000);
+    msg.setDTS(dts.deadlineNSecs());
+
+    // Verify DTS is set and not Forever
+    iDeadlineTimer retrievedDTS = msg.dts();
+    EXPECT_FALSE(retrievedDTS.isForever());
+    EXPECT_GT(retrievedDTS.deadlineNSecs(), 0);
+    EXPECT_LT(retrievedDTS.deadlineNSecs(), std::numeric_limits<xint64>::max());
+}
+
+/**
+ * Test: DTS serialization/deserialization preserves value
+ */
+TEST_F(INCMessageTest, DTSSerializationPreservesValue) {
+    // Create message with timeout-based DTS
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 456);
+    iDeadlineTimer dts = iDeadlineTimer::current();
+    dts.setDeadline(3000); // 3 seconds from now
+    xint64 originalDTS = dts.deadlineNSecs();
+    msg.setDTS(originalDTS);
+
+    // Verify DTS is preserved through getter
+    iDeadlineTimer retrievedDTS = msg.dts();
+    EXPECT_EQ(retrievedDTS.deadlineNSecs(), originalDTS);
+    EXPECT_GT(retrievedDTS.deadlineNSecs(), 0);
+    EXPECT_LT(retrievedDTS.deadlineNSecs(), std::numeric_limits<xint64>::max());
+}
+
+/**
+ * Test: DTS copy semantics - verify DTS is preserved during copy
+ */
+TEST_F(INCMessageTest, DTSCopySemantics) {
+    // Create original message with specific DTS
+    iINCMessage original(INC_MSG_METHOD_CALL, 0, 789);
+    iDeadlineTimer dts = iDeadlineTimer::current();
+    dts.setDeadline(10000); // 10 seconds
+    xint64 originalDTS = dts.deadlineNSecs();
+    original.setDTS(originalDTS);
+
+    // Copy constructor
+    iINCMessage copied(original);
+    EXPECT_EQ(copied.dts().deadlineNSecs(), originalDTS);
+
+    // Assignment operator
+    iINCMessage assigned(INC_MSG_PING, 0, 1);
+    assigned = original;
+    EXPECT_EQ(assigned.dts().deadlineNSecs(), originalDTS);
+}
+
+/**
+ * Test: Expired DTS detection
+ */
+TEST_F(INCMessageTest, DTSExpiredDetection) {
+    iINCMessage msg(INC_MSG_METHOD_CALL, 0, 111);
+
+    // Set DTS to 1ms in the past (expired)
+    iDeadlineTimer dts = iDeadlineTimer::current();
+    xint64 pastTime = dts.deadlineNSecs() - 1000000; // 1ms ago in nanoseconds
+    msg.setDTS(pastTime);
+
+    // Verify message DTS has expired
+    iDeadlineTimer retrievedDTS = msg.dts();
+    EXPECT_TRUE(retrievedDTS.hasExpired());
+    EXPECT_LT(retrievedDTS.deadlineNSecs(), iDeadlineTimer::current().deadlineNSecs());
+}
+
 

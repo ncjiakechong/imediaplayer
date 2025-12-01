@@ -553,10 +553,10 @@ int iEventDispatcher_Glib::updatePoll(iPollFD* fd, iEventSource* source)
         priority = source->priority();
 
     GPollFD* wraper = itMap->second;
-    
+
     // Remove old GPollFD from context
     g_main_context_remove_poll(m_mainContext, wraper);
-    
+
     // Update GPollFD events from iPollFD
     wraper->events = 0;
     if (fd->events & IX_IO_IN)
@@ -571,10 +571,10 @@ int iEventDispatcher_Glib::updatePoll(iPollFD* fd, iEventSource* source)
         wraper->events |= G_IO_HUP;
     if (fd->events & IX_IO_NVAL)
         wraper->events |= G_IO_NVAL;
-    
+
     // Re-add GPollFD to context with updated events
     g_main_context_add_poll(m_mainContext, wraper, priority);
-    
+
     return 0;
 }
 

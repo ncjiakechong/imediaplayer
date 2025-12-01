@@ -15,7 +15,7 @@
 #define IINCCONTEXT_H
 
 #include <core/inc/iinccontextconfig.h>
-#include <core/inc/iincoperation.h>
+#include <core/inc/iincconnection.h>
 #include <core/thread/ithread.h>
 #include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
@@ -24,14 +24,11 @@
 namespace iShell {
 
 class iINCEngine;
-class iINCProtocol;
-class iINCHandshake;
-class iINCMessage;
 
 /// @brief Client-side connection context
 /// @details Manages connection lifecycle, async operations, and auto-reconnect.
 ///          Owns its own iINCEngine instance.
-/// 
+///
 /// @par Key Features:
 /// - **Asynchronous**: Non-blocking async RPC calls with callbacks
 /// - **Shared Memory**: Zero-copy binary data transfer via iINCStream
@@ -88,10 +85,10 @@ public:
     iSharedDataPointer<iINCOperation> pingpong();
 
     /// Get server protocol version
-    xuint32 getServerProtocolVersion() const { return m_serverProtocol; }
+    xuint32 getServerProtocolVersion() const { return m_connection ? m_connection->peerProtocolVersion() : 0; }
 
     /// Get server name
-    iString getServerName() const { return m_serverName; }
+    iString getServerName() const { return m_connection ? m_connection->peerName() : iString(); }
 
     /// Check if connection is to local server
     bool isLocal() const;
@@ -118,51 +115,43 @@ protected:
     iSharedDataPointer<iINCOperation> callMethod(iStringView method, xuint16 version, const iByteArray& args, xint64 timeout = 10000);
 
 private:
-    void onProtocolMessage(const iINCMessage& msg);
-    void onProtocolError(xint32 errorCode);
-    void onDeviceError(xint32 errorCode);
-    void handleHandshake(const iINCMessage& msg);
-    void handleHandshakeAck(const iINCMessage& msg);
-    void handleEvent(const iINCMessage& msg);
+    void onMessageReceived(iINCConnection* conn, const iINCMessage& msg);
+    void onErrorOccurred(iINCConnection* conn, xint32 errorCode);
+
+    void handleHandshakeAck(iINCConnection* conn, const iINCMessage& msg);
+    void handleEvent(iINCConnection* conn, const iINCMessage& msg);
     void scheduleReconnect();
     void onReconnectTimeout();
     void attemptReconnect();
     void cleanupOperations();
-    
+
     /// Request channel allocation from server (async, non-blocking)
     /// @param mode Channel mode (MODE_READ, MODE_WRITE, or both)
     /// @return Operation handle to track async request
     /// @note Returns immediately, set callback to get result
     iSharedDataPointer<iINCOperation> requestChannel(xuint32 mode);
-    
+
     /// Request channel release to server (async, non-blocking)
     /// @param channelId Channel ID to release
     /// @return Operation handle to track async request
     /// @note Returns immediately, set callback to get result
     iSharedDataPointer<iINCOperation> releaseChannel(xuint32 channelId);
-    
+
     /// Set state and emit stateChanged signal with previous state
     void setState(State newState);
 
-    /// Get protocol instance (private, only for friend classes)
-    iINCProtocol* protocol() const { return m_protocol; }
-
     iINCContextConfig m_config;     ///< Context configuration
     iINCEngine*     m_engine;       ///< Owned engine
-    iINCProtocol*   m_protocol;     ///< Protocol handler
+    iINCConnection* m_connection;   ///< connection handler
     iThread*        m_ioThread;     ///< IO thread for network operations
-    iINCHandshake*  m_handshake;    ///< Handshake handler
     State           m_state;
-    iString         m_serverName;
     iString         m_serverUrl;
-    xuint32         m_serverProtocol;
-    
+
     // Auto-reconnect timer ID (using iObject::startTimer/killTimer)
     int             m_reconnectTimerId;
     int             m_reconnectAttempts;
-    
-    friend class iINCStream;  // Allow iINCStream to access protocol()
-    
+
+    friend class iINCStream;
     IX_DISABLE_COPY(iINCContext)
 };
 

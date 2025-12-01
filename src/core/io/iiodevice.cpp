@@ -409,11 +409,11 @@ struct _PeekMaxData {
 static bool _PeekMaxFunc(const iByteArray& chunk, xint64, xint64 distance, void* userdata)
 {
     _PeekMaxData* data = static_cast<_PeekMaxData*>(userdata);
-    
+
     // Skip empty chunks
     if (chunk.isEmpty())
         return true;
-    
+
     if (distance + chunk.length() <= data->offset)
         return true;
     if ((data->maxLength > 0) && (distance >= data->maxLength + data->offset))
@@ -540,7 +540,7 @@ iIODevice::~iIODevice()
         delete pair.second;
     }
     m_readBuffers.clear();
-    
+
     // Clean up all write channels
     for (auto& pair : m_writeBuffers) {
         delete pair.second;

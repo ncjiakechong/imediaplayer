@@ -97,10 +97,10 @@ TEST_F(EventSourceTest, RefCounting) {
 TEST_F(EventSourceTest, FlagsManipulation) {
     TestEventSource source(iLatin1StringView("test-flags"), 0);
     EXPECT_EQ(source.flags(), 0);
-    
+
     source.setFlags(IX_EVENT_SOURCE_READY);
     EXPECT_EQ(source.flags(), IX_EVENT_SOURCE_READY);
-    
+
     source.setFlags(IX_EVENT_SOURCE_READY | IX_EVENT_SOURCE_CAN_RECURSE);
     EXPECT_EQ(source.flags(), IX_EVENT_SOURCE_READY | IX_EVENT_SOURCE_CAN_RECURSE);
 }
@@ -108,11 +108,11 @@ TEST_F(EventSourceTest, FlagsManipulation) {
 TEST_F(EventSourceTest, PrepareMethod) {
     TestEventSource source(iLatin1StringView("test-prepare"), 0);
     xint64 timeout = 0;
-    
+
     // Test default prepare (returns false)
     EXPECT_FALSE(source.prepare(&timeout));
     EXPECT_EQ(source.prepareCount(), 1);
-    
+
     // Test prepare with custom result
     source.setPrepareResult(true);
     source.setPrepareTimeout(1000);
@@ -123,11 +123,11 @@ TEST_F(EventSourceTest, PrepareMethod) {
 
 TEST_F(EventSourceTest, CheckMethod) {
     TestEventSource source(iLatin1StringView("test-check"), 0);
-    
+
     // Test default check (returns false)
     EXPECT_FALSE(source.check());
     EXPECT_EQ(source.checkCount(), 1);
-    
+
     // Test check with custom result
     source.setCheckResult(true);
     EXPECT_TRUE(source.check());
@@ -137,7 +137,7 @@ TEST_F(EventSourceTest, CheckMethod) {
 TEST_F(EventSourceTest, DispatchCounting) {
     TestEventSource source(iLatin1StringView("test-dispatch"), 0);
     source.setCheckResult(true);
-    
+
     // Dispatch is protected, but detectableDispatch calls it
     EXPECT_EQ(source.dispatchCount(), 0);
     source.detectableDispatch(1);
@@ -147,10 +147,10 @@ TEST_F(EventSourceTest, DispatchCounting) {
 TEST_F(EventSourceTest, ComboDetection) {
     TestEventSource source(iLatin1StringView("test-combo"), 0);
     EXPECT_EQ(source.comboDetectedCount(), 0u);
-    
+
     source.comboDetected(5);
     EXPECT_EQ(source.comboDetectedCount(), 5u);
-    
+
     source.comboDetected(10);
     EXPECT_EQ(source.comboDetectedCount(), 10u);
 }
@@ -159,7 +159,7 @@ TEST_F(EventSourceTest, PriorityLevels) {
     TestEventSource lowPriority(iLatin1StringView("low"), -10);
     TestEventSource normalPriority(iLatin1StringView("normal"), 0);
     TestEventSource highPriority(iLatin1StringView("high"), 100);
-    
+
     EXPECT_EQ(lowPriority.priority(), -10);
     EXPECT_EQ(normalPriority.priority(), 0);
     EXPECT_EQ(highPriority.priority(), 100);
@@ -167,7 +167,7 @@ TEST_F(EventSourceTest, PriorityLevels) {
 
 TEST_F(EventSourceTest, MultiplePrepareCalls) {
     TestEventSource source(iLatin1StringView("test-multi-prepare"), 0);
-    
+
     for (int i = 0; i < 5; ++i) {
         source.prepare(nullptr);
     }
@@ -176,7 +176,7 @@ TEST_F(EventSourceTest, MultiplePrepareCalls) {
 
 TEST_F(EventSourceTest, MultipleCheckCalls) {
     TestEventSource source(iLatin1StringView("test-multi-check"), 0);
-    
+
     for (int i = 0; i < 5; ++i) {
         source.check();
     }
@@ -186,7 +186,7 @@ TEST_F(EventSourceTest, MultipleCheckCalls) {
 TEST_F(EventSourceTest, PrepareWithNullTimeout) {
     TestEventSource source(iLatin1StringView("test-null-timeout"), 0);
     source.setPrepareTimeout(5000);
-    
+
     // Should not crash with null timeout pointer
     EXPECT_FALSE(source.prepare(nullptr));
     EXPECT_EQ(source.prepareCount(), 1);
@@ -195,7 +195,7 @@ TEST_F(EventSourceTest, PrepareWithNullTimeout) {
 TEST_F(EventSourceTest, NameComparison) {
     TestEventSource source1(iLatin1StringView("source-a"), 0);
     TestEventSource source2(iLatin1StringView("source-b"), 0);
-    
+
     EXPECT_NE(source1.name(), source2.name());
     EXPECT_EQ(source1.name(), iLatin1StringView("source-a"));
 }
@@ -203,15 +203,15 @@ TEST_F(EventSourceTest, NameComparison) {
 // Test detectableDispatch sequence tracking
 TEST_F(EventSourceTest, DetectableDispatchSequence) {
     TestEventSource source(iLatin1StringView("test-detectable"), 0);
-    
+
     // First dispatch with sequence 1
     source.detectableDispatch(1);
     EXPECT_EQ(source.dispatchCount(), 1);
-    
+
     // Next dispatch with sequence 2 (consecutive)
     source.detectableDispatch(2);
     EXPECT_EQ(source.dispatchCount(), 2);
-    
+
     // Same sequence again
     source.detectableDispatch(2);
     EXPECT_EQ(source.dispatchCount(), 3);
@@ -219,15 +219,15 @@ TEST_F(EventSourceTest, DetectableDispatchSequence) {
 
 TEST_F(EventSourceTest, DetectableDispatchNonConsecutive) {
     TestEventSource source(iLatin1StringView("test-non-consecutive"), 0);
-    
+
     // First dispatch
     source.detectableDispatch(1);
     EXPECT_EQ(source.dispatchCount(), 1);
-    
+
     // Skip to sequence 5 (non-consecutive)
     source.detectableDispatch(5);
     EXPECT_EQ(source.dispatchCount(), 2);
-    
+
     // Continue with 6 (consecutive to 5)
     source.detectableDispatch(6);
     EXPECT_EQ(source.dispatchCount(), 3);
@@ -235,10 +235,10 @@ TEST_F(EventSourceTest, DetectableDispatchNonConsecutive) {
 
 TEST_F(EventSourceTest, DetectableDispatchReturnsDispatchResult) {
     TestEventSource source(iLatin1StringView("test-dispatch-result"), 0);
-    
+
     source.setDispatchResult(true);
     EXPECT_TRUE(source.detectableDispatch(1));
-    
+
     source.setDispatchResult(false);
     EXPECT_FALSE(source.detectableDispatch(2));
 }
@@ -250,7 +250,7 @@ TEST_F(EventSourceTest, AddPollWithoutDispatcher) {
     fd.fd = 1;
     fd.events = IX_IO_IN;
     fd.revents = 0;
-    
+
     EXPECT_EQ(source.dispatcher(), nullptr);
     EXPECT_EQ(source.addPoll(&fd), 0);
 }
@@ -262,10 +262,10 @@ TEST_F(EventSourceTest, RemovePollWithoutDispatcher) {
     fd1.events = IX_IO_IN;
     fd2.fd = 2;
     fd2.events = IX_IO_OUT;
-    
+
     source.addPoll(&fd1);
     source.addPoll(&fd2);
-    
+
     EXPECT_EQ(source.removePoll(&fd1), 0);
     EXPECT_EQ(source.removePoll(&fd2), 0);
 }
@@ -275,9 +275,9 @@ TEST_F(EventSourceTest, UpdatePollWithoutDispatcher) {
     iPollFD fd;
     fd.fd = 1;
     fd.events = IX_IO_IN;
-    
+
     source.addPoll(&fd);
-    
+
     // Update poll events
     fd.events = IX_IO_OUT;
     EXPECT_EQ(source.updatePoll(&fd), 0);
@@ -286,7 +286,7 @@ TEST_F(EventSourceTest, UpdatePollWithoutDispatcher) {
 TEST_F(EventSourceTest, AddMultiplePolls) {
     TestEventSource source(iLatin1StringView("test-multi-polls"), 0);
     iPollFD fds[5];
-    
+
     for (int i = 0; i < 5; ++i) {
         fds[i].fd = i + 1;
         fds[i].events = IX_IO_IN;
@@ -299,7 +299,7 @@ TEST_F(EventSourceTest, RemoveNonExistentPoll) {
     iPollFD fd;
     fd.fd = 999;
     fd.events = IX_IO_IN;
-    
+
     // Should not crash when removing non-existent poll
     EXPECT_EQ(source.removePoll(&fd), 0);
 }
@@ -307,7 +307,7 @@ TEST_F(EventSourceTest, RemoveNonExistentPoll) {
 // Test attach to invalid dispatcher
 TEST_F(EventSourceTest, AttachToNullDispatcher) {
     TestEventSource source(iLatin1StringView("test-null-dispatcher"), 0);
-    
+
     int result = source.attach(nullptr);
     EXPECT_EQ(result, -1);
     EXPECT_EQ(source.dispatcher(), nullptr);
@@ -316,7 +316,7 @@ TEST_F(EventSourceTest, AttachToNullDispatcher) {
 // Test detach without dispatcher
 TEST_F(EventSourceTest, DetachWithoutDispatcher) {
     TestEventSource source(iLatin1StringView("test-detach-null"), 0);
-    
+
     EXPECT_EQ(source.dispatcher(), nullptr);
     int result = source.detach();
     EXPECT_EQ(result, -1);
@@ -326,7 +326,7 @@ TEST_F(EventSourceTest, DetachWithoutDispatcher) {
 TEST_F(EventSourceTest, DestructorWithoutDispatcher) {
     TestEventSource* source = new TestEventSource(
         iLatin1StringView("test-destructor"), 0);
-    
+
     EXPECT_EQ(source->dispatcher(), nullptr);
     delete source;  // Should not crash
 }
@@ -335,7 +335,7 @@ TEST_F(EventSourceTest, DestructorWithoutDispatcher) {
 TEST_F(EventSourceTest, PrepareWithZeroTimeout) {
     TestEventSource source(iLatin1StringView("test-zero-timeout"), 0);
     source.setPrepareTimeout(0);
-    
+
     xint64 timeout = -1;
     source.prepare(&timeout);
     EXPECT_EQ(timeout, 0);
@@ -345,7 +345,7 @@ TEST_F(EventSourceTest, PrepareWithZeroTimeout) {
 TEST_F(EventSourceTest, PrepareWithNegativeTimeout) {
     TestEventSource source(iLatin1StringView("test-neg-timeout"), 0);
     source.setPrepareTimeout(-5000);
-    
+
     xint64 timeout = 0;
     source.prepare(&timeout);
     EXPECT_EQ(timeout, -5000);
@@ -356,7 +356,7 @@ TEST_F(EventSourceTest, PrepareWithLargeTimeout) {
     TestEventSource source(iLatin1StringView("test-large-timeout"), 0);
     xint64 largeTimeout = 9999999999LL;
     source.setPrepareTimeout(largeTimeout);
-    
+
     xint64 timeout = 0;
     source.prepare(&timeout);
     EXPECT_EQ(timeout, largeTimeout);
@@ -383,13 +383,13 @@ TEST_F(EventSourceTest, LargePriority) {
 // Test alternating prepare results
 TEST_F(EventSourceTest, AlternatingPrepareResults) {
     TestEventSource source(iLatin1StringView("test-alternating"), 0);
-    
+
     source.setPrepareResult(true);
     EXPECT_TRUE(source.prepare(nullptr));
-    
+
     source.setPrepareResult(false);
     EXPECT_FALSE(source.prepare(nullptr));
-    
+
     source.setPrepareResult(true);
     EXPECT_TRUE(source.prepare(nullptr));
 }
@@ -397,13 +397,13 @@ TEST_F(EventSourceTest, AlternatingPrepareResults) {
 // Test alternating check results
 TEST_F(EventSourceTest, AlternatingCheckResults) {
     TestEventSource source(iLatin1StringView("test-alternating-check"), 0);
-    
+
     source.setCheckResult(false);
     EXPECT_FALSE(source.check());
-    
+
     source.setCheckResult(true);
     EXPECT_TRUE(source.check());
-    
+
     source.setCheckResult(false);
     EXPECT_FALSE(source.check());
 }
@@ -411,7 +411,7 @@ TEST_F(EventSourceTest, AlternatingCheckResults) {
 // Test combo detection with zero count
 TEST_F(EventSourceTest, ComboDetectionZero) {
     TestEventSource source(iLatin1StringView("test-combo-zero"), 0);
-    
+
     source.comboDetected(0);
     EXPECT_EQ(source.comboDetectedCount(), 0u);
 }
@@ -419,7 +419,7 @@ TEST_F(EventSourceTest, ComboDetectionZero) {
 // Test combo detection with large count
 TEST_F(EventSourceTest, ComboDetectionLarge) {
     TestEventSource source(iLatin1StringView("test-combo-large"), 0);
-    
+
     xuint32 largeCount = 4294967295u;  // Max uint32
     source.comboDetected(largeCount);
     EXPECT_EQ(source.comboDetectedCount(), largeCount);
@@ -429,18 +429,18 @@ TEST_F(EventSourceTest, ComboDetectionLarge) {
 // Note: sequence 0 is intentionally ignored to avoid external dispatch interference (e.g., GLib)
 TEST_F(EventSourceTest, DetectableDispatchZeroSequence) {
     TestEventSource source(iLatin1StringView("test-zero-seq"), 0);
-    
+
     // Sequence 0 is ignored
     source.detectableDispatch(0);
     EXPECT_EQ(source.dispatchCount(), 1);
-    
+
     source.detectableDispatch(0);
     EXPECT_EQ(source.dispatchCount(), 2);
-    
+
     // Non-zero sequences should work normally
     source.detectableDispatch(1);
     EXPECT_EQ(source.dispatchCount(), 3);
-    
+
     source.detectableDispatch(2);
     EXPECT_EQ(source.dispatchCount(), 4);
 }
@@ -448,11 +448,11 @@ TEST_F(EventSourceTest, DetectableDispatchZeroSequence) {
 // Test detectableDispatch with large sequence numbers
 TEST_F(EventSourceTest, DetectableDispatchLargeSequence) {
     TestEventSource source(iLatin1StringView("test-large-seq"), 0);
-    
+
     xuint32 large = 4000000000u;
     source.detectableDispatch(large);
     EXPECT_EQ(source.dispatchCount(), 1);
-    
+
     // The next sequence is checked if it equals current or current+1
     source.detectableDispatch(large + 1);
     EXPECT_EQ(source.dispatchCount(), 2);
@@ -461,16 +461,16 @@ TEST_F(EventSourceTest, DetectableDispatchLargeSequence) {
 // Test flags combinations
 TEST_F(EventSourceTest, FlagsCombinations) {
     TestEventSource source(iLatin1StringView("test-flags-combo"), 0);
-    
+
     // All flags set
     int allFlags = IX_EVENT_SOURCE_READY | IX_EVENT_SOURCE_CAN_RECURSE | IX_EVENT_SOURCE_BLOCKED;
     source.setFlags(allFlags);
     EXPECT_EQ(source.flags(), allFlags);
-    
+
     // Clear flags
     source.setFlags(0);
     EXPECT_EQ(source.flags(), 0);
-    
+
     // Set only BLOCKED
     source.setFlags(IX_EVENT_SOURCE_BLOCKED);
     EXPECT_EQ(source.flags(), IX_EVENT_SOURCE_BLOCKED);
@@ -479,12 +479,12 @@ TEST_F(EventSourceTest, FlagsCombinations) {
 // Test multiple ref/deref cycles
 TEST_F(EventSourceTest, MultipleRefDerefCycles) {
     TestEventSource source(iLatin1StringView("test-ref-cycles"), 0);
-    
+
     // Increase ref count
     source.ref();
     source.ref();
     source.ref();
-    
+
     // Decrease ref count
     EXPECT_TRUE(source.deref());
     EXPECT_TRUE(source.deref());
@@ -494,7 +494,7 @@ TEST_F(EventSourceTest, MultipleRefDerefCycles) {
 // Test poll with different event types
 TEST_F(EventSourceTest, PollWithDifferentEventTypes) {
     TestEventSource source(iLatin1StringView("test-poll-events"), 0);
-    
+
     iPollFD fd1, fd2, fd3;
     fd1.fd = 1;
     fd1.events = IX_IO_IN;
@@ -502,18 +502,18 @@ TEST_F(EventSourceTest, PollWithDifferentEventTypes) {
     fd2.events = IX_IO_OUT;
     fd3.fd = 3;
     fd3.events = IX_IO_IN | IX_IO_OUT;
-    
+
     source.addPoll(&fd1);
     source.addPoll(&fd2);
     source.addPoll(&fd3);
-    
+
     source.removePoll(&fd2);
 }
 
 // Test sequential sequence numbers
 TEST_F(EventSourceTest, SequentialSequenceNumbers) {
     TestEventSource source(iLatin1StringView("test-sequential"), 0);
-    
+
     for (xuint32 i = 1; i <= 10; ++i) {
         source.detectableDispatch(i);
         EXPECT_EQ(source.dispatchCount(), (int)i);
@@ -523,15 +523,15 @@ TEST_F(EventSourceTest, SequentialSequenceNumbers) {
 // Test gap in sequence numbers
 TEST_F(EventSourceTest, SequenceGapResetsCombo) {
     TestEventSource source(iLatin1StringView("test-seq-gap"), 0);
-    
+
     source.detectableDispatch(1);
     source.detectableDispatch(2);
     EXPECT_EQ(source.dispatchCount(), 2);
-    
+
     // Large gap
     source.detectableDispatch(100);
     EXPECT_EQ(source.dispatchCount(), 3);
-    
+
     // Continue from 100
     source.detectableDispatch(101);
     EXPECT_EQ(source.dispatchCount(), 4);

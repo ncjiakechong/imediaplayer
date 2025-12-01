@@ -292,7 +292,7 @@ public:
 
         // when growing, special rules apply to memory layout
         T* dataPtr = static_cast<T*>(d->data().value());
-        
+
         // Check if we actually reallocated (capacity grew significantly due to memory pool)
         bool actuallyReallocated = (d->allocatedCapacity() > capacity * 1.5);
         if (from.needsDetach() || actuallyReallocated) {
@@ -313,7 +313,7 @@ public:
             // When not detaching: ::realloc() policy - preserve existing free space at beginning
             dataPtr += from.freeSpaceAtBegin();
         }
-    
+
         d->updatePtr(dataPtr);
         return iArrayDataPointer(d, dataPtr);
     }

@@ -123,10 +123,9 @@ public:
 
     int wait(iMutex& mutex)
     {
-        int retValue = 0;
         pthread_mutex_lock(&_mutex);
         mutex.unlock();
-        retValue = pthread_cond_wait(&_cond, &_mutex);
+        int retValue = pthread_cond_wait(&_cond, &_mutex);
         pthread_mutex_unlock(&_mutex);
         mutex.lock();
 

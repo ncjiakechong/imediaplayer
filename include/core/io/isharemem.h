@@ -42,7 +42,7 @@ private:
     int doAttach(MemType type, uint id, xintptr memfd, bool writable, bool for_cleanup);
     void freePrivateMem();
 
-    const char* m_name;
+    char        m_name[16];
     MemType     m_type;
     uint        m_id;
     void*       m_ptr;
@@ -64,6 +64,8 @@ private:
      * always open. Check comments on top of pa_mempool_new() for
      * rationale. */
     xintptr     m_memfd;
+
+    IX_DISABLE_COPY(iShareMem);
 };
 
 } // namespace iShell

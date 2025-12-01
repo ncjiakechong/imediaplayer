@@ -2755,7 +2755,7 @@ iByteArray iByteArray::trimmed_helper(iByteArray &a)
 }
 
 iByteArrayView iByteArrayView::trimmed() const
-{ 
+{
     const char *start = cbegin();
     const char *stop = cend();
     iStringAlgorithms<iByteArrayView>::trimmed_helper_positions(start, stop);

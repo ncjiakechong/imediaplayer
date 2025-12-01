@@ -17,7 +17,7 @@ public:
 
     // --- Implement pure virtual functions from the base class ---
     MOCK_METHOD5(handleMethod, void(iShell::iINCConnection* conn, xuint32 seqNum, const iShell::iString& method, xuint16 version, const iShell::iByteArray& args));
-    MOCK_METHOD4(handleBinaryData, void(iShell::iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iShell::iByteArray& data));
+    MOCK_METHOD5(handleBinaryData, void(iShell::iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iShell::iByteArray& data));
 
     // --- Mock other virtual functions needed for testing ---
     MOCK_METHOD1(listenOn, int(const iShell::iStringView& url));
@@ -50,7 +50,7 @@ TEST_F(INCServerTest, Construction) {
 TEST_F(INCServerTest, SetConfig) {
     iShell::iINCServerConfig config;
     config.setMaxConnections(100);
-    
+
     // Verify that setConfig is called with the correct parameters
     EXPECT_CALL(*server, setConfig(testing::Truly([](const iShell::iINCServerConfig& c) {
         return c.maxConnections() == 100;
@@ -63,7 +63,7 @@ TEST_F(INCServerTest, ListenAndClose) {
     // Use a Unicode string literal for the URL
     EXPECT_CALL(*server, listenOn(testing::Eq(iShell::iStringView(u"pipe:///tmp/test_socket"))))
         .WillOnce(testing::Return(0));
-    
+
     int result = server->listenOn(u"pipe:///tmp/test_socket");
     ASSERT_EQ(result, 0);
 
@@ -92,27 +92,27 @@ TEST_F(INCServerTest, HandleMethod) {
 }
 
 TEST_F(INCServerTest, HandleBinaryData) {
-    // Use a matcher for the binary data
-    EXPECT_CALL(*server, handleBinaryData(nullptr, 42, 1, testing::Eq(iShell::iByteArray("binary_data"))))
+    // Use a matcher for the binary data (now includes pos parameter)
+    EXPECT_CALL(*server, handleBinaryData(nullptr, 42, 1, 0, testing::Eq(iShell::iByteArray("binary_data"))))
         .Times(1);
-    server->handleBinaryData(nullptr, 42, 1, iShell::iByteArray("binary_data"));
+    server->handleBinaryData(nullptr, 42, 1, 0, iShell::iByteArray("binary_data"));
 }
 
 // Signal emission tests (conceptual - cannot easily verify in UT without mocks)
 TEST_F(INCServerTest, Signals) {
     // These tests are conceptual placeholders to show how signals would be tested
     // with a proper mocking framework.
-    
+
     // clientConnected
     // clientDisconnected
     // streamOpened
     // streamClosed
-    
+
     // Example with a mock connection:
     // MockConnection conn;
     // server->addConnection(&conn);
     // EXPECT_SIGNAL_EMITTED(server, clientConnected);
-    
+
     SUCCEED();
 }
 

@@ -91,7 +91,7 @@ TEST_F(IUrlTest, HostExtraction) {
 TEST_F(IUrlTest, HostWithDifferentDomains) {
     iUrl url1("https://www.example.com/path");
     EXPECT_EQ(url1.host(), iString("www.example.com"));
-    
+
     iUrl url2("https://api.github.com/repos");
     EXPECT_EQ(url2.host(), iString("api.github.com"));
 }
@@ -122,7 +122,7 @@ TEST_F(IUrlTest, PathExtraction) {
 TEST_F(IUrlTest, PathWithDifferentValues) {
     iUrl url1("https://www.example.com/simple");
     EXPECT_EQ(url1.path(), iString("/simple"));
-    
+
     iUrl url2("https://www.example.com/path/with/multiple/segments");
     EXPECT_EQ(url2.path(), iString("/path/with/multiple/segments"));
 }
@@ -169,7 +169,7 @@ TEST_F(IUrlTest, FragmentWithDifferentAnchors) {
     iUrl url1("https://www.example.com/path#intro");
     EXPECT_TRUE(url1.hasFragment());
     EXPECT_EQ(url1.fragment(), iString("intro"));
-    
+
     iUrl url2("https://www.example.com/path#conclusion");
     EXPECT_EQ(url2.fragment(), iString("conclusion"));
 }
@@ -203,7 +203,7 @@ TEST_F(IUrlTest, UserNameExtraction) {
 TEST_F(IUrlTest, UserNameVariations) {
     iUrl url1("https://admin@www.example.com/path");
     EXPECT_EQ(url1.userName(), iString("admin"));
-    
+
     iUrl url2("https://user123@api.service.com/endpoint");
     EXPECT_EQ(url2.userName(), iString("user123"));
 }
@@ -233,7 +233,7 @@ TEST_F(IUrlTest, FromEncodedBasic) {
 TEST_F(IUrlTest, IsRelativeCheck) {
     iUrl url1("https://www.example.com/path");
     EXPECT_FALSE(url1.isRelative());
-    
+
     iUrl url2("/relative/path");
     EXPECT_TRUE(url2.isRelative());
 }

@@ -41,7 +41,7 @@ public:
     /// Initialize engine resources
     /// @return true on success, false on error
     bool initialize();
-    
+
     /// Shutdown engine and cleanup resources
     void shutdown();
 
@@ -50,7 +50,7 @@ public:
     bool isReady() const { return m_initialized; }
 
     // --- Transport Creation Methods (replacing iINCTransportFactory) ---
-    
+
     /// Create client transport from URL
     /// @param url Connection URL (e.g., "tcp://127.0.0.1:8080" or "pipe:///tmp/inc.sock")
     /// @return Created transport device, or nullptr on error
@@ -71,14 +71,14 @@ private:
     };
 
     ParsedUrl parseUrl(const iStringView& url);
-    
+
     iTcpDevice* createTcpClient(const ParsedUrl& url);
     iTcpDevice* createTcpServer(const ParsedUrl& url);
     iUnixDevice* createPipeClient(const ParsedUrl& url);
     iUnixDevice* createPipeServer(const ParsedUrl& url);
 
     bool                m_initialized;  ///< Initialization state
-    
+
     IX_DISABLE_COPY(iINCEngine)
 };
 

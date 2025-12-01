@@ -23,7 +23,7 @@
 
 namespace iShell {
 
-iINCConnection::iINCConnection(iINCDevice* device, xuint64 connId)
+iINCConnection::iINCConnection(iINCDevice* device, xuint32 connId)
     : m_protocol(IX_NULLPTR)
     , m_connId(connId)
     , m_peerProtocol(0)
@@ -31,9 +31,10 @@ iINCConnection::iINCConnection(iINCDevice* device, xuint64 connId)
 {
     // Create protocol handler for this device
     m_protocol = new iINCProtocol(device, this);
-    
+
     // Forward signals to server for handling (connection does not process, only forwards)
     iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCConnection::onErrorOccurred);
+    iObject::connect(m_protocol, &iINCProtocol::errorOccurred, this, &iINCConnection::onErrorOccurred);
     iObject::connect(m_protocol, &iINCProtocol::messageReceived, this, &iINCConnection::onMessageReceived);
     iObject::connect(m_protocol, &iINCProtocol::binaryDataReceived, this, &iINCConnection::onBinaryDataReceived);
 }
@@ -52,7 +53,7 @@ iString iINCConnection::peerAddress() const
     if (!m_protocol || !m_protocol->device()) {
         return iString();
     }
-    
+
     return m_protocol->device()->peerAddress();
 }
 
@@ -61,33 +62,28 @@ bool iINCConnection::isConnected() const
     return m_protocol && m_protocol->device() && m_protocol->device()->isOpen();
 }
 
+xuint32 iINCConnection::nextSequence()
+{
+    IX_ASSERT(m_protocol);
+    return m_protocol->nextSequence();
+}
 
 bool iINCConnection::isLocal() const
 {
     return m_protocol && m_protocol->device() && m_protocol->device()->isLocal();
 }
 
-void iINCConnection::enableMempool(const iByteArray& name, MemType type, size_t size)
+void iINCConnection::enableMempool(iSharedDataPointer<iMemPool> pool)
 {
     if (!m_protocol) return;
 
-    m_protocol->enableMempool(name, type, size);
-}
-
-void iINCConnection::sendReply(xuint32 seqNum, xint32 errorCode, const iByteArray& result)
-{
-    IX_ASSERT(m_protocol);
-
-    iINCMessage msg(INC_MSG_METHOD_REPLY, seqNum);
-    msg.payload().putInt32(errorCode);
-    msg.payload().putBytes(result);
-    m_protocol->sendMessage(msg);
+    m_protocol->enableMempool(pool);
 }
 
 void iINCConnection::sendEvent(const iStringView& eventName, xuint16 version, const iByteArray& data)
 {
     IX_ASSERT(m_protocol);
-    iINCMessage msg(INC_MSG_EVENT, m_protocol->nextSequence());
+    iINCMessage msg(INC_MSG_EVENT, m_connId, m_protocol->nextSequence());
     msg.payload().putUint16(version);
     msg.payload().putString(eventName.toString());
     msg.payload().putBytes(data);
@@ -97,9 +93,9 @@ void iINCConnection::sendEvent(const iStringView& eventName, xuint16 version, co
 iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
 {
     IX_ASSERT(m_protocol);
-    
+
     // Create PING message and send it - protocol creates and tracks operation
-    iINCMessage msg(INC_MSG_PING, 0);  // Protocol assigns sequence number
+    iINCMessage msg(INC_MSG_PING, m_connId, m_protocol->nextSequence());
     auto op = m_protocol->sendMessage(msg);
     if (!op) return op;
 
@@ -108,10 +104,15 @@ iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
     return op;
 }
 
-void iINCConnection::sendMessage(const iINCMessage& msg)
+iSharedDataPointer<iINCOperation> iINCConnection::sendMessage(const iINCMessage& msg)
 {
     IX_ASSERT(m_protocol);
-    m_protocol->sendMessage(msg);
+    return m_protocol->sendMessage(msg);
+}
+iSharedDataPointer<iINCOperation> iINCConnection::sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data)
+{
+    IX_ASSERT(m_protocol);
+    return m_protocol->sendBinaryData(channel, pos, data);
 }
 
 bool iINCConnection::isSubscribed(const iStringView& eventName) const
@@ -133,7 +134,7 @@ void iINCConnection::addSubscription(const iString& pattern)
             return;
         }
     }
-    
+
     m_subscriptions.push_back(pattern);
     ilog_info("[", m_peerName, "] Subscribed to: ", pattern);
 }
@@ -176,14 +177,14 @@ bool iINCConnection::matchesPattern(const iString& eventName, const iString& pat
         iString prefix = pattern.left(pattern.length() - 2);
         return eventName.startsWith(prefix);
     }
-    
+
     // Exact match
     return eventName == pattern;
 }
 
 xuint32 iINCConnection::allocateChannel(xuint32 channelId, xuint32 mode)
 {
-    m_channels[channelId] = mode;    
+    m_channels[channelId] = mode;
     ilog_info("[", m_peerName, "][", channelId, "] Allocated channel, mode=", mode);
     return channelId;
 }
@@ -195,7 +196,7 @@ void iINCConnection::releaseChannel(xuint32 channelId)
         ilog_warn("[", m_peerName, "][", channelId, "] Channel not found for connection");
         return;
     }
-    
+
     m_channels.erase(it);
     ilog_info("[", m_peerName, "][", channelId, "] Released channel");
 }
@@ -205,7 +206,7 @@ bool iINCConnection::isChannelAllocated(xuint32 channelId) const
     return m_channels.find(channelId) != m_channels.end();
 }
 
-void iINCConnection::onErrorOccurred(int errorCode)
+void iINCConnection::onErrorOccurred(xint32 errorCode)
 {
     IEMIT errorOccurred(this, errorCode);
 }
@@ -215,9 +216,9 @@ void iINCConnection::onMessageReceived(const iINCMessage& msg)
     IEMIT messageReceived(this, msg);
 }
 
-void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, const iByteArray& data)
+void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data)
 {
-    IEMIT binaryDataReceived(this, channelId, seqNum, data);
+    IEMIT binaryDataReceived(this, channelId, seqNum, pos, data);
 }
 
 } // namespace iShell

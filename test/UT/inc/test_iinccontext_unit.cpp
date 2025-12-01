@@ -26,7 +26,7 @@ protected:
     void TearDown() override {
         // Don't reset g_testINC - it's controlled by command-line
     }
-    
+
     iCoreApplication* app = nullptr;
 };
 

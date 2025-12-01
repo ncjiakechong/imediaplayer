@@ -55,7 +55,7 @@ TEST_F(INCServerConfigTest, ListenAddress) {
 TEST_F(INCServerConfigTest, SystemInstance) {
     config.setSystemInstance(true);
     EXPECT_TRUE(config.systemInstance());
-    
+
     config.setSystemInstance(false);
     EXPECT_FALSE(config.systemInstance());
 }
@@ -66,7 +66,7 @@ TEST_F(INCServerConfigTest, SystemInstance) {
 TEST_F(INCServerConfigTest, VersionPolicy) {
     config.setVersionPolicy(iINCServerConfig::Strict);
     EXPECT_EQ(iINCServerConfig::Strict, config.versionPolicy());
-    
+
     config.setVersionPolicy(iINCServerConfig::Permissive);
     EXPECT_EQ(iINCServerConfig::Permissive, config.versionPolicy());
 }
@@ -135,7 +135,7 @@ TEST_F(INCServerConfigTest, MaxMessageSize) {
 TEST_F(INCServerConfigTest, EncryptionRequirement) {
     config.setEncryptionRequirement(iINCServerConfig::Required);
     EXPECT_EQ(iINCServerConfig::Required, config.encryptionRequirement());
-    
+
     config.setEncryptionRequirement(iINCServerConfig::Preferred);
     EXPECT_EQ(iINCServerConfig::Preferred, config.encryptionRequirement());
 }
@@ -196,7 +196,7 @@ TEST_F(INCServerConfigTest, NiceLevel) {
 TEST_F(INCServerConfigTest, EnableIOThread) {
     config.setEnableIOThread(false);
     EXPECT_FALSE(config.enableIOThread());
-    
+
     config.setEnableIOThread(true);
     EXPECT_TRUE(config.enableIOThread());
 }
@@ -277,7 +277,7 @@ TEST_F(INCContextConfigTest, DisableMemfd) {
 TEST_F(INCContextConfigTest, EncryptionMethod) {
     config.setEncryptionMethod(iINCContextConfig::TLS_1_3);
     EXPECT_EQ(iINCContextConfig::TLS_1_3, config.encryptionMethod());
-    
+
     config.setEncryptionMethod(iINCContextConfig::TLS_1_2);
     EXPECT_EQ(iINCContextConfig::TLS_1_2, config.encryptionMethod());
 }
@@ -297,7 +297,7 @@ TEST_F(INCContextConfigTest, CertificatePath) {
 TEST_F(INCContextConfigTest, AutoReconnect) {
     config.setAutoReconnect(false);
     EXPECT_FALSE(config.autoReconnect());
-    
+
     config.setAutoReconnect(true);
     EXPECT_TRUE(config.autoReconnect());
 }
@@ -340,7 +340,7 @@ TEST_F(INCContextConfigTest, OperationTimeout) {
 TEST_F(INCContextConfigTest, EnableIOThread) {
     config.setEnableIOThread(false);
     EXPECT_FALSE(config.enableIOThread());
-    
+
     config.setEnableIOThread(true);
     EXPECT_TRUE(config.enableIOThread());
 }

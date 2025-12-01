@@ -4,7 +4,7 @@
 /////////////////////////////////////////////////////////////////
 /// @file    iincprotocol.h
 /// @brief   Protocol layer with message queuing and flow control
-/// 
+///
 /// @par Lock-Free Features:
 /// - Lock-free message queue for high-performance RPC
 /// - Zero-copy binary transfer via shared memory references
@@ -31,7 +31,7 @@ namespace iShell {
 /// @details Unified for both client and server.
 ///          Manages sequence numbers, message queuing, and flow control.
 ///          Supports zero-copy binary data transfer via shared memory when possible.
-/// 
+///
 /// @par Architecture Features:
 /// - **Lock-Free**: Atomic sequence number generation, lock-free message queuing
 /// - **Shared Memory**: Zero-copy binary transfer via iMemBlock/iMemExport
@@ -60,7 +60,7 @@ public:
     /// @return iINCOperation pointer for tracking the request, or nullptr on error
     /// @note Attempts zero-copy via iMemExport if data is backed by iMemBlock,
     ///       falls back to data copy if shared memory export fails
-    iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, const iByteArray& data);
+    iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data);
 
     /// Read next message (non-blocking)
     /// @return true if message read successfully
@@ -72,15 +72,15 @@ public:
     /// Get underlying transport device
     iINCDevice* device() const { return m_device; }
 
-    /// Enable shared memory
-    void enableMempool(const iByteArray& name, MemType type, size_t size);
+    /// Enable shared memory with existing pool
+    void enableMempool(iSharedDataPointer<iMemPool> pool);
 
 // signals:
     /// Emitted when binary data is received (routed by channel ID)
     /// @param channel Channel identifier for routing to appropriate stream
     /// @param seqNum Sequence number from the message
     /// @param data Binary data (reference-counted, safe for async processing)
-    void binaryDataReceived(xuint32 channel, xuint32 seqNum, const iByteArray& data) ISIGNAL(binaryDataReceived, channel, seqNum, data);
+    void binaryDataReceived(xuint32 channel, xuint32 seqNum, xint64 pos, const iByteArray& data) ISIGNAL(binaryDataReceived, channel, seqNum, pos, data);
 
     void messageReceived(const iINCMessage& msg) ISIGNAL(messageReceived, msg);
     void errorOccurred(xint32 errorCode) ISIGNAL(errorOccurred, errorCode);
@@ -90,32 +90,32 @@ private:
     void onReadyWrite();
     void onDeviceConnected();  // Handle device connected signal
     void sendMessageImpl(iINCMessage msg, iINCOperation* op);
-    
+
     /// Process received binary data message
     void processBinaryDataMessage(const iINCMessage& msg);
 
     iINCDevice*             m_device;
     iAtomicCounter<xuint32> m_seqCounter;
-    
+
     // Message queuing
     std::queue<iINCMessage> m_sendQueue;
-    
+
     // Partial write buffer (for incomplete writes)
     iByteArray              m_partialSendBuffer;  ///< Unsent portion of current message
     xint64                  m_partialSendOffset;  ///< Bytes already sent
-    
+
     // Receive buffer
     iByteArray              m_recvBuffer;
-    
+
     // Shared memory support for zero-copy binary transfer
     iByteArray              m_pollName;
     iSharedDataPointer<iMemPool> m_memPool;
     iMemExport*             m_memExport;
     iMemImport*             m_memImport;
-    
+
     // Operation tracking (centralized in protocol layer)
     std::unordered_map<xuint32, iINCOperation*> m_operations;  ///< Maps seqNum -> operation
-    
+
     IX_DISABLE_COPY(iINCProtocol)
 };
 

@@ -105,7 +105,7 @@ TEST(iDateExtended, DayOfWeekCheck) {
 TEST(iDateExtended, DayOfYearCheck) {
     iDate date(2024, 1, 1);
     EXPECT_EQ(date.dayOfYear(), 1);
-    
+
     iDate lastDay(2024, 12, 31);
     EXPECT_EQ(lastDay.dayOfYear(), 366);  // 2024 is leap year
 }
@@ -113,10 +113,10 @@ TEST(iDateExtended, DayOfYearCheck) {
 TEST(iDateExtended, DaysInMonthCheck) {
     iDate jan(2024, 1, 15);
     EXPECT_EQ(jan.daysInMonth(), 31);
-    
+
     iDate feb(2024, 2, 15);
     EXPECT_EQ(feb.daysInMonth(), 29);  // Leap year
-    
+
     iDate febNonLeap(2023, 2, 15);
     EXPECT_EQ(febNonLeap.daysInMonth(), 28);
 }
@@ -124,7 +124,7 @@ TEST(iDateExtended, DaysInMonthCheck) {
 TEST(iDateExtended, DaysInYearCheck) {
     iDate leap(2024, 1, 15);
     EXPECT_EQ(leap.daysInYear(), 366);
-    
+
     iDate nonLeap(2023, 1, 15);
     EXPECT_EQ(nonLeap.daysInYear(), 365);
 }
@@ -184,7 +184,7 @@ TEST(iDateExtended, ComparisonOperators) {
     iDate date1(2024, 1, 15);
     iDate date2(2024, 1, 20);
     iDate date3(2024, 1, 15);
-    
+
     EXPECT_TRUE(date1 < date2);
     EXPECT_TRUE(date1 <= date2);
     EXPECT_TRUE(date1 <= date3);
@@ -293,7 +293,7 @@ TEST(iTimeExtended, ComparisonOperators) {
     iTime time1(10, 30, 0);
     iTime time2(10, 35, 0);
     iTime time3(10, 30, 0);
-    
+
     EXPECT_TRUE(time1 < time2);
     EXPECT_TRUE(time1 <= time2);
     EXPECT_TRUE(time1 <= time3);
@@ -349,7 +349,7 @@ TEST(iDateTimeExtended, AddDaysDateTime) {
     iDate date(2024, 1, 15);
     iTime time(10, 30, 0);
     iDateTime dt(date, time);
-    
+
     iDateTime future = dt.addDays(10);
     EXPECT_EQ(future.date().day(), 25);
     EXPECT_EQ(future.time(), time);
@@ -359,7 +359,7 @@ TEST(iDateTimeExtended, AddMonthsDateTime) {
     iDate date(2024, 1, 15);
     iTime time(10, 30, 0);
     iDateTime dt(date, time);
-    
+
     iDateTime future = dt.addMonths(2);
     EXPECT_EQ(future.date().month(), 3);
 }
@@ -368,7 +368,7 @@ TEST(iDateTimeExtended, AddYearsDateTime) {
     iDate date(2024, 1, 15);
     iTime time(10, 30, 0);
     iDateTime dt(date, time);
-    
+
     iDateTime future = dt.addYears(5);
     EXPECT_EQ(future.date().year(), 2029);
 }
@@ -377,7 +377,7 @@ TEST(iDateTimeExtended, AddSecsDateTime) {
     iDate date(2024, 1, 15);
     iTime time(10, 59, 30);
     iDateTime dt(date, time);
-    
+
     iDateTime future = dt.addSecs(45);
     EXPECT_EQ(future.time().hour(), 11);
     EXPECT_EQ(future.time().minute(), 0);
@@ -388,7 +388,7 @@ TEST(iDateTimeExtended, AddMSecsDateTime) {
     iDate date(2024, 1, 15);
     iTime time(10, 30, 45, 500);
     iDateTime dt(date, time);
-    
+
     iDateTime future = dt.addMSecs(700);
     EXPECT_EQ(future.time().second(), 46);
     EXPECT_EQ(future.time().msec(), 200);
@@ -401,7 +401,7 @@ TEST(iDateTimeExtended, DaysToDateTime) {
     iTime time(10, 30, 0);
     iDateTime dt1(date1, time);
     iDateTime dt2(date2, time);
-    
+
     EXPECT_EQ(dt1.daysTo(dt2), 10);
 }
 
@@ -411,7 +411,7 @@ TEST(iDateTimeExtended, SecsToDateTime) {
     iTime time2(10, 32, 30);
     iDateTime dt1(date, time1);
     iDateTime dt2(date, time2);
-    
+
     EXPECT_EQ(dt1.secsTo(dt2), 150);
 }
 
@@ -421,7 +421,7 @@ TEST(iDateTimeExtended, MSecsToDateTime) {
     iTime time2(10, 30, 1, 200);
     iDateTime dt1(date, time1);
     iDateTime dt2(date, time2);
-    
+
     EXPECT_EQ(dt1.msecsTo(dt2), 700);
 }
 
@@ -430,7 +430,7 @@ TEST(iDateTimeExtended, ToMSecsSinceEpoch) {
     iDate date(1970, 1, 1);
     iTime time(0, 0, 0, 0);
     iDateTime dt(date, time, iShell::UTC);
-    
+
     xint64 msecs = dt.toMSecsSinceEpoch();
     EXPECT_EQ(msecs, 0);
 }
@@ -439,7 +439,7 @@ TEST(iDateTimeExtended, ToSecsSinceEpoch) {
     iDate date(1970, 1, 1);
     iTime time(0, 0, 0, 0);
     iDateTime dt(date, time, iShell::UTC);
-    
+
     xint64 secs = dt.toSecsSinceEpoch();
     EXPECT_EQ(secs, 0);
 }
@@ -447,7 +447,7 @@ TEST(iDateTimeExtended, ToSecsSinceEpoch) {
 TEST(iDateTimeExtended, FromMSecsSinceEpoch) {
     xint64 msecs = 1000;  // 1 second after epoch
     iDateTime dt = iDateTime::fromMSecsSinceEpoch(msecs, iShell::UTC);
-    
+
     EXPECT_EQ(dt.date().year(), 1970);
     EXPECT_EQ(dt.date().month(), 1);
     EXPECT_EQ(dt.date().day(), 1);
@@ -457,7 +457,7 @@ TEST(iDateTimeExtended, FromMSecsSinceEpoch) {
 TEST(iDateTimeExtended, FromSecsSinceEpoch) {
     xint64 secs = 3600;  // 1 hour after epoch
     iDateTime dt = iDateTime::fromSecsSinceEpoch(secs, iShell::UTC);
-    
+
     EXPECT_EQ(dt.time().hour(), 1);
 }
 
@@ -465,7 +465,7 @@ TEST(iDateTimeExtended, FromSecsSinceEpoch) {
 TEST(iDateTimeExtended, SetMSecsSinceEpoch) {
     iDateTime dt;
     dt.setMSecsSinceEpoch(1000);
-    
+
     EXPECT_EQ(dt.date().year(), 1970);
     EXPECT_EQ(dt.time().second(), 1);
 }
@@ -473,7 +473,7 @@ TEST(iDateTimeExtended, SetMSecsSinceEpoch) {
 TEST(iDateTimeExtended, SetSecsSinceEpoch) {
     iDateTime dt;
     dt.setSecsSinceEpoch(3600);
-    
+
     // Just verify the epoch value is set correctly
     EXPECT_EQ(dt.toSecsSinceEpoch(), 3600);
 }
@@ -483,7 +483,7 @@ TEST(iDateTimeExtended, ToLocalTime) {
     iDate date(2024, 1, 15);
     iTime time(10, 30, 0);
     iDateTime dt(date, time, iShell::UTC);
-    
+
     iDateTime local = dt.toLocalTime();
     EXPECT_EQ(local.timeSpec(), iShell::LocalTime);
 }
@@ -492,7 +492,7 @@ TEST(iDateTimeExtended, ToUTC) {
     iDate date(2024, 1, 15);
     iTime time(10, 30, 0);
     iDateTime dt(date, time, iShell::LocalTime);
-    
+
     iDateTime utc = dt.toUTC();
     EXPECT_EQ(utc.timeSpec(), iShell::UTC);
 }
@@ -501,7 +501,7 @@ TEST(iDateTimeExtended, SetOffsetFromUtc) {
     iDate date(2024, 1, 15);
     iTime time(10, 30, 0);
     iDateTime dt(date, time);
-    
+
     dt.setOffsetFromUtc(3600);  // +1 hour
     EXPECT_EQ(dt.offsetFromUtc(), 3600);
 }
@@ -510,7 +510,7 @@ TEST(iDateTimeExtended, ToOffsetFromUtc) {
     iDate date(2024, 1, 15);
     iTime time(10, 30, 0);
     iDateTime dt(date, time, iShell::UTC);
-    
+
     iDateTime offset = dt.toOffsetFromUtc(3600);
     EXPECT_EQ(offset.offsetFromUtc(), 3600);
 }
@@ -520,7 +520,7 @@ TEST(iDateTimeExtended, SetDate) {
     iDateTime dt;
     iDate date(2024, 1, 15);
     dt.setDate(date);
-    
+
     EXPECT_EQ(dt.date(), date);
 }
 
@@ -528,14 +528,14 @@ TEST(iDateTimeExtended, SetTime) {
     iDateTime dt;
     iTime time(10, 30, 45);
     dt.setTime(time);
-    
+
     EXPECT_EQ(dt.time(), time);
 }
 
 TEST(iDateTimeExtended, SetTimeSpec) {
     iDateTime dt;
     dt.setTimeSpec(iShell::UTC);
-    
+
     EXPECT_EQ(dt.timeSpec(), iShell::UTC);
 }
 
@@ -544,11 +544,11 @@ TEST(iDateTimeExtended, ComparisonOperators) {
     iDate date1(2024, 1, 15);
     iDate date2(2024, 1, 20);
     iTime time(10, 30, 0);
-    
+
     iDateTime dt1(date1, time);
     iDateTime dt2(date2, time);
     iDateTime dt3(date1, time);
-    
+
     EXPECT_TRUE(dt1 < dt2);
     EXPECT_TRUE(dt1 <= dt2);
     EXPECT_TRUE(dt1 <= dt3);
@@ -565,7 +565,7 @@ TEST(iDateTimeExtended, CopyConstructor) {
     iTime time(10, 30, 0);
     iDateTime dt1(date, time);
     iDateTime dt2(dt1);
-    
+
     EXPECT_EQ(dt1, dt2);
 }
 
@@ -575,7 +575,7 @@ TEST(iDateTimeExtended, AssignmentOperator) {
     iDateTime dt1(date, time);
     iDateTime dt2;
     dt2 = dt1;
-    
+
     EXPECT_EQ(dt1, dt2);
 }
 

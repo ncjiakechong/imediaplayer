@@ -30,7 +30,7 @@ TEST_F(TCPDeviceTest, Placeholder) {
     // - Mock send/recv operations
     // - Mock non-blocking I/O
     // - Mock error conditions (EAGAIN, ECONNRESET, etc.)
-    
+
     GTEST_SKIP() << "TCP Device tests require Mock infrastructure (Phase 2)";
 }
 

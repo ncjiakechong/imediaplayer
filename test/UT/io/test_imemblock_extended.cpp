@@ -58,7 +58,7 @@ TEST_F(IMemBlockExtendedTest, AllocAlign16) {
 }
 
 TEST_F(IMemBlockExtendedTest, AllocOptions) {
-    iSharedDataPointer<iMemBlock> b(iMemBlock::newOne(nullptr, 100, 1, 0, 
+    iSharedDataPointer<iMemBlock> b(iMemBlock::newOne(nullptr, 100, 1, 0,
         iMemBlock::GrowsForward | iMemBlock::CapacityReserved));
     ASSERT_NE(b.data(), nullptr);
     EXPECT_TRUE(b->options() & iMemBlock::GrowsForward);
@@ -257,7 +257,7 @@ TEST_F(IMemBlockExtendedTest, MultiUser) {
 
 
 TEST_F(IMemBlockExtendedTest, OptsCombined) {
-    iSharedDataPointer<iMemBlock> b(iMemBlock::newOne(nullptr, 100, 1, 0, 
+    iSharedDataPointer<iMemBlock> b(iMemBlock::newOne(nullptr, 100, 1, 0,
         iMemBlock::GrowsForward | iMemBlock::CapacityReserved | iMemBlock::GrowsBackwards));
     EXPECT_TRUE(b->options() & iMemBlock::GrowsForward);
     EXPECT_TRUE(b->options() & iMemBlock::CapacityReserved);

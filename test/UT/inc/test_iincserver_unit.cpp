@@ -32,11 +32,12 @@ protected:
     }
 
     void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum,
-                         const iByteArray& data) override
+                         xint64 pos, const iByteArray& data) override
     {
         IX_UNUSED(conn);
         IX_UNUSED(channelId);
         IX_UNUSED(seqNum);
+        IX_UNUSED(pos);
         IX_UNUSED(data);
     }
 };

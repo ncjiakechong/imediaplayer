@@ -17,21 +17,21 @@
 #include <unordered_map>
 
 #include <core/inc/iincserverconfig.h>
+#include <core/inc/iincconnection.h>
 #include <core/thread/ithread.h>
 #include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
+#include <core/io/imemblock.h>
 
 namespace iShell {
 
 class iINCEngine;
-class iINCConnection;
-class iINCMessage;
 class iINCDevice;
 
 /// @brief Server base class for handling client connections
 /// @details Subclass should override handleMethod() to implement service logic.
 ///          Owns its own iINCEngine instance.
-/// 
+///
 /// @par Performance Features:
 /// - **Asynchronous**: Non-blocking event-driven architecture
 /// - **Shared Memory**: iINCStream for efficient large data transfer
@@ -71,16 +71,16 @@ public:
 // signals:
     /// Emitted when new client connects
     void clientConnected(iINCConnection* conn) ISIGNAL(clientConnected, conn);
-    
+
     /// Emitted when client disconnects
     void clientDisconnected(iINCConnection* conn) ISIGNAL(clientDisconnected, conn);
-    
+
     /// Emitted when stream/channel is opened by a client
     /// @param conn Client connection that requested the channel
     /// @param channelId Allocated channel identifier
     /// @param mode Channel mode (MODE_READ, MODE_WRITE, or both)
     void streamOpened(iINCConnection* conn, xuint32 channelId, xuint32 mode) ISIGNAL(streamOpened, conn, channelId, mode);
-    
+
     /// Emitted when stream/channel is closed by a client
     /// @param conn Client connection that released the channel
     /// @param channelId Channel identifier that was released
@@ -97,23 +97,27 @@ protected:
     /// @note For async processing:
     ///       1. Store seqNum and conn for later
     ///       2. Return empty iByteArray immediately
-    ///       3. When done, call conn->sendReply(seqNum, result)
+    ///       3. When done, call sendMethodReply(conn, seqNum, result)
     virtual void handleMethod(iINCConnection* conn, xuint32 seqNum, const iString& method, xuint16 version, const iByteArray& args) = 0;
+    void sendMethodReply(iINCConnection* conn, xuint32 seqNum, xint32 errorCode, const iByteArray& result);
 
     /// Override this to handle binary data received from a client on a channel
     /// @param conn Client connection that sent the data
     /// @param channelId Channel identifier
     /// @param seqNum Sequence number from the message
     /// @param data Binary data payload
-    /// @note Default implementation does nothing. Subclass should override to process stream data.
-    virtual void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iByteArray& data) = 0;
+    /// @note For async processing:
+    ///       1. Store seqNum and conn for later
+    ///       2. When done, call sendBinaryReply(conn, seqNum, writen)
+    virtual void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) = 0;
+    void sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint32 writen);
 
     /// Override this to handle subscription requests
     /// @param conn Client connection
     /// @param pattern Event pattern (e.g., "system.*")
     /// @return true to allow, false to deny
     virtual bool handleSubscribe(iINCConnection* conn, const iString& pattern);
-    
+
     /// Broadcast event to all subscribed clients
     /// @param eventName Event identifier
     /// @param version Event version
@@ -126,14 +130,10 @@ private:
     void handleListenDeviceError(int errorCode);
     void handleNewConnection(iINCDevice* clientDevice);
     void onClientDisconnected(iINCConnection* conn);
-    void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iByteArray& data);
-    void onConnectionErrorOccurred(iINCConnection* conn, int errorCode);
+    void handleHandshake(iINCConnection* conn, const iINCMessage& msg);
+    void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data);
+    void onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCode);
     void onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg);
-
-    /// Process message from client connection (called by iINCConnection)
-    /// @param conn Client connection
-    /// @param msg Received message
-    void processMessage(iINCConnection* conn, const iINCMessage& msg);
 
     iINCServerConfig m_config;          ///< Server configuration
     iINCEngine*     m_engine;           ///< Owned engine instance
@@ -141,12 +141,13 @@ private:
     iThread*        m_ioThread;         ///< Thread for handling I/O operations
     iString         m_serverName;
     bool            m_listening;
-    iAtomicCounter<xuint64> m_nextConnId;       ///< Connection ID generator (thread-safe atomic)
     iAtomicCounter<xuint32> m_nextChannelId;    ///< Global channel ID generator (server-wide unique, thread-safe atomic)
-    
+
     // Connection tracking
-    std::unordered_map<xuint64, iINCConnection*> m_connections; ///< work in ioThread
-    
+    std::unordered_map<xuint32, iINCConnection*> m_connections; ///< work in ioThread
+
+    iSharedDataPointer<iMemPool> m_globalPool;
+
     IX_DISABLE_COPY(iINCServer)
 };
 

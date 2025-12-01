@@ -16,7 +16,7 @@ const char* iINCErrorString(iINCError error)
     switch (error) {
         case INC_OK:
             return "Success";
-            
+
         // Connection errors (0x8xxx)
         case INC_ERROR_CONNECTION_FAILED:
             return "Connection failed";
@@ -34,7 +34,7 @@ const char* iINCErrorString(iINCError error)
             return "Not connected to server";
         case INC_ERROR_ALREADY_CONNECTED:
             return "Already connected";
-            
+
         // Protocol errors (0xCxxx)
         case INC_ERROR_INVALID_MESSAGE:
             return "Malformed message";
@@ -52,7 +52,7 @@ const char* iINCErrorString(iINCError error)
             return "Write operation failed";
         case INC_ERROR_INVALID_STATE:
             return "Invalid operation for current state";
-            
+
         // Resource errors (0xExxx)
         case INC_ERROR_NO_MEMORY:
             return "Out of memory";
@@ -68,7 +68,7 @@ const char* iINCErrorString(iINCError error)
             return "Access denied";
         case INC_ERROR_NOT_SUBSCRIBED:
             return "Not subscribed to event";
-            
+
         // Application errors (0xFxxx)
         case INC_ERROR_INTERNAL:
             return "Internal error";
@@ -76,7 +76,7 @@ const char* iINCErrorString(iINCError error)
             return "Unknown error";
         case INC_ERROR_APPLICATION:
             return "Application error";
-            
+
         default:
             return "Unknown error";
     }

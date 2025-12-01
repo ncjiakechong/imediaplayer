@@ -39,7 +39,7 @@ TEST_F(IBitArrayTest, ConstructWithSize) {
     EXPECT_FALSE(bits.isEmpty());
     EXPECT_FALSE(bits.isNull());
     EXPECT_EQ(bits.size(), 10);
-    
+
     // All bits should be false
     for (int i = 0; i < 10; ++i) {
         EXPECT_FALSE(bits.testBit(i));
@@ -49,7 +49,7 @@ TEST_F(IBitArrayTest, ConstructWithSize) {
 TEST_F(IBitArrayTest, ConstructWithSizeAndValue) {
     iBitArray bits(8, true);
     EXPECT_EQ(bits.size(), 8);
-    
+
     // All bits should be true
     for (int i = 0; i < 8; ++i) {
         EXPECT_TRUE(bits.testBit(i));
@@ -59,7 +59,7 @@ TEST_F(IBitArrayTest, ConstructWithSizeAndValue) {
 TEST_F(IBitArrayTest, CopyConstruction) {
     iBitArray bits1(5, true);
     iBitArray bits2(bits1);
-    
+
     EXPECT_EQ(bits2.size(), 5);
     for (int i = 0; i < 5; ++i) {
         EXPECT_TRUE(bits2.testBit(i));
@@ -69,7 +69,7 @@ TEST_F(IBitArrayTest, CopyConstruction) {
 TEST_F(IBitArrayTest, Assignment) {
     iBitArray bits1(5, true);
     iBitArray bits2;
-    
+
     bits2 = bits1;
     EXPECT_EQ(bits2.size(), 5);
     for (int i = 0; i < 5; ++i) {
@@ -84,15 +84,15 @@ TEST_F(IBitArrayTest, Assignment) {
 TEST_F(IBitArrayTest, Resize) {
     iBitArray bits(5, true);
     EXPECT_EQ(bits.size(), 5);
-    
+
     bits.resize(10);
     EXPECT_EQ(bits.size(), 10);
-    
+
     // Original bits should be preserved
     for (int i = 0; i < 5; ++i) {
         EXPECT_TRUE(bits.testBit(i));
     }
-    
+
     // New bits should be false
     for (int i = 5; i < 10; ++i) {
         EXPECT_FALSE(bits.testBit(i));
@@ -102,7 +102,7 @@ TEST_F(IBitArrayTest, Resize) {
 TEST_F(IBitArrayTest, Truncate) {
     iBitArray bits(10, true);
     bits.truncate(5);
-    
+
     EXPECT_EQ(bits.size(), 5);
     for (int i = 0; i < 5; ++i) {
         EXPECT_TRUE(bits.testBit(i));
@@ -112,7 +112,7 @@ TEST_F(IBitArrayTest, Truncate) {
 TEST_F(IBitArrayTest, Clear) {
     iBitArray bits(10, true);
     EXPECT_FALSE(bits.isEmpty());
-    
+
     bits.clear();
     EXPECT_TRUE(bits.isEmpty());
     // Note: size() dereferences internal buffer, only call on non-empty arrays
@@ -124,7 +124,7 @@ TEST_F(IBitArrayTest, Clear) {
 
 TEST_F(IBitArrayTest, SetBit) {
     iBitArray bits(8, false);
-    
+
     bits.setBit(3);
     EXPECT_TRUE(bits.testBit(3));
     EXPECT_FALSE(bits.testBit(2));
@@ -133,17 +133,17 @@ TEST_F(IBitArrayTest, SetBit) {
 
 TEST_F(IBitArrayTest, SetBitWithValue) {
     iBitArray bits(8, false);
-    
+
     bits.setBit(3, true);
     EXPECT_TRUE(bits.testBit(3));
-    
+
     bits.setBit(3, false);
     EXPECT_FALSE(bits.testBit(3));
 }
 
 TEST_F(IBitArrayTest, ClearBit) {
     iBitArray bits(8, true);
-    
+
     bits.clearBit(3);
     EXPECT_FALSE(bits.testBit(3));
     EXPECT_TRUE(bits.testBit(2));
@@ -152,11 +152,11 @@ TEST_F(IBitArrayTest, ClearBit) {
 
 TEST_F(IBitArrayTest, ToggleBit) {
     iBitArray bits(8, false);
-    
+
     bool prev = bits.toggleBit(3);
     EXPECT_FALSE(prev);
     EXPECT_TRUE(bits.testBit(3));
-    
+
     prev = bits.toggleBit(3);
     EXPECT_TRUE(prev);
     EXPECT_FALSE(bits.testBit(3));
@@ -167,7 +167,7 @@ TEST_F(IBitArrayTest, TestBit) {
     bits.setBit(0);
     bits.setBit(3);
     bits.setBit(7);
-    
+
     EXPECT_TRUE(bits.testBit(0));
     EXPECT_FALSE(bits.testBit(1));
     EXPECT_FALSE(bits.testBit(2));
@@ -185,7 +185,7 @@ TEST_F(IBitArrayTest, TestBit) {
 TEST_F(IBitArrayTest, ConstArrayAccess) {
     iBitArray bits(8, false);
     bits.setBit(3);
-    
+
     const iBitArray& constBits = bits;
     EXPECT_TRUE(constBits[3]);
     EXPECT_FALSE(constBits[2]);
@@ -194,10 +194,10 @@ TEST_F(IBitArrayTest, ConstArrayAccess) {
 
 TEST_F(IBitArrayTest, ArrayAccessAssignment) {
     iBitArray bits(8, false);
-    
+
     bits[3] = true;
     EXPECT_TRUE(bits.testBit(3));
-    
+
     bits[3] = false;
     EXPECT_FALSE(bits.testBit(3));
 }
@@ -208,12 +208,12 @@ TEST_F(IBitArrayTest, ArrayAccessAssignment) {
 
 TEST_F(IBitArrayTest, Fill) {
     iBitArray bits(8, false);
-    
+
     bits.fill(true);
     for (int i = 0; i < 8; ++i) {
         EXPECT_TRUE(bits.testBit(i));
     }
-    
+
     bits.fill(false);
     for (int i = 0; i < 8; ++i) {
         EXPECT_FALSE(bits.testBit(i));
@@ -222,7 +222,7 @@ TEST_F(IBitArrayTest, Fill) {
 
 TEST_F(IBitArrayTest, FillWithSize) {
     iBitArray bits(5, false);
-    
+
     bits.fill(true, 10);
     EXPECT_EQ(bits.size(), 10);
     for (int i = 0; i < 10; ++i) {
@@ -232,9 +232,9 @@ TEST_F(IBitArrayTest, FillWithSize) {
 
 TEST_F(IBitArrayTest, FillRange) {
     iBitArray bits(10, false);
-    
+
     bits.fill(true, 2, 7);  // Fill bits 2-6 (end is exclusive)
-    
+
     EXPECT_FALSE(bits.testBit(0));
     EXPECT_FALSE(bits.testBit(1));
     EXPECT_TRUE(bits.testBit(2));
@@ -256,7 +256,7 @@ TEST_F(IBitArrayTest, CountTrue) {
     bits.setBit(2);
     bits.setBit(5);
     bits.setBit(8);
-    
+
     EXPECT_EQ(bits.count(true), 3);
 }
 
@@ -265,7 +265,7 @@ TEST_F(IBitArrayTest, CountFalse) {
     bits.setBit(2);
     bits.setBit(5);
     bits.setBit(8);
-    
+
     EXPECT_EQ(bits.count(false), 7);
 }
 
@@ -278,14 +278,14 @@ TEST_F(IBitArrayTest, BitwiseAND) {
     bits1.setBit(1);
     bits1.setBit(3);
     bits1.setBit(5);
-    
+
     iBitArray bits2(8, false);
     bits2.setBit(3);
     bits2.setBit(5);
     bits2.setBit(7);
-    
+
     iBitArray result = bits1 & bits2;
-    
+
     EXPECT_FALSE(result.testBit(1));
     EXPECT_TRUE(result.testBit(3));
     EXPECT_TRUE(result.testBit(5));
@@ -296,13 +296,13 @@ TEST_F(IBitArrayTest, BitwiseOR) {
     iBitArray bits1(8, false);
     bits1.setBit(1);
     bits1.setBit(3);
-    
+
     iBitArray bits2(8, false);
     bits2.setBit(3);
     bits2.setBit(5);
-    
+
     iBitArray result = bits1 | bits2;
-    
+
     EXPECT_TRUE(result.testBit(1));
     EXPECT_TRUE(result.testBit(3));
     EXPECT_TRUE(result.testBit(5));
@@ -314,14 +314,14 @@ TEST_F(IBitArrayTest, BitwiseXOR) {
     bits1.setBit(1);
     bits1.setBit(3);
     bits1.setBit(5);
-    
+
     iBitArray bits2(8, false);
     bits2.setBit(3);
     bits2.setBit(5);
     bits2.setBit(7);
-    
+
     iBitArray result = bits1 ^ bits2;
-    
+
     EXPECT_TRUE(result.testBit(1));   // Only in bits1
     EXPECT_FALSE(result.testBit(3));  // In both
     EXPECT_FALSE(result.testBit(5));  // In both
@@ -333,9 +333,9 @@ TEST_F(IBitArrayTest, BitwiseNOT) {
     bits.setBit(1);
     bits.setBit(3);
     bits.setBit(5);
-    
+
     iBitArray result = ~bits;
-    
+
     EXPECT_TRUE(result.testBit(0));
     EXPECT_FALSE(result.testBit(1));
     EXPECT_TRUE(result.testBit(2));
@@ -351,14 +351,14 @@ TEST_F(IBitArrayTest, BitwiseANDAssignment) {
     bits1.setBit(1);
     bits1.setBit(3);
     bits1.setBit(5);
-    
+
     iBitArray bits2(8, false);
     bits2.setBit(3);
     bits2.setBit(5);
     bits2.setBit(7);
-    
+
     bits1 &= bits2;
-    
+
     EXPECT_FALSE(bits1.testBit(1));
     EXPECT_TRUE(bits1.testBit(3));
     EXPECT_TRUE(bits1.testBit(5));
@@ -373,18 +373,18 @@ TEST_F(IBitArrayTest, Equality) {
     iBitArray bits1(8, false);
     bits1.setBit(1);
     bits1.setBit(3);
-    
+
     iBitArray bits2(8, false);
     bits2.setBit(1);
     bits2.setBit(3);
-    
+
     iBitArray bits3(8, false);
     bits3.setBit(1);
     bits3.setBit(5);
-    
+
     EXPECT_TRUE(bits1 == bits2);
     EXPECT_FALSE(bits1 == bits3);
-    
+
     EXPECT_FALSE(bits1 != bits2);
     EXPECT_TRUE(bits1 != bits3);
 }
@@ -396,16 +396,16 @@ TEST_F(IBitArrayTest, Equality) {
 TEST_F(IBitArrayTest, CopyOnWrite) {
     iBitArray bits1(8, false);
     bits1.setBit(3);
-    
+
     iBitArray bits2 = bits1;
-    
+
     // Modify bits2
     bits2.setBit(5);
-    
+
     // bits1 should remain unchanged
     EXPECT_TRUE(bits1.testBit(3));
     EXPECT_FALSE(bits1.testBit(5));
-    
+
     // bits2 should have both bits set
     EXPECT_TRUE(bits2.testBit(3));
     EXPECT_TRUE(bits2.testBit(5));
@@ -425,7 +425,7 @@ TEST_F(IBitArrayTest, SingleBit) {
     iBitArray bits(1, true);
     EXPECT_EQ(bits.size(), 1);
     EXPECT_TRUE(bits.testBit(0));
-    
+
     bits.setBit(0, false);
     EXPECT_FALSE(bits.testBit(0));
 }
@@ -433,12 +433,12 @@ TEST_F(IBitArrayTest, SingleBit) {
 TEST_F(IBitArrayTest, LargeBitArray) {
     iBitArray bits(1000, false);
     EXPECT_EQ(bits.size(), 1000);
-    
+
     // Set some bits at various positions
     bits.setBit(0);
     bits.setBit(500);
     bits.setBit(999);
-    
+
     EXPECT_TRUE(bits.testBit(0));
     EXPECT_TRUE(bits.testBit(500));
     EXPECT_TRUE(bits.testBit(999));
@@ -447,7 +447,7 @@ TEST_F(IBitArrayTest, LargeBitArray) {
 TEST_F(IBitArrayTest, ResizeToSmallerSize) {
     iBitArray bits(100, true);
     bits.resize(50);
-    
+
     EXPECT_EQ(bits.size(), 50);
     EXPECT_TRUE(bits.testBit(0));
     EXPECT_TRUE(bits.testBit(49));
@@ -456,7 +456,7 @@ TEST_F(IBitArrayTest, ResizeToSmallerSize) {
 TEST_F(IBitArrayTest, ResizeToLargerSize) {
     iBitArray bits(50, true);
     bits.resize(100);
-    
+
     EXPECT_EQ(bits.size(), 100);
     EXPECT_TRUE(bits.testBit(0));
     EXPECT_TRUE(bits.testBit(49));
@@ -468,11 +468,11 @@ TEST_F(IBitArrayTest, ResizeToLargerSize) {
 TEST_F(IBitArrayTest, BitwiseOperationsWithDifferentSizes) {
     iBitArray bits1(8, false);
     bits1.setBit(3);
-    
+
     iBitArray bits2(16, false);
     bits2.setBit(3);
     bits2.setBit(10);
-    
+
     // Operations should handle different sizes
     iBitArray result = bits1 & bits2;
     EXPECT_GT(result.size(), 0);

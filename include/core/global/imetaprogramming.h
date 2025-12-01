@@ -83,7 +83,7 @@ template <>
 struct _Is_integral<unsigned char>
 { enum { value = 1 }; };
 
-template <> 
+template <>
 struct _Is_integral<wchar_t>
 { enum { value = 1 }; };
 

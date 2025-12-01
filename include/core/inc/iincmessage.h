@@ -10,9 +10,10 @@
 #ifndef IINCMESSAGE_H
 #define IINCMESSAGE_H
 
-#include <core/inc/iinctagstruct.h>
-#include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
+#include <core/utils/ibytearray.h>
+#include <core/inc/iinctagstruct.h>
+#include <core/kernel/ideadlinetimer.h>
 
 namespace iShell {
 
@@ -33,10 +34,11 @@ enum iINCMessageType {
     INC_MSG_STREAM_OPEN     = ((1 + 6) << 1),     ///< Open shared memory stream
     INC_MSG_STREAM_OPEN_ACK = ((1 + 6) << 1) + 1, ///< Open shared memory stream acknowledgement
     INC_MSG_STREAM_CLOSE    = ((1 + 7) << 1),     ///< Close shared memory stream
+    INC_MSG_STREAM_CLOSE_ACK = ((1 + 7) << 1) + 1, ///< Close shared memory stream acknowledgement
     INC_MSG_BINARY_DATA     = ((1 + 8) << 1),     ///< Binary data with optional SHM reference
     INC_MSG_BINARY_DATA_ACK = ((1 + 8) << 1) + 1, ///< Binary data with optional SHM reference acknowledgement
     INC_MSG_PING            = ((1 + 9) << 1),     ///< Keepalive ping
-    INC_MSG_PONG            = ((1 + 10) << 1)    ///< Keepalive pong
+    INC_MSG_PONG            = ((1 + 9) << 1) + 1  ///< Keepalive pong
 };
 
 /// @brief Message flags for binary data transfer
@@ -46,18 +48,19 @@ enum iINCMessageFlags {
     INC_MSG_FLAG_COMPRESSED = 0x02      ///< Payload is compressed (future use)
 };
 
-/// @brief Message header structure (24 bytes, fixed size)
+/// @brief Message header structure (32 bytes, fixed size)
 #pragma pack(push, 1)
 struct iINCMessageHeader {
     xuint32 magic;              ///< Magic number (0x494E4300 - "INC\0")
     xuint16 protocolVersion;    ///< Protocol version
     xuint16 payloadVersion;     ///< Payload version
-    xuint32 length;             ///< Payload length (bytes)
     xuint16 type;               ///< Message type (iINCMessageType)
-    xuint16 channelID;          ///< Channel ID
+    xuint16 flags;              ///< Message flags (iINCMessageFlags)
+    xuint32 channelID;          ///< Channel ID
     xuint32 seqNum;             ///< Sequence number
-    xuint32 flags;              ///< Message flags (iINCMessageFlags)
-    
+    xuint32 length;             ///< Payload length (bytes)
+    xint64  dts;                ///< Duration timestamp for message (nanoseconds, max=forever)
+
     /// Magic number for INC messages: "INC\0"
     static const xuint32 MAGIC;
     static const xint32 HEADER_SIZE;
@@ -70,7 +73,7 @@ class IX_CORE_EXPORT iINCMessage
 {
 public:
     // Removed default constructor - use iINCMessage(type, seqNum) instead
-    iINCMessage(iINCMessageType type, xuint32 seqNum);
+    iINCMessage(iINCMessageType type, xuint32 channelID, xuint32 seqNum);
     iINCMessage(const iINCMessage& other);
     iINCMessage& operator=(const iINCMessage& other);
     ~iINCMessage();
@@ -84,25 +87,27 @@ public:
     bool isValid() const;
 
     // Accessors
+    xuint16 flags() const { return m_flags; }
     iINCMessageType type() const { return m_type; }
     xuint32 sequenceNumber() const { return m_seqNum; }
     xuint16 protocolVersion() const { return m_protocolVersion; }
     xuint16 payloadVersion() const { return m_payloadVersion; }
-    xuint16 channelID() const { return m_channelID; }
-    xuint32 flags() const { return m_flags; }
-    
+    xuint32 channelID() const { return m_channelID; }
+    iDeadlineTimer dts() const { iDeadlineTimer dts; dts.setPreciseDeadline(0, m_dts); return dts; }
+
     /// Get typed payload for type-safe reading/writing
     iINCTagStruct& payload() { return m_payload; }
     const iINCTagStruct& payload() const { return m_payload; }
-    
+
     // Mutators
     void setType(iINCMessageType type) { m_type = type; }
     void setSequenceNumber(xuint32 seq) { m_seqNum = seq; }
     void setProtocolVersion(xuint16 ver) { m_protocolVersion = ver; }
     void setPayloadVersion(xuint16 ver) { m_payloadVersion = ver; }
-    void setChannelID(xuint16 channel) { m_channelID = channel; }
-    void setFlags(xuint32 flags) { m_flags = flags; }
-    
+    void setChannelID(xuint32 channel) { m_channelID = channel; }
+    void setFlags(xuint16 flags) { m_flags = flags; }
+    void setDTS(xint64 dts) { m_dts = dts; }
+
     /// Set payload from iINCTagStruct
     void setPayload(const iINCTagStruct& payload) { m_payload = payload; }
 
@@ -111,11 +116,12 @@ public:
 
 private:
     iINCMessageType m_type;
-    xuint32         m_seqNum;
+    xuint16         m_flags;
     xuint16         m_protocolVersion;
     xuint16         m_payloadVersion;
-    xuint16         m_channelID;
-    xuint32         m_flags;
+    xuint32         m_channelID;
+    xuint32         m_seqNum;
+    xint64          m_dts;
     iINCTagStruct   m_payload;      ///< Type-safe payload
 };
 

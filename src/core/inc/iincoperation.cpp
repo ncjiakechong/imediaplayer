@@ -22,6 +22,7 @@ iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent)
     , m_seqNum(seqNum)
     , m_state(STATE_RUNNING)
     , m_errorCode(0)
+    , m_blockID(0)
     , m_timer(parent)
     , m_timeout(0)
     , m_finishedCallback(IX_NULLPTR)
@@ -49,7 +50,7 @@ void iINCOperation::setTimeout(xint64 timeout)
     if (m_state != STATE_RUNNING) {
         return;
     }
-    
+
     m_timeout = timeout;
     if (timeout > 0) {
         iObject::invokeMethod(&m_timer, static_cast<void (iTimer::*)(int, xintptr)>(&iTimer::start), timeout, 0);
@@ -78,7 +79,7 @@ void iINCOperation::setState(State st)
     if (m_state == st) {
         return;
     }
-    
+
     m_state = st;
     if (st != STATE_RUNNING) {
         iObject::invokeMethod(&m_timer, &iTimer::stop);
@@ -95,13 +96,20 @@ void iINCOperation::setResult(xint32 errorCode, const iByteArray& data)
     if (m_state != STATE_RUNNING) {
         return;
     }
-    
+
     m_errorCode = errorCode;
     m_resultData = data;
-    
+
     // If errorCode is 0 (INC_OK), operation succeeded
     // Otherwise, operation failed
     setState(errorCode == 0 ? STATE_DONE : STATE_FAILED);
 }
+
+ iINCTagStruct iINCOperation::resultData() const
+ {
+    iINCTagStruct result;
+    result.setData(m_resultData);
+    return result;
+ }
 
 } // namespace iShell

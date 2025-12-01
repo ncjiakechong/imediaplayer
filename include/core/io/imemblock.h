@@ -19,12 +19,12 @@
 #include <core/utils/ifreelist.h>
 #include <core/utils/ishareddata.h>
 #include <core/global/inamespace.h>
+#include <core/io/isharemem.h>
 
 namespace iShell {
 
 class iMemPool;
 class iMemBlock;
-class iShareMem;
 class iMemImport;
 class iMemExport;
 class iMemImportSegment;
@@ -212,6 +212,7 @@ public:
     void vacuum();
     bool isShared() const;
     bool isMemfdBacked() const;
+    MemType type() const { return m_memory ? m_memory->type() : MEMTYPE_PRIVATE; }
     inline bool isGlobal() const { return m_global; }
     inline bool isPerClient() const { return !m_global; }
     inline bool isRemoteWritable() const { return m_isRemoteWritable; }

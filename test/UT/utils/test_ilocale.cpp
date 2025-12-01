@@ -255,7 +255,7 @@ TEST_F(ILocaleTest, ToLower) {
 TEST_F(ILocaleTest, MeasurementSystem) {
     iLocale locale(iLocale::English, iLocale::UnitedStates);
     iLocale::MeasurementSystem system = locale.measurementSystem();
-    EXPECT_TRUE(system == iLocale::MetricSystem || 
+    EXPECT_TRUE(system == iLocale::MetricSystem ||
                 system == iLocale::ImperialUSSystem ||
                 system == iLocale::ImperialUKSystem);
 }

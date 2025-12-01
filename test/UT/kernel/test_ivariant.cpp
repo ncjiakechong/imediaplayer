@@ -85,10 +85,10 @@ TEST_F(IVariantTest, Clear) {
 TEST_F(IVariantTest, CopyConstructor) {
     iVariant v1(42);
     iVariant v2(v1);
-    
+
     ASSERT_TRUE(v2.isValid());
     ASSERT_EQ(v2.value<int>(), 42);
-    
+
     iVariant v3(iString("test"));
     iVariant v4(v3);
     ASSERT_EQ(v4.value<iString>(), "test");
@@ -98,11 +98,11 @@ TEST_F(IVariantTest, CopyConstructor) {
 TEST_F(IVariantTest, AssignmentOperator) {
     iVariant v1(123);
     iVariant v2;
-    
+
     v2 = v1;
     ASSERT_TRUE(v2.isValid());
     ASSERT_EQ(v2.value<int>(), 123);
-    
+
     iVariant v3(iString("hello"));
     v1 = v3;
     ASSERT_EQ(v1.value<iString>(), "hello");
@@ -113,15 +113,15 @@ TEST_F(IVariantTest, EqualityComparison) {
     iVariant v1(42);
     iVariant v2(42);
     iVariant v3(99);
-    
+
     ASSERT_TRUE(v1 == v2);
     ASSERT_FALSE(v1 == v3);
     ASSERT_TRUE(v1 != v3);
-    
+
     iVariant v4(iString("test"));
     iVariant v5(iString("test"));
     iVariant v6(iString("other"));
-    
+
     ASSERT_TRUE(v4 == v5);
     ASSERT_FALSE(v4 == v6);
 }
@@ -129,7 +129,7 @@ TEST_F(IVariantTest, EqualityComparison) {
 // Test canConvert
 TEST_F(IVariantTest, CanConvert) {
     iRegisterConverter<int, iString>([](int val) { return iString::number(val); });
-    
+
     iVariant v(42);
     ASSERT_TRUE(v.canConvert<int>());
     ASSERT_TRUE(v.canConvert<iString>());
@@ -139,16 +139,16 @@ TEST_F(IVariantTest, CanConvert) {
 TEST_F(IVariantTest, ValueExtraction) {
     iRegisterConverter<iString, int>([](const iString& s) { bool ok; int val = s.toInt(&ok); return ok ? val : 0; });
     iRegisterConverter<int, double>([](int val) { return static_cast<double>(val); });
-    
+
     iVariant v1(42);
     ASSERT_EQ(v1.value<int>(), 42);
-    
+
     iVariant v2(iString("123"));
     ASSERT_EQ(v2.value<int>(), 123);
-    
+
     iVariant v3(3.14);
     ASSERT_DOUBLE_EQ(v3.value<double>(), 3.14);
-    
+
     iVariant v4(42);
     ASSERT_DOUBLE_EQ(v4.value<double>(), 42.0);
 }
@@ -158,13 +158,13 @@ TEST_F(IVariantTest, StringConversion) {
     iRegisterConverter<int, iString>([](int val) { return iString::number(val); });
     iRegisterConverter<double, iString>([](double val) { return iString::number(val); });
     iRegisterConverter<bool, iString>([](bool val) { return val ? "true" : "false"; });
-    
+
     iVariant v1(iString("hello"));
     ASSERT_EQ(v1.value<iString>(), "hello");
-    
+
     iVariant v2(42);
     ASSERT_EQ(v2.value<iString>(), "42");
-    
+
     iVariant v3(true);
     ASSERT_EQ(v3.value<iString>(), "true");
 }
@@ -172,16 +172,16 @@ TEST_F(IVariantTest, StringConversion) {
 // Test bool conversion
 TEST_F(IVariantTest, BoolConversion) {
     iRegisterConverter<int, bool>([](int val) { return val != 0; });
-    
+
     iVariant v1(true);
     ASSERT_TRUE(v1.value<bool>());
-    
+
     iVariant v2(false);
     ASSERT_FALSE(v2.value<bool>());
-    
+
     iVariant v3(1);
     ASSERT_TRUE(v3.value<bool>());
-    
+
     iVariant v4(0);
     ASSERT_FALSE(v4.value<bool>());
 }
@@ -192,7 +192,7 @@ TEST_F(IVariantTest, NumericTypes) {
     iVariant v_short(static_cast<short>(1000));
     iVariant v_long(1000000L);
     iVariant v_float(3.14f);
-    
+
     ASSERT_TRUE(v_char.isValid());
     ASSERT_TRUE(v_short.isValid());
     ASSERT_TRUE(v_long.isValid());
@@ -202,10 +202,10 @@ TEST_F(IVariantTest, NumericTypes) {
 // Test null variant behavior
 TEST_F(IVariantTest, NullVariant) {
     iVariant v;
-    
+
     ASSERT_TRUE(v.isNull());
     ASSERT_FALSE(v.isValid());
-    
+
     v = iVariant(0);
     ASSERT_FALSE(v.isNull());
     ASSERT_TRUE(v.isValid());

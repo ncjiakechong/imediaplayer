@@ -39,7 +39,7 @@ TEST_F(StringExtendedTest, AppendOperations) {
     iString str(u"Hello");
     str.append(u" ");
     str.append(u"World");
-    
+
     EXPECT_GT(str.length(), 5);
 }
 
@@ -47,7 +47,7 @@ TEST_F(StringExtendedTest, AppendOperations) {
 TEST_F(StringExtendedTest, InsertOperations) {
     iString str(u"HelloWorld");
     str.insert(5, u" ");
-    
+
     EXPECT_GT(str.length(), 10);
 }
 
@@ -56,7 +56,7 @@ TEST_F(StringExtendedTest, RemoveOperations) {
     iString str(u"Hello World");
     int originalLength = str.length();
     iString result = str.remove(5, 6);  // Remove " World"
-    
+
     // Compare result with original length, not current str
     EXPECT_LT(result.length(), originalLength);
     // Verify the result is what we expect
@@ -67,17 +67,17 @@ TEST_F(StringExtendedTest, RemoveOperations) {
 TEST_F(StringExtendedTest, ReplaceOperations) {
     iString str(u"Hello World");
     iString result = str.replace(iString(u"World"), iString(u"There"));
-    
+
     EXPECT_EQ(result.length(), str.length());
 }
 
 // Test 7: ToUpper and toLower
 TEST_F(StringExtendedTest, CaseConversion) {
     iString str(u"Hello World");
-    
+
     iString upper = str.toUpper();
     iString lower = str.toLower();
-    
+
     EXPECT_GT(upper.length(), 0);
     EXPECT_GT(lower.length(), 0);
 }
@@ -85,13 +85,13 @@ TEST_F(StringExtendedTest, CaseConversion) {
 // Test 8: Substring operations
 TEST_F(StringExtendedTest, SubstringOperations) {
     iString str(u"0123456789");
-    
+
     iString mid = str.mid(2, 5);
     EXPECT_EQ(mid.length(), 5);
-    
+
     iString left = str.left(5);
     EXPECT_EQ(left.length(), 5);
-    
+
     iString right = str.right(5);
     EXPECT_EQ(right.length(), 5);
 }
@@ -99,7 +99,7 @@ TEST_F(StringExtendedTest, SubstringOperations) {
 // Test 9: StartsWith and endsWith
 TEST_F(StringExtendedTest, StartsWithEndsWith) {
     iString str(u"prefix_content_suffix");
-    
+
     EXPECT_TRUE(str.startsWith(u"prefix"));
     EXPECT_TRUE(str.endsWith(u"suffix"));
     EXPECT_FALSE(str.startsWith(u"suffix"));
@@ -108,7 +108,7 @@ TEST_F(StringExtendedTest, StartsWithEndsWith) {
 // Test 10: Contains operation
 TEST_F(StringExtendedTest, ContainsOperation) {
     iString str(u"Hello World");
-    
+
     EXPECT_TRUE(str.contains(u"World"));
     EXPECT_TRUE(str.contains(u"Hello"));
     EXPECT_FALSE(str.contains(u"xyz"));
@@ -117,10 +117,10 @@ TEST_F(StringExtendedTest, ContainsOperation) {
 // Test 11: IndexOf operations
 TEST_F(StringExtendedTest, IndexOfOperations) {
     iString str(u"Hello World World");
-    
+
     int first = str.indexOf(u"World");
     EXPECT_GE(first, 0);
-    
+
     int last = str.lastIndexOf(u"World");
     EXPECT_GT(last, first);
 }
@@ -128,18 +128,18 @@ TEST_F(StringExtendedTest, IndexOfOperations) {
 // Test 12: Split operation
 TEST_F(StringExtendedTest, SplitOperation) {
     iString str(u"one,two,three");
-    
+
     // Note: Need to check if split method exists
     // auto parts = str.split(u",");
     // EXPECT_EQ(parts.size(), 3);
-    
+
     EXPECT_FALSE(str.isEmpty());
 }
 
 // Test 13: Trim operations
 TEST_F(StringExtendedTest, TrimOperations) {
     iString str(u"  trim me  ");
-    
+
     iString trimmed = str.trimmed();
     EXPECT_LE(trimmed.length(), str.length());
 }
@@ -148,7 +148,7 @@ TEST_F(StringExtendedTest, TrimOperations) {
 TEST_F(StringExtendedTest, NumberConversion) {
     iString numStr = iString::number(12345);
     EXPECT_FALSE(numStr.isEmpty());
-    
+
     int value = numStr.toInt();
     EXPECT_EQ(value, 12345);
 }
@@ -158,7 +158,7 @@ TEST_F(StringExtendedTest, ComparisonOperators) {
     iString str1(u"abc");
     iString str2(u"abc");
     iString str3(u"def");
-    
+
     EXPECT_TRUE(str1 == str2);
     EXPECT_FALSE(str1 == str3);
     EXPECT_TRUE(str1 != str3);
@@ -169,7 +169,7 @@ TEST_F(StringExtendedTest, ComparisonOperators) {
 TEST_F(StringExtendedTest, EmptyStringHandling) {
     iString empty1;
     iString empty2(u"");
-    
+
     EXPECT_TRUE(empty1.isEmpty());
     EXPECT_TRUE(empty2.isEmpty());
     EXPECT_TRUE(empty1 == empty2);
@@ -181,7 +181,7 @@ TEST_F(StringExtendedTest, LargeStringOperations) {
     for (int i = 0; i < 1000; i++) {
         large.append(u"x");
     }
-    
+
     EXPECT_EQ(large.length(), 1000);
 }
 
@@ -194,7 +194,7 @@ TEST_F(StringExtendedTest, UnicodeCharacters) {
 // Test 19: Character access
 TEST_F(StringExtendedTest, CharacterAccess) {
     iString str(u"Test");
-    
+
     if (str.length() > 0) {
         iChar ch = str.at(0);
         EXPECT_TRUE(ch.isLetter() || ch.isDigit() || ch.isPunct());
@@ -205,11 +205,11 @@ TEST_F(StringExtendedTest, CharacterAccess) {
 TEST_F(StringExtendedTest, ReserveCapacity) {
     iString str;
     str.reserve(100);
-    
+
     for (int i = 0; i < 50; i++) {
         str.append(u"a");
     }
-    
+
     EXPECT_EQ(str.length(), 50);
 }
 
@@ -217,7 +217,7 @@ TEST_F(StringExtendedTest, ReserveCapacity) {
 TEST_F(StringExtendedTest, ClearOperation) {
     iString str(u"test data");
     EXPECT_FALSE(str.isEmpty());
-    
+
     str.clear();
     EXPECT_TRUE(str.isEmpty());
 }
@@ -225,11 +225,11 @@ TEST_F(StringExtendedTest, ClearOperation) {
 // Test 22: Repeated append
 TEST_F(StringExtendedTest, RepeatedAppend) {
     iString str(u"a");
-    
+
     for (int i = 0; i < 10; i++) {
         str += u"b";
     }
-    
+
     EXPECT_GT(str.length(), 1);
 }
 
@@ -243,7 +243,7 @@ TEST_F(StringExtendedTest, FillOperation) {
 TEST_F(StringExtendedTest, ResizeOperation) {
     iString str(u"test");
     int original = str.length();
-    
+
     str.resize(10);
     EXPECT_GE(str.length(), original);
 }
@@ -252,7 +252,7 @@ TEST_F(StringExtendedTest, ResizeOperation) {
 TEST_F(StringExtendedTest, ChopOperation) {
     iString str(u"0123456789");
     str.chop(5);
-    
+
     EXPECT_EQ(str.length(), 5);
 }
 
@@ -260,18 +260,18 @@ TEST_F(StringExtendedTest, ChopOperation) {
 TEST_F(StringExtendedTest, ArgFormatting) {
     iString format(u"Value: %1, Name: %2");
     iString result = format.arg(42).arg(u"test");
-    
+
     EXPECT_GT(result.length(), format.length());
 }
 
 // Test 27: Section operation
 TEST_F(StringExtendedTest, SectionOperation) {
     iString str(u"one:two:three");
-    
+
     // Note: Check if section method exists
     // iString section = str.section(u":", 1, 1);
     // EXPECT_FALSE(section.isEmpty());
-    
+
     EXPECT_FALSE(str.isEmpty());
 }
 
@@ -279,7 +279,7 @@ TEST_F(StringExtendedTest, SectionOperation) {
 TEST_F(StringExtendedTest, SimplifiedOperation) {
     iString str(u"  multiple   spaces   here  ");
     iString simplified = str.simplified();
-    
+
     EXPECT_LE(simplified.length(), str.length());
 }
 
@@ -288,7 +288,7 @@ TEST_F(StringExtendedTest, IsNullVsIsEmpty) {
     iString null;
     iString empty(u"");
     iString filled(u"data");
-    
+
     EXPECT_TRUE(null.isEmpty());
     EXPECT_TRUE(empty.isEmpty());
     EXPECT_FALSE(filled.isEmpty());
@@ -298,7 +298,7 @@ TEST_F(StringExtendedTest, IsNullVsIsEmpty) {
 TEST_F(StringExtendedTest, MoveSemantics) {
     iString str1(u"move test");
     int original_length = str1.length();
-    
+
     iString str2 = str1;  // Copy
     EXPECT_EQ(str2.length(), original_length);
 }

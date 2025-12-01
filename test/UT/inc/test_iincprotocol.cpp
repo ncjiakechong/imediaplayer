@@ -33,7 +33,7 @@ TEST_F(INCProtocolTest, CreateMessage) {
     xuint32 messageSize = 0;
     memcpy(&messageSize, payload.constData() + 4, 4);
     messageSize = xFromBigEndian(messageSize);
-    
+
     ASSERT_EQ(messageSize, payload.size() - 8);
 
     // Further parsing would require iIncProtocol::parseMessage, which we'll test separately
@@ -50,7 +50,7 @@ TEST_F(INCProtocolTest, ParseMessage) {
 
     ASSERT_EQ(parsedBytes, payload.size());
     EXPECT_EQ(msg.type, iIncProtocol::Response);
-    
+
     xint32 val;
     ASSERT_TRUE(msg.tags.getInt32(val));
     EXPECT_EQ(val, 54321);
@@ -99,7 +99,7 @@ TEST_F(INCProtocolTest, ParseMultipleMessages) {
     combinedPayload.append(payload2);
 
     iIncProtocol::IncProtocolMessage msg1, msg2;
-    
+
     // Parse first message
     int parsedBytes1 = iIncProtocol::parseMessage(combinedPayload, msg1);
     ASSERT_EQ(parsedBytes1, payload1.size());

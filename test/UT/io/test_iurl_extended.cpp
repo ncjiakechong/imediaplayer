@@ -123,7 +123,7 @@ TEST(iUrlExtended, SetUserInfo) {
 TEST(iUrlExtended, PortDefault) {
     iUrl url1("https://example.com/path");
     EXPECT_EQ(url1.port(), -1);  // Default port
-    
+
     iUrl url2("http://example.com/path");
     EXPECT_EQ(url2.port(), -1);  // Default port
 }
@@ -295,7 +295,7 @@ TEST(iUrlExtended, FromStringRoundtrip) {
     iString original("https://example.com/path?key=value");
     iUrl url(original);
     iString roundtrip = url.toString();
-    
+
     EXPECT_TRUE(url.isValid());
     // Roundtrip may normalize URL
 }
@@ -346,7 +346,7 @@ TEST(iUrlExtended, LocalhostUrl) {
 TEST(iUrlExtended, DeepCopy) {
     iUrl url1("https://example.com/path?query=value");
     iUrl url2 = url1;
-    
+
     // Both should be valid and equal
     EXPECT_TRUE(url1.isValid());
     EXPECT_TRUE(url2.isValid());
@@ -361,7 +361,7 @@ TEST(iUrlExtended, SelfAssignment) {
 TEST(iUrlExtended, ChainedAssignment) {
     iUrl url1("https://example.com/path");
     iUrl url2, url3;
-    
+
     url3 = url2 = url1;
     EXPECT_EQ(url1.toString(), url3.toString());
 }
@@ -373,9 +373,9 @@ TEST(iUrlExtended, ChainedAssignment) {
 TEST(iUrlExtended, SwapUrls) {
     iUrl url1("https://example.com/path1");
     iUrl url2("https://other.com/path2");
-    
+
     url1.swap(url2);
-    
+
     EXPECT_EQ(url1.host(), iString("other.com"));
     EXPECT_EQ(url2.host(), iString("example.com"));
 }

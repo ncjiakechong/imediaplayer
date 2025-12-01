@@ -47,7 +47,7 @@ TEST_F(StringTest, Comparison) {
     iShell::iString str1("abc");
     iShell::iString str2("abc");
     iShell::iString str3("def");
-    
+
     EXPECT_EQ(str1, str2);
     EXPECT_NE(str1, str3);
 }

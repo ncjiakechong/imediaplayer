@@ -39,7 +39,7 @@ iINCStream::iINCStream(const iStringView& name, iINCContext* context, iObject* p
     , m_channelId(0)  // Will be allocated by server during attach()
 {
     IX_ASSERT(context != IX_NULLPTR);
-    
+
     // Monitor context state changes
     iObject::connect(context, &iINCContext::stateChanged, this, &iINCStream::onContextStateChanged);
 }
@@ -48,7 +48,7 @@ iINCStream::~iINCStream()
 {
     // CRITICAL: First detach to trigger graceful channel release
     detach();
-    
+
     // Cancel all pending operations - this will trigger callbacks
     // which will automatically remove operations from m_pendingOps
     // Make a copy of the list since callbacks will modify it
@@ -63,11 +63,6 @@ iINCStream::~iINCStream()
         }
         op->deref();
     }
-}
-
-iINCProtocol* iINCStream::protocol() const
-{
-    return m_context ? m_context->protocol() : IX_NULLPTR;
 }
 
 void iINCStream::setState(State newState)
@@ -85,18 +80,18 @@ bool iINCStream::attach(Mode mode)
         ilog_warn("[", objectName(), "][", m_channelId, "][*] Stream already attached or attaching");
         return false;
     }
-    
+
     // Check if context is connected
     if (!m_context || m_context->state() != iINCContext::STATE_READY) {
         ilog_error("[", objectName(), "][", m_channelId, "] Context not ready, state=", m_context ? m_context->state() : -1);
         IEMIT error(INC_ERROR_CONNECTION_FAILED);
         return false;
     }
-    
+
     m_mode = mode;
     setState(STATE_ATTACHING);
-    iObject::connect(protocol(), &iINCProtocol::binaryDataReceived, this, &iINCStream::onBinaryDataReceived, iShell::DirectConnection);
-    
+    iObject::connect(m_context->m_connection, &iINCConnection::binaryDataReceived, this, &iINCStream::onBinaryDataReceived, iShell::DirectConnection);
+
     // Request channel from server (async, non-blocking)
     auto op = m_context->requestChannel(mode);
     if (!op) {
@@ -105,13 +100,13 @@ bool iINCStream::attach(Mode mode)
         IEMIT error(INC_ERROR_CONNECTION_FAILED);
         return false;
     }
-    
+
     // Track this operation and set callback for completion
     // Manually manage refcount - add ref when tracking
     op->ref();
     m_pendingOps.push_back(op.data());
     op->setFinishedCallback(&iINCStream::onChannelAllocated, this);
-    
+
     ilog_info("[", objectName(), "][", m_channelId, "] Stream entering ATTACHING state, waiting for server allocation");
     return true;  // Return immediately, don't wait
 }
@@ -121,7 +116,7 @@ void iINCStream::detach()
     if (m_state == STATE_DETACHED || m_state == STATE_DETACHING) {
         return;  // Already detached or detaching
     }
-    
+
     // Cancel pending attach if still in progress
     // Just transition to DETACHED state - the operation callback will check state
     if (m_state == STATE_ATTACHING) {
@@ -130,27 +125,17 @@ void iINCStream::detach()
         setState(STATE_DETACHED);
         return;
     }
-    
+
     // Must be in ATTACHED or ERROR state
     if (m_channelId == 0) {
         ilog_info("[", objectName(), "][0] Stream detached (no channel allocated)");
         setState(STATE_DETACHED);
         return;
     }
-    
-    // Clear receive queue
-    {
-        iScopedLock<iMutex> locker(m_queueMutex);
-        while (!m_recvQueue.empty()) {
-            m_recvQueue.pop();
-        }
-    }
-    
+
     // Enter DETACHING state
     setState(STATE_DETACHING);
-    // Disconnect from protocol signals first
-    iObject::disconnect(protocol(), &iINCProtocol::binaryDataReceived, this, &iINCStream::onBinaryDataReceived);
-    
+
     // Send async release request to server
     if (!m_context) {
         // No context, force detach
@@ -158,7 +143,9 @@ void iINCStream::detach()
         setState(STATE_DETACHED);
         return;
     }
-        
+
+    // Disconnect signals first
+    iObject::disconnect(m_context->m_connection, &iINCConnection::binaryDataReceived, this, &iINCStream::onBinaryDataReceived);
     auto op = m_context->releaseChannel(m_channelId);
     if (!op) {
         // Failed to send release request, force detach
@@ -168,7 +155,6 @@ void iINCStream::detach()
         return;
     }
 
-
     // Track this operation and set callback
     // Manually manage refcount - add ref when tracking
     op->ref();
@@ -177,109 +163,68 @@ void iINCStream::detach()
     op->setFinishedCallback(&iINCStream::onChannelReleased, this);
 }
 
-iSharedDataPointer<iINCOperation> iINCStream::write(const iByteArray& data)
+iSharedDataPointer<iINCOperation> iINCStream::write(xint64 pos, const iByteArray& data)
 {
     if (m_state != STATE_ATTACHED || !(m_mode & MODE_WRITE)) {
         ilog_warn("[", objectName(), "][", m_channelId, "] Stream not ready for writing");
         return iSharedDataPointer<iINCOperation>();
     }
-    
-    iINCProtocol* proto = protocol();
-    if (!proto) {
+
+    if (!m_context->m_connection) {
         ilog_error("[", objectName(), "][", m_channelId, "] No protocol available");
         return iSharedDataPointer<iINCOperation>();
     }
-    
+
     // Delegate to protocol for zero-copy binary data transfer
     // sendBinaryData now returns seqNum for tracking
-    auto op = proto->sendBinaryData(m_channelId, data);
+    auto op = m_context->m_connection->sendBinaryData(m_channelId, pos, data);
     if (!op) return op;
 
     op->setTimeout(m_context->m_config.operationTimeoutMs());  // Use configured timeout
     return op;
 }
 
-iByteArray iINCStream::read()
-{
-    if (m_state != STATE_ATTACHED || !(m_mode & MODE_READ)) {
-        ilog_warn("[", objectName(), "][", m_channelId, "] Stream not ready for reading");
-        return iByteArray();
-    }
-    
-    iScopedLock<iMutex> locker(m_queueMutex);
-    if (m_recvQueue.empty()) {
-        return iByteArray();
-    }
-    
-    iByteArray data = m_recvQueue.front();
-    m_recvQueue.pop();
-    return data;
-}
-
-xint32 iINCStream::chunksAvailable() const
-{
-    iScopedLock<iMutex> locker(m_queueMutex);
-    return static_cast<xint32>(m_recvQueue.size());
-}
-
-iByteArray iINCStream::peek() const
-{
-    if (m_state != STATE_ATTACHED) {
-        return iByteArray();
-    }
-    
-    iScopedLock<iMutex> locker(m_queueMutex);
-    
-    if (m_recvQueue.empty()) {
-        return iByteArray();
-    }
-    
-    return m_recvQueue.front();
-}
-
-void iINCStream::onBinaryDataReceived(xuint32 channel, xuint32 seqNum, const iByteArray& data)
+void iINCStream::onBinaryDataReceived(iINCConnection*, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data)
 {
     // Filter by channel ID
-    if (channel != m_channelId) {
+    if (channelId != m_channelId) {
         return;  // Not for this stream
     }
-    
-    IX_UNUSED(seqNum);  // seqNum not needed for stream data (not request/reply)
-    
-    // Queue received data
-    {
-        iScopedLock<iMutex> locker(m_queueMutex);
-        m_recvQueue.push(data);
-    }
-    
-    // Emit readyRead signal (consistent with iIODevice)
-    IEMIT readyRead();
-    ilog_debug("[", objectName(), "][", m_channelId, "][", seqNum, 
-                "] Received data:", data.size(), "bytes, queue size=", m_recvQueue.size());
+
+    ilog_debug("[", objectName(), "][", m_channelId, "][", seqNum,
+                "] Received data:", data.size(), "bytes");
+    IEMIT dataReceived(seqNum, pos, data);
+}
+
+void iINCStream::ackDataReceived(xuint32 seqNum, xint32 size)
+{
+    iINCMessage msg(INC_MSG_BINARY_DATA_ACK, m_channelId, seqNum);
+    msg.payload().putInt32(size);
+    m_context->m_connection->sendMessage(msg);
 }
 
 void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
 {
     iINCStream* stream = static_cast<iINCStream*>(userData);
-    
+
     // Remove from pending operations list and release reference
     auto it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
     if (it != stream->m_pendingOps.end()) {
         stream->m_pendingOps.erase(it);
         op->deref();  // Release our reference
     }
-    
+
     // Check if we're still in ATTACHING state (might have been cancelled)
     if (stream->m_state != STATE_ATTACHING) {
-        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(), 
+        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Attach completed but stream no longer attaching, ignoring");
         return;
     }
-    
+
     // Check operation state
     if (op->getState() != iINCOperation::STATE_DONE) {
         // Operation failed/timeout/cancelled
-        ilog_error("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(), 
+        ilog_error("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Channel allocation failed with error code:", op->errorCode());
         iObject::invokeMethod(stream, &iINCStream::setState, STATE_ERROR);
         iObject::invokeMethod(stream, &iINCStream::error, op->errorCode());
@@ -287,25 +232,22 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
     }
 
     // Parse channel ID from result (use iINCTagStruct for type-safe parsing)
-    const iByteArray& resultData = op->resultData();
-    iINCTagStruct result;
-    result.setData(resultData);
-    
     xuint32 channelId = 0;
     bool peerWantsShmNegotiation = false;
+    iINCTagStruct result = op->resultData();
 
     if (!result.getUint32(channelId)
         || !result.getBool(peerWantsShmNegotiation)) {
-        ilog_error("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(), 
+        ilog_error("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Failed to parse channel allocated");
         iObject::invokeMethod(stream, &iINCStream::setState, STATE_ERROR);
         iObject::invokeMethod(stream, &iINCStream::error, INC_ERROR_INVALID_MESSAGE);
         return;
     }
-        
+
     stream->m_channelId = channelId;
     if (!peerWantsShmNegotiation) {
-        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(), 
+        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Stream attached, mode=", stream->m_mode);
         iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
         return;
@@ -316,39 +258,41 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
     if (!result.getUint16(negotiontedShmType)
         || (0 == negotiontedShmType)
         || !result.eof()) {
-        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(), 
+        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Stream attached, mode=", stream->m_mode, " and no negotiated SHM");
         iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
         return;
     }
 
-    ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(), 
+    ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                 "] Stream attached, mode=", stream->m_mode, " and with SHM ", negotiontedShmType);
-    stream->protocol()->enableMempool(stream->m_context->m_config.sharedMemoryName(), static_cast<MemType>(negotiontedShmType), 
-                                    stream->m_context->m_config.sharedMemorySize());
+
+    iMemPool* memPool = iMemPool::create(stream->m_context->m_config.sharedMemoryName().constData(), static_cast<MemType>(negotiontedShmType),
+                                    stream->m_context->m_config.sharedMemorySize(), true);
+    stream->m_context->m_connection->enableMempool(iSharedDataPointer<iMemPool>(memPool));
     iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
 }
 
 void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
 {
     iINCStream* stream = static_cast<iINCStream*>(userData);
-    
+
     // Remove from pending operations list and release reference
     auto it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
     if (it != stream->m_pendingOps.end()) {
         stream->m_pendingOps.erase(it);
         op->deref();  // Release our reference
     }
-    
+
     // Check if we're still in DETACHING state
     if (stream->m_state != STATE_DETACHING) {
-        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(), 
+        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Detach completed but stream no longer detaching, ignoring");
         return;
     }
-    
+
     // Complete detach regardless of operation result
-    ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(), 
+    ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                 "] Stream fully detached");
     stream->m_channelId = 0;
     iObject::invokeMethod(stream, &iINCStream::setState, STATE_DETACHED);
@@ -357,27 +301,34 @@ void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
 void iINCStream::onContextStateChanged(int state)
 {
     iINCContext::State contextState = static_cast<iINCContext::State>(state);
-    
+
     // Only care about transition to UNCONNECTED or FAILED
     if (contextState != iINCContext::STATE_UNCONNECTED &&
         contextState != iINCContext::STATE_FAILED) {
         return;  // Not an error state, ignore
     }
-    
+
     // Context disconnected/failed, invalidate stream
     if (m_state == STATE_DETACHED) {
         return;  // Already detached, nothing to do
     }
-    
+
     ilog_warn("[", objectName(), "][", m_channelId, "] Context state changed to ERROR in stream state", m_state);
-    iObject::disconnect(protocol(), &iINCProtocol::binaryDataReceived, this, &iINCStream::onBinaryDataReceived);
-    
-    // Clear receive queue
-    {
-        iScopedLock<iMutex> locker(m_queueMutex);
-        while (!m_recvQueue.empty()) {
-            m_recvQueue.pop();
+    iObject::disconnect(m_context->m_connection, &iINCConnection::binaryDataReceived, this, &iINCStream::onBinaryDataReceived);
+
+    // Cancel all pending operations - this will trigger callbacks
+    // which will automatically remove operations from m_pendingOps
+    // Make a copy of the list since callbacks will modify it
+    while (!m_pendingOps.empty()) {
+        iINCOperation* op = m_pendingOps.back();
+        m_pendingOps.pop_back();
+        if (op->getState() == iINCOperation::STATE_RUNNING) {
+            // Clear callback first to prevent re-entry
+            op->setFinishedCallback(IX_NULLPTR, IX_NULLPTR);
+            // Now cancel - won't trigger callback
+            op->cancel();
         }
+        op->deref();
     }
 
     State oldState = m_state;

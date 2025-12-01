@@ -77,7 +77,7 @@ public:
             addPoll(&m_pollFd);
             return;
         }
-        
+
         // If already added, check if events changed
         m_pollFd.events = newEvents;
         updatePoll(&m_pollFd);
@@ -181,13 +181,13 @@ int iUnixDevice::connectToPath(const iString& path)
     struct sockaddr_un serverAddr;
     std::memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sun_family = AF_UNIX;
-    
+
     if (path.length() >= sizeof(serverAddr.sun_path)) {
         close();
         ilog_error("[] Socket path too long:", path);
         return INC_ERROR_CONNECTION_FAILED;
     }
-    
+
     strncpy(serverAddr.sun_path, path.toUtf8().constData(), sizeof(serverAddr.sun_path) - 1);
 
     // Connect
@@ -204,7 +204,7 @@ int iUnixDevice::connectToPath(const iString& path)
         configEventAbility(false, true);
         return INC_OK;
     }
-    
+
     // Only emit connected() if already connected (immediate connection)
     ilog_info("[] Connected immediately to", path);
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
@@ -238,13 +238,13 @@ int iUnixDevice::listenOn(const iString& path)
     struct sockaddr_un serverAddr;
     std::memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sun_family = AF_UNIX;
-    
+
     if (path.length() >= sizeof(serverAddr.sun_path)) {
         close();
         ilog_error("[] Socket path too long:", path);
         return INC_ERROR_CONNECTION_FAILED;
     }
-    
+
     strncpy(serverAddr.sun_path, path.toUtf8().constData(), sizeof(serverAddr.sun_path) - 1);
 
     // Bind
@@ -265,10 +265,10 @@ int iUnixDevice::listenOn(const iString& path)
     // Set non-blocking
     setNonBlocking(true);
     m_socketPath = path;
-    
+
     // Open the device using base class (sets m_openMode for isOpen())
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
-    
+
     // Create EventSource for this server socket (but don't attach yet)
     // If old EventSource exists, detach and destroy it first (it monitors old socket)
     if (m_eventSource) {
@@ -276,7 +276,7 @@ int iUnixDevice::listenOn(const iString& path)
         m_eventSource->deref();   // Final deref() to destroy (refCount 1->0, delete this)
         m_eventSource = IX_NULLPTR;
     }
-    
+
     // Create new EventSource (constructor sets refCount to 1)
     // NOTE: Event loop not attached yet. Caller must:
     //       1. Connect to newConnection() signal
@@ -310,21 +310,21 @@ void iUnixDevice::acceptConnection()
 
     // Set non-blocking
     clientDevice->setNonBlocking(true);
-    
+
     // Open the device using base class (sets m_openMode for isOpen())
     clientDevice->iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
-    
+
     // Create EventSource for accepted client connection
     // NOTE: Event loop not attached yet. Caller must:
     //       1. Connect to readyRead()/disconnected() signals
     //       2. Call startEventMonitoring() to attach to event loop
     clientDevice->m_eventSource = new iUnixEventSource(clientDevice);
-    
+
     // Accepted connections are already established, monitor read events only
     clientDevice->configEventAbility(true, false);
 
     ilog_info("[", peerAddress(), "] Accepted connection on ", m_socketPath);
-    
+
     // Emit newConnection signal with the client device
     // NOTE: Caller (e.g., iINCServer) must call startEventMonitoring() on client device
     IEMIT newConnection(clientDevice);
@@ -344,7 +344,7 @@ iByteArray iUnixDevice::readData(xint64 maxlen, xint64* readErr)
 {
     iByteArray result;
     result.resize(static_cast<int>(maxlen));
-    
+
     ssize_t bytesRead = ::recv(m_sockfd, result.data(), maxlen, 0);
     if (bytesRead > 0) {
         result.resize(static_cast<int>(bytesRead));
@@ -491,7 +491,7 @@ void iUnixDevice::handleConnectionComplete()
 
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
     configEventAbility(true, false);
-    
+
     ilog_info("[", peerAddress(), "] Connected to", m_socketPath);
     IEMIT connected();
 }

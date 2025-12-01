@@ -102,14 +102,14 @@ void iINCTagStruct::putBool(bool value)
 void iINCTagStruct::putString(iStringView str)
 {
     writeTag(TAG_STRING);
-    
+
     iByteArray utf8 = str.toUtf8();
     xuint32 length = static_cast<xuint32>(utf8.size());
-    
+
     // Write length (network byte order)
     xuint32 netLength = htonl(length);
     m_data.append(reinterpret_cast<const char*>(&netLength), sizeof(netLength));
-    
+
     // Write string data
     if (length > 0) {
         m_data.append(utf8);
@@ -119,13 +119,13 @@ void iINCTagStruct::putString(iStringView str)
 void iINCTagStruct::putBytes(iByteArrayView data)
 {
     writeTag(TAG_BYTES);
-    
+
     xuint32 length = static_cast<xuint32>(data.size());
-    
+
     // Write length (network byte order)
     xuint32 netLength = htonl(length);
     m_data.append(reinterpret_cast<const char*>(&netLength), sizeof(netLength));
-    
+
     // Write binary data
     if (length > 0) {
         m_data.append(data);
@@ -135,11 +135,11 @@ void iINCTagStruct::putBytes(iByteArrayView data)
 void iINCTagStruct::putDouble(double value)
 {
     writeTag(TAG_DOUBLE);
-    
+
     // Store as 64-bit network byte order
     xuint64 bits;
     memcpy(&bits, &value, sizeof(double));
-    
+
     xuint32 high = htonl(static_cast<xuint32>(bits >> 32));
     xuint32 low = htonl(static_cast<xuint32>(bits & 0xFFFFFFFF));
     m_data.append(reinterpret_cast<const char*>(&high), sizeof(high));
@@ -153,12 +153,12 @@ bool iINCTagStruct::readTag(Tag expectedTag) const
     if (m_readIndex >= static_cast<xsizetype>(m_data.size())) {
         return false;  // No more data
     }
-    
+
     xuint8 tag = static_cast<xuint8>(m_data.at(m_readIndex));
     if (tag != expectedTag) {
         return false;  // Type mismatch
     }
-    
+
     m_readIndex++;
     return true;
 }
@@ -168,7 +168,7 @@ iINCTagStruct::Tag iINCTagStruct::peekTag() const
     if (m_readIndex >= static_cast<xsizetype>(m_data.size())) {
         return TAG_INVALID;
     }
-    
+
     return static_cast<Tag>(static_cast<xuint8>(m_data.at(m_readIndex)));
 }
 
@@ -177,11 +177,11 @@ bool iINCTagStruct::getUint8(xuint8& value) const
     if (!readTag(TAG_UINT8)) {
         return false;
     }
-    
+
     if (m_readIndex >= static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     value = static_cast<xuint8>(m_data.at(m_readIndex));
     m_readIndex++;
     return true;
@@ -192,11 +192,11 @@ bool iINCTagStruct::getUint16(xuint16& value) const
     if (!readTag(TAG_UINT16)) {
         return false;
     }
-    
+
     if (m_readIndex + sizeof(xuint16) > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     xuint16 netValue;
     memcpy(&netValue, m_data.constData() + m_readIndex, sizeof(xuint16));
     value = ntohs(netValue);
@@ -209,11 +209,11 @@ bool iINCTagStruct::getUint32(xuint32& value) const
     if (!readTag(TAG_UINT32)) {
         return false;
     }
-    
+
     if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     xuint32 netValue;
     memcpy(&netValue, m_data.constData() + m_readIndex, sizeof(xuint32));
     value = ntohl(netValue);
@@ -226,15 +226,15 @@ bool iINCTagStruct::getUint64(xuint64& value) const
     if (!readTag(TAG_UINT64)) {
         return false;
     }
-    
+
     if (m_readIndex + sizeof(xuint64) > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     xuint32 high, low;
     memcpy(&high, m_data.constData() + m_readIndex, sizeof(xuint32));
     memcpy(&low, m_data.constData() + m_readIndex + sizeof(xuint32), sizeof(xuint32));
-    
+
     value = (static_cast<xuint64>(ntohl(high)) << 32) | ntohl(low);
     m_readIndex += sizeof(xuint64);
     return true;
@@ -245,11 +245,11 @@ bool iINCTagStruct::getInt32(xint32& value) const
     if (!readTag(TAG_INT32)) {
         return false;
     }
-    
+
     if (m_readIndex + sizeof(xint32) > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     xuint32 netValue;
     memcpy(&netValue, m_data.constData() + m_readIndex, sizeof(xuint32));
     value = static_cast<xint32>(ntohl(netValue));
@@ -262,15 +262,15 @@ bool iINCTagStruct::getInt64(xint64& value) const
     if (!readTag(TAG_INT64)) {
         return false;
     }
-    
+
     if (m_readIndex + sizeof(xint64) > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     xuint32 high, low;
     memcpy(&high, m_data.constData() + m_readIndex, sizeof(xuint32));
     memcpy(&low, m_data.constData() + m_readIndex + sizeof(xuint32), sizeof(xuint32));
-    
+
     xuint64 uvalue = (static_cast<xuint64>(ntohl(high)) << 32) | ntohl(low);
     value = static_cast<xint64>(uvalue);
     m_readIndex += sizeof(xint64);
@@ -282,11 +282,11 @@ bool iINCTagStruct::getBool(bool& value) const
     if (!readTag(TAG_BOOL)) {
         return false;
     }
-    
+
     if (m_readIndex >= static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     value = (m_data.at(m_readIndex) != '\x00');
     m_readIndex++;
     return true;
@@ -297,17 +297,17 @@ bool iINCTagStruct::getString(iString& value) const
     if (!readTag(TAG_STRING)) {
         return false;
     }
-    
+
     // Read length
     if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     xuint32 netLength;
     memcpy(&netLength, m_data.constData() + m_readIndex, sizeof(xuint32));
     xuint32 length = ntohl(netLength);
     m_readIndex += sizeof(xuint32);
-    
+
     // Read string data
     if (length <= 0) {
         value = iString();
@@ -321,7 +321,7 @@ bool iINCTagStruct::getString(iString& value) const
     // Read from current position, then advance
     value = iString::fromUtf8(iByteArrayView(m_data).mid(m_readIndex, length));
     m_readIndex += length;
-    
+
     return true;
 }
 
@@ -330,17 +330,17 @@ bool iINCTagStruct::getBytes(iByteArray& value) const
     if (!readTag(TAG_BYTES)) {
         return false;
     }
-    
+
     // Read length
     if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     xuint32 netLength;
     memcpy(&netLength, m_data.constData() + m_readIndex, sizeof(xuint32));
     xuint32 length = ntohl(netLength);
     m_readIndex += sizeof(xuint32);
-    
+
     // Read binary data
     if (length <= 0) {
         value = iByteArray();
@@ -350,10 +350,10 @@ bool iINCTagStruct::getBytes(iByteArray& value) const
     if (m_readIndex + length > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     // Wrap imported block in iByteArray for safe reference counting (zero-copy)
     iByteArray::DataPointer dp(const_cast<iINCTagStruct*>(this)->m_data.data_ptr().d_ptr(),
-                                const_cast<iINCTagStruct*>(this)->m_data.data_ptr().begin() + m_readIndex, 
+                                const_cast<iINCTagStruct*>(this)->m_data.data_ptr().begin() + m_readIndex,
                                 length);
     m_readIndex += length;
 
@@ -366,18 +366,18 @@ bool iINCTagStruct::getDouble(double& value) const
     if (!readTag(TAG_DOUBLE)) {
         return false;
     }
-    
+
     if (m_readIndex + sizeof(double) > static_cast<xsizetype>(m_data.size())) {
         return false;
     }
-    
+
     xuint32 high, low;
     memcpy(&high, m_data.constData() + m_readIndex, sizeof(xuint32));
     memcpy(&low, m_data.constData() + m_readIndex + sizeof(xuint32), sizeof(xuint32));
-    
+
     xuint64 bits = (static_cast<xuint64>(ntohl(high)) << 32) | ntohl(low);
     memcpy(&value, &bits, sizeof(double));
-    
+
     m_readIndex += sizeof(double);
     return true;
 }
@@ -437,13 +437,13 @@ iString iINCTagStruct::dump() const
     iString result("iINCTagStruct dump:\n");
     xsizetype tempIndex = 0;
     int fieldIndex = 0;
-    
+
     while (tempIndex < static_cast<xsizetype>(m_data.size())) {
         Tag tag = static_cast<Tag>(static_cast<xuint8>(m_data.at(tempIndex)));
         tempIndex++;
-        
+
         result += iString::asprintf("  [%d] %s: ", fieldIndex++, tagToString(tag));
-        
+
         switch (tag) {
             case TAG_UINT8:
                 if (tempIndex < static_cast<xsizetype>(m_data.size())) {
@@ -451,7 +451,7 @@ iString iINCTagStruct::dump() const
                     tempIndex++;
                 }
                 break;
-                
+
             case TAG_UINT16:
                 if (tempIndex + sizeof(xuint16) <= static_cast<xsizetype>(m_data.size())) {
                     xuint16 netValue;
@@ -460,7 +460,7 @@ iString iINCTagStruct::dump() const
                     tempIndex += sizeof(xuint16);
                 }
                 break;
-                
+
             case TAG_UINT32:
             case TAG_INT32:
                 if (tempIndex + sizeof(xuint32) <= static_cast<xsizetype>(m_data.size())) {
@@ -474,14 +474,14 @@ iString iINCTagStruct::dump() const
                     tempIndex += sizeof(xuint32);
                 }
                 break;
-                
+
             case TAG_BOOL:
                 if (tempIndex < static_cast<xsizetype>(m_data.size())) {
                     result += (m_data.at(tempIndex) != '\x00') ? "true\n" : "false\n";
                     tempIndex++;
                 }
                 break;
-                
+
             case TAG_STRING:
             case TAG_BYTES:
                 if (tempIndex + sizeof(xuint32) <= static_cast<xsizetype>(m_data.size())) {
@@ -489,7 +489,7 @@ iString iINCTagStruct::dump() const
                     memcpy(&netLength, m_data.constData() + tempIndex, sizeof(xuint32));
                     xuint32 length = ntohl(netLength);
                     tempIndex += sizeof(xuint32);
-                    
+
                     if (tag == TAG_STRING && tempIndex + length <= static_cast<xsizetype>(m_data.size())) {
                         iString str = iString::fromUtf8(iByteArrayView(m_data).mid(tempIndex, length));
                         result += iString::asprintf("\"%s\"\n", str.toUtf8().constData());
@@ -500,13 +500,13 @@ iString iINCTagStruct::dump() const
                     }
                 }
                 break;
-                
+
             default:
                 result += "<unsupported>\n";
                 break;
         }
     }
-    
+
     return result;
 }
 

@@ -36,18 +36,19 @@ iString iINCServerConfig::dump() const
 {
     static const char* policyNames[] = { "Strict", "Compatible", "Permissive" };
     static const char* encryptNames[] = { "Optional", "Preferred", "Required" };
-    
+
     iString result = "=== INC Server Configuration ===\n";
-    
+
     result += iString::asprintf("Listen Address: %s\n", m_listenAddress.toUtf8().constData());
     result += iString::asprintf("System Instance: %s\n", m_systemInstance ? "true" : "false");
     result += iString::asprintf("Version Policy: %s\n", policyNames[m_versionPolicy]);
-    result += iString::asprintf("Protocol Version: %d (range: %d-%d)\n", 
+    result += iString::asprintf("Protocol Version: %d (range: %d-%d)\n",
                                 m_protocolVersionCurrent, m_protocolVersionMin, m_protocolVersionMax);
     result += iString::asprintf("Max Connections: %d\n", m_maxConnections);
     result += iString::asprintf("Max Connections Per Client: %d\n", m_maxConnectionsPerClient);
     result += iString::asprintf("Disable SHM: %s\n", m_disableSharedMemory ? "true" : "false");
     result += iString::asprintf("SHM Size: %zu bytes\n", m_sharedMemorySize);
+    result += iString::asprintf("SHM Name: %s\n", m_sharedMemoryName.constData());
     result += iString::asprintf("Max Message Size: %zu bytes\n", m_maxMessageSize);
     result += iString::asprintf("Encryption Requirement: %s\n", encryptNames[m_encryptionRequirement]);
     result += iString::asprintf("Client Timeout: %d ms\n", m_clientTimeoutMs);
@@ -55,7 +56,7 @@ iString iINCServerConfig::dump() const
     result += iString::asprintf("High Priority: %s\n", m_highPriority ? "true" : "false");
     result += iString::asprintf("Nice Level: %d\n", m_niceLevel);
     result += iString::asprintf("Enable IO Thread: %s\n", m_enableIOThread ? "true" : "false");
-    
+
     return result;
 }
 

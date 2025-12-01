@@ -52,7 +52,7 @@ void parseCustomArgs(int argc, char** argv) {
             exit(0);
         }
     }
-    
+
     // If no module specified, test all
     if (!g_testKernel && !g_testThread && !g_testINC && !g_testUtils && !g_testIO) {
         g_testKernel = g_testThread = g_testINC = g_testUtils = g_testIO = true;
@@ -79,16 +79,16 @@ public:
 int main(int argc, char** argv) {
     // Create application instance for tests that need event loop
     iCoreApplication app(argc, argv);
-    
+
     // Parse custom arguments first
     parseCustomArgs(argc, argv);
-    
+
     // Initialize Google Test
     ::testing::InitGoogleTest(&argc, argv);
-    
+
     // Add custom environment
     ::testing::AddGlobalTestEnvironment(new ModuleEnvironment());
-    
+
     // Run tests (note: this blocks if any test runs event loop)
     return RUN_ALL_TESTS();
 }

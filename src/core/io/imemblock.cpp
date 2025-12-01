@@ -74,7 +74,7 @@ struct iMemImportSegment {
     unsigned n_blocks;
     bool writable;
 
-    iMemImportSegment(const char* name) 
+    iMemImportSegment(const char* name)
         : import(IX_NULLPTR), memory(name), trap(IX_NULLPTR), n_blocks(0), writable(false)
     {}
 
@@ -514,7 +514,13 @@ void* iMemBlock::acquire(size_t offset)
 {
     IX_ASSERT((count() >= 0) && (offset < m_length));
 
-    m_nAcquired++;
+    int oldValue = m_nAcquired.value();
+    while (!m_nAcquired.testAndSet(oldValue, oldValue + 1)) {
+        if (oldValue < 0) {
+            // Block is being destroyed, fail fast
+            return IX_NULLPTR;
+        }
+    }
     return (xuint8 *)(m_data.load()) + offset;
 }
 
@@ -1168,7 +1174,7 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
     *blockId = (uint) (slot - m_slots + m_baseIdx);
 
     _lock.unlock();
-    ilog_debug("Got block id ", *blockId);
+    ilog_verbose("Got block id ", *blockId);
 
     iShareMem* memory = IX_NULLPTR;
     iMemDataWraper data = block->data();

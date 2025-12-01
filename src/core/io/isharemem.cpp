@@ -215,14 +215,15 @@ iShareMem* iShareMem::create(const char* name, MemType type, size_t size, mode_t
 }
 
 iShareMem::iShareMem(const char* name)
-    : m_name(name)
-    , m_type(MEMTYPE_PRIVATE)
+    : m_type(MEMTYPE_PRIVATE)
     , m_id(0)
     , m_ptr(IX_NULLPTR)
     , m_size(0)
     , m_doUnlink(false)
     , m_memfd(-1)
 {
+    istrncpy(m_name, name, std::min(sizeof(m_name), istrlen(name)));
+    m_name[sizeof(m_name) - 1] = '\0';
 }
 
 iShareMem::~iShareMem()
@@ -328,7 +329,7 @@ int iShareMem::doAttach(MemType type, uint id, xintptr memfd, bool writable, boo
 
         if (fd < 0) {
             if ((errno != EACCES && errno != ENOENT) || !for_cleanup)
-                ilog_warn("shm_open() failed: ", errno);
+                ilog_warn("shm_open('", fn, "') failed: ", errno, " (", strerror(errno), ")");
             return -1;
         }
         break;

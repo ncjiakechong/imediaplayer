@@ -591,7 +591,7 @@ bool iObject::connectImpl(const _iConnection& conn)
 
         sender_map::const_iterator it = connectionLists->allsignals.find(conn._signal);
         if (connectionLists->allsignals.end() == it) break;
-    
+
         _iConnection* c2 = it->second.first;
         while (c2) {
             if (conn.compare(c2))

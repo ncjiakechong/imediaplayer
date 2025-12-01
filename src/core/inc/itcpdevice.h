@@ -33,7 +33,7 @@ public:
     virtual ~iTcpDevice();
 
     // --- Client Mode Methods ---
-    
+
     /// Connect to remote server (client mode only)
     /// @param host Server hostname or IP
     /// @param port Server port
@@ -41,7 +41,7 @@ public:
     int connectToHost(const iString& host, xuint16 port);
 
     // --- Server Mode Methods ---
-    
+
     /// Start listening for connections (server mode only)
     /// @param address Bind address (e.g., "0.0.0.0" for all interfaces)
     /// @param port Port number
@@ -53,10 +53,10 @@ public:
     void acceptConnection();
 
     // --- Common Methods ---
-    
+
     /// Get peer address (format: "IP:port")
     iString peerAddress() const IX_OVERRIDE;
-    
+
     /// Get peer IP address only
     iString peerIpAddress() const { return m_peerAddr; }
     xuint16 peerPort() const { return m_peerPort; }
@@ -113,7 +113,7 @@ private:
     iString             m_localAddr;
     xuint16             m_localPort;
     iEventSource*       m_eventSource;  ///< Internal EventSource (created in connectToHost/listenOn)
-    
+
     IX_DISABLE_COPY(iTcpDevice)
 };
 

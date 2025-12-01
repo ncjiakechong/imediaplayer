@@ -35,16 +35,16 @@ namespace iShell {
 iByteArray iINCHandshake::serializeHandshakeData(const iINCHandshakeData& data)
 {
     iINCTagStruct tags;
-    
+
     // Serialize in fixed order (no keys - sequential format)
     tags.putUint32(data.protocolVersion);
     tags.putString(data.nodeName);
     tags.putString(data.nodeId);
     tags.putUint32(data.capabilities);
-    
+
     // Optional auth token - use empty array if not present
     tags.putBytes(data.authToken);
-    
+
     return tags.data();
 }
 
@@ -52,7 +52,7 @@ bool iINCHandshake::deserializeHandshakeData(const iByteArray& bytes, iINCHandsh
 {
     iINCTagStruct tags;
     tags.setData(bytes);
-    
+
     // Protocol version (required)
     if (!tags.getUint32(data.protocolVersion)
         || !tags.getString(data.nodeName)
@@ -67,7 +67,7 @@ bool iINCHandshake::deserializeHandshakeData(const iByteArray& bytes, iINCHandsh
         // Ignore error for optional field
         data.authToken.clear();
     }
-    
+
     return true;
 }
 
@@ -78,8 +78,8 @@ iINCHandshake::iINCHandshake(Role role)
     , m_serverConfig(nullptr)
 {
     // Generate unique node ID using PID + timestamp
-    m_localData.nodeId = iString::asprintf("node_%ld_%ld", 
-                                           iCoreApplication::applicationPid(), 
+    m_localData.nodeId = iString::asprintf("node_%ld_%ld",
+                                           iCoreApplication::applicationPid(),
                                            iDateTime::currentSecsSinceEpoch());
 }
 
@@ -108,35 +108,35 @@ void iINCHandshake::buildLocalDataFromConfig()
     if (m_role == ROLE_CLIENT && m_contextConfig) {
         // Client: use configured protocol version
         m_localData.protocolVersion = m_contextConfig->protocolVersionCurrent();
-        
+
         // Client capabilities based on configuration
         m_localData.capabilities = iINCHandshakeData::CAP_STREAM;  // Always support streams
-        
+
         if (!m_contextConfig->disableSharedMemory()) {
             m_localData.capabilities |= iINCHandshakeData::CAP_STREAM;
         }
-        
+
         if (m_contextConfig->encryptionMethod() != iINCContextConfig::NoEncryption) {
             m_localData.capabilities |= iINCHandshakeData::CAP_ENCRYPTION;
         }
-        
+
         // Always support multiplexing and file transfer
         m_localData.capabilities |= iINCHandshakeData::CAP_MULTIPLEXING;
         m_localData.capabilities |= iINCHandshakeData::CAP_FILE_TRANSFER;
-        
+
     } else if (m_role == ROLE_SERVER && m_serverConfig) {
         // Server: use configured protocol version
         m_localData.protocolVersion = m_serverConfig->protocolVersionCurrent();
-        
+
         // Server capabilities (all features available)
         m_localData.capabilities = iINCHandshakeData::CAP_STREAM |
                                    iINCHandshakeData::CAP_MULTIPLEXING |
                                    iINCHandshakeData::CAP_FILE_TRANSFER;
-        
+
         if (!m_serverConfig->disableSharedMemory()) {
             m_localData.capabilities |= iINCHandshakeData::CAP_STREAM;
         }
-        
+
         if (m_serverConfig->encryptionRequirement() != iINCServerConfig::Optional) {
             m_localData.capabilities |= iINCHandshakeData::CAP_ENCRYPTION;
         }
@@ -146,11 +146,11 @@ void iINCHandshake::buildLocalDataFromConfig()
 void iINCHandshake::setLocalData(const iINCHandshakeData& data)
 {
     m_localData = data;
-    
+
     // Ensure we have a node ID
     if (m_localData.nodeId.isEmpty()) {
-        m_localData.nodeId = iString::asprintf("node_%ld_%ld", 
-                                               iCoreApplication::applicationPid(), 
+        m_localData.nodeId = iString::asprintf("node_%ld_%ld",
+                                               iCoreApplication::applicationPid(),
                                                iDateTime::currentSecsSinceEpoch());
     }
 }
@@ -172,7 +172,7 @@ iByteArray iINCHandshake::start()
     m_state = STATE_SENDING;
     iByteArray data = serializeHandshakeData(m_localData);
     // Client starting handshake
-    
+
     return data;
 }
 
@@ -200,12 +200,12 @@ iByteArray iINCHandshake::processHandshake(const iByteArray& data)
 
         // Server handshake completed
         return serializeHandshakeData(m_localData);
-        
+
     } else {
         // Client: received server response
         m_state = STATE_COMPLETED;
 
-        // Client handshake completed        
+        // Client handshake completed
         // No response needed
         return iByteArray();
     }
@@ -218,7 +218,7 @@ bool iINCHandshake::validateRemoteData()
 
         // Client validating server version
         xuint16 serverVersion = m_remoteData.protocolVersion;
-        
+
         if (serverVersion < m_contextConfig->protocolVersionMin()
             || serverVersion > m_contextConfig->protocolVersionMax()) {
             m_errorMessage = iString::asprintf(
@@ -228,7 +228,7 @@ bool iINCHandshake::validateRemoteData()
                 m_contextConfig->protocolVersionMax());
             return false;
         }
-        
+
         // Check encryption requirement
         if (m_contextConfig->encryptionMethod() != iINCContextConfig::NoEncryption) {
             if (!m_remoteData.hasCapability(iINCHandshakeData::CAP_ENCRYPTION)) {
@@ -239,13 +239,13 @@ bool iINCHandshake::validateRemoteData()
 
         return true;
     } while (false);
-    
+
     do {
         if (m_role != ROLE_SERVER || !m_serverConfig) break;
 
         // Server validating client version
         xuint16 clientVersion = m_remoteData.protocolVersion;
-        
+
         switch (m_serverConfig->versionPolicy()) {
         case iINCServerConfig::Strict:
             if (clientVersion != m_serverConfig->protocolVersionCurrent()) {
@@ -256,7 +256,7 @@ bool iINCHandshake::validateRemoteData()
                 return false;
             }
             break;
-            
+
         case iINCServerConfig::Compatible:
             if (clientVersion < m_serverConfig->protocolVersionMin() ||
                 clientVersion > m_serverConfig->protocolVersionMax()) {
@@ -268,7 +268,7 @@ bool iINCHandshake::validateRemoteData()
                 return false;
             }
             break;
-            
+
         case iINCServerConfig::Permissive:
             if (clientVersion < m_serverConfig->protocolVersionMin() ||
                 clientVersion > m_serverConfig->protocolVersionMax()) {
@@ -277,7 +277,7 @@ bool iINCHandshake::validateRemoteData()
             }
             break;
         }
-        
+
         // Check encryption requirement
         switch (m_serverConfig->encryptionRequirement()) {
         case iINCServerConfig::Required:
@@ -286,13 +286,13 @@ bool iINCHandshake::validateRemoteData()
                 return false;
             }
             break;
-            
+
         case iINCServerConfig::Preferred:
             if (!m_remoteData.hasCapability(iINCHandshakeData::CAP_ENCRYPTION)) {
                 ilog_warn(ILOG_TAG, "Client does not support encryption, falling back to plain connection");
             }
             break;
-            
+
         case iINCServerConfig::Optional:
             // Accept any encryption capability
             break;
@@ -300,7 +300,7 @@ bool iINCHandshake::validateRemoteData()
 
         return true;
     } while (false);
-    
+
     // No configuration provided, use legacy compatibility check
     if (!isCompatible(m_localData.protocolVersion, m_remoteData.protocolVersion)) {
         m_errorMessage = iString::asprintf("Incompatible protocol version: local=%u, remote=%u",
@@ -318,7 +318,7 @@ bool iINCHandshake::isCompatible(xuint32 clientVersion, xuint32 serverVersion)
     // Version format: 0xMMMMmmpp (MMMM=major, mm=minor, pp=patch)
     xuint32 clientMajor = (clientVersion >> 16) & 0xFFFF;
     xuint32 serverMajor = (serverVersion >> 16) & 0xFFFF;
-    
+
     // For now, require exact match (we're at version 1)
     // In future, can implement backward compatibility
     return clientMajor == serverMajor;
@@ -329,7 +329,7 @@ xuint32 iINCHandshake::negotiatedCapabilities() const
     if (m_state != STATE_COMPLETED) {
         return 0;
     }
-    
+
     // Intersection of local and remote capabilities
     return m_localData.capabilities & m_remoteData.capabilities;
 }

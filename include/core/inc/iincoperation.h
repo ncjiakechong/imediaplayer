@@ -4,7 +4,7 @@
 /////////////////////////////////////////////////////////////////
 /// @file    iincoperation.h
 /// @brief   Async operation tracking with timeout support
-/// 
+///
 /// @par Asynchronous Features:
 /// - Non-blocking RPC with callbacks
 /// - Operation state tracking (running/done/failed/timeout)
@@ -15,17 +15,16 @@
 #ifndef IINCOPERATION_H
 #define IINCOPERATION_H
 
-#include <core/utils/ibytearray.h>
-#include <core/utils/istring.h>
-#include <core/utils/ishareddata.h>
 #include <core/kernel/itimer.h>
+#include <core/utils/ishareddata.h>
+#include <core/inc/iinctagstruct.h>
 
 namespace iShell {
 
 /// @brief Tracks asynchronous operation state and result
 /// @details Each async operation returns an iSharedDataPointer<iINCOperation> for automatic lifecycle management.
 ///          Application can monitor state changes via callbacks and cancel operations.
-/// 
+///
 /// @par Async Architecture:
 /// - Non-blocking: All RPC operations return immediately
 /// - Callback-driven: State changes trigger callbacks
@@ -57,7 +56,7 @@ public:
     xint32 errorCode() const { return m_errorCode; }
 
     /// Get result data (valid when state is DONE)
-    iByteArray resultData() const { return m_resultData; }
+    iINCTagStruct resultData() const;
 
     /// Set timeout for this operation (milliseconds)
     /// @param timeout Timeout in ms (0 = no timeout)
@@ -75,17 +74,18 @@ private:
 
     void setState(State st);
     void setResult(xint32 errorCode, const iByteArray& data);
-    
+
     /// Static timeout handler for iTimer::singleShot
     void onTimeout(xintptr userData);
 
     xuint32         m_seqNum;
     State           m_state;
-    
+
     // Result data
     iByteArray      m_resultData;
     xint32          m_errorCode;
-    
+    xuint32         m_blockID;
+
     iTimer          m_timer;
     xint64          m_timeout;
 

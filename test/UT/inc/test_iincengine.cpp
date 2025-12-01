@@ -53,7 +53,7 @@ TEST_F(INCEngineTest, InitializeOnce) {
 TEST_F(INCEngineTest, InitializeMultipleTimes) {
     EXPECT_TRUE(engine->initialize());
     EXPECT_TRUE(engine->isReady());
-    
+
     // Second initialization should be no-op but still return true
     EXPECT_TRUE(engine->initialize());
     EXPECT_TRUE(engine->isReady());
@@ -68,7 +68,7 @@ TEST_F(INCEngineTest, ShutdownWithoutInit) {
 TEST_F(INCEngineTest, ShutdownAfterInit) {
     engine->initialize();
     EXPECT_TRUE(engine->isReady());
-    
+
     engine->shutdown();
     EXPECT_FALSE(engine->isReady());
 }
@@ -77,7 +77,7 @@ TEST_F(INCEngineTest, ReinitializeAfterShutdown) {
     engine->initialize();
     engine->shutdown();
     EXPECT_FALSE(engine->isReady());
-    
+
     // Should be able to reinitialize
     EXPECT_TRUE(engine->initialize());
     EXPECT_TRUE(engine->isReady());
@@ -87,11 +87,11 @@ TEST_F(INCEngineTest, ReinitializeAfterShutdown) {
 
 TEST_F(INCEngineTest, CreateClientTransportInvalidUrl) {
     engine->initialize();
-    
+
     // Empty URL
     iINCDevice* device = engine->createClientTransport(iString(u""));
     EXPECT_EQ(device, nullptr);
-    
+
     // URL without scheme
     device = engine->createClientTransport(iString(u"localhost:8080"));
     EXPECT_EQ(device, nullptr);
@@ -99,21 +99,21 @@ TEST_F(INCEngineTest, CreateClientTransportInvalidUrl) {
 
 TEST_F(INCEngineTest, CreateClientTransportUnsupportedScheme) {
     engine->initialize();
-    
+
     iINCDevice* device = engine->createClientTransport(iString(u"http://localhost:8080"));
     EXPECT_EQ(device, nullptr);
-    
+
     device = engine->createClientTransport(iString(u"ws://localhost:8080"));
     EXPECT_EQ(device, nullptr);
 }
 
 TEST_F(INCEngineTest, CreateServerTransportInvalidUrl) {
     engine->initialize();
-    
+
     // Empty URL
     iINCDevice* device = engine->createServerTransport(iString(u""));
     EXPECT_EQ(device, nullptr);
-    
+
     // URL without scheme
     device = engine->createServerTransport(iString(u"0.0.0.0:8080"));
     EXPECT_EQ(device, nullptr);
@@ -121,7 +121,7 @@ TEST_F(INCEngineTest, CreateServerTransportInvalidUrl) {
 
 TEST_F(INCEngineTest, CreateServerTransportUnsupportedScheme) {
     engine->initialize();
-    
+
     iINCDevice* device = engine->createServerTransport(iString(u"http://0.0.0.0:8080"));
     EXPECT_EQ(device, nullptr);
 }
@@ -130,7 +130,7 @@ TEST_F(INCEngineTest, CreateServerTransportUnsupportedScheme) {
 
 TEST_F(INCEngineTest, CreateTcpClientMissingPort) {
     engine->initialize();
-    
+
     // TCP URL without port should fail
     iINCDevice* device = engine->createClientTransport(iString(u"tcp://localhost"));
     EXPECT_EQ(device, nullptr);
@@ -138,7 +138,7 @@ TEST_F(INCEngineTest, CreateTcpClientMissingPort) {
 
 TEST_F(INCEngineTest, CreateTcpServerMissingPort) {
     engine->initialize();
-    
+
     // TCP URL without port - iUrl might return default port 65535
     iINCDevice* device = engine->createServerTransport(iString(u"tcp://0.0.0.0"));
     // Depending on iUrl implementation, this might succeed with default port
@@ -150,11 +150,11 @@ TEST_F(INCEngineTest, CreateTcpServerMissingPort) {
 
 TEST_F(INCEngineTest, CreateTcpClientValidUrl) {
     engine->initialize();
-    
+
     // Note: This will fail to connect since no server is running
     // But it tests URL parsing and device creation logic
     iINCDevice* device = engine->createClientTransport(iString(u"tcp://127.0.0.1:9999"));
-    
+
     // Device creation might fail due to connection error, which is expected
     // We're mainly testing that parsing works
     if (device != nullptr) {
@@ -164,11 +164,11 @@ TEST_F(INCEngineTest, CreateTcpClientValidUrl) {
 
 TEST_F(INCEngineTest, CreateTcpServerValidUrl) {
     engine->initialize();
-    
+
     // Try to create server on random high port
     // Might fail if port is in use
     iINCDevice* device = engine->createServerTransport(iString(u"tcp://127.0.0.1:19999"));
-    
+
     if (device != nullptr) {
         delete device;
     }
@@ -176,10 +176,10 @@ TEST_F(INCEngineTest, CreateTcpServerValidUrl) {
 
 TEST_F(INCEngineTest, CreateTcpClientDefaultHost) {
     engine->initialize();
-    
+
     // TCP URL without host should default to localhost
     iINCDevice* device = engine->createClientTransport(iString(u"tcp://:9998"));
-    
+
     // May fail to connect but should parse correctly
     if (device != nullptr) {
         delete device;
@@ -190,53 +190,53 @@ TEST_F(INCEngineTest, CreateTcpClientDefaultHost) {
 
 TEST_F(INCEngineTest, CreateUnixClientMissingPath) {
     engine->initialize();
-    
+
     // Unix socket without path should fail
     iINCDevice* device = engine->createClientTransport(iString(u"unix://"));
     EXPECT_EQ(device, nullptr);
-    
+
     device = engine->createClientTransport(iString(u"pipe://"));
     EXPECT_EQ(device, nullptr);
 }
 
 TEST_F(INCEngineTest, CreateUnixServerMissingPath) {
     engine->initialize();
-    
+
     // Unix socket without path should fail
     iINCDevice* device = engine->createServerTransport(iString(u"unix://"));
     EXPECT_EQ(device, nullptr);
-    
+
     device = engine->createServerTransport(iString(u"pipe://"));
     EXPECT_EQ(device, nullptr);
 }
 
 TEST_F(INCEngineTest, CreateUnixClientValidUrl) {
     engine->initialize();
-    
+
     // Note: Will fail to connect since no server exists
     // But tests URL parsing
     iINCDevice* device = engine->createClientTransport(iString(u"unix:///tmp/test_inc_nonexistent.sock"));
-    
+
     // Expected to fail connection
     EXPECT_EQ(device, nullptr);
 }
 
 TEST_F(INCEngineTest, CreatePipeClientValidUrl) {
     engine->initialize();
-    
+
     // Test pipe:// scheme (alias for unix://)
     iINCDevice* device = engine->createClientTransport(iString(u"pipe:///tmp/test_inc_nonexistent2.sock"));
-    
+
     // Expected to fail connection
     EXPECT_EQ(device, nullptr);
 }
 
 TEST_F(INCEngineTest, CreateUnixServerValidUrl) {
     engine->initialize();
-    
+
     // Try to create Unix socket server
     iINCDevice* device = engine->createServerTransport(iString(u"unix:///tmp/test_inc_server.sock"));
-    
+
     if (device != nullptr) {
         delete device;
         // Clean up socket file if created
@@ -246,10 +246,10 @@ TEST_F(INCEngineTest, CreateUnixServerValidUrl) {
 
 TEST_F(INCEngineTest, CreatePipeServerValidUrl) {
     engine->initialize();
-    
+
     // Test pipe:// scheme for server
     iINCDevice* device = engine->createServerTransport(iString(u"pipe:///tmp/test_inc_server2.sock"));
-    
+
     if (device != nullptr) {
         delete device;
         // Clean up socket file if created
@@ -263,7 +263,7 @@ TEST_F(INCEngineTest, CreateTransportBeforeInit) {
     // Engine not initialized - operations should still work
     // (initialize() is mostly a flag, doesn't prevent operations)
     iINCDevice* device = engine->createClientTransport(iString(u"tcp://127.0.0.1:9997"));
-    
+
     if (device != nullptr) {
         delete device;
     }
@@ -272,11 +272,11 @@ TEST_F(INCEngineTest, CreateTransportBeforeInit) {
 TEST_F(INCEngineTest, CreateTransportAfterShutdown) {
     engine->initialize();
     engine->shutdown();
-    
+
     // Should still be able to create transports after shutdown
     // (shutdown() just clears the flag)
     iINCDevice* device = engine->createClientTransport(iString(u"tcp://127.0.0.1:9996"));
-    
+
     if (device != nullptr) {
         delete device;
     }
@@ -287,10 +287,10 @@ TEST_F(INCEngineTest, CreateTransportAfterShutdown) {
 TEST_F(INCEngineTest, EngineWithParent) {
     iObject parent;
     iINCEngine* childEngine = new iINCEngine(&parent);
-    
+
     // Parent relationship is valid
     EXPECT_NE(childEngine, nullptr);
-    
+
     delete childEngine;
 }
 

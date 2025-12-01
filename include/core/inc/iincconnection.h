@@ -10,18 +10,21 @@
 #ifndef IINCCONNECTION_H
 #define IINCCONNECTION_H
 
+#include <vector>
+
+#include <core/inc/iincmessage.h>
 #include <core/inc/iincoperation.h>
 #include <core/kernel/iobject.h>
 #include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
-#include <vector>
 
 namespace iShell {
 
-class iINCServer;
-class iINCProtocol;
 class iINCDevice;
-class iINCMessage;
+class iINCServer;
+class iINCContext;
+class iINCProtocol;
+class iINCStream;
 
 /// @brief Represents a client connection on the server side
 /// @details Each connected client has an associated iINCConnection object.
@@ -41,12 +44,6 @@ public:
 
     /// Get client protocol version
     xuint32 peerProtocolVersion() const { return m_peerProtocol; }
-
-    /// Send method reply to this client
-    /// @param seqNum Sequence number from original request
-    /// @param errorCode Error code (0 for success)
-    /// @param result Serialized result data (empty if error)
-    void sendReply(xuint32 seqNum, xint32 errorCode, const iByteArray& result);
 
     /// Send event notification to this client (if subscribed)
     /// @param eventName Event identifier
@@ -78,31 +75,35 @@ public:
 private: // signals
     /// Emitted when connection is closed
     void disconnected(iINCConnection* conn) ISIGNAL(disconnected, conn);
-    
+
     /// Emitted when protocol message received (forwarded to server for handling)
     void messageReceived(iINCConnection* conn, const iINCMessage& msg) ISIGNAL(messageReceived, conn, msg);
 
     /// Emitted when binary data received on a channel
     /// @note Private signal - server uses handleBinaryData virtual method instead
-    void binaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, const iByteArray& data) ISIGNAL(binaryDataReceived, conn, channelId, seqNum, data);
+    void binaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) ISIGNAL(binaryDataReceived, conn, channelId, seqNum, pos, data);
 
     /// Emitted when device error occurs (forwarded to server for handling)
-    void errorOccurred(iINCConnection* conn, int errorCode) ISIGNAL(errorOccurred, conn, errorCode);
+    void errorOccurred(iINCConnection* conn, xint32 errorCode) ISIGNAL(errorOccurred, conn, errorCode);
 
 private:
-    iINCConnection(iINCDevice* device, xuint64 connId);
+    iINCConnection(iINCDevice* device, xuint32 connId);
     virtual ~iINCConnection();
 
     /// Enable shared memory
-    void enableMempool(const iByteArray& name, MemType type, size_t size);
+    void enableMempool(iSharedDataPointer<iMemPool> pool);
 
     bool matchesPattern(const iString& eventName, const iString& pattern) const;
-    
-    /// Send INC message directly to this client
-    /// @param msg Message to send
-    /// @note Internal use only - for server framework
-    void sendMessage(const iINCMessage& msg);
-    
+
+    /// Allocate next sequence number (thread-safe)
+    xuint32 nextSequence();
+
+    /// Send INC message directly to peer
+    iSharedDataPointer<iINCOperation> sendMessage(const iINCMessage& msg);
+
+    /// Send binary data with zero-copy optimization via shared memory
+    iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data);
+
     /// Add subscription pattern (called by server internally)
     /// @param pattern Event pattern (e.g., "system.*")
     void addSubscription(const iString& pattern);
@@ -110,19 +111,19 @@ private:
     /// Remove subscription pattern (called by server internally)
     /// @param pattern Event pattern to remove
     void removeSubscription(const iString& pattern);
-    
+
     /// Allocate channel for stream (server-side only)
     /// @param mode Stream mode requested by client
     /// @return Allocated channel ID, or 0 if allocation failed
     xuint32 allocateChannel(xuint32 channelId, xuint32 mode);
-    
+
     /// Release channel (server-side only)
     /// @param channelId Channel to release
     void releaseChannel(xuint32 channelId);
-    
+
     /// Set handshake handler (server-side only)
     void setHandshakeHandler(class iINCHandshake* handshake);
-    
+
     /// Clear handshake handler (server-side only)
     void clearHandshake();
 
@@ -132,24 +133,27 @@ private:
     /// Set client protocol version (called during handshake)
     void setPeerProtocolVersion(xuint32 version) { m_peerProtocol = version; }
 
-    void onErrorOccurred(int errorCode);
-    void onMessageReceived(const iINCMessage& msg);
-    void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, const iByteArray& data);
+    void setConnectionId(xuint32 connId) { m_connId = connId; }
 
+    void onErrorOccurred(xint32 errorCode);
+    void onMessageReceived(const iINCMessage& msg);
+    void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data);
 
     iINCProtocol*           m_protocol;         // Owned protocol instance
-    xuint64                 m_connId;           // Unique connection ID
+    xuint32                 m_connId;           // Unique connection ID
     iString                 m_peerName;
     xuint32                 m_peerProtocol;
     iINCHandshake*          m_handshake;        // Handshake handler (server-side only)
-    
+
     // Event subscription patterns
     std::vector<iString>    m_subscriptions;
-    
+
     // Channel management (server-side)
     std::unordered_map<xuint32, xuint32> m_channels;  ///< channelId -> mode
-    
+
     friend class iINCServer;
+    friend class iINCContext;
+    friend class iINCStream;
     IX_DISABLE_COPY(iINCConnection)
 };
 

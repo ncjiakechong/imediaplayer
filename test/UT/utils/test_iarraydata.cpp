@@ -19,9 +19,9 @@ protected:
 TEST_F(IArrayDataTest, MidNormalRange) {
     xsizetype position = 5;
     xsizetype length = 10;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Subset);
     EXPECT_EQ(position, 5);
     EXPECT_EQ(length, 10);
@@ -31,9 +31,9 @@ TEST_F(IArrayDataTest, MidNormalRange) {
 TEST_F(IArrayDataTest, MidPositionBeyondLength) {
     xsizetype position = 25;
     xsizetype length = 10;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Null);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 0);
@@ -43,9 +43,9 @@ TEST_F(IArrayDataTest, MidPositionBeyondLength) {
 TEST_F(IArrayDataTest, MidNegativePositionFullRange) {
     xsizetype position = -5;
     xsizetype length = 30;  // -5 + 30 >= 20, should return Full
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Full);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 20);
@@ -55,9 +55,9 @@ TEST_F(IArrayDataTest, MidNegativePositionFullRange) {
 TEST_F(IArrayDataTest, MidNegativePositionNegativeLength) {
     xsizetype position = -5;
     xsizetype length = -10;  // length < 0, should return Full
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Full);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 20);
@@ -67,9 +67,9 @@ TEST_F(IArrayDataTest, MidNegativePositionNegativeLength) {
 TEST_F(IArrayDataTest, MidNegativePositionNull) {
     xsizetype position = -10;
     xsizetype length = 5;  // -10 + 5 = -5 <= 0, should return Null
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Null);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 0);
@@ -79,9 +79,9 @@ TEST_F(IArrayDataTest, MidNegativePositionNull) {
 TEST_F(IArrayDataTest, MidNegativePositionSubset) {
     xsizetype position = -5;
     xsizetype length = 10;  // -5 + 10 = 5, should adjust position to 0, length to 5
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Subset);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 5);
@@ -91,9 +91,9 @@ TEST_F(IArrayDataTest, MidNegativePositionSubset) {
 TEST_F(IArrayDataTest, MidLengthExceedsRemaining) {
     xsizetype position = 15;
     xsizetype length = 20;  // 15 + 20 > 20, should clip to 5
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Subset);
     EXPECT_EQ(position, 15);
     EXPECT_EQ(length, 5);
@@ -103,9 +103,9 @@ TEST_F(IArrayDataTest, MidLengthExceedsRemaining) {
 TEST_F(IArrayDataTest, MidReturningFull) {
     xsizetype position = 0;
     xsizetype length = 20;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Full);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 20);
@@ -115,9 +115,9 @@ TEST_F(IArrayDataTest, MidReturningFull) {
 TEST_F(IArrayDataTest, MidReturningEmpty) {
     xsizetype position = 10;
     xsizetype length = 0;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Empty);
     EXPECT_EQ(position, 10);
     EXPECT_EQ(length, 0);
@@ -127,9 +127,9 @@ TEST_F(IArrayDataTest, MidReturningEmpty) {
 TEST_F(IArrayDataTest, MidPositionAtBoundary) {
     xsizetype position = 20;
     xsizetype length = 5;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Empty);
     EXPECT_EQ(position, 20);
     EXPECT_EQ(length, 0);
@@ -139,9 +139,9 @@ TEST_F(IArrayDataTest, MidPositionAtBoundary) {
 TEST_F(IArrayDataTest, MidZeroOriginalLength) {
     xsizetype position = 0;
     xsizetype length = 5;
-    
+
     auto result = iContainerImplHelper::mid(0, &position, &length);
-    
+
     // When originalLength is 0, position=0 and adjusted length=0 means Full (position == 0 && length == originalLength)
     EXPECT_EQ(result, iContainerImplHelper::Full);
     EXPECT_EQ(position, 0);
@@ -152,9 +152,9 @@ TEST_F(IArrayDataTest, MidZeroOriginalLength) {
 TEST_F(IArrayDataTest, MidZeroLengthAtStart) {
     xsizetype position = 0;
     xsizetype length = 0;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Empty);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 0);
@@ -164,9 +164,9 @@ TEST_F(IArrayDataTest, MidZeroLengthAtStart) {
 TEST_F(IArrayDataTest, MidLargePosition) {
     xsizetype position = 1000;
     xsizetype length = 10;
-    
+
     auto result = iContainerImplHelper::mid(100, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Null);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 0);
@@ -176,9 +176,9 @@ TEST_F(IArrayDataTest, MidLargePosition) {
 TEST_F(IArrayDataTest, MidNegativePositionBoundary) {
     xsizetype position = -20;
     xsizetype length = 20;  // -20 + 20 = 0, should return Null
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Null);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 0);
@@ -188,9 +188,9 @@ TEST_F(IArrayDataTest, MidNegativePositionBoundary) {
 TEST_F(IArrayDataTest, MidNegativePositionSlightlyPast) {
     xsizetype position = -20;
     xsizetype length = 21;  // -20 + 21 = 1, should adjust
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Subset);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 1);
@@ -200,9 +200,9 @@ TEST_F(IArrayDataTest, MidNegativePositionSlightlyPast) {
 TEST_F(IArrayDataTest, MidAlmostFullRange) {
     xsizetype position = 1;
     xsizetype length = 19;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Subset);
     EXPECT_EQ(position, 1);
     EXPECT_EQ(length, 19);
@@ -212,9 +212,9 @@ TEST_F(IArrayDataTest, MidAlmostFullRange) {
 TEST_F(IArrayDataTest, MidVeryLargeLength) {
     xsizetype position = 5;
     xsizetype length = 999999;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Subset);
     EXPECT_EQ(position, 5);
     EXPECT_EQ(length, 15);  // Should clip to remaining length
@@ -224,9 +224,9 @@ TEST_F(IArrayDataTest, MidVeryLargeLength) {
 TEST_F(IArrayDataTest, MidNegativePositionExactLength) {
     xsizetype position = -10;
     xsizetype length = 15;  // -10 + 15 = 5
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Subset);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 5);
@@ -236,9 +236,9 @@ TEST_F(IArrayDataTest, MidNegativePositionExactLength) {
 TEST_F(IArrayDataTest, MidPositionNearEnd) {
     xsizetype position = 19;
     xsizetype length = 10;
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Subset);
     EXPECT_EQ(position, 19);
     EXPECT_EQ(length, 1);  // Only 1 element left
@@ -248,9 +248,9 @@ TEST_F(IArrayDataTest, MidPositionNearEnd) {
 TEST_F(IArrayDataTest, MidSmallOriginalLength) {
     xsizetype position = 0;
     xsizetype length = 1;
-    
+
     auto result = iContainerImplHelper::mid(1, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Full);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 1);
@@ -260,9 +260,9 @@ TEST_F(IArrayDataTest, MidSmallOriginalLength) {
 TEST_F(IArrayDataTest, MidNegativePositionCoveringAll) {
     xsizetype position = -5;
     xsizetype length = 100;  // More than enough to cover from adjusted position
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Full);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 20);
@@ -272,9 +272,9 @@ TEST_F(IArrayDataTest, MidNegativePositionCoveringAll) {
 TEST_F(IArrayDataTest, MidBothZero) {
     xsizetype position = 0;
     xsizetype length = 0;
-    
+
     auto result = iContainerImplHelper::mid(100, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Empty);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 0);
@@ -284,9 +284,9 @@ TEST_F(IArrayDataTest, MidBothZero) {
 TEST_F(IArrayDataTest, MidLargeNegativePosition) {
     xsizetype position = -100;
     xsizetype length = 50;  // -100 + 50 = -50, still negative
-    
+
     auto result = iContainerImplHelper::mid(20, &position, &length);
-    
+
     EXPECT_EQ(result, iContainerImplHelper::Null);
     EXPECT_EQ(position, 0);
     EXPECT_EQ(length, 0);
@@ -295,10 +295,10 @@ TEST_F(IArrayDataTest, MidLargeNegativePosition) {
 // Test iTypedArrayData allocation
 TEST_F(IArrayDataTest, TypedArrayDataAllocation) {
     iTypedArrayData<int>* data = iTypedArrayData<int>::allocate(10);
-    
+
     ASSERT_NE(data, nullptr);
     EXPECT_GE(data->allocatedCapacity(), 10);
-    
+
     data->deref();
 }
 
@@ -306,13 +306,13 @@ TEST_F(IArrayDataTest, TypedArrayDataAllocation) {
 TEST_F(IArrayDataTest, TypedArrayDataDifferentTypes) {
     iTypedArrayData<char>* charData = iTypedArrayData<char>::allocate(100);
     iTypedArrayData<double>* doubleData = iTypedArrayData<double>::allocate(50);
-    
+
     ASSERT_NE(charData, nullptr);
     ASSERT_NE(doubleData, nullptr);
-    
+
     EXPECT_GE(charData->allocatedCapacity(), 100);
     EXPECT_GE(doubleData->allocatedCapacity(), 50);
-    
+
     charData->deref();
     doubleData->deref();
 }
@@ -320,8 +320,8 @@ TEST_F(IArrayDataTest, TypedArrayDataDifferentTypes) {
 // Test iTypedArrayData with zero capacity
 TEST_F(IArrayDataTest, TypedArrayDataZeroCapacity) {
     iTypedArrayData<int>* data = iTypedArrayData<int>::allocate(0);
-    
+
     ASSERT_NE(data, nullptr);
-    
+
     data->deref();
 }

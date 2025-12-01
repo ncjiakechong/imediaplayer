@@ -22,13 +22,13 @@ public:
     TestObject() : value(0), deleted(nullptr) {}
     explicit TestObject(int v) : value(v), deleted(nullptr) {}
     TestObject(int v, bool* deletedFlag) : value(v), deleted(deletedFlag) {}
-    
+
     ~TestObject() {
         if (deleted) {
             *deleted = true;
         }
     }
-    
+
     int value;
     bool* deleted;
 };
@@ -70,7 +70,7 @@ TEST_F(ISharedPtrTest, ConstructFromPointer) {
 TEST_F(ISharedPtrTest, CopyConstruction) {
     iSharedPtr<TestObject> ptr1(new TestObject(42));
     iSharedPtr<TestObject> ptr2(ptr1);
-    
+
     EXPECT_FALSE(ptr1.isNull());
     EXPECT_FALSE(ptr2.isNull());
     EXPECT_EQ(ptr1.data(), ptr2.data());
@@ -80,7 +80,7 @@ TEST_F(ISharedPtrTest, CopyConstruction) {
 TEST_F(ISharedPtrTest, Assignment) {
     iSharedPtr<TestObject> ptr1(new TestObject(42));
     iSharedPtr<TestObject> ptr2;
-    
+
     ptr2 = ptr1;
     EXPECT_FALSE(ptr2.isNull());
     EXPECT_EQ(ptr1.data(), ptr2.data());
@@ -103,7 +103,7 @@ TEST_F(ISharedPtrTest, AutomaticDeletion) {
 TEST_F(ISharedPtrTest, SharedOwnership) {
     bool deleted = false;
     iSharedPtr<TestObject> ptr2;
-    
+
     {
         iSharedPtr<TestObject> ptr1(new TestObject(42, &deleted));
         ptr2 = ptr1;
@@ -111,7 +111,7 @@ TEST_F(ISharedPtrTest, SharedOwnership) {
     }
     // ptr1 destroyed, but ptr2 still owns the object
     EXPECT_FALSE(deleted);
-    
+
     ptr2.clear();
     EXPECT_TRUE(deleted);
 }
@@ -119,7 +119,7 @@ TEST_F(ISharedPtrTest, SharedOwnership) {
 TEST_F(ISharedPtrTest, Clear) {
     bool deleted = false;
     iSharedPtr<TestObject> ptr(new TestObject(42, &deleted));
-    
+
     EXPECT_FALSE(ptr.isNull());
     ptr.clear();
     EXPECT_TRUE(ptr.isNull());
@@ -129,7 +129,7 @@ TEST_F(ISharedPtrTest, Clear) {
 TEST_F(ISharedPtrTest, Reset) {
     iSharedPtr<TestObject> ptr(new TestObject(42));
     EXPECT_EQ(ptr->value, 42);
-    
+
     ptr.reset(new TestObject(100));
     EXPECT_EQ(ptr->value, 100);
 }
@@ -137,7 +137,7 @@ TEST_F(ISharedPtrTest, Reset) {
 TEST_F(ISharedPtrTest, ResetToNull) {
     iSharedPtr<TestObject> ptr(new TestObject(42));
     EXPECT_FALSE(ptr.isNull());
-    
+
     ptr.reset();
     EXPECT_TRUE(ptr.isNull());
 }
@@ -149,12 +149,12 @@ TEST_F(ISharedPtrTest, ResetToNull) {
 TEST_F(ISharedPtrTest, Swap) {
     iSharedPtr<TestObject> ptr1(new TestObject(42));
     iSharedPtr<TestObject> ptr2(new TestObject(100));
-    
+
     TestObject* data1 = ptr1.data();
     TestObject* data2 = ptr2.data();
-    
+
     ptr1.swap(ptr2);
-    
+
     EXPECT_EQ(ptr1.data(), data2);
     EXPECT_EQ(ptr2.data(), data1);
     EXPECT_EQ(ptr1->value, 100);
@@ -169,7 +169,7 @@ TEST_F(ISharedPtrTest, Swap) {
 // TEST_F(ISharedPtrTest, PolymorphicAssignment) {
 //     iSharedPtr<DerivedTestObject> derived(new DerivedTestObject(42));
 //     iSharedPtr<TestObject> base;
-//     
+//
 //     base = derived;
 //     EXPECT_FALSE(base.isNull());
 //     EXPECT_EQ(base->value, 42);
@@ -188,14 +188,14 @@ TEST_F(ISharedPtrTest, WeakPtrDefaultConstruction) {
 TEST_F(ISharedPtrTest, WeakPtrFromSharedPtr) {
     iSharedPtr<TestObject> shared(new TestObject(42));
     iWeakPtr<TestObject> weak(shared);
-    
+
     EXPECT_FALSE(weak.isNull());
 }
 
 TEST_F(ISharedPtrTest, WeakPtrToStrongRef) {
     iSharedPtr<TestObject> shared(new TestObject(42));
     iWeakPtr<TestObject> weak(shared);
-    
+
     iSharedPtr<TestObject> shared2 = weak.toStrongRef();
     EXPECT_FALSE(shared2.isNull());
     EXPECT_EQ(shared2->value, 42);
@@ -209,14 +209,14 @@ TEST_F(ISharedPtrTest, WeakPtrToStrongRef) {
 TEST_F(ISharedPtrTest, WeakPtrDoesNotPreventDeletion) {
     bool deleted = false;
     iWeakPtr<TestObject> weak;
-    
+
     {
         iSharedPtr<TestObject> shared(new TestObject(42, &deleted));
         weak = shared;
         EXPECT_FALSE(weak.isNull());
         EXPECT_FALSE(deleted);
     }
-    
+
     // Shared pointer destroyed, object should be deleted
     EXPECT_TRUE(deleted);
     EXPECT_TRUE(weak.isNull());
@@ -224,16 +224,16 @@ TEST_F(ISharedPtrTest, WeakPtrDoesNotPreventDeletion) {
 
 TEST_F(ISharedPtrTest, WeakPtrExpiration) {
     iWeakPtr<TestObject> weak;
-    
+
     {
         iSharedPtr<TestObject> shared(new TestObject(42));
         weak = shared;
         EXPECT_FALSE(weak.isNull());
     }
-    
+
     // Shared pointer destroyed
     EXPECT_TRUE(weak.isNull());
-    
+
     // toStrongRef should return null
     iSharedPtr<TestObject> expired = weak.toStrongRef();
     EXPECT_TRUE(expired.isNull());
@@ -247,7 +247,7 @@ TEST_F(ISharedPtrTest, WeakPtrCopyConstruction) {
     iSharedPtr<TestObject> shared(new TestObject(42));
     iWeakPtr<TestObject> weak1(shared);
     iWeakPtr<TestObject> weak2(weak1);
-    
+
     EXPECT_FALSE(weak2.isNull());
     iSharedPtr<TestObject> shared2 = weak2.toStrongRef();
     EXPECT_EQ(shared2->value, 42);
@@ -257,10 +257,10 @@ TEST_F(ISharedPtrTest, WeakPtrAssignment) {
     iSharedPtr<TestObject> shared(new TestObject(42));
     iWeakPtr<TestObject> weak1(shared);
     iWeakPtr<TestObject> weak2;
-    
+
     weak2 = weak1;
     EXPECT_FALSE(weak2.isNull());
-    
+
     iSharedPtr<TestObject> shared2 = weak2.toStrongRef();
     EXPECT_EQ(shared2->value, 42);
 }
@@ -272,15 +272,15 @@ TEST_F(ISharedPtrTest, WeakPtrAssignment) {
 TEST_F(ISharedPtrTest, WeakPtrSwap) {
     iSharedPtr<TestObject> shared1(new TestObject(42));
     iSharedPtr<TestObject> shared2(new TestObject(100));
-    
+
     iWeakPtr<TestObject> weak1(shared1);
     iWeakPtr<TestObject> weak2(shared2);
-    
+
     weak1.swap(weak2);
-    
+
     iSharedPtr<TestObject> strong1 = weak1.toStrongRef();
     iSharedPtr<TestObject> strong2 = weak2.toStrongRef();
-    
+
     EXPECT_EQ(strong1->value, 100);
     EXPECT_EQ(strong2->value, 42);
 }
@@ -294,7 +294,7 @@ TEST_F(ISharedPtrTest, WeakPtrEquality) {
     iWeakPtr<TestObject> weak1(shared);
     iWeakPtr<TestObject> weak2(shared);
     iWeakPtr<TestObject> weak3;
-    
+
     EXPECT_TRUE(weak1 == weak2);
     EXPECT_FALSE(weak1 == weak3);
     EXPECT_FALSE(weak1 != weak2);
@@ -304,7 +304,7 @@ TEST_F(ISharedPtrTest, WeakPtrEquality) {
 TEST_F(ISharedPtrTest, WeakPtrSharedPtrComparison) {
     iSharedPtr<TestObject> shared(new TestObject(42));
     iWeakPtr<TestObject> weak(shared);
-    
+
     EXPECT_TRUE(weak == shared);
     EXPECT_FALSE(weak != shared);
 }
@@ -315,17 +315,17 @@ TEST_F(ISharedPtrTest, WeakPtrSharedPtrComparison) {
 
 TEST_F(ISharedPtrTest, CustomDeleter) {
     bool deleted = false;
-    
+
     auto deleter = [&deleted](TestObject* obj) {
         deleted = true;
         delete obj;
     };
-    
+
     {
         iSharedPtr<TestObject> ptr(new TestObject(42), deleter);
         EXPECT_FALSE(deleted);
     }
-    
+
     EXPECT_TRUE(deleted);
 }
 
@@ -336,7 +336,7 @@ TEST_F(ISharedPtrTest, CustomDeleter) {
 TEST_F(ISharedPtrTest, ToWeakRef) {
     iSharedPtr<TestObject> shared(new TestObject(42));
     iWeakPtr<TestObject> weak = shared.toWeakRef();
-    
+
     EXPECT_FALSE(weak.isNull());
     iSharedPtr<TestObject> strong = weak.toStrongRef();
     EXPECT_EQ(strong->value, 42);
@@ -349,7 +349,7 @@ TEST_F(ISharedPtrTest, ToWeakRef) {
 TEST_F(ISharedPtrTest, NullPointerHandling) {
     iSharedPtr<TestObject> ptr1;
     iSharedPtr<TestObject> ptr2;
-    
+
     // Null to null assignment
     ptr1 = ptr2;
     EXPECT_TRUE(ptr1.isNull());
@@ -359,7 +359,7 @@ TEST_F(ISharedPtrTest, NullPointerHandling) {
 TEST_F(ISharedPtrTest, SelfAssignment) {
     iSharedPtr<TestObject> ptr(new TestObject(42));
     ptr = ptr;  // Self-assignment
-    
+
     EXPECT_FALSE(ptr.isNull());
     EXPECT_EQ(ptr->value, 42);
 }
@@ -369,13 +369,13 @@ TEST_F(ISharedPtrTest, MultipleWeakReferences) {
     iWeakPtr<TestObject> weak1(shared);
     iWeakPtr<TestObject> weak2(shared);
     iWeakPtr<TestObject> weak3(shared);
-    
+
     EXPECT_FALSE(weak1.isNull());
     EXPECT_FALSE(weak2.isNull());
     EXPECT_FALSE(weak3.isNull());
-    
+
     shared.clear();
-    
+
     EXPECT_TRUE(weak1.isNull());
     EXPECT_TRUE(weak2.isNull());
     EXPECT_TRUE(weak3.isNull());
@@ -387,12 +387,12 @@ TEST_F(ISharedPtrTest, MultipleWeakReferences) {
 
 TEST_F(ISharedPtrTest, WeakToStrongWithExpiredShared) {
     iWeakPtr<TestObject> weak;
-    
+
     {
         iSharedPtr<TestObject> shared(new TestObject(42));
         weak = shared;
     }
-    
+
     // shared is destroyed, try to convert weak to strong (should fail gracefully)
     iSharedPtr<TestObject> expired = weak.toStrongRef();
     EXPECT_TRUE(expired.isNull());
@@ -404,9 +404,9 @@ TEST_F(ISharedPtrTest, MultipleSharedPtrCopies) {
     iSharedPtr<TestObject> ptr2(ptr1);
     iSharedPtr<TestObject> ptr3(ptr2);
     iSharedPtr<TestObject> ptr4(ptr3);
-    
+
     EXPECT_FALSE(deleted);
-    
+
     // Clear all but one
     ptr1.clear();
     EXPECT_FALSE(deleted);
@@ -414,7 +414,7 @@ TEST_F(ISharedPtrTest, MultipleSharedPtrCopies) {
     EXPECT_FALSE(deleted);
     ptr3.clear();
     EXPECT_FALSE(deleted);
-    
+
     // Last one should trigger deletion
     ptr4.clear();
     EXPECT_TRUE(deleted);
@@ -423,7 +423,7 @@ TEST_F(ISharedPtrTest, MultipleSharedPtrCopies) {
 TEST_F(ISharedPtrTest, WeakPtrClear) {
     iSharedPtr<TestObject> shared(new TestObject(42));
     iWeakPtr<TestObject> weak(shared);
-    
+
     EXPECT_FALSE(weak.isNull());
     weak.clear();
     EXPECT_TRUE(weak.isNull());
@@ -432,15 +432,15 @@ TEST_F(ISharedPtrTest, WeakPtrClear) {
 TEST_F(ISharedPtrTest, ResetWithSamePointer) {
     bool deleted1 = false;
     bool deleted2 = false;
-    
+
     iSharedPtr<TestObject> ptr(new TestObject(42, &deleted1));
     EXPECT_FALSE(deleted1);
-    
+
     // Reset with a new object
     ptr.reset(new TestObject(100, &deleted2));
     EXPECT_TRUE(deleted1);   // First object should be deleted
     EXPECT_FALSE(deleted2);  // Second object still alive
-    
+
     ptr.clear();
     EXPECT_TRUE(deleted2);   // Second object now deleted
 }

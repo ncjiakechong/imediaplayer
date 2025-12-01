@@ -28,7 +28,7 @@ TEST(IEndianTest, BswapUint16) {
     xuint16 val = 0x1234;
     xuint16 swapped = ibswap(val);
     EXPECT_EQ(swapped, static_cast<xuint16>(0x3412));
-    
+
     // Double swap should return original
     EXPECT_EQ(ibswap(swapped), val);
 }
@@ -37,7 +37,7 @@ TEST(IEndianTest, BswapUint32) {
     xuint32 val = 0x12345678;
     xuint32 swapped = ibswap(val);
     EXPECT_EQ(swapped, static_cast<xuint32>(0x78563412));
-    
+
     // Double swap should return original
     EXPECT_EQ(ibswap(swapped), val);
 }
@@ -46,7 +46,7 @@ TEST(IEndianTest, BswapUint64) {
     xuint64 val = IX_UINT64_C(0x123456789ABCDEF0);
     xuint64 swapped = ibswap(val);
     EXPECT_EQ(swapped, IX_UINT64_C(0xF0DEBC9A78563412));
-    
+
     // Double swap should return original
     EXPECT_EQ(ibswap(swapped), val);
 }
@@ -79,7 +79,7 @@ TEST(IEndianTest, BswapFloat) {
     float val = 3.14159f;
     float swapped = ibswap(val);
     float doubleSwapped = ibswap(swapped);
-    
+
     // Double swap should restore original value
     EXPECT_FLOAT_EQ(doubleSwapped, val);
 }
@@ -88,7 +88,7 @@ TEST(IEndianTest, BswapDouble) {
     double val = 3.141592653589793;
     double swapped = ibswap(val);
     double doubleSwapped = ibswap(swapped);
-    
+
     // Double swap should restore original value
     EXPECT_DOUBLE_EQ(doubleSwapped, val);
 }
@@ -145,94 +145,94 @@ TEST(IEndianTest, BswapReverseOrder32) {
 
 TEST(IEndianTest, ToFromBigEndian16) {
     xuint16 val = 0x1234;
-    
+
     // Convert to big endian and back
     xuint16 be = iToBigEndian(val);
     xuint16 restored = iFromBigEndian(be);
-    
+
     EXPECT_EQ(restored, val);
 }
 
 TEST(IEndianTest, ToFromBigEndian32) {
     xuint32 val = 0x12345678;
-    
+
     // Convert to big endian and back
     xuint32 be = iToBigEndian(val);
     xuint32 restored = iFromBigEndian(be);
-    
+
     EXPECT_EQ(restored, val);
 }
 
 TEST(IEndianTest, ToFromBigEndian64) {
     xuint64 val = IX_UINT64_C(0x123456789ABCDEF0);
-    
+
     // Convert to big endian and back
     xuint64 be = iToBigEndian(val);
     xuint64 restored = iFromBigEndian(be);
-    
+
     EXPECT_EQ(restored, val);
 }
 
 TEST(IEndianTest, ToFromLittleEndian16) {
     xuint16 val = 0x1234;
-    
+
     // Convert to little endian and back
     xuint16 le = iToLittleEndian(val);
     xuint16 restored = iFromLittleEndian(le);
-    
+
     EXPECT_EQ(restored, val);
 }
 
 TEST(IEndianTest, ToFromLittleEndian32) {
     xuint32 val = 0x12345678;
-    
+
     // Convert to little endian and back
     xuint32 le = iToLittleEndian(val);
     xuint32 restored = iFromLittleEndian(le);
-    
+
     EXPECT_EQ(restored, val);
 }
 
 TEST(IEndianTest, ToFromLittleEndian64) {
     xuint64 val = IX_UINT64_C(0x123456789ABCDEF0);
-    
+
     // Convert to little endian and back
     xuint64 le = iToLittleEndian(val);
     xuint64 restored = iFromLittleEndian(le);
-    
+
     EXPECT_EQ(restored, val);
 }
 
 TEST(IEndianTest, ToUnaligned) {
     xuint32 val = 0x12345678;
     char buffer[10];
-    
+
     // Write to unaligned address
     iToUnaligned(val, buffer + 1);
-    
+
     // Read back
     xuint32 restored = iFromUnaligned<xuint32>(buffer + 1);
-    
+
     EXPECT_EQ(restored, val);
 }
 
 TEST(IEndianTest, BigEndianToMemory) {
     xuint32 val = 0x12345678;
     char buffer[4];
-    
+
     iToBigEndian(val, buffer);
     xuint32 restored = iFromBigEndian<xuint32>(buffer);
-    
+
     EXPECT_EQ(restored, val);
 }
 
 TEST(IEndianTest, LittleEndianToMemory) {
     xuint32 val = 0x12345678;
     char buffer[4];
-    
+
     iToLittleEndian(val, buffer);
     xuint32 restored = iFromLittleEndian<xuint32>(buffer);
-    
+
     EXPECT_EQ(restored, val);
 }
 
@@ -253,7 +253,7 @@ TEST(IEndianTest, LEIntegerComparison) {
     xuint32_le val1(100);
     xuint32_le val2(100);
     xuint32_le val3(200);
-    
+
     EXPECT_TRUE(val1 == val2);
     EXPECT_TRUE(val1 != val3);
 }
@@ -262,13 +262,13 @@ TEST(IEndianTest, LEIntegerArithmetic) {
     xuint16_le val(100);
     val += 50;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(150));
-    
+
     val -= 30;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(120));
-    
+
     val *= 2;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(240));
-    
+
     val /= 4;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(60));
 }
@@ -277,7 +277,7 @@ TEST(IEndianTest, LEIntegerIncrement) {
     xuint16_le val(10);
     ++val;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(11));
-    
+
     val++;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(12));
 }
@@ -286,7 +286,7 @@ TEST(IEndianTest, LEIntegerDecrement) {
     xuint16_le val(10);
     --val;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(9));
-    
+
     val--;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(8));
 }
@@ -295,10 +295,10 @@ TEST(IEndianTest, LEIntegerBitwiseOps) {
     xuint16_le val(0xFF);
     val |= 0xFF00;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(0xFFFF));
-    
+
     val &= 0x00FF;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(0x00FF));
-    
+
     val ^= 0xFFFF;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(0xFF00));
 }
@@ -307,7 +307,7 @@ TEST(IEndianTest, LEIntegerShift) {
     xuint16_le val(1);
     val <<= 4;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(16));
-    
+
     val >>= 2;
     EXPECT_EQ(static_cast<xuint16>(val), static_cast<xuint16>(4));
 }
@@ -315,7 +315,7 @@ TEST(IEndianTest, LEIntegerShift) {
 TEST(IEndianTest, LEIntegerMaxMin) {
     xuint16_le maxVal = xuint16_le::max();
     xuint16_le minVal = xuint16_le::min();
-    
+
     EXPECT_EQ(static_cast<xuint16>(maxVal), std::numeric_limits<xuint16>::max());
     EXPECT_EQ(static_cast<xuint16>(minVal), std::numeric_limits<xuint16>::min());
 }
@@ -337,7 +337,7 @@ TEST(IEndianTest, BEIntegerComparison) {
     xuint32_be val1(100);
     xuint32_be val2(100);
     xuint32_be val3(200);
-    
+
     EXPECT_TRUE(val1 == val2);
     EXPECT_TRUE(val1 != val3);
 }
@@ -345,7 +345,7 @@ TEST(IEndianTest, BEIntegerComparison) {
 TEST(IEndianTest, BEIntegerMaxMin) {
     xuint16_be maxVal = xuint16_be::max();
     xuint16_be minVal = xuint16_be::min();
-    
+
     EXPECT_EQ(static_cast<xuint16>(maxVal), std::numeric_limits<xuint16>::max());
     EXPECT_EQ(static_cast<xuint16>(minVal), std::numeric_limits<xuint16>::min());
 }
@@ -358,7 +358,7 @@ TEST(INumericTest, IsInfDouble) {
     double inf = std::numeric_limits<double>::infinity();
     double negInf = -std::numeric_limits<double>::infinity();
     double normal = 1.0;
-    
+
     EXPECT_TRUE(iIsInf(inf));
     EXPECT_TRUE(iIsInf(negInf));
     EXPECT_FALSE(iIsInf(normal));
@@ -367,7 +367,7 @@ TEST(INumericTest, IsInfDouble) {
 TEST(INumericTest, IsNaNDouble) {
     double nan = std::numeric_limits<double>::quiet_NaN();
     double normal = 1.0;
-    
+
     EXPECT_TRUE(iIsNaN(nan));
     EXPECT_FALSE(iIsNaN(normal));
 }
@@ -376,7 +376,7 @@ TEST(INumericTest, IsFiniteDouble) {
     double normal = 1.0;
     double inf = std::numeric_limits<double>::infinity();
     double nan = std::numeric_limits<double>::quiet_NaN();
-    
+
     EXPECT_TRUE(iIsFinite(normal));
     EXPECT_FALSE(iIsFinite(inf));
     EXPECT_FALSE(iIsFinite(nan));
@@ -386,7 +386,7 @@ TEST(INumericTest, IsInfFloat) {
     float inf = std::numeric_limits<float>::infinity();
     float negInf = -std::numeric_limits<float>::infinity();
     float normal = 1.0f;
-    
+
     EXPECT_TRUE(iIsInf(inf));
     EXPECT_TRUE(iIsInf(negInf));
     EXPECT_FALSE(iIsInf(normal));
@@ -395,7 +395,7 @@ TEST(INumericTest, IsInfFloat) {
 TEST(INumericTest, IsNaNFloat) {
     float nan = std::numeric_limits<float>::quiet_NaN();
     float normal = 1.0f;
-    
+
     EXPECT_TRUE(iIsNaN(nan));
     EXPECT_FALSE(iIsNaN(normal));
 }
@@ -404,7 +404,7 @@ TEST(INumericTest, IsFiniteFloat) {
     float normal = 1.0f;
     float inf = std::numeric_limits<float>::infinity();
     float nan = std::numeric_limits<float>::quiet_NaN();
-    
+
     EXPECT_TRUE(iIsFinite(normal));
     EXPECT_FALSE(iIsFinite(inf));
     EXPECT_FALSE(iIsFinite(nan));
@@ -507,7 +507,7 @@ TEST(INumericTest, FuzzyCompareDouble) {
     double a = 1.0;
     double b = 1.0 + 1e-13;  // Very close
     double c = 2.0;
-    
+
     EXPECT_TRUE(iFuzzyCompare(a, b));
     EXPECT_FALSE(iFuzzyCompare(a, c));
 }
@@ -516,7 +516,7 @@ TEST(INumericTest, FuzzyCompareFloat) {
     float a = 1.0f;
     float b = 1.0f + 1e-6f;  // Very close
     float c = 2.0f;
-    
+
     EXPECT_TRUE(iFuzzyCompare(a, b));
     EXPECT_FALSE(iFuzzyCompare(a, c));
 }
@@ -525,7 +525,7 @@ TEST(INumericTest, FuzzyIsNullDouble) {
     double zero = 0.0;
     double almostZero = 1e-13;
     double notZero = 0.1;
-    
+
     EXPECT_TRUE(iFuzzyIsNull(zero));
     EXPECT_TRUE(iFuzzyIsNull(almostZero));
     EXPECT_FALSE(iFuzzyIsNull(notZero));
@@ -535,7 +535,7 @@ TEST(INumericTest, FuzzyIsNullFloat) {
     float zero = 0.0f;
     float almostZero = 1e-6f;
     float notZero = 0.1f;
-    
+
     EXPECT_TRUE(iFuzzyIsNull(zero));
     EXPECT_TRUE(iFuzzyIsNull(almostZero));
     EXPECT_FALSE(iFuzzyIsNull(notZero));
@@ -545,7 +545,7 @@ TEST(INumericTest, IsNullDouble) {
     double zero = 0.0;
     double negZero = -0.0;
     double small = 1e-300;
-    
+
     EXPECT_TRUE(iIsNull(zero));
     EXPECT_TRUE(iIsNull(negZero));
     EXPECT_FALSE(iIsNull(small));
@@ -555,7 +555,7 @@ TEST(INumericTest, IsNullFloat) {
     float zero = 0.0f;
     float negZero = -0.0f;
     float small = 1e-40f;
-    
+
     EXPECT_TRUE(iIsNull(zero));
     EXPECT_TRUE(iIsNull(negZero));
     EXPECT_FALSE(iIsNull(small));
@@ -588,7 +588,7 @@ TEST(IGlobalTest, PointerSizedTypes) {
 TEST(IGlobalTest, Int64Macros) {
     xint64 signed_val = IX_INT64_C(9223372036854775807);
     xuint64 unsigned_val = IX_UINT64_C(18446744073709551615);
-    
+
     EXPECT_GT(signed_val, 0);
     EXPECT_GT(unsigned_val, static_cast<xuint64>(0));
 }
@@ -603,7 +603,7 @@ TEST(IGlobalTest, IntegerForSize) {
     using UInt4 = iIntegerForSize<4>::Unsigned;
     using Int8 = iIntegerForSize<8>::Signed;
     using UInt8 = iIntegerForSize<8>::Unsigned;
-    
+
     EXPECT_EQ(sizeof(Int1), 1u);
     EXPECT_EQ(sizeof(UInt1), 1u);
     EXPECT_EQ(sizeof(Int2), 2u);
@@ -619,9 +619,9 @@ TEST(IEndianBswapTest, Bswap16Basic) {
     // Test 16-bit byte swap
     xuint16 src[3] = {0x1234, 0xABCD, 0x00FF};
     xuint16 dst[3];
-    
+
     ibswap<2>(src, 3, dst);
-    
+
     EXPECT_EQ(dst[0], 0x3412);
     EXPECT_EQ(dst[1], 0xCDAB);
     EXPECT_EQ(dst[2], 0xFF00);
@@ -630,9 +630,9 @@ TEST(IEndianBswapTest, Bswap16Basic) {
 TEST(IEndianBswapTest, Bswap16InPlace) {
     // Test 16-bit in-place byte swap
     xuint16 data[2] = {0x1234, 0xFFEE};
-    
+
     ibswap<2>(data, 2, data);
-    
+
     EXPECT_EQ(data[0], 0x3412);
     EXPECT_EQ(data[1], 0xEEFF);
 }
@@ -641,9 +641,9 @@ TEST(IEndianBswapTest, Bswap32Basic) {
     // Test 32-bit byte swap
     xuint32 src[2] = {0x12345678, 0xABCDEF00};
     xuint32 dst[2];
-    
+
     ibswap<4>(src, 2, dst);
-    
+
     EXPECT_EQ(dst[0], 0x78563412u);
     EXPECT_EQ(dst[1], 0x00EFCDABu);
 }
@@ -651,9 +651,9 @@ TEST(IEndianBswapTest, Bswap32Basic) {
 TEST(IEndianBswapTest, Bswap32InPlace) {
     // Test 32-bit in-place byte swap
     xuint32 data[1] = {0x12345678};
-    
+
     ibswap<4>(data, 1, data);
-    
+
     EXPECT_EQ(data[0], 0x78563412u);
 }
 
@@ -661,9 +661,9 @@ TEST(IEndianBswapTest, Bswap64Basic) {
     // Test 64-bit byte swap
     xuint64 src[2] = {0x123456789ABCDEF0ULL, 0xFEDCBA0987654321ULL};
     xuint64 dst[2];
-    
+
     ibswap<8>(src, 2, dst);
-    
+
     EXPECT_EQ(dst[0], 0xF0DEBC9A78563412ULL);
     EXPECT_EQ(dst[1], 0x2143658709BADCFEULL);
 }
@@ -671,9 +671,9 @@ TEST(IEndianBswapTest, Bswap64Basic) {
 TEST(IEndianBswapTest, Bswap64InPlace) {
     // Test 64-bit in-place byte swap
     xuint64 data[1] = {0x123456789ABCDEF0ULL};
-    
+
     ibswap<8>(data, 1, data);
-    
+
     EXPECT_EQ(data[0], 0xF0DEBC9A78563412ULL);
 }
 
@@ -681,9 +681,9 @@ TEST(IEndianBswapTest, BswapZeroCount) {
     // Test byte swap with zero count (edge case)
     xuint32 src[1] = {0x12345678};
     xuint32 dst[1] = {0};
-    
+
     ibswap<4>(src, 0, dst);
-    
+
     // Should not modify dst
     EXPECT_EQ(dst[0], 0u);
 }
@@ -692,8 +692,8 @@ TEST(IEndianBswapTest, BswapSingleElement) {
     // Test byte swap with single element
     xuint16 src = 0xABCD;
     xuint16 dst;
-    
+
     ibswap<2>(&src, 1, &dst);
-    
+
     EXPECT_EQ(dst, 0xCDAB);
 }

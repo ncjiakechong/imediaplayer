@@ -50,7 +50,7 @@ TEST_F(MutexTest, ThreadSafety) {
     int counter = 0;
     const int iterations = 1000;
     const int numThreads = 4;
-    
+
     std::vector<std::thread> threads;
     for (int t = 0; t < numThreads; ++t) {
         threads.emplace_back([&]() {
@@ -60,11 +60,11 @@ TEST_F(MutexTest, ThreadSafety) {
             }
         });
     }
-    
+
     for (auto& thread : threads) {
         thread.join();
     }
-    
+
     EXPECT_EQ(counter, numThreads * iterations);
 }
 
@@ -77,11 +77,11 @@ TEST_F(MutexTest, TryLockSuccess) {
 TEST_F(MutexTest, TryLockFailure) {
     iShell::iMutex mutex;
     mutex.lock();
-    
+
     std::thread t([&]() {
         EXPECT_LT(mutex.tryLock(10), 0); // Should fail within 10ms
     });
-    
+
     t.join();
     mutex.unlock();
 }
@@ -131,11 +131,11 @@ TEST_F(MutexTest, ScopedLockNesting) {
 TEST_F(MutexTest, LockUnlockPattern) {
     iShell::iMutex mutex;
     int sharedData = 0;
-    
+
     mutex.lock();
     sharedData = 42;
     mutex.unlock();
-    
+
     mutex.lock();
     EXPECT_EQ(sharedData, 42);
     mutex.unlock();

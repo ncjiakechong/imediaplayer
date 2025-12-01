@@ -30,12 +30,12 @@ namespace iShell {
 ///
 ///          Categories:
 ///          0x8xxx (1000): Connection errors
-///          0xCxxx (1100): Protocol errors  
+///          0xCxxx (1100): Protocol errors
 ///          0xExxx (1110): Resource errors
 ///          0xFxxx (1111): Application errors
 enum iINCError {
     INC_OK                      = 0,          ///< Success
-    
+
     // Connection errors (0x8000 + 1~99)
     INC_ERROR_CONNECTION_FAILED = INC_ERROR_CATEGORY_CONNECTION + 1,     ///< Connection failed
     INC_ERROR_DISCONNECTED      = INC_ERROR_CATEGORY_CONNECTION + 2,     ///< Connection lost

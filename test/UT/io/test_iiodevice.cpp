@@ -76,15 +76,15 @@ public:
 protected:
     iByteArray readData(xint64 maxlen, xint64* readErr) override {
         if (readErr) *readErr = 0;
-        
+
         xint64 currentPos = pos();
         if (currentPos >= m_buffer.size()) {
             return iByteArray();
         }
 
-        xint64 bytesToRead = (maxlen < 0) ? (m_buffer.size() - currentPos) : 
+        xint64 bytesToRead = (maxlen < 0) ? (m_buffer.size() - currentPos) :
                              std::min(maxlen, m_buffer.size() - currentPos);
-        
+
         iByteArray result = m_buffer.mid(currentPos, bytesToRead);
         // Position is managed by iIODevice base class
         return result;
@@ -92,7 +92,7 @@ protected:
 
     xint64 writeData(const iByteArray& data) override {
         xint64 currentPos = pos();
-        
+
         if (openMode() & Append) {
             m_buffer.append(data);
         } else {
@@ -184,7 +184,7 @@ TEST_F(IODeviceTest, OpenWithTruncate) {
 TEST_F(IODeviceTest, CloseDevice) {
     device->open(iIODevice::ReadWrite);
     EXPECT_TRUE(device->isOpen());
-    
+
     device->close();
     EXPECT_FALSE(device->isOpen());
     EXPECT_EQ(device->openMode(), iIODevice::NotOpen);
@@ -201,7 +201,7 @@ TEST_F(IODeviceTest, ReadData) {
     iByteArray testData("Hello World");
     device->setBuffer(testData);
     device->open(iIODevice::ReadOnly);
-    
+
     iByteArray result = device->read(5);
     EXPECT_EQ(result, iByteArray("Hello"));
 }
@@ -210,7 +210,7 @@ TEST_F(IODeviceTest, ReadAll) {
     iByteArray testData("Complete Data");
     device->setBuffer(testData);
     device->open(iIODevice::ReadOnly);
-    
+
     iByteArray result = device->readAll();
     EXPECT_EQ(result, testData);
 }
@@ -219,7 +219,7 @@ TEST_F(IODeviceTest, ReadBeyondEnd) {
     iByteArray testData("Short");
     device->setBuffer(testData);
     device->open(iIODevice::ReadOnly);
-    
+
     iByteArray result = device->read(100);
     EXPECT_EQ(result, testData);
 }
@@ -241,7 +241,7 @@ TEST_F(IODeviceTest, ReadWhenWriteOnly) {
 
 TEST_F(IODeviceTest, WriteData) {
     device->open(iIODevice::WriteOnly);
-    
+
     xint64 written = device->write(iByteArray("Test"));
     EXPECT_EQ(written, 4);
     EXPECT_EQ(device->getBuffer(), iByteArray("Test"));
@@ -249,18 +249,18 @@ TEST_F(IODeviceTest, WriteData) {
 
 TEST_F(IODeviceTest, WriteMultipleTimes) {
     device->open(iIODevice::WriteOnly);
-    
+
     device->write(iByteArray("Hello"));
     device->seek(0);
     device->write(iByteArray("World"));
-    
+
     EXPECT_EQ(device->getBuffer(), iByteArray("World"));
 }
 
 TEST_F(IODeviceTest, WriteInAppendMode) {
     device->setBuffer(iByteArray("Initial"));
     device->open(iIODevice::WriteOnly | iIODevice::Append);
-    
+
     device->write(iByteArray(" Data"));
     EXPECT_EQ(device->getBuffer(), iByteArray("Initial Data"));
 }
@@ -286,10 +286,10 @@ TEST_F(IODeviceTest, InitialPosition) {
 TEST_F(IODeviceTest, SeekToPosition) {
     device->setBuffer(iByteArray("0123456789"));
     device->open(iIODevice::ReadOnly);
-    
+
     EXPECT_TRUE(device->seek(5));
     EXPECT_EQ(device->pos(), 5);
-    
+
     iByteArray result = device->read(3);
     EXPECT_EQ(result, iByteArray("567"));
 }
@@ -297,7 +297,7 @@ TEST_F(IODeviceTest, SeekToPosition) {
 TEST_F(IODeviceTest, SeekToEnd) {
     device->setBuffer(iByteArray("Data"));
     device->open(iIODevice::ReadOnly);
-    
+
     // Can seek to size (at end)
     EXPECT_TRUE(device->seek(4));
     EXPECT_TRUE(device->atEnd());
@@ -306,17 +306,17 @@ TEST_F(IODeviceTest, SeekToEnd) {
 TEST_F(IODeviceTest, SeekNegative) {
     device->setBuffer(iByteArray("Data"));
     device->open(iIODevice::ReadOnly);
-    
+
     EXPECT_FALSE(device->seek(-1));
 }
 
 TEST_F(IODeviceTest, ResetPosition) {
     device->setBuffer(iByteArray("Data"));
     device->open(iIODevice::ReadOnly);
-    
+
     device->seek(3);
     EXPECT_EQ(device->pos(), 3);
-    
+
     EXPECT_TRUE(device->reset());
     EXPECT_EQ(device->pos(), 0);
 }
@@ -332,7 +332,7 @@ TEST_F(IODeviceTest, AtEndInitially) {
 TEST_F(IODeviceTest, AtEndAfterReading) {
     device->setBuffer(iByteArray("Test"));
     device->open(iIODevice::ReadOnly);
-    
+
     device->readAll();
     EXPECT_TRUE(device->atEnd());
 }
@@ -359,7 +359,7 @@ TEST_F(IODeviceTest, BytesAvailableFull) {
 TEST_F(IODeviceTest, BytesAvailableAfterPartialRead) {
     device->setBuffer(iByteArray("12345"));
     device->open(iIODevice::ReadOnly);
-    
+
     device->read(2);
     // After reading 2 bytes, at least 3 should be available
     EXPECT_GE(device->bytesAvailable(), 3);
@@ -389,7 +389,7 @@ TEST_F(IODeviceTest, SizeAfterWrite) {
 TEST_F(IODeviceTest, ReadZeroBytes) {
     device->setBuffer(iByteArray("Data"));
     device->open(iIODevice::ReadOnly);
-    
+
     iByteArray result = device->read(0);
     EXPECT_TRUE(result.isEmpty());
 }
@@ -403,7 +403,7 @@ TEST_F(IODeviceTest, WriteEmptyData) {
 TEST_F(IODeviceTest, SeekToCurrentPosition) {
     device->setBuffer(iByteArray("Data"));
     device->open(iIODevice::ReadOnly);
-    
+
     device->seek(2);
     EXPECT_TRUE(device->seek(2));
     EXPECT_EQ(device->pos(), 2);
@@ -412,10 +412,10 @@ TEST_F(IODeviceTest, SeekToCurrentPosition) {
 TEST_F(IODeviceTest, OpenModePreservedAfterOperation) {
     device->open(iIODevice::ReadWrite);
     iIODevice::OpenMode mode = device->openMode();
-    
+
     device->write(iByteArray("Test"));
     EXPECT_EQ(device->openMode(), mode);
-    
+
     device->read(4);
     EXPECT_EQ(device->openMode(), mode);
 }

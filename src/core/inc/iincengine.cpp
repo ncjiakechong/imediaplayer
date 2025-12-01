@@ -63,7 +63,7 @@ iINCDevice* iINCEngine::createClientTransport(const iStringView& url)
 
     if (parsed.scheme == "tcp") {
         return createTcpClient(parsed);
-    } 
+    }
     else if (parsed.scheme == "pipe" || parsed.scheme == "unix") {
         return createPipeClient(parsed);
     }
@@ -82,7 +82,7 @@ iINCDevice* iINCEngine::createServerTransport(const iStringView& url)
 
     if (parsed.scheme == "tcp") {
         return createTcpServer(parsed);
-    } 
+    }
     else if (parsed.scheme == "pipe" || parsed.scheme == "unix") {
         return createPipeServer(parsed);
     }

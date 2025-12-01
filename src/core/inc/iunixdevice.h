@@ -31,14 +31,14 @@ public:
     virtual ~iUnixDevice();
 
     // --- Client Mode Methods ---
-    
+
     /// Connect to Unix domain socket (client mode only)
     /// @param path Socket path (e.g., "/tmp/inc.sock")
     /// @return 0 on success, negative on error
     int connectToPath(const iString& path);
 
     // --- Server Mode Methods ---
-    
+
     /// Start listening on Unix domain socket (server mode only)
     /// @param path Socket path
     /// @return 0 on success, negative on error
@@ -49,10 +49,10 @@ public:
     void acceptConnection();
 
     // --- Common Methods ---
-    
+
     /// Get peer address (returns socket path)
     iString peerAddress() const IX_OVERRIDE { return m_socketPath; }
-    
+
     /// Get socket path
     iString socketPath() const { return m_socketPath; }
 
@@ -96,7 +96,7 @@ private:
     int                 m_sockfd;
     iString             m_socketPath;
     iEventSource*       m_eventSource;  ///< Internal EventSource (created in connectToPath/listenOn)
-    
+
     IX_DISABLE_COPY(iUnixDevice)
 };
 

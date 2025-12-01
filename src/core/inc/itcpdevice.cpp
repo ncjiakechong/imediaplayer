@@ -79,7 +79,7 @@ public:
             addPoll(&m_pollFd);
             return;
         }
-        
+
         // If already added, check if events changed
         m_pollFd.events = newEvents;
         updatePoll(&m_pollFd);
@@ -155,22 +155,22 @@ bool iTcpDevice::isLocal() const
     // Check if peer address is a loopback address
     // IPv4: 127.0.0.0/8 (127.0.0.1 is most common)
     // IPv6: ::1
-    
+
     if (m_peerAddr.isEmpty()) {
         // No peer address yet, assume local for safety
         return true;
     }
-    
+
     // Check for IPv4 loopback (127.x.x.x)
     if (m_peerAddr.startsWith("127.")) {
         return true;
     }
-    
+
     // Check for IPv6 loopback (::1)
     if (m_peerAddr == "::1") {
         return true;
     }
-    
+
     // TODO: Could also check if peer address matches any local interface address
     // For now, non-loopback addresses are considered non-local
     return false;
@@ -238,7 +238,7 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
 
     // Update local info (kernel has bound the socket after connect)
     updateLocalInfo();
-    
+
     if (result < 0) {
         configEventAbility(false, true);
         return INC_OK;
@@ -323,10 +323,10 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     // Update local info
     m_localPort = port;
     m_localAddr = address.isEmpty() ? "0.0.0.0" : address;
-    
+
     // Open the device using base class (sets m_openMode for isOpen())
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
-    
+
     // Create EventSource for this server socket (but don't attach yet)
     // If old EventSource exists, detach and destroy it first (it monitors old socket)
     if (m_eventSource) {
@@ -334,14 +334,14 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
         m_eventSource->deref();   // Final deref() to destroy (refCount 1->0, delete this)
         m_eventSource = IX_NULLPTR;
     }
-    
+
     // Create new EventSource (constructor sets refCount to 1)
     // NOTE: Event loop not attached yet. Caller must:
     //       1. Connect to newConnection() signal
     //       2. Call startEventMonitoring() to attach to event loop for accept() notifications
     m_eventSource = new iTcpEventSource(this);
     configEventAbility(true, false);
-    
+
     ilog_info("[] Listening on", m_localAddr, ":", m_localPort);
     return INC_OK;
 }
@@ -381,16 +381,16 @@ void iTcpDevice::acceptConnection()
     // Set socket options
     clientDevice->setNonBlocking(true);
     clientDevice->setSocketOptions();
-    
+
     // Open the device using base class (sets m_openMode for isOpen())
     clientDevice->iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
-    
+
     // Create EventSource for accepted client connection
     // NOTE: Event loop not attached yet. Caller must:
     //       1. Connect to readyRead()/disconnected() signals
     //       2. Call startEventMonitoring() to attach to event loop
     clientDevice->m_eventSource = new iTcpEventSource(clientDevice);
-    
+
     // Accepted connections are already established, monitor read events only
     clientDevice->configEventAbility(true, false);
 
@@ -413,7 +413,7 @@ iByteArray iTcpDevice::readData(xint64 maxlen, xint64* readErr)
 {
     iByteArray result;
     result.resize(static_cast<int>(maxlen));
-    
+
     ssize_t bytesRead = ::recv(m_sockfd, result.data(), maxlen, 0);
     if (bytesRead > 0) {
         result.resize(static_cast<int>(bytesRead));
@@ -457,7 +457,7 @@ xint64 iTcpDevice::writeData(const iByteArray& data)
     m_eventSource->detach();
     ilog_error("[", peerAddress(), "] Write failed:", strerror(errno));
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
-    return -1;    
+    return -1;
 }
 
 void iTcpDevice::close()
@@ -478,7 +478,7 @@ void iTcpDevice::close()
     }
 
     iIODevice::close();
-    IEMIT disconnected(); 
+    IEMIT disconnected();
 }
 
 bool iTcpDevice::startEventMonitoring(iEventDispatcher* dispatcher)
@@ -648,11 +648,11 @@ void iTcpDevice::handleConnectionComplete()
 
     // Open the device using base class (sets m_openMode for isOpen())
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
-    
+
     // Keep monitoring both read and write events temporarily
     // Protocol layer will adjust this after sending queued messages
     configEventAbility(true, false);
-    
+
     ilog_info("[] Connected to ", m_peerAddr, ":", m_peerPort);
     IEMIT connected();
 }
