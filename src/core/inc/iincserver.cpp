@@ -63,18 +63,16 @@ int iINCServer::listenOn(const iStringView& url)
         return INC_ERROR_INVALID_STATE;
     }
 
-    // Use url parameter if provided, otherwise use config listen address
-    iString listenUrl = url.isEmpty() ? m_config.listenAddress() : url.toString();
-    if (listenUrl.isEmpty()) {
+    if (url.isEmpty()) {
         ilog_error("[", objectName(), "] No listen URL specified and no listen address in config");
         return INC_ERROR_INVALID_ARGS;
     }
 
     // Create listening device
     // Create server transport using engine (EventSource is created but NOT attached yet)
-    m_listenDevice = m_engine->createServerTransport(listenUrl);
+    m_listenDevice = m_engine->createServerTransport(url);
     if (!m_listenDevice) {
-        ilog_error("[", objectName(), "] Failed to create listen device for", listenUrl);
+        ilog_error("[", objectName(), "] Failed to create listen device for", url);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -94,8 +92,8 @@ int iINCServer::listenOn(const iStringView& url)
         }
 
         // perClient = false
-        m_globalPool = iMemPool::create(m_config.sharedMemoryName().constData(), poolType, m_config.sharedMemorySize(), false);
-        ilog_info("[", objectName(), "] Created global memory pool with type:", m_globalPool->type(), "name:", m_config.sharedMemoryName().constData());
+        m_globalPool = iMemPool::create("iINCServer", m_config.sharedMemoryName().constData(), poolType, m_config.sharedMemorySize(), false);
+        ilog_info("[", objectName(), "] Created global memory pool with type:", m_globalPool->type(), " name:", m_config.sharedMemoryName().constData());
     }
 
     m_listening = true;
@@ -224,7 +222,6 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     // Connect all forwarding signals from connection
     iObject::connect(conn, &iINCConnection::disconnected, this, &iINCServer::onClientDisconnected, iShell::DirectConnection);
     iObject::connect(conn, &iINCConnection::errorOccurred, this, &iINCServer::onConnectionErrorOccurred, iShell::DirectConnection);
-    iObject::connect(conn, &iINCConnection::binaryDataReceived, this, &iINCServer::onConnectionBinaryData, iShell::DirectConnection);
     iObject::connect(conn, &iINCConnection::messageReceived, this, &iINCServer::onConnectionMessageReceived, iShell::DirectConnection);
 
     // AFTER EventSource is attached, configure event monitoring
@@ -291,6 +288,18 @@ void iINCServer::onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCod
 {
     ilog_warn("[", conn->peerName(), "] Device error occurred, connection ID:", conn->connectionId(), "error:", errorCode);
     conn->close();
+}
+
+_iINCPStream::_iINCPStream(iINCServer* server, xuint32 channelId, Mode mode, iObject* parent)
+    : iINCChannel(parent)
+    , m_mode(mode)
+    , m_channelId(channelId)
+    , m_server(server)
+{}
+
+void _iINCPStream::onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) 
+{
+    m_server->onConnectionBinaryData(conn, channelId, seqNum, pos, data);
 }
 
 void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg)
@@ -366,9 +375,8 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMes
                 } else if (!m_config.disableSharedMemory() && conn->isLocal() && negotiontedShmType)  {
                     // Select the highest priority bit (lowest bit position) using iCountTrailingZeroBits
                     // MEMFD (0x02, bit 1) has higher priority than POSIX (0x04, bit 2)
-                    iByteArray pollName = iByteArray(clientShmName.data(), clientShmName.size()); // ensure \0 at the end
                     negotiontedShmType = static_cast<xuint16>(1) << iCountTrailingZeroBits(negotiontedShmType);
-                    iMemPool* memPool = iMemPool::create(pollName.constData(), static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize(), true);
+                    iMemPool* memPool = iMemPool::create("iINCServer", clientShmName.constData(), static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize(), true);
                     conn->enableMempool(iSharedDataPointer<iMemPool>(memPool));
                 } else {
                     negotiontedShmType = 0;
@@ -379,7 +387,7 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMes
             }
 
             // Allocate channel
-            xuint32 channelId = conn->allocateChannel(++m_nextChannelId, mode);
+            xuint32 channelId = conn->regeisterChannel(new _iINCPStream(this, ++m_nextChannelId, static_cast<iINCChannel::Mode>(mode)));
 
             // Send reply with allocated channel ID using type-safe API
             iINCMessage reply(INC_MSG_STREAM_OPEN_ACK, msg.channelID(), msg.sequenceNumber());
@@ -406,7 +414,7 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMes
             }
 
             // Release channel
-            conn->releaseChannel(channelId);
+            delete conn->unregeisterChannel(channelId);
 
             // Send confirmation reply using type-safe API
             ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Channel released and confirmed");

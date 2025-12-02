@@ -21,7 +21,6 @@ protected:
  * Test: Default constructor values
  */
 TEST_F(INCServerConfigTest, DefaultValues) {
-    EXPECT_FALSE(config.systemInstance());
     EXPECT_EQ(iINCServerConfig::Compatible, config.versionPolicy());
     EXPECT_EQ(1, config.protocolVersionCurrent());
     EXPECT_EQ(1, config.protocolVersionMin());
@@ -31,33 +30,12 @@ TEST_F(INCServerConfigTest, DefaultValues) {
     EXPECT_EQ(256 * 1024 * 1024, config.sharedMemorySize());
     EXPECT_FALSE(config.disableSharedMemory());
     EXPECT_FALSE(config.disableMemfd());
-    EXPECT_EQ(16 * 1024 * 1024, config.maxMessageSize());
     EXPECT_EQ(iINCServerConfig::Optional, config.encryptionRequirement());
     EXPECT_EQ(60000, config.clientTimeoutMs());
     EXPECT_EQ(-1, config.exitIdleTimeMs());
     EXPECT_FALSE(config.highPriority());
     EXPECT_EQ(-11, config.niceLevel());
     EXPECT_TRUE(config.enableIOThread());
-}
-
-/**
- * Test: Listen address getter/setter
- */
-TEST_F(INCServerConfigTest, ListenAddress) {
-    iString addr("tcp://127.0.0.1:19000");
-    config.setListenAddress(addr);
-    EXPECT_EQ(addr, config.listenAddress());
-}
-
-/**
- * Test: System instance getter/setter
- */
-TEST_F(INCServerConfigTest, SystemInstance) {
-    config.setSystemInstance(true);
-    EXPECT_TRUE(config.systemInstance());
-
-    config.setSystemInstance(false);
-    EXPECT_FALSE(config.systemInstance());
 }
 
 /**
@@ -119,14 +97,6 @@ TEST_F(INCServerConfigTest, DisableSharedMemory) {
 TEST_F(INCServerConfigTest, DisableMemfd) {
     config.setDisableMemfd(true);
     EXPECT_TRUE(config.disableMemfd());
-}
-
-/**
- * Test: Max message size getter/setter
- */
-TEST_F(INCServerConfigTest, MaxMessageSize) {
-    config.setMaxMessageSize(32 * 1024 * 1024);
-    EXPECT_EQ(32 * 1024 * 1024, config.maxMessageSize());
 }
 
 /**

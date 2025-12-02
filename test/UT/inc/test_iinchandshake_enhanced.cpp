@@ -57,7 +57,6 @@ TEST_F(INCHandshakeEnhancedTest, SetServerConfig) {
     iINCHandshake handshake(iINCHandshake::ROLE_SERVER);
 
     iINCServerConfig config;
-    config.setListenAddress("0.0.0.0:19000");
     config.setProtocolVersionRange(1, 1, 1);
 
     handshake.setServerConfig(&config);
@@ -159,7 +158,6 @@ TEST_F(INCHandshakeEnhancedTest, FullHandshakeExchange) {
     iINCHandshake serverHandshake(iINCHandshake::ROLE_SERVER);
     iINCServerConfig serverConfig;
     serverConfig.setProtocolVersionRange(1, 1, 1);
-    serverConfig.setListenAddress("0.0.0.0:19000");
     serverHandshake.setServerConfig(&serverConfig);
 
     // Server processes client handshake

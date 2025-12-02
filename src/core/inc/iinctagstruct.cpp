@@ -129,6 +129,7 @@ void iINCTagStruct::putBytes(iByteArrayView data)
     // Write binary data
     if (length > 0) {
         m_data.append(data);
+        m_data.append('\0');
     }
 }
 
@@ -355,7 +356,7 @@ bool iINCTagStruct::getBytes(iByteArray& value) const
     iByteArray::DataPointer dp(const_cast<iINCTagStruct*>(this)->m_data.data_ptr().d_ptr(),
                                 const_cast<iINCTagStruct*>(this)->m_data.data_ptr().begin() + m_readIndex,
                                 length);
-    m_readIndex += length;
+    m_readIndex += length + 1;
 
     value = iByteArray(dp);
     return true;
@@ -496,7 +497,7 @@ iString iINCTagStruct::dump() const
                         tempIndex += length;
                     } else if (tag == TAG_BYTES) {
                         result += iString::asprintf("<%u bytes>\n", length);
-                        tempIndex += length;
+                        tempIndex += length + (length > 0 ? 1 : 0);
                     }
                 }
                 break;

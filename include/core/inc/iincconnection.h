@@ -24,7 +24,32 @@ class iINCDevice;
 class iINCServer;
 class iINCContext;
 class iINCProtocol;
-class iINCStream;
+class iINCConnection;
+
+class IX_CORE_EXPORT iINCChannel : public iObject
+{
+    IX_OBJECT(iINCChannel)
+public:
+    /// Stream mode
+    enum Mode {
+        MODE_READ   = 0x01 << 0,    ///< Read-only (receive binary data)
+        MODE_WRITE  = 0x01 << 1,    ///< Write-only (send binary data)
+        MODE_READWRITE = MODE_READ | MODE_WRITE ///< Bidirectional
+    };
+
+    explicit iINCChannel(iObject* parent = IX_NULLPTR);
+    iINCChannel(const iString& name, iObject* parent = IX_NULLPTR);
+    virtual ~iINCChannel();
+
+    virtual xuint32 channelId() const = 0;
+    virtual Mode mode() const = 0;
+
+protected:
+    virtual void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) = 0;
+
+    friend class iINCConnection;
+    IX_DISABLE_COPY(iINCChannel)
+};
 
 /// @brief Represents a client connection on the server side
 /// @details Each connected client has an associated iINCConnection object.
@@ -79,10 +104,6 @@ private: // signals
     /// Emitted when protocol message received (forwarded to server for handling)
     void messageReceived(iINCConnection* conn, const iINCMessage& msg) ISIGNAL(messageReceived, conn, msg);
 
-    /// Emitted when binary data received on a channel
-    /// @note Private signal - server uses handleBinaryData virtual method instead
-    void binaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) ISIGNAL(binaryDataReceived, conn, channelId, seqNum, pos, data);
-
     /// Emitted when device error occurs (forwarded to server for handling)
     void errorOccurred(iINCConnection* conn, xint32 errorCode) ISIGNAL(errorOccurred, conn, errorCode);
 
@@ -91,6 +112,7 @@ private:
     virtual ~iINCConnection();
 
     /// Enable shared memory
+    iSharedDataPointer<iMemPool> mempool() const;
     void enableMempool(iSharedDataPointer<iMemPool> pool);
 
     bool matchesPattern(const iString& eventName, const iString& pattern) const;
@@ -113,13 +135,14 @@ private:
     void removeSubscription(const iString& pattern);
 
     /// Allocate channel for stream (server-side only)
-    /// @param mode Stream mode requested by client
+    /// @param channel Stream channel requested by client
     /// @return Allocated channel ID, or 0 if allocation failed
-    xuint32 allocateChannel(xuint32 channelId, xuint32 mode);
+    xuint32 regeisterChannel(iINCChannel* channel);
 
     /// Release channel (server-side only)
     /// @param channelId Channel to release
-    void releaseChannel(xuint32 channelId);
+    /// @return Allocated channel instance
+    iINCChannel* unregeisterChannel(xuint32 channelId);
 
     /// Set handshake handler (server-side only)
     void setHandshakeHandler(class iINCHandshake* handshake);
@@ -149,11 +172,10 @@ private:
     std::vector<iString>    m_subscriptions;
 
     // Channel management (server-side)
-    std::unordered_map<xuint32, xuint32> m_channels;  ///< channelId -> mode
+    std::unordered_map<xuint32, iINCChannel*> m_channels;  ///< channelId -> mode
 
     friend class iINCServer;
     friend class iINCContext;
-    friend class iINCStream;
     IX_DISABLE_COPY(iINCConnection)
 };
 

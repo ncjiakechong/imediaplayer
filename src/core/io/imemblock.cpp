@@ -656,7 +656,7 @@ void iMemBlock::replaceImport()
  *
  * TODO-1: Transform the global core mempool to a per-client one
  * TODO-2: Remove global mempools support */
-iMemPool* iMemPool::create(const char* name, MemType type, size_t size, bool perClient)
+iMemPool* iMemPool::create(const char* name, const char* prefix, MemType type, size_t size, bool perClient)
 {
     const size_t page_size = ix_page_size();
     size_t block_size = ix_page_align(IX_MEMPOOL_SLOT_SIZE);
@@ -673,7 +673,7 @@ iMemPool* iMemPool::create(const char* name, MemType type, size_t size, bool per
             n_blocks = 2;
     }
 
-    iShareMem* memory = iShareMem::create(name, type, n_blocks * block_size, 0700);
+    iShareMem* memory = iShareMem::create(prefix, type, n_blocks * block_size, 0700);
     if (IX_NULLPTR == memory)
         return IX_NULLPTR;
 

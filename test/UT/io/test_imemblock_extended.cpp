@@ -8,7 +8,7 @@ using namespace iShell;
 class IMemBlockExtendedTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        pool = iMemPool::create("test_ext", MEMTYPE_PRIVATE, 128*1024, true);
+        pool = iMemPool::create("test_ext", "test_ext", MEMTYPE_PRIVATE, 128*1024, true);
         ASSERT_NE(pool, nullptr);
         poolPtr = iSharedDataPointer<iMemPool>(pool);
     }
@@ -219,8 +219,8 @@ TEST_F(IMemBlockExtendedTest, StatsAfterAlloc) {
 }
 
 TEST_F(IMemBlockExtendedTest, PoolDiffSizes) {
-    iMemPool* s = iMemPool::create("small", MEMTYPE_PRIVATE, 16*1024, false);
-    iMemPool* l = iMemPool::create("large", MEMTYPE_PRIVATE, 512*1024, false);
+    iMemPool* s = iMemPool::create("small", "small", MEMTYPE_PRIVATE, 16*1024, false);
+    iMemPool* l = iMemPool::create("large", "large", MEMTYPE_PRIVATE, 512*1024, false);
     ASSERT_NE(s, nullptr);
     ASSERT_NE(l, nullptr);
     s->deref();
@@ -228,7 +228,7 @@ TEST_F(IMemBlockExtendedTest, PoolDiffSizes) {
 }
 
 TEST_F(IMemBlockExtendedTest, PoolPerClient) {
-    iMemPool* p = iMemPool::create("client", MEMTYPE_PRIVATE, 64*1024, true);
+    iMemPool* p = iMemPool::create("client", "client", MEMTYPE_PRIVATE, 64*1024, true);
     ASSERT_NE(p, nullptr);
     EXPECT_TRUE(p->isPerClient());
     p->deref();

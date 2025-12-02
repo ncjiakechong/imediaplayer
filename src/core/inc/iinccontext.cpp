@@ -312,6 +312,7 @@ void iINCContext::handleHandshakeAck(iINCConnection* conn, const iINCMessage& ms
     }
 
     // Handshake completed successfully
+    // CRITICAL: Save handshake data BEFORE clearHandshake() deletes it
     const iINCHandshakeData& remote = handshake->remoteData();
     conn->setConnectionId(msg.channelID());
     conn->setPeerName(remote.nodeName);
@@ -320,7 +321,7 @@ void iINCContext::handleHandshakeAck(iINCConnection* conn, const iINCMessage& ms
 
     invokeMethod(this, &iINCContext::setState, STATE_READY);
     ilog_info("[", objectName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                "] Handshake completed with", remote.nodeName, "protocol version", remote.protocolVersion);
+                "] Handshake completed with", conn->peerName(), "protocol version", conn->peerProtocolVersion());
 }
 
 void iINCContext::handleEvent(iINCConnection*, const iINCMessage& msg)
@@ -397,14 +398,18 @@ iSharedDataPointer<iINCOperation> iINCContext::requestChannel(xuint32 mode)
     // Prepare STREAM_OPEN message with mode in payload using type-safe API
     iINCMessage msg(INC_MSG_STREAM_OPEN, m_connection->connectionId(), m_connection->nextSequence());  // Protocol assigns sequence number
     msg.payload().putUint32(mode);
-    msg.payload().putBool(!m_config.disableSharedMemory());
+    msg.payload().putBool(!m_config.disableSharedMemory() || m_connection->mempool());
 
-    // If this is the first stream and shared memory is not negotiated yet,
-    // include shared memory negotiation parameters
-    if (!m_config.disableSharedMemory()) {
+    if (m_connection->mempool()) {
+        // send current config to server
+        msg.payload().putUint16(m_connection->mempool()->type());
+        msg.payload().putBytes(m_config.sharedMemoryName());
+    } else if (!m_config.disableSharedMemory()) {
+        // If this is the first stream and shared memory is not negotiated yet,
+        // include shared memory negotiation parameters
         msg.payload().putUint16(m_config.sharedMemoryType());
         msg.payload().putBytes(m_config.sharedMemoryName());
-    }
+    } else {}
 
     // Send request - protocol creates and tracks operation
     auto op = m_connection->sendMessage(msg);
@@ -434,5 +439,37 @@ iSharedDataPointer<iINCOperation> iINCContext::releaseChannel(xuint32 channelId)
     op->setTimeout(m_config.operationTimeoutMs());
     return op;
 }
+
+xuint32 iINCContext::regeisterChannel(iINCChannel* channel, MemType type)
+{
+    IX_ASSERT(m_state == STATE_READY && m_connection);
+    if ((0 != type) && !m_connection->mempool()) {
+        iMemPool* memPool = iMemPool::create("iINCContext", m_config.sharedMemoryName().constData(), type, m_config.sharedMemorySize(), true);
+        m_connection->enableMempool(iSharedDataPointer<iMemPool>(memPool));
+    }
+
+    return m_connection->regeisterChannel(channel);
+}
+
+iINCChannel* iINCContext::unregeisterChannel(xuint32 channelId)
+{
+    IX_ASSERT(m_state == STATE_READY && m_connection);
+    return m_connection->unregeisterChannel(channelId);
+}
+
+iSharedDataPointer<iINCOperation> iINCContext::sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data)
+{
+    IX_ASSERT(m_state == STATE_READY && m_connection);
+    return m_connection->sendBinaryData(channel, pos, data);
+}
+
+void iINCContext::ackDataReceived(xuint32 channel, xuint32 seqNum, xint32 size)
+{
+    IX_ASSERT(m_state == STATE_READY && m_connection);
+    iINCMessage msg(INC_MSG_BINARY_DATA_ACK, channel, seqNum);
+    msg.payload().putInt32(size);
+    m_connection->sendMessage(msg);
+}
+
 
 } // namespace iShell

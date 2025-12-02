@@ -20,9 +20,9 @@ namespace iShell {
 class IX_CORE_EXPORT iShareMem
 {
 public:
-    static iShareMem* create(const char* name, MemType type, size_t size, mode_t mode);
+    static iShareMem* create(const char* prefix, MemType type, size_t size, mode_t mode);
 
-    iShareMem(const char* name);
+    iShareMem(const char* prefix);
     ~iShareMem();
 
     int attach(MemType type, uint id, xintptr memfd, bool writable);
@@ -35,14 +35,14 @@ public:
     inline MemType type() const { return m_type; }
 
 private:
-    static iShareMem* createPrivateMem(const char* name, size_t size);
-    static iShareMem* createSharedMem(const char* name, MemType type, size_t size, mode_t mode);
-    static int cleanup(const char* name);
+    static iShareMem* createPrivateMem(const char* prefix, size_t size);
+    static iShareMem* createSharedMem(const char* prefix, MemType type, size_t size, mode_t mode);
+    static int cleanup(const char* prefix);
 
     int doAttach(MemType type, uint id, xintptr memfd, bool writable, bool for_cleanup);
     void freePrivateMem();
 
-    char        m_name[16];
+    const char  m_prefix[16];
     MemType     m_type;
     uint        m_id;
     void*       m_ptr;

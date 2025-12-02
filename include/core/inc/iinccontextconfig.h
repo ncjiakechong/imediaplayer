@@ -11,7 +11,6 @@
 #define IINCCONTEXTCONFIG_H
 
 #include <core/utils/istring.h>
-#include <cstddef>  // for size_t
 
 namespace iShell {
 
@@ -63,8 +62,8 @@ public:
     bool disableSharedMemory() const { return m_disableSharedMemory; }
     void setDisableSharedMemory(bool disable) { m_disableSharedMemory = disable; }
 
-    size_t sharedMemorySize() const { return m_sharedMemorySize; }
-    void setSharedMemorySize(size_t size) { m_sharedMemorySize = size; }
+    xuint32 sharedMemorySize() const { return m_sharedMemorySize; }
+    void setSharedMemorySize(xuint32 size) { m_sharedMemorySize = size; }
 
     xuint16 sharedMemoryType() const { return m_sharedMemoryType; }
     void setSharedMemoryType(xuint16 type) { m_sharedMemoryType = type; }
@@ -117,8 +116,8 @@ private:
 
     // Transport options
     bool m_disableSharedMemory = false;
-    size_t m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
     xuint16 m_sharedMemoryType = MEMTYPE_SHARED_POSIX;
+    xuint32 m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
     iByteArray m_sharedMemoryName = "ix-shm";
 
     // Encryption settings

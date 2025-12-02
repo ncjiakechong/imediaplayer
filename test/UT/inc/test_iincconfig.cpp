@@ -16,8 +16,6 @@ TEST_F(INCServerConfigTest, DefaultConstruction) {
     iINCServerConfig config;
 
     // Verify default values
-    EXPECT_TRUE(config.listenAddress().isEmpty());
-    EXPECT_FALSE(config.systemInstance());
     EXPECT_EQ(config.versionPolicy(), iINCServerConfig::Compatible);
     EXPECT_EQ(config.protocolVersionCurrent(), 1);
     EXPECT_EQ(config.protocolVersionMin(), 1);
@@ -26,7 +24,6 @@ TEST_F(INCServerConfigTest, DefaultConstruction) {
     EXPECT_EQ(config.maxConnectionsPerClient(), 10);
     EXPECT_EQ(config.sharedMemorySize(), 4 * 1024 * 1024);
     EXPECT_FALSE(config.disableSharedMemory());
-    EXPECT_EQ(config.maxMessageSize(), 16 * 1024 * 1024);
     EXPECT_EQ(config.encryptionRequirement(), iINCServerConfig::Optional);
     EXPECT_TRUE(config.certificatePath().isEmpty());
     EXPECT_TRUE(config.privateKeyPath().isEmpty());
@@ -35,16 +32,6 @@ TEST_F(INCServerConfigTest, DefaultConstruction) {
     EXPECT_FALSE(config.highPriority());
     EXPECT_EQ(config.niceLevel(), -11);
     EXPECT_TRUE(config.enableIOThread());
-}
-
-TEST_F(INCServerConfigTest, SetListenSettings) {
-    iINCServerConfig config;
-
-    config.setListenAddress("127.0.0.1:8080");
-    EXPECT_EQ(config.listenAddress(), "127.0.0.1:8080");
-
-    config.setSystemInstance(true);
-    EXPECT_TRUE(config.systemInstance());
 }
 
 TEST_F(INCServerConfigTest, SetVersionPolicy) {
@@ -84,9 +71,6 @@ TEST_F(INCServerConfigTest, SetResourceLimits) {
 
     config.setDisableSharedMemory(true);
     EXPECT_TRUE(config.disableSharedMemory());
-
-    config.setMaxMessageSize(32 * 1024 * 1024);
-    EXPECT_EQ(config.maxMessageSize(), 32 * 1024 * 1024);
 }
 
 TEST_F(INCServerConfigTest, SetEncryptionSettings) {
@@ -137,13 +121,11 @@ TEST_F(INCServerConfigTest, SetThreadingSettings) {
 
 TEST_F(INCServerConfigTest, DumpMethod) {
     iINCServerConfig config;
-    config.setListenAddress("127.0.0.1:19000");
     config.setMaxConnections(200);
 
     iString dump = config.dump();
     EXPECT_FALSE(dump.isEmpty());
     // Dump should contain configuration information
-    EXPECT_TRUE(dump.contains("127.0.0.1:19000"));
     EXPECT_TRUE(dump.contains("Max Connections: 200"));
 }
 

@@ -89,10 +89,10 @@ static char* segmentName(char *fn, size_t l, const char* name, unsigned id)
     return fn;
 }
 
-iShareMem* iShareMem::createPrivateMem(const char* name, size_t size)
+iShareMem* iShareMem::createPrivateMem(const char* prefix, size_t size)
 {
     IX_ASSERT(size > 0);
-    iShareMem* shm = new iShareMem(name);
+    iShareMem* shm = new iShareMem(prefix);
     shm->m_type = MEMTYPE_PRIVATE;
     shm->m_size = size;
 
@@ -129,18 +129,18 @@ static void ix_random(void *ret_data, size_t length) {
         *p = (xuint8) rand();
 }
 
-iShareMem* iShareMem::createSharedMem(const char* name, MemType type, size_t size, mode_t mode)
+iShareMem* iShareMem::createSharedMem(const char* prefix, MemType type, size_t size, mode_t mode)
 {
     /* Each time we create a new SHM area, let's first drop all stale ones */
-    cleanup(name);
+    cleanup(prefix);
 
-    iShareMem* shm = new iShareMem(name);
+    iShareMem* shm = new iShareMem(prefix);
     ix_random(&(shm->m_id), sizeof(shm->m_id));
 
     switch (type) {
     case MEMTYPE_SHARED_POSIX: {
         char fn[32] = { 0 };
-        segmentName(fn, sizeof(fn), shm->m_name, shm->m_id);
+        segmentName(fn, sizeof(fn), shm->m_prefix, shm->m_id);
         shm->m_memfd = shm_open(fn, O_RDWR|O_CREAT|O_EXCL, mode);
         shm->m_doUnlink = true;
         break;
@@ -202,28 +202,28 @@ iShareMem* iShareMem::createSharedMem(const char* name, MemType type, size_t siz
     return shm;
 }
 
-iShareMem* iShareMem::create(const char* name, MemType type, size_t size, mode_t mode) {
+iShareMem* iShareMem::create(const char* prefix, MemType type, size_t size, mode_t mode) {
     IX_ASSERT((size > 0) && (size <= MAX_SHM_SIZE));
     IX_ASSERT(!(mode & ~0777) && (mode >= 0600));
 
     /* Round up to make it page aligned */
     size = ix_page_align(size);
     if (type == MEMTYPE_PRIVATE)
-        return createPrivateMem(name, size);
+        return createPrivateMem(prefix, size);
 
-    return createSharedMem(name, type, size, mode);
+    return createSharedMem(prefix, type, size, mode);
 }
 
-iShareMem::iShareMem(const char* name)
-    : m_type(MEMTYPE_PRIVATE)
+iShareMem::iShareMem(const char* prefix)
+    : m_prefix{}
+    , m_type(MEMTYPE_PRIVATE)
     , m_id(0)
     , m_ptr(IX_NULLPTR)
     , m_size(0)
     , m_doUnlink(false)
     , m_memfd(-1)
 {
-    istrncpy(m_name, name, std::min(sizeof(m_name), istrlen(name)));
-    m_name[sizeof(m_name) - 1] = '\0';
+    istrncpy(const_cast<char*>(m_prefix), prefix, std::min(sizeof(m_prefix), istrlen(prefix)));
 }
 
 iShareMem::~iShareMem()
@@ -247,7 +247,7 @@ int iShareMem::detach()
 
         if ((MEMTYPE_SHARED_POSIX == m_type) && m_doUnlink) {
             char fn[32] = { 0 };
-            segmentName(fn, sizeof(fn), m_name, m_id);
+            segmentName(fn, sizeof(fn), m_prefix, m_id);
             if (shm_unlink(fn) < 0)
                 ilog_warn(" shm_unlink(", fn, ") failed: ", errno);
         }
@@ -324,7 +324,7 @@ int iShareMem::doAttach(MemType type, uint id, xintptr memfd, bool writable, boo
     case MEMTYPE_SHARED_POSIX: {
         IX_ASSERT(-1 == memfd);
         char fn[32] = { 0 };
-        segmentName(fn, sizeof(fn), m_name, id);
+        segmentName(fn, sizeof(fn), m_prefix, id);
         fd = shm_open(fn, writable ? O_RDWR : O_RDONLY, 0);
 
         if (fd < 0) {
@@ -505,7 +505,7 @@ int iShareMem::cleanup(const char* name)
 
         /* Ok, the owner of this shms segment is dead, so, let's remove the segment */
         char fn[128] = { 0 };
-        segmentName(fn, sizeof(fn), seg.m_name, id);
+        segmentName(fn, sizeof(fn), seg.m_prefix, id);
 
         if (shm_unlink(fn) < 0 && errno != EACCES && errno != ENOENT) {
             ilog_warn("Failed to remove SHM segment ", fn, ": ", errno);

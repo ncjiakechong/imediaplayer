@@ -18,7 +18,7 @@ class IMemBlockTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Create a memory pool for testing - use MEMTYPE_PRIVATE to avoid name collisions
-        pool = iMemPool::create("test_pool", MEMTYPE_PRIVATE, 64*1024, false);
+        pool = iMemPool::create("test_pool", "test_pool", MEMTYPE_PRIVATE, 64*1024, false);
         ASSERT_NE(pool, nullptr);
         poolPtr = iSharedDataPointer<iMemPool>(pool);
     }
@@ -371,7 +371,7 @@ protected:
 // Test memory pool creation
 TEST_F(IMemPoolTest, CreateBasic) {
     // Use MEMTYPE_PRIVATE instead of SHARED_POSIX to avoid name collision
-    iSharedDataPointer<iMemPool> pool(iMemPool::create("test_pool", MEMTYPE_PRIVATE,
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("test_pool", "test_pool", MEMTYPE_PRIVATE,
                                        64*1024, false));
     ASSERT_NE(pool.data(), nullptr);
     // Just verify pool was created successfully
@@ -381,7 +381,7 @@ TEST_F(IMemPoolTest, CreateBasic) {
 // Test global pool creation
 TEST_F(IMemPoolTest, CreateGlobalPool) {
     // Use MEMTYPE_PRIVATE - note that global flag may not apply to private memory
-    iSharedDataPointer<iMemPool> pool(iMemPool::create("global_pool", MEMTYPE_PRIVATE,
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("global_pool", "global_pool", MEMTYPE_PRIVATE,
                                        64*1024, true));
     ASSERT_NE(pool.data(), nullptr);
     // For MEMTYPE_PRIVATE, the pool is always per-client
@@ -391,7 +391,7 @@ TEST_F(IMemPoolTest, CreateGlobalPool) {
 
 // Test pool statistics
 TEST_F(IMemPoolTest, PoolStatistics) {
-    iSharedDataPointer<iMemPool> pool(iMemPool::create("stats_pool", MEMTYPE_PRIVATE,
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("stats_pool", "stats_pool", MEMTYPE_PRIVATE,
                                        64*1024, false));
     ASSERT_NE(pool.data(), nullptr);
 
@@ -410,7 +410,7 @@ TEST_F(IMemPoolTest, PoolStatistics) {
 
 // Test blockSizeMax
 TEST_F(IMemPoolTest, BlockSizeMax) {
-    iSharedDataPointer<iMemPool> pool(iMemPool::create("size_pool", MEMTYPE_PRIVATE,
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("size_pool", "size_pool", MEMTYPE_PRIVATE,
                                        64*1024, false));
     ASSERT_NE(pool.data(), nullptr);
 
@@ -420,7 +420,7 @@ TEST_F(IMemPoolTest, BlockSizeMax) {
 
 // Test isShared method
 TEST_F(IMemPoolTest, IsShared) {
-    iSharedDataPointer<iMemPool> pool(iMemPool::create("shared_pool", MEMTYPE_PRIVATE,
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("shared_pool", "shared_pool", MEMTYPE_PRIVATE,
                                        64*1024, false));
     ASSERT_NE(pool.data(), nullptr);
 
@@ -431,7 +431,7 @@ TEST_F(IMemPoolTest, IsShared) {
 
 // Test vacuum method
 TEST_F(IMemPoolTest, Vacuum) {
-    iSharedDataPointer<iMemPool> pool(iMemPool::create("vacuum_pool", MEMTYPE_PRIVATE,
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("vacuum_pool", "vacuum_pool", MEMTYPE_PRIVATE,
                                        64*1024, false));
     ASSERT_NE(pool.data(), nullptr);
 
@@ -446,7 +446,7 @@ TEST_F(IMemPoolTest, Vacuum) {
 
 // Test remote writable flag
 TEST_F(IMemPoolTest, RemoteWritable) {
-    iSharedDataPointer<iMemPool> pool(iMemPool::create("rw_pool", MEMTYPE_PRIVATE,
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("rw_pool", "rw_pool", MEMTYPE_PRIVATE,
                                        64*1024, false));
     ASSERT_NE(pool.data(), nullptr);
 
@@ -462,14 +462,14 @@ TEST_F(IMemPoolTest, RemoteWritable) {
 // Test pool with different memory types
 TEST_F(IMemPoolTest, DifferentMemTypes) {
     // Test MEMTYPE_SHARED_POSIX
-    iSharedDataPointer<iMemPool> pool1(iMemPool::create("anon_pool", MEMTYPE_SHARED_POSIX,
+    iSharedDataPointer<iMemPool> pool1(iMemPool::create("anon_pool", "anon_pool", MEMTYPE_SHARED_POSIX,
                                         64*1024, false));
     if (pool1.data() != nullptr) {
         EXPECT_FALSE(pool1->isMemfdBacked());
     }
 
     // Test MEMTYPE_SHARED_MEMFD
-    iSharedDataPointer<iMemPool> pool2(iMemPool::create("memfd_pool", MEMTYPE_SHARED_MEMFD,
+    iSharedDataPointer<iMemPool> pool2(iMemPool::create("memfd_pool", "memfd_pool", MEMTYPE_SHARED_MEMFD,
                                         64*1024, false));
     if (pool2.data() != nullptr) {
         EXPECT_TRUE(pool2->isMemfdBacked());
@@ -478,7 +478,7 @@ TEST_F(IMemPoolTest, DifferentMemTypes) {
 
 // Test pool reference counting
 TEST_F(IMemPoolTest, PoolRefCounting) {
-    iMemPool* rawPool = iMemPool::create("ref_pool", MEMTYPE_SHARED_POSIX,
+    iMemPool* rawPool = iMemPool::create("ref_pool", "ref_pool", MEMTYPE_SHARED_POSIX,
                                        64*1024, false);
     ASSERT_NE(rawPool, nullptr);
 
@@ -498,9 +498,9 @@ TEST_F(IMemPoolTest, PoolRefCounting) {
 
 // Test multiple pools
 TEST_F(IMemPoolTest, MultiplePools) {
-    iSharedDataPointer<iMemPool> pool1(iMemPool::create("pool1", MEMTYPE_SHARED_POSIX,
+    iSharedDataPointer<iMemPool> pool1(iMemPool::create("pool1", "pool1", MEMTYPE_SHARED_POSIX,
                                         32*1024, false));
-    iSharedDataPointer<iMemPool> pool2(iMemPool::create("pool2", MEMTYPE_SHARED_POSIX,
+    iSharedDataPointer<iMemPool> pool2(iMemPool::create("pool2", "pool2", MEMTYPE_SHARED_POSIX,
                                         64*1024, false));
 
     ASSERT_FALSE(pool1.data() == nullptr);

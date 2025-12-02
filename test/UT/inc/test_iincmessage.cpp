@@ -341,9 +341,9 @@ TEST_F(INCMessageTest, PayloadAtMaxSize) {
     // Note: iINCTagStruct adds tag bytes, so we need to account for that
     iINCTagStruct maxPayload;
 
-    // putBytes adds a tag byte + 4 bytes for length, so payload should be MAX - 5
+    // putBytes adds a tag byte + 4 bytes for length + 1 byte null terminator, so payload should be MAX - 6
     iByteArray maxData;
-    const int tagOverhead = 5; // 1 byte tag + 4 bytes length
+    const int tagOverhead = 6; // 1 byte tag + 4 bytes length + 1 byte null terminator
     maxData.resize(iINCMessageHeader::MAX_MESSAGE_SIZE - tagOverhead);
     for (int i = 0; i < maxData.size(); ++i) {
         maxData[i] = static_cast<char>(i % 256);

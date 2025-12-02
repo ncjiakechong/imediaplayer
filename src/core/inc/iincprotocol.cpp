@@ -166,7 +166,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
     // Fallback to data copy using type-safe API
     msg.setFlags(INC_MSG_FLAG_NONE);
     msg.payload().putInt64(pos);
-    msg.payload().putBytes(iByteArrayView(data.constData(), std::min<xsizetype>(data.size(), iINCMessageHeader::MAX_MESSAGE_SIZE - 5)));
+    msg.payload().putBytes(iByteArrayView(data.constData(), std::min<xsizetype>(data.size(), iINCMessageHeader::MAX_MESSAGE_SIZE - 10)));
     ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via copy: size=", msg.payload().size(), " bytes");
     return sendMessage(msg);
 }

@@ -16,16 +16,16 @@
 #ifndef IINCSTREAM_H
 #define IINCSTREAM_H
 
-#include <core/kernel/iobject.h>
-#include <core/inc/iinccontext.h>
-#include <core/utils/ibytearray.h>
-#include <core/utils/istring.h>
 #include <queue>
 #include <list>
 
-namespace iShell {
+#include <core/kernel/iobject.h>
+#include <core/inc/iinccontext.h>
+#include <core/inc/iincconnection.h>
+#include <core/utils/ibytearray.h>
+#include <core/utils/istring.h>
 
-class iMutex;
+namespace iShell {
 
 /// @brief Lightweight channel abstraction for binary data transfer
 /// @details Delegates to iINCProtocol for zero-copy binary data transfer.
@@ -37,7 +37,7 @@ class iMutex;
 /// - Memory pool: 2MB pools with 32 slots × 64KB
 /// - Async write with bytesWritten() signal
 /// - Lock-free binary block transfer
-class IX_CORE_EXPORT iINCStream : public iObject
+class IX_CORE_EXPORT iINCStream : public iINCChannel
 {
     IX_OBJECT(iINCStream)
 public:
@@ -50,13 +50,6 @@ public:
         STATE_ERROR         ///< Error occurred
     };
 
-    /// Stream mode
-    enum Mode {
-        MODE_READ   = 0x01 << 0,    ///< Read-only (receive binary data)
-        MODE_WRITE  = 0x01 << 1,    ///< Write-only (send binary data)
-        MODE_READWRITE = MODE_READ | MODE_WRITE ///< Bidirectional
-    };
-
     /// @brief Constructor
     /// @param name Stream name for identification and debugging
     /// @param context Associated INC context (owns the protocol)
@@ -67,6 +60,8 @@ public:
 
     /// Get stream state
     State state() const { return m_state; }
+    Mode mode() const IX_OVERRIDE { return m_mode; }
+    xuint32 channelId() const IX_OVERRIDE { return m_channelId; }
 
     /// Attach to channel for data transfer (async, returns immediately)
     /// @param mode Stream mode (read/write/bidirectional)
@@ -130,7 +125,7 @@ public:
 
 private:
     /// Handle binary data received from protocol layer
-    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data);
+    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) IX_OVERRIDE;
 
     /// Static callback for channel allocation completion
     static void onChannelAllocated(iINCOperation* op, void* userData);
@@ -140,6 +135,9 @@ private:
 
     /// Handle context state changes
     void onContextStateChanged(int state);
+
+    /// Cleanup pending operations on stream destruction
+    void cleanupPendingOps();
 
     /// Set state and emit stateChanged signal with previous state
     void setState(State newState);

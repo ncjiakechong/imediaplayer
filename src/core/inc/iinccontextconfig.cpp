@@ -37,7 +37,7 @@ iString iINCContextConfig::dump() const
 
     result += iString::asprintf("Default Server: %s\n", m_defaultServer.toUtf8().constData());
     result += iString::asprintf("Disable Shared Memory: %s\n", m_disableSharedMemory ? "true" : "false");
-    result += iString::asprintf("Shared Memory Size: %zu bytes\n", m_sharedMemorySize);
+    result += iString::asprintf("Shared Memory Size: %d bytes\n", m_sharedMemorySize);
     result += iString::asprintf("Auto Reconnect: %s\n", m_autoReconnect ? "true" : "false");
     result += iString::asprintf("Connect Timeout: %d ms\n", m_connectTimeoutMs);
     result += iString::asprintf("Operation Timeout: %d ms\n", m_operationTimeoutMs);

@@ -125,6 +125,9 @@ private:
     void attemptReconnect();
     void cleanupOperations();
 
+    /// Set state and emit stateChanged signal with previous state
+    void setState(State newState);
+
     /// Request channel allocation from server (async, non-blocking)
     /// @param mode Channel mode (MODE_READ, MODE_WRITE, or both)
     /// @return Operation handle to track async request
@@ -137,8 +140,17 @@ private:
     /// @note Returns immediately, set callback to get result
     iSharedDataPointer<iINCOperation> releaseChannel(xuint32 channelId);
 
-    /// Set state and emit stateChanged signal with previous state
-    void setState(State newState);
+    /// record channel for stream
+    xuint32 regeisterChannel(iINCChannel* channel, MemType type);
+
+    /// unrecord channel for stream
+    iINCChannel* unregeisterChannel(xuint32 channelId);
+
+    /// Send binary data with zero-copy optimization via shared memory
+    iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data);
+
+    /// feedback server that data chunk has been received
+    void ackDataReceived(xuint32 channel, xuint32 seqNum, xint32 size);
 
     iINCContextConfig m_config;     ///< Context configuration
     iINCEngine*     m_engine;       ///< Owned engine

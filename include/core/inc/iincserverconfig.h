@@ -10,7 +10,6 @@
 #ifndef IINCSERVERCONFIG_H
 #define IINCSERVERCONFIG_H
 
-#include <cstddef>  // for size_t
 #include <core/utils/istring.h>
 
 namespace iShell {
@@ -49,13 +48,6 @@ public:
     /// Serialize configuration to string (for debugging)
     iString dump() const;
 
-    // ===== Listen Settings =====
-    iString listenAddress() const { return m_listenAddress; }
-    void setListenAddress(const iString& address) { m_listenAddress = address; }
-
-    bool systemInstance() const { return m_systemInstance; }
-    void setSystemInstance(bool system) { m_systemInstance = system; }
-
     // ===== Protocol Version Policy =====
     VersionPolicy versionPolicy() const { return m_versionPolicy; }
     void setVersionPolicy(VersionPolicy policy) { m_versionPolicy = policy; }
@@ -77,8 +69,8 @@ public:
     void setMaxConnectionsPerClient(int max) { m_maxConnectionsPerClient = max; }
 
     // ===== Resource Limits =====
-    size_t sharedMemorySize() const { return m_sharedMemorySize; }
-    void setSharedMemorySize(size_t size) { m_sharedMemorySize = size; }
+    xuint32 sharedMemorySize() const { return m_sharedMemorySize; }
+    void setSharedMemorySize(xuint32 size) { m_sharedMemorySize = size; }
 
     bool disableSharedMemory() const { return m_disableSharedMemory; }
     void setDisableSharedMemory(bool disable) { m_disableSharedMemory = disable; }
@@ -88,9 +80,6 @@ public:
 
     iByteArray sharedMemoryName() const { return m_sharedMemoryName; }
     void setSharedMemoryName(const iByteArray& name) { m_sharedMemoryName = name; }
-
-    size_t maxMessageSize() const { return m_maxMessageSize; }
-    void setMaxMessageSize(size_t size) { m_maxMessageSize = size; }
 
     // ===== Security =====
     EncryptionRequirement encryptionRequirement() const { return m_encryptionRequirement; }
@@ -121,10 +110,6 @@ public:
     void setEnableIOThread(bool enable) { m_enableIOThread = enable; }
 
 private:
-    // Listen settings
-    iString m_listenAddress;
-    bool m_systemInstance = false;
-
     // Protocol version policy
     VersionPolicy m_versionPolicy = Compatible;
     xuint16 m_protocolVersionCurrent = 1;
@@ -136,11 +121,10 @@ private:
     int m_maxConnectionsPerClient = 10;
 
     // Resource limits
-    size_t m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
     bool m_disableSharedMemory = false;
     xuint16 m_sharedMemoryType = MEMTYPE_SHARED_POSIX | MEMTYPE_PRIVATE;  // Auto-select best type
+    xuint32 m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
     iByteArray m_sharedMemoryName = "ix-shm";  // Default shared memory name
-    size_t m_maxMessageSize = 16 * 1024 * 1024;  // 16 MB
 
     // Security
     EncryptionRequirement m_encryptionRequirement = Optional;

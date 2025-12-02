@@ -23,6 +23,20 @@
 
 namespace iShell {
 
+iINCChannel::iINCChannel(iObject* parent)
+    : iObject(parent)
+{
+}
+
+iINCChannel::iINCChannel(const iString& name, iObject* parent)
+    : iObject(name, parent)
+{
+}
+
+iINCChannel::~iINCChannel()
+{
+}
+
 iINCConnection::iINCConnection(iINCDevice* device, xuint32 connId)
     : m_protocol(IX_NULLPTR)
     , m_connId(connId)
@@ -71,6 +85,13 @@ xuint32 iINCConnection::nextSequence()
 bool iINCConnection::isLocal() const
 {
     return m_protocol && m_protocol->device() && m_protocol->device()->isLocal();
+}
+
+iSharedDataPointer<iMemPool> iINCConnection::mempool() const
+{
+    if (!m_protocol) return iSharedDataPointer<iMemPool>();
+
+    return m_protocol->mempool();
 }
 
 void iINCConnection::enableMempool(iSharedDataPointer<iMemPool> pool)
@@ -182,23 +203,41 @@ bool iINCConnection::matchesPattern(const iString& eventName, const iString& pat
     return eventName == pattern;
 }
 
-xuint32 iINCConnection::allocateChannel(xuint32 channelId, xuint32 mode)
+xuint32 iINCConnection::regeisterChannel(iINCChannel* channel)
 {
-    m_channels[channelId] = mode;
-    ilog_info("[", m_peerName, "][", channelId, "] Allocated channel, mode=", mode);
-    return channelId;
+    if (!channel->channelId()) {
+        ilog_warn("[", m_peerName, "][", channel->channelId(), "] Invalid channel ID");
+        return 0;
+    }
+
+    m_channels[channel->channelId()] = channel;
+    ilog_info("[", m_peerName, "][", channel->channelId(), "] Allocated channel, mode=", channel->mode());
+    return channel->channelId();
 }
 
-void iINCConnection::releaseChannel(xuint32 channelId)
+iINCChannel* iINCConnection::unregeisterChannel(xuint32 channelId)
 {
     auto it = m_channels.find(channelId);
     if (it == m_channels.end()) {
         ilog_warn("[", m_peerName, "][", channelId, "] Channel not found for connection");
+        return IX_NULLPTR;
+    }
+
+    ilog_info("[", m_peerName, "][", channelId, "] Released channel");
+    iINCChannel* channel = it->second;
+    m_channels.erase(it);
+    return channel;
+}
+
+void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data)
+{
+    auto it = m_channels.find(channelId);
+    if (it == m_channels.end()) {
+        ilog_warn("[", m_peerName, "][", channelId, "] invalid channel for binary data received");
         return;
     }
 
-    m_channels.erase(it);
-    ilog_info("[", m_peerName, "][", channelId, "] Released channel");
+    it->second->onBinaryDataReceived(this, channelId, seqNum, pos, data);
 }
 
 bool iINCConnection::isChannelAllocated(xuint32 channelId) const
@@ -214,11 +253,6 @@ void iINCConnection::onErrorOccurred(xint32 errorCode)
 void iINCConnection::onMessageReceived(const iINCMessage& msg)
 {
     IEMIT messageReceived(this, msg);
-}
-
-void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data)
-{
-    IEMIT binaryDataReceived(this, channelId, seqNum, pos, data);
 }
 
 } // namespace iShell

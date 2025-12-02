@@ -27,6 +27,27 @@ namespace iShell {
 
 class iINCEngine;
 class iINCDevice;
+class iINCServer;
+
+class IX_CORE_EXPORT _iINCPStream : public iINCChannel
+{
+    IX_OBJECT(_iINCPStream)
+
+public:
+    _iINCPStream(iINCServer* server, xuint32 channelId, Mode mode, iObject* parent = IX_NULLPTR);
+
+    xuint32 channelId() const IX_OVERRIDE { return m_channelId; }
+    Mode mode() const IX_OVERRIDE { return m_mode; }
+
+protected:
+    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) IX_OVERRIDE;
+
+private:
+    Mode m_mode;
+    xuint32 m_channelId;
+    iINCServer* m_server;
+    IX_DISABLE_COPY(_iINCPStream)
+};
 
 /// @brief Server base class for handling client connections
 /// @details Subclass should override handleMethod() to implement service logic.
@@ -148,6 +169,7 @@ private:
 
     iSharedDataPointer<iMemPool> m_globalPool;
 
+    friend class _iINCPStream;
     IX_DISABLE_COPY(iINCServer)
 };
 
