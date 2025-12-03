@@ -237,8 +237,8 @@ private:
     size_t m_blockSize;
     xuint32 m_nBlocks;
 
-    const char* m_name;
-    iShareMem* m_memory;
+    const char  m_name[24];
+    iShareMem*  m_memory;
     iMemImport* m_imports;
     iMemExport* m_exports;
 

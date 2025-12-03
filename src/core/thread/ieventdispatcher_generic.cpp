@@ -368,7 +368,7 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
 
             if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
                 ++m_inCheckOrPrepare;
-                result = source->prepare(&sourceTimeout);
+                result = source->detectablePrepare(&sourceTimeout);
                 --m_inCheckOrPrepare;
             }
 
@@ -496,7 +496,7 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
 
             if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
                 ++m_inCheckOrPrepare;
-                result = source->check();
+                result = source->detectableCheck();
                 --m_inCheckOrPrepare;
             }
 

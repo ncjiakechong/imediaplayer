@@ -200,7 +200,7 @@ static gboolean eventSourceWraperPrepare(GSource *s, gint *timeout)
 
     xint64 timeout_wraper = -1;
     iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
-    bool ret = source->imp->prepare(&timeout_wraper);
+    bool ret = source->imp->detectablePrepare(&timeout_wraper);
     *timeout = (gint)((timeout_wraper + 999999LL) / (1000LL * 1000LL));
     return ret;
 }
@@ -229,7 +229,7 @@ static gboolean eventSourceWraperCheck(GSource *s)
             ifd->revents |= IX_IO_NVAL;
     }
 
-    return source->imp->check();
+    return source->imp->detectableCheck();
 }
 
 static gboolean eventSourceWraperDispatch(GSource *s, GSourceFunc, gpointer)

@@ -100,26 +100,12 @@ int main(int argc, char **argv)
 {
     ilog_debug(iStringLiteral("test app"));
     iShell::iCoreApplication app(argc, argv);
-
-    iShell::iPollFD wakeupFd = {};
-    iShell::iWakeup wakeup;
-    iShell::iEventSource* source = new iShell::iEventSource(iShell::iLatin1StringView("TestSource"), 0);
-
-    wakeup.getPollfd(&wakeupFd);
-    source->addPoll(&wakeupFd);
-    source->attach(app.eventDispatcher());
-    source->deref();
-
     TestCase* tstCase = new TestCase;
 
     tstCase->invokeMethod(tstCase, &TestCase::start, iShell::QueuedConnection);
 
     app.exec();
 
-//    source->detach();
-//    source->deref();
-
     delete tstCase;
-
     return 0;
 }

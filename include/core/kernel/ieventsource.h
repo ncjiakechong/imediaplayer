@@ -28,8 +28,6 @@ typedef enum
 class IX_CORE_EXPORT iEventSource
 {
 public:
-    iEventSource(iLatin1StringView name, int priority);
-
     bool ref();
     bool deref();
 
@@ -60,7 +58,7 @@ public:
      * be %IX_NULLPTR, in which case the effect is as if the function always returns
      * %FALSE with a timeout of -1.
      */
-    virtual bool prepare(xint64 *timeout_);
+    bool detectablePrepare(xint64 *timeout_);
 
     /**
      * Called after all the file descriptors are polled. The source
@@ -68,7 +66,7 @@ public:
      * time may have passed since the previous prepare function was called,
      * so the source should be checked again here.
      */
-    virtual bool check();
+    bool detectableCheck();
 
     /**
      * Called to dispatch the event source, after it has returned
@@ -80,12 +78,17 @@ public:
     bool detectableDispatch(xuint32 sequence);
 
 protected:
+    iEventSource(iLatin1StringView name, int priority);
     virtual ~iEventSource();
 
+    /// to handle prepare/check/dispatch for derived classes
+    virtual bool prepare(xint64 *timeout_);
+    virtual bool check();
     virtual bool dispatch();
 
     /// to deal combo count warning, children source can change it in this callback
-    virtual void comboDetected(xuint32 count);
+    /// return true means may be HANG or false which source work normally
+    virtual bool detectHang(xuint32 combo);
 
 private:
     iLatin1StringView m_name;
@@ -101,7 +104,6 @@ private:
     std::list<iPollFD*> m_pollFds;
 
     IX_DISABLE_COPY(iEventSource)
-
 };
 
 } // namespace iShell

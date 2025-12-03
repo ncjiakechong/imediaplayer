@@ -148,7 +148,7 @@ iShareMem* iShareMem::createSharedMem(const char* prefix, MemType type, size_t s
 
     #ifdef IX_HAVE_MEMFD
     case MEMTYPE_SHARED_MEMFD: {
-        shm->m_memfd = memfd_create(name, MFD_ALLOW_SEALING);
+        shm->m_memfd = memfd_create(shm->m_prefix, MFD_ALLOW_SEALING);
         break;
     }
     #endif
@@ -223,7 +223,9 @@ iShareMem::iShareMem(const char* prefix)
     , m_doUnlink(false)
     , m_memfd(-1)
 {
-    istrncpy(const_cast<char*>(m_prefix), prefix, std::min(sizeof(m_prefix), istrlen(prefix)));
+    if (prefix) {
+        strncpy(const_cast<char*>(m_prefix), prefix, std::min(sizeof(m_prefix) - 1, strlen(prefix)));
+    }
 }
 
 iShareMem::~iShareMem()
@@ -448,7 +450,7 @@ static int ix_atou(const char *s, xuint32 *ret_u)
     return 0;
 }
 
-int iShareMem::cleanup(const char* name)
+int iShareMem::cleanup(const char* prefix)
 {
     #if defined(SHM_PATH)
     DIR *d = opendir(SHM_PATH);
@@ -460,17 +462,17 @@ int iShareMem::cleanup(const char* name)
     #if defined(__sun)
     const int shm_id_len = 11;
     #else
-    const int shm_id_len = strlen(name);
+    const int shm_id_len = strlen(prefix);
     #endif
 
     struct dirent *de;
     while ((de = readdir(d))) {
-        iShareMem seg(name);
+        iShareMem seg(prefix);
 
         #if defined(__sun)
         if (strncmp(de->d_name, ".SHMDIX-shm-", shm_id_len))
         #else
-        if (strncmp(de->d_name, name, shm_id_len))
+        if (strncmp(de->d_name, prefix, shm_id_len))
         #endif
         {
             continue;

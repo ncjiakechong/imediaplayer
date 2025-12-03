@@ -74,8 +74,8 @@ struct iMemImportSegment {
     unsigned n_blocks;
     bool writable;
 
-    iMemImportSegment(const char* name)
-        : import(IX_NULLPTR), memory(name), trap(IX_NULLPTR), n_blocks(0), writable(false)
+    iMemImportSegment(const char* prefix)
+        : import(IX_NULLPTR), memory(prefix), trap(IX_NULLPTR), n_blocks(0), writable(false)
     {}
 
     bool isPermanent() const { return memory.type() == MEMTYPE_SHARED_MEMFD; }
@@ -396,7 +396,7 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t eleme
         return block;
     } else {
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__,
-                        "Memory block too large for pool: %llu > %zu", (long long unsigned int)(allocSize - headerSize), pool->m_blockSize);
+                        "pool %s to alloc too large memory block: %llu > %zu", pool->m_name, (long long unsigned int)(allocSize - headerSize), pool->m_blockSize);
         pool->m_stat.nTooLargeForPool++;
         return IX_NULLPTR;
     }
@@ -679,15 +679,15 @@ iMemPool* iMemPool::create(const char* name, const char* prefix, MemType type, s
 
     iMemPool* pool = new iMemPool(name, memory, block_size, n_blocks, perClient);
     iLogger::asprintf(ILOG_TAG, iShell::ILOG_DEBUG, __FILE__, __FUNCTION__, __LINE__,
-                        "Using %d memory pool with %u slots of size %zu each, total size is %zu, maximum usable slot size is %zu",
-                        type, pool->m_nBlocks, pool->m_blockSize, pool->m_nBlocks * pool->m_blockSize, pool->blockSizeMax());
+                        "pool %s using %d type with %u slots of size %zu each, total size is %zu, maximum usable slot size is %zu",
+                        pool->m_name, type, pool->m_nBlocks, pool->m_blockSize, pool->m_nBlocks * pool->m_blockSize, pool->blockSizeMax());
 
     return pool;
 }
 
 iMemPool* iMemPool::fakeAdaptor()
 {
-    static iSharedDataPointer<iMemPool> s_fakeMemPool(new iMemPool("FakePool", new iShareMem("FakePool"), 1024, 0, false));
+    static iSharedDataPointer<iMemPool> s_fakeMemPool(new iMemPool("FakePool", new iShareMem("ix-shm"), 1024, 0, false));
     return s_fakeMemPool.data();
 }
 
@@ -696,7 +696,7 @@ iMemPool::iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint
     , m_isRemoteWritable(false)
     , m_blockSize(block_size)
     , m_nBlocks(n_blocks)
-    , m_name(name)
+    , m_name{}
     , m_memory(memory)
     , m_imports(IX_NULLPTR)
     , m_exports(IX_NULLPTR)
@@ -716,6 +716,10 @@ iMemPool::iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint
     m_stat.exportedSize = 0;
     m_stat.nTooLargeForPool = 0;
     m_stat.nPoolFull = 0;
+
+    if (name) {
+        strncpy(const_cast<char*>(m_name), name, std::min(sizeof(m_name) - 1, strlen(name)));
+    }
 
     for (int idx = 0; idx < iMemBlock::MEMBLOCK_TYPE_MAX; ++idx) {
         m_stat.nAllocatedByType[idx] = 0;
@@ -757,14 +761,14 @@ iMemPool::~iMemPool()
 
             if (!k)
                 iLogger::asprintf(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__,
-                            "REF: Leaked memory block %p idx: %u", slot, idx);
+                            "pool %s REF: Leaked memory block %p idx: %u", m_name, slot, idx);
 
             while ((k = list.pop(IX_NULLPTR)))
                 while (!m_freeSlots.push(k)) {}
         }
 
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__,
-                        "Memory pool destroyed but not all memory blocks freed! remain %d", m_stat.nAllocated.value());
+                        "pool %s destroyed but not all memory blocks freed! remain %d", m_name, m_stat.nAllocated.value());
     }
 
     while(m_freeSlots.pop(IX_NULLPTR)) {}
@@ -813,7 +817,7 @@ iMemPool::Slot* iMemPool::allocateSlot()
     }
 
     if (IX_NULLPTR == slot && (m_nBlocks > 0)) {
-        iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, "Pool full");
+        iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, "pool %s full", m_name);
         m_stat.nPoolFull++;
         return slot;
     }
@@ -888,7 +892,7 @@ iMemImportSegment* iMemImport::segmentAttach(MemType type, uint shmId, int memfd
     if (m_segments.size() >= IX_MEMIMPORT_SEGMENTS_MAX)
         return IX_NULLPTR;
 
-    iMemImportSegment* seg = new iMemImportSegment(m_pool->m_name);
+    iMemImportSegment* seg = new iMemImportSegment(m_pool->m_memory->prefix());
     if (seg->memory.attach(type, shmId, memfd_fd, writable) < 0) {
         delete seg;
         return IX_NULLPTR;

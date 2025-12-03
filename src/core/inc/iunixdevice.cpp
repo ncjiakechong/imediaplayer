@@ -34,6 +34,9 @@ public:
     iUnixEventSource(iUnixDevice* device, int priority = 0)
         : iEventSource(iLatin1StringView("iUnixEventSource"), priority)
         , m_device(device)
+        , m_readBytes(0)
+        , m_writeBytes(0)
+        , m_monitorEvents(0)
     {
         m_pollFd.fd = -1;
         m_pollFd.events = 0;  // No events initially
@@ -65,6 +68,7 @@ public:
             newEvents |= IX_IO_OUT;
         }
 
+        m_monitorEvents |= newEvents;
         if (!newEvents && m_pollFd.events) {
             removePoll(&m_pollFd);
             m_pollFd.events = 0;
@@ -81,6 +85,23 @@ public:
         // If already added, check if events changed
         m_pollFd.events = newEvents;
         updatePoll(&m_pollFd);
+    }
+
+    bool detectHang(xuint32 combo) IX_OVERRIDE {
+        if ((m_monitorEvents & IX_IO_IN) && m_readBytes == 0) {
+            m_monitorEvents = m_pollFd.events;
+            return true;
+        }
+
+        if ((m_monitorEvents & IX_IO_OUT) && m_writeBytes == 0) {
+            m_monitorEvents = m_pollFd.events;
+            return true;
+        }
+
+        m_readBytes = 0;
+        m_writeBytes = 0;
+        m_monitorEvents = m_pollFd.events;
+        return false;
     }
 
     bool prepare(xint64 *timeout) IX_OVERRIDE {
@@ -129,9 +150,12 @@ public:
         return true;
     }
 
-private:
     iUnixDevice*    m_device;
     iPollFD         m_pollFd;
+
+    int             m_readBytes;
+    int             m_writeBytes;
+    int             m_monitorEvents;
 };
 
 iUnixDevice::iUnixDevice(Role role, iObject *parent)
@@ -323,6 +347,7 @@ void iUnixDevice::acceptConnection()
     // Accepted connections are already established, monitor read events only
     clientDevice->configEventAbility(true, false);
 
+    static_cast<iUnixEventSource*>(m_eventSource)->m_readBytes += 1;
     ilog_info("[", peerAddress(), "] Accepted connection on ", m_socketPath);
 
     // Emit newConnection signal with the client device
@@ -347,6 +372,7 @@ iByteArray iUnixDevice::readData(xint64 maxlen, xint64* readErr)
 
     ssize_t bytesRead = ::recv(m_sockfd, result.data(), maxlen, 0);
     if (bytesRead > 0) {
+        static_cast<iUnixEventSource*>(m_eventSource)->m_readBytes += 1;
         result.resize(static_cast<int>(bytesRead));
         if (readErr) *readErr = bytesRead;
         return result;
@@ -377,6 +403,7 @@ xint64 iUnixDevice::writeData(const iByteArray& data)
 {
     ssize_t bytesWritten = ::send(m_sockfd, data.constData(), data.size(), MSG_NOSIGNAL);
     if (bytesWritten >= 0) {
+        static_cast<iUnixEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesWritten);
         return static_cast<xint64>(bytesWritten);
     }
 

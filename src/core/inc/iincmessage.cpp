@@ -77,6 +77,7 @@ iByteArray iINCMessage::header() const
     // Write header (32 bytes fixed)
     iByteArray data;
     data.append(reinterpret_cast<const char*>(&header), sizeof(header));
+    IX_COMPILER_VERIFY(sizeof(iINCMessageHeader) == iINCMessageHeader::HEADER_SIZE);
     return data;
 }
 

@@ -444,7 +444,7 @@ xuint32 iINCContext::regeisterChannel(iINCChannel* channel, MemType type)
 {
     IX_ASSERT(m_state == STATE_READY && m_connection);
     if ((0 != type) && !m_connection->mempool()) {
-        iMemPool* memPool = iMemPool::create("iINCContext", m_config.sharedMemoryName().constData(), type, m_config.sharedMemorySize(), true);
+        iMemPool* memPool = iMemPool::create(objectName().toUtf8().constData(), m_config.sharedMemoryName().constData(), type, m_config.sharedMemorySize(), true);
         m_connection->enableMempool(iSharedDataPointer<iMemPool>(memPool));
     }
 

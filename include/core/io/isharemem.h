@@ -33,6 +33,7 @@ public:
     inline void* data() const { return m_ptr; }
     inline size_t size() const { return m_size; }
     inline MemType type() const { return m_type; }
+    inline const char* prefix() const { return m_prefix; }
 
 private:
     static iShareMem* createPrivateMem(const char* prefix, size_t size);
@@ -42,7 +43,7 @@ private:
     int doAttach(MemType type, uint id, xintptr memfd, bool writable, bool for_cleanup);
     void freePrivateMem();
 
-    const char  m_prefix[16];
+    const char  m_prefix[12];
     MemType     m_type;
     uint        m_id;
     void*       m_ptr;

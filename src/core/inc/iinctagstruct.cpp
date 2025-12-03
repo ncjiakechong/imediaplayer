@@ -415,6 +415,14 @@ xsizetype iINCTagStruct::bytesAvailable() const
     return static_cast<xsizetype>(m_data.size()) - m_readIndex;
 }
 
+xsizetype iINCTagStruct::remainingBuffer(xsizetype target) const
+{
+    const xint32 bytetagsize = 6; // Maximum tag size (1 byte tag + 4 bytes length + 1 byte'\0')
+    if (target <= m_data.size() + bytetagsize) return 0;
+
+    return target - m_data.size() - bytetagsize;
+}
+
 const char* iINCTagStruct::tagToString(Tag tag)
 {
     switch (tag) {

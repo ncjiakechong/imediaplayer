@@ -162,6 +162,9 @@ public:
     /// Get number of bytes remaining to read
     xsizetype bytesAvailable() const;
 
+    /// Get number of bytes remaining in buffer
+    xsizetype remainingBuffer(xsizetype target) const;
+
     /// Dump payload contents for debugging
     /// @return Human-readable representation of all fields and types
     iString dump() const;

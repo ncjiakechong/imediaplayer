@@ -38,8 +38,9 @@ public:
         return m_checkResult;
     }
 
-    void comboDetected(xuint32 count) override {
+    bool detectHang(xuint32 count) override {
         m_comboDetectedCount = count;
+        return true;
     }
 
     // Test accessors
@@ -110,13 +111,13 @@ TEST_F(EventSourceTest, PrepareMethod) {
     xint64 timeout = 0;
 
     // Test default prepare (returns false)
-    EXPECT_FALSE(source.prepare(&timeout));
+    EXPECT_FALSE(source.detectablePrepare(&timeout));
     EXPECT_EQ(source.prepareCount(), 1);
 
     // Test prepare with custom result
     source.setPrepareResult(true);
     source.setPrepareTimeout(1000);
-    EXPECT_TRUE(source.prepare(&timeout));
+    EXPECT_TRUE(source.detectablePrepare(&timeout));
     EXPECT_EQ(timeout, 1000);
     EXPECT_EQ(source.prepareCount(), 2);
 }
@@ -125,12 +126,12 @@ TEST_F(EventSourceTest, CheckMethod) {
     TestEventSource source(iLatin1StringView("test-check"), 0);
 
     // Test default check (returns false)
-    EXPECT_FALSE(source.check());
+    EXPECT_FALSE(source.detectableCheck());
     EXPECT_EQ(source.checkCount(), 1);
 
     // Test check with custom result
     source.setCheckResult(true);
-    EXPECT_TRUE(source.check());
+    EXPECT_TRUE(source.detectableCheck());
     EXPECT_EQ(source.checkCount(), 2);
 }
 
@@ -148,10 +149,10 @@ TEST_F(EventSourceTest, ComboDetection) {
     TestEventSource source(iLatin1StringView("test-combo"), 0);
     EXPECT_EQ(source.comboDetectedCount(), 0u);
 
-    source.comboDetected(5);
+    source.detectHang(5);
     EXPECT_EQ(source.comboDetectedCount(), 5u);
 
-    source.comboDetected(10);
+    source.detectHang(10);
     EXPECT_EQ(source.comboDetectedCount(), 10u);
 }
 
@@ -169,7 +170,7 @@ TEST_F(EventSourceTest, MultiplePrepareCalls) {
     TestEventSource source(iLatin1StringView("test-multi-prepare"), 0);
 
     for (int i = 0; i < 5; ++i) {
-        source.prepare(nullptr);
+        source.detectablePrepare(nullptr);
     }
     EXPECT_EQ(source.prepareCount(), 5);
 }
@@ -178,7 +179,7 @@ TEST_F(EventSourceTest, MultipleCheckCalls) {
     TestEventSource source(iLatin1StringView("test-multi-check"), 0);
 
     for (int i = 0; i < 5; ++i) {
-        source.check();
+        source.detectableCheck();
     }
     EXPECT_EQ(source.checkCount(), 5);
 }
@@ -188,7 +189,7 @@ TEST_F(EventSourceTest, PrepareWithNullTimeout) {
     source.setPrepareTimeout(5000);
 
     // Should not crash with null timeout pointer
-    EXPECT_FALSE(source.prepare(nullptr));
+    EXPECT_FALSE(source.detectablePrepare(nullptr));
     EXPECT_EQ(source.prepareCount(), 1);
 }
 
@@ -337,7 +338,7 @@ TEST_F(EventSourceTest, PrepareWithZeroTimeout) {
     source.setPrepareTimeout(0);
 
     xint64 timeout = -1;
-    source.prepare(&timeout);
+    source.detectablePrepare(&timeout);
     EXPECT_EQ(timeout, 0);
 }
 
@@ -347,7 +348,7 @@ TEST_F(EventSourceTest, PrepareWithNegativeTimeout) {
     source.setPrepareTimeout(-5000);
 
     xint64 timeout = 0;
-    source.prepare(&timeout);
+    source.detectablePrepare(&timeout);
     EXPECT_EQ(timeout, -5000);
 }
 
@@ -358,7 +359,7 @@ TEST_F(EventSourceTest, PrepareWithLargeTimeout) {
     source.setPrepareTimeout(largeTimeout);
 
     xint64 timeout = 0;
-    source.prepare(&timeout);
+    source.detectablePrepare(&timeout);
     EXPECT_EQ(timeout, largeTimeout);
 }
 
@@ -385,13 +386,13 @@ TEST_F(EventSourceTest, AlternatingPrepareResults) {
     TestEventSource source(iLatin1StringView("test-alternating"), 0);
 
     source.setPrepareResult(true);
-    EXPECT_TRUE(source.prepare(nullptr));
+    EXPECT_TRUE(source.detectablePrepare(nullptr));
 
     source.setPrepareResult(false);
-    EXPECT_FALSE(source.prepare(nullptr));
+    EXPECT_FALSE(source.detectablePrepare(nullptr));
 
     source.setPrepareResult(true);
-    EXPECT_TRUE(source.prepare(nullptr));
+    EXPECT_TRUE(source.detectablePrepare(nullptr));
 }
 
 // Test alternating check results
@@ -399,20 +400,20 @@ TEST_F(EventSourceTest, AlternatingCheckResults) {
     TestEventSource source(iLatin1StringView("test-alternating-check"), 0);
 
     source.setCheckResult(false);
-    EXPECT_FALSE(source.check());
+    EXPECT_FALSE(source.detectableCheck());
 
     source.setCheckResult(true);
-    EXPECT_TRUE(source.check());
+    EXPECT_TRUE(source.detectableCheck());
 
     source.setCheckResult(false);
-    EXPECT_FALSE(source.check());
+    EXPECT_FALSE(source.detectableCheck());
 }
 
 // Test combo detection with zero count
 TEST_F(EventSourceTest, ComboDetectionZero) {
     TestEventSource source(iLatin1StringView("test-combo-zero"), 0);
 
-    source.comboDetected(0);
+    source.detectHang(0);
     EXPECT_EQ(source.comboDetectedCount(), 0u);
 }
 
@@ -421,7 +422,7 @@ TEST_F(EventSourceTest, ComboDetectionLarge) {
     TestEventSource source(iLatin1StringView("test-combo-large"), 0);
 
     xuint32 largeCount = 4294967295u;  // Max uint32
-    source.comboDetected(largeCount);
+    source.detectHang(largeCount);
     EXPECT_EQ(source.comboDetectedCount(), largeCount);
 }
 

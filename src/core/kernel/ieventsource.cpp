@@ -145,8 +145,18 @@ bool iEventSource::check()
 bool iEventSource::dispatch()
 { return true; }
 
-void iEventSource::comboDetected(xuint32 count)
-{}
+bool iEventSource::detectHang(xuint32 combo)
+{ return true; }
+
+bool iEventSource::detectablePrepare(xint64 *timeout_)
+{
+    return prepare(timeout_);
+}
+
+bool iEventSource::detectableCheck()
+{
+    return check();
+}
 
 bool iEventSource::detectableDispatch(xuint32 sequence)
 {
@@ -158,10 +168,17 @@ bool iEventSource::detectableDispatch(xuint32 sequence)
         m_comboCount = 0;
     }
 
-    if (m_comboCount >= 512 && !(m_comboCount & 0x1FF)) {
+    do {
+        if (!m_comboCount || (m_comboCount & 0x1FF))
+            break;
+
+        if (!detectHang(m_comboCount)) {
+            m_comboCount = 0;
+            break;
+        }
+
         ilog_info("source ", name(), " combo count ", m_comboCount, " many times at ", sequence, " and maybe detach later to avoid CPU HANG");
-        comboDetected(m_comboCount);
-    }
+    } while (false);
 
     if (m_comboCount > 10000) {
         ilog_warn("source ", name(), " combo count ", m_comboCount, " exceeded limit at ", sequence, ", detaching to avoid CPU HANG");
