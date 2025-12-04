@@ -69,6 +69,8 @@ set (ComSource
 	inc/iincdevice.cpp
 	inc/itcpdevice.cpp
 	inc/iunixdevice.cpp
+	inc/iudpdevice.cpp
+	inc/iudpclientdevice.cpp
 	inc/iincoperation.cpp
 	inc/iinccontext.cpp
 	inc/iincserver.cpp

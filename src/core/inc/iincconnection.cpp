@@ -121,7 +121,6 @@ iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
     if (!op) return op;
 
     ilog_debug("[", m_peerName, "][", msg.channelID(), "][", op->sequenceNumber(), "] Sent PING to client");
-    op->setTimeout(2000);  // 2 seconds
     return op;
 }
 

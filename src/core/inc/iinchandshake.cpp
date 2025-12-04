@@ -157,13 +157,13 @@ void iINCHandshake::setLocalData(const iINCHandshakeData& data)
 
 iByteArray iINCHandshake::start()
 {
-    if (m_role != ROLE_CLIENT) {
+    if (ROLE_CLIENT != m_role) {
         // Handshake error: Only client can start
         ilog_error("start() called on server-side handshake, role:", m_role);
         return iByteArray();
     }
 
-    if (m_state != STATE_IDLE) {
+    if (STATE_IDLE != m_state && STATE_SENDING != m_state) {
         // Already in progress (SENDING/COMPLETED/FAILED), return empty to indicate error
         ilog_warn("start() called but handshake already in progress, state:", m_state);
         return iByteArray();
@@ -194,21 +194,13 @@ iByteArray iINCHandshake::processHandshake(const iByteArray& data)
         return iByteArray();
     }
 
-    if (m_role == ROLE_SERVER) {
-        // Server: received client handshake, send response
-        m_state = STATE_COMPLETED;
-
-        // Server handshake completed
-        return serializeHandshakeData(m_localData);
-
-    } else {
-        // Client: received server response
-        m_state = STATE_COMPLETED;
-
-        // Client handshake completed
-        // No response needed
+    m_state = STATE_COMPLETED;
+    if (ROLE_CLIENT == m_role) {
         return iByteArray();
     }
+
+    // Server: received client handshake, send response
+    return serializeHandshakeData(m_localData);
 }
 
 bool iINCHandshake::validateRemoteData()

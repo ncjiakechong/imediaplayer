@@ -98,6 +98,10 @@ public:
     int exitIdleTimeMs() const { return m_exitIdleTimeMs; }
     void setExitIdleTimeMs(int time) { m_exitIdleTimeMs = time; }
 
+    /// Protocol operation timeout (handshake, ping-pong, etc.)
+    int protocolTimeoutMs() const { return m_protocolTimeoutMs; }
+    void setProtocolTimeoutMs(int timeout) { m_protocolTimeoutMs = timeout; }
+
     // ===== Performance =====
     bool highPriority() const { return m_highPriority; }
     void setHighPriority(bool enable) { m_highPriority = enable; }
@@ -134,6 +138,7 @@ private:
     // Timeouts
     int m_clientTimeoutMs = 60000;  // 60 seconds
     int m_exitIdleTimeMs = -1;      // Never exit
+    int m_protocolTimeoutMs = 500; // 500ms for protocol operations (handshake, ping-pong)
 
     // Performance
     bool m_highPriority = false;

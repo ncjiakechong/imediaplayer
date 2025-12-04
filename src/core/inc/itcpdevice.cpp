@@ -84,6 +84,10 @@ public:
             return;
         }
 
+        if(newEvents == m_pollFd.events) {
+            return; // No change
+        }
+    
         // If already added, check if events changed
         m_pollFd.events = newEvents;
         updatePoll(&m_pollFd);

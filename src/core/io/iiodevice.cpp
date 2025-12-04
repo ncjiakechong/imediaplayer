@@ -493,8 +493,8 @@ iIODevice::iIODevice()
     : m_openMode(iIODevice::NotOpen)
     , m_pos(0)
     , m_devicePos(0)
-    , m_readChannelCount(0)
-    , m_writeChannelCount(0)
+    , m_nextReadChannel(0)
+    , m_nextWriteChannel(0)
     , m_currentReadChannel(0)
     , m_currentWriteChannel(0)
     , m_readBufferChunkSize(IIODEVICE_BUFFERSIZE)
@@ -514,8 +514,8 @@ iIODevice::iIODevice(iObject *parent)
     , m_openMode(iIODevice::NotOpen)
     , m_pos(0)
     , m_devicePos(0)
-    , m_readChannelCount(0)
-    , m_writeChannelCount(0)
+    , m_nextReadChannel(0)
+    , m_nextWriteChannel(0)
     , m_currentReadChannel(0)
     , m_currentWriteChannel(0)
     , m_readBufferChunkSize(IIODEVICE_BUFFERSIZE)
@@ -581,8 +581,12 @@ void iIODevice::setOpenMode(OpenMode openMode)
 {
     m_openMode = openMode;
     m_accessMode = iIODevice::Unset;
-    setReadChannelCount(isReadable() ? std::max(m_readChannelCount, 1) : 0);
-    setWriteChannelCount(isWritable() ? std::max(m_writeChannelCount, 1) : 0);
+    if (isReadable()) {
+        requestReadChannel(std::min(m_nextReadChannel, 1));
+    }
+    if (isWritable()) {
+        requestWriteChannel(std::min(m_nextWriteChannel, 1));
+    }
 }
 
 /*!
@@ -621,27 +625,55 @@ void iIODevice::setCurrentReadChannel(int channel)
         return;
     }
 
-    m_buffer.m_buf = (channel < !m_readBuffers.empty() ? m_readBuffers.find(channel)->second : IX_NULLPTR);
-    m_currentReadChannel = channel;
+    std::unordered_map<int, iMemBlockQueue*>::iterator it = m_readBuffers.find(channel);
+    m_buffer.m_buf = (it != m_readBuffers.end()) ? it->second : IX_NULLPTR;
+    m_currentReadChannel = (it != m_readBuffers.end()) ? channel : 0;
 }
 
-void iIODevice::setReadChannelCount(int count)
+int iIODevice::requestReadChannel(int channel)
 {
-    int distance = std::abs(count - (int)m_readBuffers.size());
-    for (int idx = 0; idx < distance; ++idx) {
-        if (count > m_readBuffers.size()) {
-            m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1StringView("iodeviceRead"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
-        } else {
-            std::unordered_map<int, iMemBlockQueue*>::iterator it = m_readBuffers.find(count + distance - idx - 1);
-            IX_ASSERT(it != m_readBuffers.end());
-            iMemBlockQueue* queue = it->second;
-            m_readBuffers.erase(it);
-            delete queue;
-        }
+    if (m_readBuffers.find(channel) != m_readBuffers.end()) {
+        ilog_warn("requestReadChannel", "Channel %d is already requested", channel);
+        return -1;
+    }
+    
+    if (channel >= m_nextReadChannel) {
+        m_nextReadChannel = channel + 1;
     }
 
-    m_readChannelCount = count;
-    setCurrentReadChannel(m_currentReadChannel);
+    m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(channel, new iMemBlockQueue(iLatin1StringView("iodeviceRead"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
+    setCurrentReadChannel(channel);
+    return channel;
+}
+
+bool iIODevice::releaseReadChannel(int channel)
+{
+    std::unordered_map<int, iMemBlockQueue*>::iterator it = m_readBuffers.find(channel);
+    if (it == m_readBuffers.end()) {
+        return true;
+    }
+
+    iMemBlockQueue* queue = it->second;
+    m_readBuffers.erase(it);
+    delete queue;
+
+    if (m_currentReadChannel != channel) {
+        return true;
+    }
+
+    setCurrentReadChannel(!m_readBuffers.empty() ? m_readBuffers.begin()->first : 0);
+    return true;
+}
+void iIODevice::clearReadChannels()
+{
+    while (!m_readBuffers.empty()) {
+        iMemBlockQueue* queue = m_readBuffers.begin()->second;
+        m_readBuffers.erase(m_readBuffers.begin());
+        delete queue;
+    }
+
+    m_nextReadChannel = 0;
+    setCurrentReadChannel(0);
 }
 
 /*!
@@ -654,27 +686,56 @@ void iIODevice::setReadChannelCount(int count)
 */
 void iIODevice::setCurrentWriteChannel(int channel)
 {
-    m_writeBuffer.m_buf = (channel < !m_writeBuffers.empty() ? m_writeBuffers.find(channel)->second : IX_NULLPTR);
-    m_currentWriteChannel = channel;
+    std::unordered_map<int, iMemBlockQueue*>::iterator it = m_writeBuffers.find(channel);
+    m_writeBuffer.m_buf = (m_writeBuffers.end() != it)? it->second : IX_NULLPTR;
+    m_currentWriteChannel = (m_writeBuffers.end() != it)? channel : 0;
 }
 
-void iIODevice::setWriteChannelCount(int count)
+int iIODevice::requestWriteChannel(int channel)
 {
-    int distance = std::abs(count - (int)m_writeBuffers.size());
-    for (int idx = 0; idx < distance; ++idx) {
-        if (count > m_writeBuffers.size()) {
-            m_writeBuffers.insert(std::pair<int, iMemBlockQueue*>(count - distance + idx, new iMemBlockQueue(iLatin1StringView("iodeviceWrite"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
-        } else {
-            std::unordered_map<int, iMemBlockQueue*>::iterator it = m_writeBuffers.find(count + distance - idx - 1);
-            IX_ASSERT(it != m_writeBuffers.end());
-            iMemBlockQueue* queue = it->second;
-            m_writeBuffers.erase(it);
-            delete queue;
-        }
+    if (m_writeBuffers.find(channel) != m_writeBuffers.end()) {
+        ilog_warn("requestWriteChannel", "Channel %d is already requested", channel);
+        return -1;
     }
 
-    m_writeChannelCount = count;
-    setCurrentWriteChannel(m_currentWriteChannel);
+    if (channel >= m_nextWriteChannel) {
+        m_nextWriteChannel = channel + 1;
+    }
+
+    m_writeBuffers.insert(std::pair<int, iMemBlockQueue*>(channel, new iMemBlockQueue(iLatin1StringView("iodeviceWrite"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
+    setCurrentWriteChannel(channel);
+    return channel;
+}
+
+bool iIODevice::releaseWriteChannel(int channel)
+{
+    std::unordered_map<int, iMemBlockQueue*>::iterator it = m_writeBuffers.find(channel);
+    if (it == m_writeBuffers.end()) {
+        return true;
+    }
+
+    iMemBlockQueue* queue = it->second;
+    m_writeBuffers.erase(it);
+    delete queue;
+
+    if (m_currentWriteChannel != channel) {
+        return true;
+    }
+
+    setCurrentWriteChannel(!m_writeBuffers.empty() ? m_writeBuffers.begin()->first : 0);
+    return true;
+}
+
+void iIODevice::clearWriteChannels()
+{
+    while (!m_writeBuffers.empty()) {
+        iMemBlockQueue* queue = m_writeBuffers.begin()->second;
+        m_writeBuffers.erase(m_writeBuffers.begin());
+        delete queue;
+    }
+
+    m_nextWriteChannel = 0;
+    setCurrentWriteChannel(0);
 }
 
 bool iIODevice::isBufferEmpty() const
@@ -714,8 +775,12 @@ bool iIODevice::open(OpenMode mode)
         m_writeBuffers.erase(m_writeBuffers.begin());
         delete queue;
     }
-    setReadChannelCount(isReadable() ? 1 : 0);
-    setWriteChannelCount(isWritable() ? 1 : 0);
+    if (isReadable()) {
+        requestReadChannel(std::min(m_nextReadChannel, 1));
+    }
+    if (isWritable()) {
+        requestWriteChannel(std::min(m_nextWriteChannel, 1));
+    }
     m_errorString.clear();
 
     return true;
@@ -736,9 +801,9 @@ void iIODevice::close()
     m_pos = 0;
     m_transactionStarted = false;
     m_transactionPos = 0;
-    setReadChannelCount(0);
+    clearReadChannels();
     // Do not clear write buffers to allow delayed close in sockets
-    m_writeChannelCount = 0;
+    m_nextWriteChannel = 0;
 
     IEMIT aboutToClose();
 }

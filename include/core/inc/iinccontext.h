@@ -152,6 +152,8 @@ private:
     /// feedback server that data chunk has been received
     void ackDataReceived(xuint32 channel, xuint32 seqNum, xint32 size);
 
+    static void onHandshakeTimeout(iINCOperation* operation, void* userData);
+
     iINCContextConfig m_config;     ///< Context configuration
     iINCEngine*     m_engine;       ///< Owned engine
     iINCConnection* m_connection;   ///< connection handler

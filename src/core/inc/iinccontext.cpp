@@ -132,9 +132,11 @@ int iINCContext::connectTo(const iStringView& url)
     // Send handshake message - handshake uses custom binary protocol
     iINCMessage handshakeMsg(INC_MSG_HANDSHAKE, m_connection->connectionId(), m_connection->nextSequence());
     handshakeMsg.payload().setData(handshakeData);
-    m_connection->sendMessage(handshakeMsg);
+    auto op = m_connection->sendMessage(handshakeMsg);
+    IX_ASSERT(op);
+    op->setTimeout(m_config.protocolTimeoutMs());
+    op->setFinishedCallback(&iINCContext::onHandshakeTimeout, this);
 
-    ilog_info("[", objectName(), "][0][", handshakeMsg.sequenceNumber(), "] Sent handshake to", connectUrl);
     return INC_OK;
 }
 
@@ -236,7 +238,7 @@ iSharedDataPointer<iINCOperation> iINCContext::pingpong()
     auto op = m_connection->pingpong();
     if (!op) return op;
 
-    op->setTimeout(m_config.operationTimeoutMs());
+    op->setTimeout(m_config.protocolTimeoutMs());
     return op;
 }
 
@@ -282,6 +284,33 @@ void iINCContext::onErrorOccurred(iINCConnection*, xint32 errorCode)
     scheduleReconnect();
 }
 
+void iINCContext::onHandshakeTimeout(iINCOperation* operation, void* userData)
+{
+    iINCContext* self = static_cast<iINCContext*>(userData);
+    if (iINCOperation::STATE_TIMEOUT != operation->getState()) return;
+
+    if (!self->m_config.autoReconnect() || !self->m_connection || !self->m_connection->m_handshake
+        || (iINCHandshake::STATE_COMPLETED == self->m_connection->m_handshake->state())) {
+        return;
+    }
+
+    if (self->m_reconnectAttempts > self->m_config.maxReconnectAttempts()) {
+        ilog_warn("[", self->objectName(), "] Reconnect handshake attempts exceed limit ", self->m_config.maxReconnectAttempts());
+        return;
+    }
+
+    ++self->m_reconnectAttempts;
+    iByteArray handshakeData = self->m_connection->m_handshake->start();
+    IX_ASSERT(!handshakeData.isEmpty());
+
+    // Send handshake message - handshake uses custom binary protocol
+    iINCMessage handshakeMsg(INC_MSG_HANDSHAKE, self->m_connection->connectionId(), self->m_connection->nextSequence());
+    handshakeMsg.payload().setData(handshakeData);
+    auto retryOp = self->m_connection->sendMessage(handshakeMsg);
+    IX_ASSERT(retryOp);
+    retryOp->setTimeout(self->m_config.protocolTimeoutMs());
+    retryOp->setFinishedCallback(&iINCContext::onHandshakeTimeout, userData);
+}
 
 void iINCContext::handleHandshakeAck(iINCConnection* conn, const iINCMessage& msg)
 {
@@ -317,7 +346,6 @@ void iINCContext::handleHandshakeAck(iINCConnection* conn, const iINCMessage& ms
     conn->setConnectionId(msg.channelID());
     conn->setPeerName(remote.nodeName);
     conn->setPeerProtocolVersion(remote.protocolVersion);
-    conn->clearHandshake();
 
     invokeMethod(this, &iINCContext::setState, STATE_READY);
     ilog_info("[", objectName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
@@ -417,7 +445,7 @@ iSharedDataPointer<iINCOperation> iINCContext::requestChannel(xuint32 mode)
 
     ilog_info("[", objectName(), "][0][", op->sequenceNumber(),
                 "] Sent async channel request, mode=", mode);
-    op->setTimeout(m_config.operationTimeoutMs());
+    op->setTimeout(m_config.protocolTimeoutMs());
     return op;
 }
 
@@ -436,7 +464,7 @@ iSharedDataPointer<iINCOperation> iINCContext::releaseChannel(xuint32 channelId)
 
     ilog_info("[", objectName(), "][", channelId, "][", op->sequenceNumber(),
                 "] Sent async channel release request");
-    op->setTimeout(m_config.operationTimeoutMs());
+    op->setTimeout(m_config.protocolTimeoutMs());
     return op;
 }
 
@@ -470,6 +498,5 @@ void iINCContext::ackDataReceived(xuint32 channel, xuint32 seqNum, xint32 size)
     msg.payload().putInt32(size);
     m_connection->sendMessage(msg);
 }
-
 
 } // namespace iShell

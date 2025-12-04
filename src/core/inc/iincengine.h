@@ -19,6 +19,7 @@ namespace iShell {
 class iINCDevice;
 class iTcpDevice;
 class iUnixDevice;
+class iUDPDevice;
 class iEventSource;
 class iTcpEventSource;
 class iUnixEventSource;
@@ -74,8 +75,10 @@ private:
 
     iTcpDevice* createTcpClient(const ParsedUrl& url);
     iTcpDevice* createTcpServer(const ParsedUrl& url);
-    iUnixDevice* createPipeClient(const ParsedUrl& url);
-    iUnixDevice* createPipeServer(const ParsedUrl& url);
+    iUnixDevice* createUnixClient(const ParsedUrl& url);
+    iUnixDevice* createUnixServer(const ParsedUrl& url);
+    iUDPDevice* createUdpClient(const ParsedUrl& url);
+    iUDPDevice* createUdpServer(const ParsedUrl& url);
 
     bool                m_initialized;  ///< Initialization state
 

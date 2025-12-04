@@ -60,6 +60,30 @@ iINCMessage::~iINCMessage()
 {
 }
 
+xint32 iINCMessage::parseHeader(iByteArrayView header)
+{
+    if (header.size() != iINCMessageHeader::HEADER_SIZE) {
+        return -1;
+    }
+
+    iINCMessageHeader hdr;
+    std::memcpy(&hdr, header.data(), sizeof(iINCMessageHeader));
+    IX_COMPILER_VERIFY(sizeof(iINCMessageHeader) == iINCMessageHeader::HEADER_SIZE);
+    if (hdr.magic != iINCMessageHeader::MAGIC) {
+        return -1;
+    }
+
+    m_protocolVersion = hdr.protocolVersion;
+    m_payloadVersion = hdr.payloadVersion;
+    m_type = static_cast<iINCMessageType>(hdr.type);
+    m_flags = hdr.flags;
+    m_channelID = hdr.channelID;
+    m_seqNum = hdr.seqNum;
+    m_dts = hdr.dts;
+
+    return hdr.length;
+}
+
 iByteArray iINCMessage::header() const
 {
     // Create header

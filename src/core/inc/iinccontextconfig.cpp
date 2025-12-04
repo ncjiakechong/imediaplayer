@@ -44,4 +44,6 @@ iString iINCContextConfig::dump() const
     result += iString::asprintf("Enable IO Thread: %s\n", m_enableIOThread ? "true" : "false");
 
     return result;
-}} // namespace iShell
+}
+
+} // namespace iShell

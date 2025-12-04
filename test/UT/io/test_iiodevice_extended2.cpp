@@ -231,17 +231,6 @@ TEST_F(IODeviceExtended2Test, OpenWithTextMode) {
     EXPECT_TRUE(device->isTextModeEnabled());
 }
 
-// Channel tests
-TEST_F(IODeviceExtended2Test, ReadChannelCount) {
-    int count = device->readChannelCount();
-    EXPECT_GE(count, 0);
-}
-
-TEST_F(IODeviceExtended2Test, WriteChannelCount) {
-    int count = device->writeChannelCount();
-    EXPECT_GE(count, 0);
-}
-
 TEST_F(IODeviceExtended2Test, CurrentReadChannel) {
     int channel = device->currentReadChannel();
     EXPECT_GE(channel, 0);

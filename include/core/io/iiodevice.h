@@ -57,8 +57,8 @@ public:
     bool isWritable() const { return (openMode() & WriteOnly) != 0; }
     virtual bool isSequential() const;
 
-    int readChannelCount() const { return m_readChannelCount; }
-    int writeChannelCount() const { return m_writeChannelCount; }
+    int nextReadChannel() const { return m_nextReadChannel; }
+    int nextWriteChannel() const { return m_nextWriteChannel; }
     int currentReadChannel() const { return m_currentReadChannel; }
     void setCurrentReadChannel(int channel);
     int currentWriteChannel() const { return m_currentWriteChannel; }
@@ -164,8 +164,12 @@ protected:
 
     void seekBuffer(xint64 newPos);
 
-    void setReadChannelCount(int count);
-    void setWriteChannelCount(int count);
+    int requestReadChannel(int channel);
+    bool releaseReadChannel(int channel);
+    void clearReadChannels();
+    int requestWriteChannel(int channel);
+    bool releaseWriteChannel(int channel);
+    void clearWriteChannels();
 
     iByteArray readImpl(xint64 maxSize, bool peeking = false, xint64* readErr = IX_NULLPTR);
     xint64 skipByReading(xint64 maxSize);
@@ -183,8 +187,8 @@ private:
 
     xint64 m_pos;
     xint64 m_devicePos;
-    int m_readChannelCount;
-    int m_writeChannelCount;
+    int m_nextReadChannel;
+    int m_nextWriteChannel;
     int m_currentReadChannel;
     int m_currentWriteChannel;
     int m_readBufferChunkSize;

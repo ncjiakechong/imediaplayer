@@ -98,6 +98,10 @@ public:
     int operationTimeoutMs() const { return m_operationTimeoutMs; }
     void setOperationTimeoutMs(int timeout) { m_operationTimeoutMs = timeout; }
 
+    /// Protocol operation timeout (handshake, ping-pong, etc.)
+    int protocolTimeoutMs() const { return m_protocolTimeoutMs; }
+    void setProtocolTimeoutMs(int timeout) { m_protocolTimeoutMs = timeout; }
+
     // ===== Threading =====
 
     /// Enable IO thread for network operations (default: true)
@@ -132,6 +136,7 @@ private:
     // Timeouts
     int m_connectTimeoutMs = 3000;
     int m_operationTimeoutMs = 2000;
+    int m_protocolTimeoutMs = 500; // 500ms for protocol operations (handshake, ping-pong)
 
     // Threading
     bool m_enableIOThread = true;  // Enable IO thread by default

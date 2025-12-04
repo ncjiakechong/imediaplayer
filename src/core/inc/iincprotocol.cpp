@@ -191,31 +191,25 @@ bool iINCProtocol::readMessage(iINCMessage& msg)
     }
 
     // Step 2: Parse header to get payload size
-    const char* headerData = m_recvBuffer.constData();
-
-    // Magic number at offset 0
-    xuint32 magic;
-    std::memcpy(&magic, headerData, sizeof(magic));
-    if (magic != iINCMessageHeader::MAGIC) {
-        ilog_error("[", m_device->peerAddress(), "] Invalid message magic: ", iHexUInt32(magic));
+    xint32 payloadLength = msg.parseHeader(iByteArrayView(m_recvBuffer.constData(), iINCMessageHeader::HEADER_SIZE));
+    if (payloadLength < 0) {
+        ilog_error("[", m_device->peerAddress(), "] Invalid message header");
         IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
         m_recvBuffer.clear();
+        msg.clear();
         return false;
     }
 
-    // Length at offset 20
-    xuint32 length;
-    std::memcpy(&length, headerData + 20, sizeof(length));
-    if (length > iINCMessageHeader::MAX_MESSAGE_SIZE) {
-        ilog_error("[", m_device->peerAddress(), "] Message too large: ", length);
+    if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
+        ilog_error("[", m_device->peerAddress(), "] Message too large: ", payloadLength);
         IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
         m_recvBuffer.clear();
+        msg.clear();
         return false;
     }
 
-    xuint32 totalSize = iINCMessageHeader::HEADER_SIZE + length;
-
     // Step 3: Ensure we have complete message (header + payload)
+    xuint32 totalSize = iINCMessageHeader::HEADER_SIZE + payloadLength;
     if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
         // Try to read more data - read up to what we need for complete message
         xint64 readErr = 0;
@@ -230,28 +224,15 @@ bool iINCProtocol::readMessage(iINCMessage& msg)
     }
 
     // Step 4: Complete message received - parse header and extract payload
-    iINCMessageHeader header;
-    std::memcpy(&header, m_recvBuffer.constData(), sizeof(header));
-
-    // Build message from header and payload
-    msg.setType(static_cast<iINCMessageType>(header.type));
-    msg.setProtocolVersion(header.protocolVersion);
-    msg.setPayloadVersion(header.payloadVersion);
-    msg.setChannelID(header.channelID);
-    msg.setSequenceNumber(header.seqNum);
-    msg.setFlags(header.flags);
-    msg.setDTS(header.dts);
-
     // Extract payload (zero-copy using mid)
-    if (header.length > 0) {
-        msg.payload().setData(m_recvBuffer.mid(sizeof(iINCMessageHeader), header.length));
+    if (payloadLength > 0) {
+        msg.payload().setData(m_recvBuffer.mid(sizeof(iINCMessageHeader), payloadLength));
     } else {
         msg.payload().clear();
     }
 
     // Step 5: Remove consumed data from buffer
     m_recvBuffer = m_recvBuffer.mid(totalSize);
-
     return true;
 }
 

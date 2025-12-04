@@ -107,6 +107,7 @@ public:
     void setChannelID(xuint32 channel) { m_channelID = channel; }
     void setFlags(xuint16 flags) { m_flags = flags; }
     void setDTS(xint64 dts) { m_dts = dts; }
+    xint32 parseHeader(iByteArrayView header);
 
     /// Set payload from iINCTagStruct
     void setPayload(const iINCTagStruct& payload) { m_payload = payload; }

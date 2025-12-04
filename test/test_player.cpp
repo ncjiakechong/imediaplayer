@@ -75,8 +75,7 @@ public:
         ::close(m_fd);
         m_fd = -1;
 
-
-        setWriteChannelCount(0);
+        clearWriteChannels();
         iIODevice::close();
     }
 

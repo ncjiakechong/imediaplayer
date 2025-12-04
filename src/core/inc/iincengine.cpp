@@ -14,6 +14,7 @@
 #include "inc/iincengine.h"
 #include "inc/itcpdevice.h"
 #include "inc/iunixdevice.h"
+#include "inc/iudpdevice.h"
 
 #define ILOG_TAG "ix_inc"
 
@@ -64,8 +65,11 @@ iINCDevice* iINCEngine::createClientTransport(const iStringView& url)
     if (parsed.scheme == "tcp") {
         return createTcpClient(parsed);
     }
+    else if (parsed.scheme == "udp") {
+        return createUdpClient(parsed);
+    }
     else if (parsed.scheme == "pipe" || parsed.scheme == "unix") {
-        return createPipeClient(parsed);
+        return createUnixClient(parsed);
     }
 
     ilog_error("Unsupported scheme:", parsed.scheme);
@@ -83,8 +87,11 @@ iINCDevice* iINCEngine::createServerTransport(const iStringView& url)
     if (parsed.scheme == "tcp") {
         return createTcpServer(parsed);
     }
+    else if (parsed.scheme == "udp") {
+        return createUdpServer(parsed);
+    }
     else if (parsed.scheme == "pipe" || parsed.scheme == "unix") {
-        return createPipeServer(parsed);
+        return createUnixServer(parsed);
     }
 
     ilog_error("Unsupported scheme:", parsed.scheme);
@@ -106,8 +113,8 @@ iINCEngine::ParsedUrl iINCEngine::parseUrl(const iStringView& url)
         return result;
     }
 
-    if (result.scheme == "tcp") {
-        // tcp://host:port
+    if (result.scheme == "tcp" || result.scheme == "udp") {
+        // tcp://host:port or udp://host:port
         result.host = parsedUrl.host();
         result.port = parsedUrl.port();
 
@@ -116,7 +123,7 @@ iINCEngine::ParsedUrl iINCEngine::parseUrl(const iStringView& url)
         }
 
         if (result.port == 0) {
-            ilog_error("Missing port in TCP URL:", url);
+            ilog_error("Missing port in TCP/UDP URL:", url);
             return result;
         }
 
@@ -164,7 +171,7 @@ iTcpDevice* iINCEngine::createTcpServer(const ParsedUrl& url)
     return device;
 }
 
-iUnixDevice* iINCEngine::createPipeClient(const ParsedUrl& url)
+iUnixDevice* iINCEngine::createUnixClient(const ParsedUrl& url)
 {
     iUnixDevice* device = new iUnixDevice(iINCDevice::ROLE_CLIENT);
 
@@ -177,7 +184,7 @@ iUnixDevice* iINCEngine::createPipeClient(const ParsedUrl& url)
     return device;
 }
 
-iUnixDevice* iINCEngine::createPipeServer(const ParsedUrl& url)
+iUnixDevice* iINCEngine::createUnixServer(const ParsedUrl& url)
 {
     iUnixDevice* device = new iUnixDevice(iINCDevice::ROLE_SERVER);
 
@@ -187,6 +194,33 @@ iUnixDevice* iINCEngine::createPipeServer(const ParsedUrl& url)
     }
 
     ilog_info("Created unix socket server on", url.path);
+    return device;
+}
+
+iUDPDevice* iINCEngine::createUdpClient(const ParsedUrl& url)
+{
+    iUDPDevice* device = new iUDPDevice(iINCDevice::ROLE_CLIENT);
+
+    if (device->connectToHost(url.host, url.port) != INC_OK) {
+        delete device;
+        return IX_NULLPTR;
+    }
+
+    ilog_info("Created UDP client to", url.host, ":", url.port);
+    return device;
+}
+
+iUDPDevice* iINCEngine::createUdpServer(const ParsedUrl& url)
+{
+    iUDPDevice* device = new iUDPDevice(iINCDevice::ROLE_SERVER);
+
+    iString bindAddr = url.host.isEmpty() ? "0.0.0.0" : url.host;
+    if (device->bindOn(bindAddr, url.port) != INC_OK) {
+        delete device;
+        return IX_NULLPTR;
+    }
+
+    ilog_info("Created UDP server on", bindAddr, ":", url.port);
     return device;
 }
 

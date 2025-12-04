@@ -241,7 +241,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     m_connections[connId] = conn;
 
     IEMIT clientConnected(conn);
-    ilog_info("[", objectName(), "] New client connected, ID:", connId);
+    ilog_info("[", objectName(), "] New client connected, ID:", connId, " from [", incDevice->peerAddress(), "]");
 }
 
 void iINCServer::handleListenDeviceDisconnected()
@@ -511,7 +511,6 @@ void iINCServer::handleHandshake(iINCConnection* conn, const iINCMessage& msg)
 
         ilog_info("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                     "] Handshake completed with ", remote.nodeName);
-        conn->clearHandshake();
     } else {
         // Handshake failed
         ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
@@ -537,7 +536,5 @@ void iINCServer::sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint3
     msg.payload().putInt32(writen);
     conn->sendMessage(msg);
 }
-
-
 
 } // namespace iShell
