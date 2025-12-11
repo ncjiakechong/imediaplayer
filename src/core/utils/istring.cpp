@@ -3870,12 +3870,12 @@ iString iChar::fromUcs4(xuint32 c)
     if (requiresSurrogates(c)) {
         _ret.chars[0] = iChar::highSurrogate(c);
         _ret.chars[1] = iChar::lowSurrogate(c);
-    } else {
-        _ret.chars[0] = xuint16(c);
-        _ret.chars[1] = u'\0';
+        return iString(iStringView(&_ret.chars[0], 2));
     }
 
-    return iString(iStringView(&_ret.chars[0], &_ret.chars[1]));
+    _ret.chars[0] = xuint16(c);
+    _ret.chars[1] = u'\0';
+    return iString(iStringView(&_ret.chars[0], 1));
 }
 
 /*!

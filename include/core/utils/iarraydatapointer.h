@@ -365,7 +365,7 @@ public:
     void moveAppend(T *b, T *e)
     { insert(this->end(), b, e); }
 
-    void insert(T *where, const T *b, const T *e) {
+    iterator insert(T *where, const T *b, const T *e) {
         IX_ASSERT(this->isMutable() || (b == e && where == this->end()));
         IX_ASSERT(!this->isShared() || (b == e && where == this->end()));
         IX_ASSERT(where >= this->begin() && where <= this->end());
@@ -377,9 +377,10 @@ public:
                   (static_cast<const T*>(this->end()) - where) * sizeof(T));
         ::memcpy(static_cast<void *>(where), static_cast<const void *>(b), (e - b) * sizeof(T));
         this->size += (e - b);
+        return where;
     }
 
-    void insert(T *where, size_t n, T t) {
+    iterator insert(T *where, size_t n, T t) {
         IX_ASSERT(!this->isShared() || (n == 0 && where == this->end()));
         IX_ASSERT(where >= this->begin() && where <= this->end());
         IX_ASSERT(size_t(this->freeSpaceAtEnd()) >= n);
@@ -389,9 +390,10 @@ public:
         this->size += xsizetype(n); // PODs can't throw on copy
         while (n--)
             *where++ = t;
+        return where - n;
     }
 
-    void erase(T *b, T *e) {
+    iterator erase(T *b, T *e) {
         IX_ASSERT(this->isMutable());
         IX_ASSERT(b < e);
         IX_ASSERT(b >= this->begin() && b < this->end());
@@ -408,6 +410,7 @@ public:
                       (static_cast<T *>(this->end()) - e) * sizeof(T));
         }
         this->size -= (e - b);
+        return b;
     }
 
     void assign(T *b, T *e, T t) {
@@ -415,7 +418,7 @@ public:
         IX_ASSERT(b >= this->begin() && e <= this->end());
 
         while (b != e)
-            ::memcpy(static_cast<void *>(b++), static_cast<const void *>(&t), sizeof(T));
+            *b++ = t;
     }
 
     bool compare(const T *begin1, const T *begin2, size_t n) const

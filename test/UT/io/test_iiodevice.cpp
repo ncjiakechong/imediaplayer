@@ -125,7 +125,7 @@ protected:
         delete device;
     }
 
-    TestIODevice* device;
+    TestIODevice* device = nullptr;
 };
 
 // ===== Construction and Basic Properties =====

@@ -134,15 +134,18 @@ private:
     /// @param pattern Event pattern to remove
     void removeSubscription(const iString& pattern);
 
-    /// Allocate channel for stream (server-side only)
-    /// @param channel Stream channel requested by client
+    /// Allocate channel for stream
+    /// @param channel Stream channel requested
     /// @return Allocated channel ID, or 0 if allocation failed
     xuint32 regeisterChannel(iINCChannel* channel);
 
-    /// Release channel (server-side only)
+    /// Release channel
     /// @param channelId Channel to release
     /// @return Allocated channel instance
     iINCChannel* unregeisterChannel(xuint32 channelId);
+
+    /// Clear all allocated channels
+    void clearChannels();
 
     /// Set handshake handler (server-side only)
     void setHandshakeHandler(class iINCHandshake* handshake);

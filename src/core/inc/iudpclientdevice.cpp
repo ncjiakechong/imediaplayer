@@ -98,8 +98,19 @@ xint64 iUDPClientDevice::writeData(const iByteArray& data)
         return data.size();
     }
 
-    iByteArray peekData = m_writeBuffer.peek(iINCMessageHeader::HEADER_SIZE);
-    IX_ASSERT(peekData.size() == iINCMessageHeader::HEADER_SIZE);
+    iByteArray peekData;
+    xint64 offset = 0;
+    while (peekData.size() < iINCMessageHeader::HEADER_SIZE) {
+        iByteArray chunk = m_writeBuffer.peek(iINCMessageHeader::HEADER_SIZE - peekData.size(), offset);
+        if (chunk.isEmpty()) break;
+        peekData.append(chunk);
+        offset += chunk.size();
+    }
+    
+    if (peekData.size() < iINCMessageHeader::HEADER_SIZE) {
+         // Should not happen if m_writeBuffer.size() >= HEADER_SIZE
+         return data.size();
+    }
 
     iINCMessage fake(INC_MSG_INVALID, 0, 0);
     xint32 payloadLength = fake.parseHeader(iByteArrayView(peekData.constData(), iINCMessageHeader::HEADER_SIZE));

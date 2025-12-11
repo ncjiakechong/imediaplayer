@@ -12,6 +12,7 @@
 #include <core/inc/iincoperation.h>
 #include <core/kernel/iobject.h>
 #include <core/kernel/itimer.h>
+#include <core/thread/ithread.h>
 
 #define ILOG_TAG "ix_inc"
 
@@ -35,19 +36,25 @@ iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent)
 iINCOperation::~iINCOperation()
 {
     iObject::disconnect(&m_timer, &iTimer::timeout, this, &iINCOperation::onTimeout);
-    iObject::invokeMethod(&m_timer, &iTimer::stop);
+}
+
+void iINCOperation::doFree()
+{
+    iTimer::singleShot(0, reinterpret_cast<xintptr>(this), &m_timer,
+                [](xintptr userdata) {
+                    iINCOperation* op = reinterpret_cast<iINCOperation*>(userdata);
+                    delete op;
+                });
 }
 
 void iINCOperation::cancel()
 {
-    if (m_state == STATE_RUNNING) {
-        setState(STATE_CANCELLED);
-    }
+    setState(STATE_CANCELLED);
 }
 
 void iINCOperation::setTimeout(xint64 timeout)
 {
-    if (m_state != STATE_RUNNING) {
+    if (STATE_RUNNING != m_state) {
         return;
     }
 
@@ -60,9 +67,7 @@ void iINCOperation::setTimeout(xint64 timeout)
 void iINCOperation::onTimeout(xintptr userData)
 {
     IX_UNUSED(userData);
-    if (STATE_RUNNING == m_state) {
-        setState(STATE_TIMEOUT);
-    }
+    setState(STATE_TIMEOUT);
 }
 
 void iINCOperation::setFinishedCallback(FinishedCallback callback, void* userData)
@@ -76,24 +81,23 @@ void iINCOperation::setFinishedCallback(FinishedCallback callback, void* userDat
 
 void iINCOperation::setState(State st)
 {
-    if (m_state == st) {
+    if ((st == m_state) || (STATE_RUNNING != m_state)) {
         return;
     }
 
     m_state = st;
-    if (st != STATE_RUNNING) {
+    if (STATE_RUNNING != st) {
         iObject::invokeMethod(&m_timer, &iTimer::stop);
     }
 
-    // Invoke finished callback if operation completed
-    if (st != STATE_RUNNING && m_finishedCallback) {
+    if (STATE_RUNNING != st && m_finishedCallback) {
         m_finishedCallback(this, m_finishedUserData);
     }
 }
 
 void iINCOperation::setResult(xint32 errorCode, const iByteArray& data)
 {
-    if (m_state != STATE_RUNNING) {
+    if (STATE_RUNNING != m_state) {
         return;
     }
 

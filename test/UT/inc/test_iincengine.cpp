@@ -257,6 +257,49 @@ TEST_F(INCEngineTest, CreatePipeServerValidUrl) {
     }
 }
 
+// === UDP Transport Tests ===
+
+TEST_F(INCEngineTest, CreateUdpClientValidUrl) {
+    engine->initialize();
+
+    // Test udp:// scheme
+    iINCDevice* device = engine->createClientTransport(iString(u"udp://127.0.0.1:9995"));
+
+    if (device != nullptr) {
+        delete device;
+    }
+}
+
+TEST_F(INCEngineTest, CreateUdpServerValidUrl) {
+    engine->initialize();
+
+    // Test udp:// scheme for server
+    iINCDevice* device = engine->createServerTransport(iString(u"udp://127.0.0.1:19995"));
+
+    if (device != nullptr) {
+        delete device;
+    }
+}
+
+TEST_F(INCEngineTest, CreateUdpClientMissingPort) {
+    engine->initialize();
+
+    // UDP URL without port should fail
+    iINCDevice* device = engine->createClientTransport(iString(u"udp://localhost"));
+    EXPECT_EQ(device, nullptr);
+}
+
+TEST_F(INCEngineTest, CreateUdpServerMissingPort) {
+    engine->initialize();
+
+    // UDP URL without port should fail (or default depending on implementation)
+    // Similar to TCP test
+    iINCDevice* device = engine->createServerTransport(iString(u"udp://0.0.0.0"));
+    if (device != nullptr) {
+        delete device;
+    }
+}
+
 // === Engine State Management ===
 
 TEST_F(INCEngineTest, CreateTransportBeforeInit) {

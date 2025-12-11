@@ -72,6 +72,8 @@ private:
     iINCOperation(xuint32 seqNum, iObject* parent);
     virtual ~iINCOperation();
 
+    void doFree() IX_OVERRIDE;
+
     void setState(State st);
     void setResult(xint32 errorCode, const iByteArray& data);
 

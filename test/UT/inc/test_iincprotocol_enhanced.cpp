@@ -98,8 +98,8 @@ protected:
         // m_mockDevice is owned by protocol, will be deleted
     }
 
-    MockINCDevice* m_mockDevice;
-    iINCProtocol* m_protocol;
+    MockINCDevice* m_mockDevice = nullptr;
+    iINCProtocol* m_protocol = nullptr;
 };
 
 // Test: Next sequence number generation (thread-safe atomic)
@@ -279,12 +279,281 @@ TEST_F(INCProtocolEnhancedTest, SendLargeBinaryData) {
     }
 
     xuint32 channelId = 100;
-    auto op = m_protocol->sendBinaryData(channelId, largeData);
+    auto op = m_protocol->sendBinaryData(channelId, 0, largeData);
 
     ASSERT_NE(op.data(), nullptr);
     m_protocol->flush();
 
     // Verify message structure was sent
     iByteArray sentData = m_mockDevice->getSentData();
+    EXPECT_GT(sentData.size(), 0);
+}
+
+// Test: Send message with invalid (too large) payload
+TEST_F(INCProtocolEnhancedTest, SendMessageTooLarge) {
+    m_mockDevice->simulateConnect();
+
+    iINCMessage msg(INC_MSG_REQUEST, 1, m_protocol->nextSequence());
+    
+    // Create a payload larger than MAX_MESSAGE_SIZE (16MB)
+    iByteArray hugePayload;
+    hugePayload.resize(20 * 1024 * 1024); // 20MB - exceeds limit
+    for (int i = 0; i < hugePayload.size(); i++) {
+        hugePayload[i] = static_cast<char>(i % 256);
+    }
+    msg.payload().setData(hugePayload);
+
+    // Should return operation with error
+    auto op = m_protocol->sendMessage(msg);
+    ASSERT_NE(op.data(), nullptr);
+    
+    // Wait a bit for async processing
+    iThread::msleep(50);
+    
+    // Operation should complete with error
+    EXPECT_EQ(op->getState(), iINCOperation::STATE_COMPLETED);
+    EXPECT_NE(op->errorCode(), INC_OK);
+}
+
+// Test: Send queue full scenario
+TEST_F(INCProtocolEnhancedTest, SendQueueFull) {
+    m_mockDevice->simulateConnect();
+    m_mockDevice->setReadyWrite(false); // Block sending
+
+    // Fill up the queue (INC_MAX_SEND_QUEUE = 100)
+    std::vector<iSharedDataPointer<iINCOperation>> operations;
+    
+    for (int i = 0; i < 105; i++) {  // Try to send more than queue capacity
+        iINCMessage msg(INC_MSG_REQUEST, 1, m_protocol->nextSequence());
+        msg.payload().putInt32(i);
+        
+        auto op = m_protocol->sendMessage(msg);
+        if (op.data()) {
+            operations.push_back(op);
+        }
+    }
+    
+    // Wait for queue processing
+    iThread::msleep(100);
+    
+    // Some operations should have failed due to queue full
+    int errorCount = 0;
+    for (const auto& op : operations) {
+        if (op->getState() == iINCOperation::STATE_COMPLETED && 
+            op->errorCode() == INC_ERROR_QUEUE_FULL) {
+            errorCount++;
+        }
+    }
+    
+    EXPECT_GT(errorCount, 0) << "Expected some operations to fail with QUEUE_FULL error";
+}
+
+// Test: Read message with invalid header
+TEST_F(INCProtocolEnhancedTest, ReadMessageInvalidHeader) {
+    m_mockDevice->simulateConnect();
+
+    // Create invalid message header (wrong magic number)
+    iByteArray invalidData;
+    invalidData.resize(iINCMessageHeader::HEADER_SIZE);
+    
+    // Set invalid magic (should be 0x494E4300 = "INC\0")
+    xuint32 invalidMagic = 0x12345678;
+    memcpy(invalidData.data(), &invalidMagic, 4);
+    
+    // Set payload length
+    xint32 payloadLen = 0;
+    memcpy(invalidData.data() + 4, &payloadLen, 4);
+    
+    // Simulate receiving invalid data
+    bool errorSignalReceived = false;
+    iObject::connect(m_protocol, &iINCProtocol::errorOccurred, 
+                     [&errorSignalReceived](xint32 errorCode) {
+                         errorSignalReceived = true;
+                     });
+    
+    m_mockDevice->simulateReceiveData(invalidData);
+    
+    // Wait for processing
+    iThread::msleep(50);
+    
+    // Should trigger error signal
+    EXPECT_TRUE(errorSignalReceived) << "Expected errorOccurred signal for invalid header";
+}
+
+// Test: Read message too large
+TEST_F(INCProtocolEnhancedTest, ReadMessageTooLarge) {
+    m_mockDevice->simulateConnect();
+
+    // Create message header with excessive payload length
+    iByteArray invalidData;
+    invalidData.resize(iINCMessageHeader::HEADER_SIZE);
+    
+    // Set valid magic
+    xuint32 magic = 0x494E4300; // "INC\0" in little-endian
+    memcpy(invalidData.data(), &magic, 4);
+    
+    // Set invalid (too large) payload length (> MAX_MESSAGE_SIZE)
+    xint32 hugePayloadLen = 20 * 1024 * 1024; // 20MB
+    memcpy(invalidData.data() + 4, &hugePayloadLen, 4);
+    
+    // Simulate receiving
+    bool errorSignalReceived = false;
+    iObject::connect(m_protocol, &iINCProtocol::errorOccurred, 
+                     [&errorSignalReceived](xint32 errorCode) {
+                         if (errorCode == INC_ERROR_MESSAGE_TOO_LARGE) {
+                             errorSignalReceived = true;
+                         }
+                     });
+    
+    m_mockDevice->simulateReceiveData(invalidData);
+    
+    // Wait for processing
+    iThread::msleep(50);
+    
+    EXPECT_TRUE(errorSignalReceived) << "Expected MESSAGE_TOO_LARGE error";
+}
+
+// Test: Read incomplete message (header only)
+TEST_F(INCProtocolEnhancedTest, ReadIncompleteMessage) {
+    m_mockDevice->simulateConnect();
+
+    // Send only partial header
+    iByteArray partialHeader;
+    partialHeader.resize(iINCMessageHeader::HEADER_SIZE / 2);
+    
+    m_mockDevice->simulateReceiveData(partialHeader);
+    
+    // Wait for processing
+    iThread::msleep(50);
+    
+    // No message should be received yet (waiting for complete header)
+    // This tests the incomplete message buffering logic
+}
+
+// Test: Read complete message in fragments
+TEST_F(INCProtocolEnhancedTest, ReadMessageFragmented) {
+    m_mockDevice->simulateConnect();
+
+    // Create a valid message
+    iINCMessage originalMsg(INC_MSG_BINARY_DATA_ACK, 5, 12345);
+    originalMsg.payload().putInt32(INC_OK);
+    
+    iByteArray completeData = originalMsg.encode();
+    
+    // Split into 3 fragments
+    xsizetype fragment1Size = completeData.size() / 3;
+    xsizetype fragment2Size = completeData.size() / 3;
+    xsizetype fragment3Size = completeData.size() - fragment1Size - fragment2Size;
+    
+    iByteArray fragment1 = completeData.left(fragment1Size);
+    iByteArray fragment2 = completeData.mid(fragment1Size, fragment2Size);
+    iByteArray fragment3 = completeData.right(fragment3Size);
+    
+    bool messageReceived = false;
+    iObject::connect(m_protocol, &iINCProtocol::messageReceived,
+                     [&messageReceived](const iINCMessage& msg) {
+                         messageReceived = true;
+                     });
+    
+    // Send fragments one by one
+    m_mockDevice->simulateReceiveData(fragment1);
+    iThread::msleep(10);
+    EXPECT_FALSE(messageReceived) << "Should not receive message after first fragment";
+    
+    m_mockDevice->simulateReceiveData(fragment2);
+    iThread::msleep(10);
+    EXPECT_FALSE(messageReceived) << "Should not receive message after second fragment";
+    
+    m_mockDevice->simulateReceiveData(fragment3);
+    iThread::msleep(50);
+    EXPECT_TRUE(messageReceived) << "Should receive complete message after all fragments";
+}
+
+// Test: Binary data received signal
+TEST_F(INCProtocolEnhancedTest, BinaryDataReceivedSignal) {
+    m_mockDevice->simulateConnect();
+
+    // Create binary data message
+    iINCMessage binaryMsg(INC_MSG_BINARY_DATA, 42, 9999);
+    binaryMsg.payload().putInt64(0); // position
+    
+    iByteArray testData("Test binary data", 16);
+    binaryMsg.payload().putBytes(testData);
+    
+    bool binaryDataReceived = false;
+    xuint32 receivedChannel = 0;
+    xuint32 receivedSeqNum = 0;
+    
+    iObject::connect(m_protocol, &iINCProtocol::binaryDataReceived,
+                     [&](xuint32 channel, xuint32 seqNum, xint64 pos, const iByteArray& data) {
+                         binaryDataReceived = true;
+                         receivedChannel = channel;
+                         receivedSeqNum = seqNum;
+                     });
+    
+    // Simulate receiving the message
+    iByteArray encodedMsg = binaryMsg.encode();
+    m_mockDevice->simulateReceiveData(encodedMsg);
+    
+    // Wait for processing
+    iThread::msleep(50);
+    
+    EXPECT_TRUE(binaryDataReceived) << "Should receive binaryDataReceived signal";
+    EXPECT_EQ(receivedChannel, 42u);
+    EXPECT_EQ(receivedSeqNum, 9999u);
+}
+
+// Test: Operation completion tracking
+TEST_F(INCProtocolEnhancedTest, OperationCompletionTracking) {
+    m_mockDevice->simulateConnect();
+
+    // Send a request
+    iINCMessage reqMsg(INC_MSG_REQUEST, 10, m_protocol->nextSequence());
+    reqMsg.payload().putString("test_key");
+    
+    auto op = m_protocol->sendMessage(reqMsg);
+    ASSERT_NE(op.data(), nullptr);
+    
+    xuint32 requestSeq = op->sequence();
+    EXPECT_EQ(op->getState(), iINCOperation::STATE_RUNNING);
+    
+    m_protocol->flush();
+    
+    // Simulate receiving response
+    iINCMessage respMsg(INC_MSG_RESPONSE, 10, requestSeq);
+    respMsg.payload().putString("response_value");
+    
+    iByteArray encodedResp = respMsg.encode();
+    m_mockDevice->simulateReceiveData(encodedResp);
+    
+    // Wait for processing
+    iThread::msleep(50);
+    
+    // Operation should be completed
+    EXPECT_EQ(op->getState(), iINCOperation::STATE_COMPLETED);
+    EXPECT_EQ(op->errorCode(), INC_OK);
+}
+
+// Test: Device connected triggers write
+TEST_F(INCProtocolEnhancedTest, DeviceConnectedTriggersWrite) {
+    // Create message before connection
+    iINCMessage msg(INC_MSG_REQUEST, 1, m_protocol->nextSequence());
+    msg.payload().putInt32(123);
+    
+    auto op = m_protocol->sendMessage(msg);
+    ASSERT_NE(op.data(), nullptr);
+    
+    // No data sent yet (not connected)
+    iByteArray sentData = m_mockDevice->getSentData();
+    EXPECT_EQ(sentData.size(), 0);
+    
+    // Connect should trigger sending
+    m_mockDevice->simulateConnect();
+    
+    // Wait for async processing
+    iThread::msleep(100);
+    
+    // Now data should be sent
+    sentData = m_mockDevice->getSentData();
     EXPECT_GT(sentData.size(), 0);
 }

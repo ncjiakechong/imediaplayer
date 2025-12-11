@@ -116,3 +116,80 @@ TEST_F(INCServerTest, Signals) {
     SUCCEED();
 }
 
+// Real server tests (moved from test_iincserver_unit.cpp)
+class MinimalTestServer : public iShell::iINCServer
+{
+    IX_OBJECT(MinimalTestServer)
+public:
+    explicit MinimalTestServer(const iShell::iString& name, iShell::iObject* parent = IX_NULLPTR)
+        : iShell::iINCServer(name, parent)
+    {
+    }
+
+protected:
+    void handleMethod(iShell::iINCConnection* conn, xuint32 seqNum, const iShell::iString& method,
+                     xuint16 version, const iShell::iByteArray& args) override
+    {
+        IX_UNUSED(conn);
+        IX_UNUSED(seqNum);
+        IX_UNUSED(method);
+        IX_UNUSED(version);
+        IX_UNUSED(args);
+    }
+
+    void handleBinaryData(iShell::iINCConnection* conn, xuint32 channelId, xuint32 seqNum,
+                         xint64 pos, const iShell::iByteArray& data) override
+    {
+        IX_UNUSED(conn);
+        IX_UNUSED(channelId);
+        IX_UNUSED(seqNum);
+        IX_UNUSED(pos);
+        IX_UNUSED(data);
+    }
+};
+
+TEST_F(INCServerTest, BasicConstruction)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    EXPECT_FALSE(testServer.isListening());
+}
+
+TEST_F(INCServerTest, CloseWhenNotListening)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    testServer.close();
+    EXPECT_FALSE(testServer.isListening());
+}
+
+TEST_F(INCServerTest, MultipleCloseCalls)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    testServer.close();
+    testServer.close();
+    testServer.close();
+    EXPECT_FALSE(testServer.isListening());
+}
+
+TEST_F(INCServerTest, ListenWithInvalidURL)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    // Try to listen on invalid URL
+    int result = testServer.listenOn(iShell::iString("invalid://malformed:address"));
+    EXPECT_NE(result, 0);  // Should return non-zero error code
+    EXPECT_FALSE(testServer.isListening());
+}
+
+TEST_F(INCServerTest, ServerConfigurationBeforeListen)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    
+    iShell::iINCServerConfig config;
+    config.setMaxConnections(10);
+    config.setProtocolTimeoutMs(3000);
+    
+    testServer.setConfig(config);
+    
+    // Configuration should be applied before listening
+    EXPECT_FALSE(testServer.isListening());
+}
+

@@ -138,6 +138,7 @@ void iINCServer::close()
         iObject::disconnect(conn, IX_NULLPTR, this, IX_NULLPTR);
         conn->moveToThread(thread());
         conn->close();
+        conn->clearChannels();
         conn->deleteLater();
     }
 

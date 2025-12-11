@@ -11,6 +11,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/core
 )
 
 # Define test executable
@@ -51,8 +52,9 @@ set(INC_TEST_SOURCES
     inc/test_iincerror.cpp
     inc/test_iincconfig.cpp
     inc/test_iinchandshake_enhanced.cpp
-    inc/test_iinccontext_unit.cpp
-    inc/test_iincserver_unit.cpp
+    inc/test_iinccontext.cpp
+    inc/test_iincprotocol.cpp
+    inc/test_iudpclientdevice.cpp
 )
 
 set(IO_TEST_SOURCES
@@ -129,6 +131,15 @@ target_link_libraries(${UT_TARGET}
     GTest::gtest
     pthread
 )
+
+# Check for GLib
+find_package(PkgConfig)
+pkg_check_modules(GLIB_PKG glib-2.0)
+if (DEFINED GLIB_PKG_INCLUDE_DIRS AND DEFINED GLIB_PKG_LDFLAGS)
+    add_definitions(-DIBUILD_HAVE_GLIB)
+    include_directories(${GLIB_PKG_INCLUDE_DIRS})
+    target_link_libraries(${UT_TARGET} ${GLIB_PKG_LDFLAGS})
+endif()
 
 # Link multimedia library if available (depends on GStreamer)
 pkg_check_modules(GST_PKG gstreamer-1.0)

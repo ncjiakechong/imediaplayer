@@ -17,7 +17,7 @@ namespace iShell {
 
 iTimer::iTimer(iObject *parent)
     : iObject(parent)
-    , m_single(0)
+    , m_single(false)
     , m_id(0)
     , m_inter(0)
     , m_userdata(0)

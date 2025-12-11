@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include <core/utils/ibytearray.h>
+#include <list>
 
 using namespace iShell;
 
@@ -276,4 +277,131 @@ TEST_F(ByteArrayCoverageTest, SwapOperation) {
 
     EXPECT_EQ("second", ba1);
     EXPECT_EQ("first", ba2);
+}
+
+TEST_F(ByteArrayCoverageTest, ToShortAndUShort) {
+    bool ok = false;
+    iByteArray ba1("123");
+    short sval = ba1.toShort(&ok);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(123, sval);
+
+    iByteArray ba2("65535");
+    ushort usval = ba2.toUShort(&ok);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(65535, usval);
+
+    iByteArray ba3("invalid");
+    ba3.toShort(&ok);
+    EXPECT_FALSE(ok);
+}
+
+TEST_F(ByteArrayCoverageTest, ToLongLongAndULongLong) {
+    bool ok = false;
+    iByteArray ba1("123456789012345");
+    xint64 llval = ba1.toLongLong(&ok);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(123456789012345LL, llval);
+
+    iByteArray ba2("18446744073709551615");
+    xuint64 ullval = ba2.toULongLong(&ok);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(18446744073709551615ULL, ullval);
+}
+
+TEST_F(ByteArrayCoverageTest, CaseConversion) {
+    iByteArray ba("HelloWorld");
+    EXPECT_FALSE(ba.isUpper());
+    EXPECT_FALSE(ba.isLower());
+
+    iByteArray upper = ba.toUpper();
+    EXPECT_EQ("HELLOWORLD", upper);
+    EXPECT_TRUE(upper.isUpper());
+    EXPECT_FALSE(upper.isLower());
+
+    iByteArray lower = ba.toLower();
+    EXPECT_EQ("helloworld", lower);
+    EXPECT_FALSE(lower.isUpper());
+    EXPECT_TRUE(lower.isLower());
+}
+
+TEST_F(ByteArrayCoverageTest, TrimmedAndSimplified) {
+    iByteArray ba("  Hello   World  \t\n");
+    
+    iByteArray trimmed = ba.trimmed();
+    EXPECT_EQ("Hello   World", trimmed);
+
+    iByteArray simplified = ba.simplified();
+    EXPECT_EQ("Hello World", simplified);
+}
+
+TEST_F(ByteArrayCoverageTest, Justified) {
+    iByteArray ba("abc");
+    
+    iByteArray left = ba.leftJustified(5, '-');
+    EXPECT_EQ("abc--", left);
+
+    iByteArray right = ba.rightJustified(5, '-');
+    EXPECT_EQ("--abc", right);
+
+    // Truncate
+    iByteArray trunc = ba.leftJustified(2, '-', true);
+    EXPECT_EQ("ab", trunc);
+}
+
+TEST_F(ByteArrayCoverageTest, Replace) {
+    iByteArray ba("banana");
+    
+    // Replace char
+    ba.replace('a', 'o');
+    EXPECT_EQ("bonono", ba);
+
+    // Replace string "no" with "na"
+    // "bonono" -> "bonana" (first 'o' is not part of "no")
+    ba.replace("no", "na");
+    EXPECT_EQ("bonana", ba);
+
+    // Replace 'o' with 'a' to restore "banana"
+    ba.replace('o', 'a');
+    EXPECT_EQ("banana", ba);
+
+    // Replace with different length
+    // "banana" -> replace "na" with "n" -> "bann"
+    ba.replace("na", "n");
+    EXPECT_EQ("bann", ba);
+}
+
+TEST_F(ByteArrayCoverageTest, Split) {
+    iByteArray ba("apple,banana,cherry");
+    std::list<iByteArray> parts = ba.split(',');
+    
+    ASSERT_EQ(3, parts.size());
+    auto it = parts.begin();
+    EXPECT_EQ("apple", *it++);
+    EXPECT_EQ("banana", *it++);
+    EXPECT_EQ("cherry", *it++);
+}
+
+TEST_F(ByteArrayCoverageTest, Count) {
+    iByteArray ba("banana");
+    EXPECT_EQ(3, ba.count('a'));
+    EXPECT_EQ(2, ba.count("na"));
+}
+
+TEST_F(ByteArrayCoverageTest, Compare) {
+    iByteArray ba1("abc");
+    iByteArray ba2("ABC");
+    
+    EXPECT_NE(0, ba1.compare(ba2, iShell::CaseSensitive));
+    EXPECT_EQ(0, ba1.compare(ba2, iShell::CaseInsensitive));
+}
+
+TEST_F(ByteArrayCoverageTest, IsValidUtf8) {
+    iByteArray ascii("Hello");
+    EXPECT_TRUE(ascii.isValidUtf8());
+
+    // Invalid UTF-8 sequence
+    char invalid[] = {(char)0xFF, (char)0xFF, 0};
+    iByteArray bad(invalid);
+    EXPECT_FALSE(bad.isValidUtf8());
 }

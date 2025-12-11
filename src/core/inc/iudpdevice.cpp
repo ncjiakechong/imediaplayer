@@ -296,6 +296,14 @@ int iUDPDevice::bindOn(const iString& address, xuint16 port)
         return INC_ERROR_CONNECTION_FAILED;
     }
 
+    // Update local port if it was 0
+    if (port == 0) {
+        socklen_t len = sizeof(bindAddr);
+        if (::getsockname(m_sockfd, (struct sockaddr*)&bindAddr, &len) == 0) {
+            port = ntohs(bindAddr.sin_port);
+        }
+    }
+
     // Set non-blocking
     setNonBlocking(true);
 
@@ -606,6 +614,8 @@ void iUDPDevice::configEventAbility(bool read, bool write)
 
 void iUDPDevice::eventAbilityUpdate()
 {
+    if (!m_eventSource) return;
+
     int newEvents = m_monitorEvents;
     for (auto& pair : m_addrToChannel) {
         iUDPClientDevice* clientDevice = pair.second;

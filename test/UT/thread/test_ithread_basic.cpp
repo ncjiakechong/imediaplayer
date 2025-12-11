@@ -173,3 +173,30 @@ TEST_F(IThreadBasicTest, CurrentThreadId) {
     int id = iThread::currentThreadId();
     EXPECT_NE(id, 0);  // Thread ID should be non-zero
 }
+
+extern void setUseGlibDispatcher(bool use);
+
+class EventLoopWorker : public iThread {
+public:
+    void run() override {
+        exec();
+    }
+};
+
+TEST_F(IThreadBasicTest, DispatcherSwitching) {
+    // Test Generic
+    setUseGlibDispatcher(false);
+    EventLoopWorker worker1;
+    worker1.start();
+    iThread::msleep(50);
+    worker1.exit();
+    worker1.wait();
+
+    // Test GLib
+    setUseGlibDispatcher(true);
+    EventLoopWorker worker2;
+    worker2.start();
+    iThread::msleep(50);
+    worker2.exit();
+    worker2.wait();
+}

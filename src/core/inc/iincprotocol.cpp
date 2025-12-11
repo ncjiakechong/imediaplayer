@@ -86,7 +86,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& m
     // Create operation for tracking this request
     iSharedDataPointer<iINCOperation> op;
     if (!(msg.type() & 0x1))
-        op = new iINCOperation(msg.sequenceNumber(), this);
+        op = new iINCOperation(msg.sequenceNumber(), IX_NULLPTR);
 
     if (!msg.isValid()) {
         ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),

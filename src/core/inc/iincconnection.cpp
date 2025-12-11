@@ -34,7 +34,7 @@ iINCChannel::iINCChannel(const iString& name, iObject* parent)
 }
 
 iINCChannel::~iINCChannel()
-{
+{   
 }
 
 iINCConnection::iINCConnection(iINCDevice* device, xuint32 connId)
@@ -226,6 +226,15 @@ iINCChannel* iINCConnection::unregeisterChannel(xuint32 channelId)
     iINCChannel* channel = it->second;
     m_channels.erase(it);
     return channel;
+}
+
+void iINCConnection::clearChannels()
+{
+    while (!m_channels.empty()) {
+        auto it = m_channels.begin();
+        delete it->second;
+        m_channels.erase(it);
+    }
 }
 
 void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data)

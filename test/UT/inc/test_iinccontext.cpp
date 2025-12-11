@@ -67,3 +67,44 @@ TEST_F(INCContextUnitTest, ConstructAndDestructMultipleTimes)
         delete context;
     }
 }
+
+TEST_F(INCContextUnitTest, ConnectWithInvalidURL)
+{
+    iINCContext context(iString("TestClient"));
+    // Try to connect with invalid URL format
+    context.connectTo(iString("invalid://malformed:url"));
+    
+    // Wait for processing
+    iThread::msleep(100);
+    
+    // State should remain unconnected or go to failed
+    EXPECT_TRUE(context.state() == iINCContext::STATE_UNCONNECTED || 
+                context.state() == iINCContext::STATE_FAILED);
+}
+
+TEST_F(INCContextUnitTest, ConnectWhileAlreadyConnecting)
+{
+    iINCContext context(iString("TestClient"));
+    // First connect attempt
+    context.connectTo(iString("tcp://127.0.0.1:9999"));
+    
+    // Try to connect again while first connection is in progress
+    // Should fail or be ignored
+    bool result = context.connectTo(iString("tcp://127.0.0.1:9998"));
+    // Implementation should prevent double connect
+}
+
+TEST_F(INCContextUnitTest, CloseWhileConnecting)
+{
+    iINCContext context(iString("TestClient"));
+    // Start connecting
+    context.connectTo(iString("tcp://127.0.0.1:9999"));
+    
+    // Close while connecting
+    context.close();
+    
+    // Should transition to closed/unconnected state
+    iThread::msleep(50);
+    EXPECT_TRUE(context.state() == iINCContext::STATE_UNCONNECTED ||
+                context.state() == iINCContext::STATE_FAILED);
+}

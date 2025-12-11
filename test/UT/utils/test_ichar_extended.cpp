@@ -379,3 +379,77 @@ TEST_F(ICharExtendedTest, NonCharacter) {
     iChar normal('A');
     EXPECT_FALSE(normal.isNonCharacter());
 }
+
+// ============================================================================
+// Additional Coverage Tests
+// ============================================================================
+
+TEST_F(ICharExtendedTest, DecompositionDetails) {
+    // Hangul
+    iChar hangul(0xAC00); // Ga
+    iString decomp = hangul.decomposition();
+    EXPECT_EQ(decomp.length(), 2);
+    EXPECT_EQ(decomp[0].unicode(), 0x1100);
+    EXPECT_EQ(decomp[1].unicode(), 0x1161);
+    EXPECT_EQ(hangul.decompositionTag(), iChar::Canonical);
+
+    // Latin A grave
+    iChar aGrave(0x00C0);
+    decomp = aGrave.decomposition();
+    EXPECT_EQ(decomp.length(), 2);
+    EXPECT_EQ(decomp[0].unicode(), 0x0041); // A
+    EXPECT_EQ(decomp[1].unicode(), 0x0300); // grave
+    EXPECT_EQ(aGrave.decompositionTag(), iChar::Canonical);
+}
+
+TEST_F(ICharExtendedTest, StaticSurrogateHelpers) {
+    xuint32 ucs4 = 0x10000;
+    EXPECT_TRUE(iChar::requiresSurrogates(ucs4));
+    xuint16 high = iChar::highSurrogate(ucs4);
+    xuint16 low = iChar::lowSurrogate(ucs4);
+    EXPECT_TRUE(iChar(high).isHighSurrogate());
+    EXPECT_TRUE(iChar(low).isLowSurrogate());
+    EXPECT_EQ(iChar::surrogateToUcs4(high, low), ucs4);
+}
+
+TEST_F(ICharExtendedTest, InvalidCodePoints) {
+    xuint32 invalid = 0x110000;
+    EXPECT_FALSE(iChar::isPrint(invalid));
+    EXPECT_FALSE(iChar::isSpace(invalid));
+    EXPECT_FALSE(iChar::isMark(invalid));
+    EXPECT_FALSE(iChar::isPunct(invalid));
+    EXPECT_FALSE(iChar::isSymbol(invalid));
+    EXPECT_FALSE(iChar::isLetter(invalid));
+    EXPECT_FALSE(iChar::isNumber(invalid));
+    EXPECT_FALSE(iChar::isLetterOrNumber(invalid));
+    EXPECT_FALSE(iChar::isDigit(invalid));
+    
+    EXPECT_EQ(iChar::digitValue(invalid), -1);
+    EXPECT_EQ(iChar::category(invalid), iChar::Other_NotAssigned);
+    EXPECT_EQ(iChar::direction(invalid), iChar::DirL); 
+    EXPECT_EQ(iChar::joiningType(invalid), iChar::Joining_None);
+    EXPECT_FALSE(iChar::hasMirrored(invalid));
+    EXPECT_EQ(iChar::mirroredChar(invalid), invalid);
+    EXPECT_EQ(iChar::toLower(invalid), invalid);
+    EXPECT_EQ(iChar::toUpper(invalid), invalid);
+    EXPECT_EQ(iChar::toTitleCase(invalid), invalid);
+    EXPECT_EQ(iChar::toCaseFolded(invalid), invalid);
+    EXPECT_EQ(iChar::combiningClass(invalid), 0);
+    EXPECT_EQ(iChar::script(invalid), iChar::Script_Unknown);
+    EXPECT_EQ(iChar::unicodeVersion(invalid), iChar::Unicode_Unassigned);
+}
+
+TEST_F(ICharExtendedTest, Normalization) {
+    // Test iString::normalized which calls decomposeHelper
+    iString s;
+    s.append(iChar(0x00C0));
+    
+    iString nfd = s.normalized(iString::NormalizationForm_D);
+    EXPECT_EQ(nfd.length(), 2);
+    EXPECT_EQ(nfd[0].unicode(), 0x0041);
+    EXPECT_EQ(nfd[1].unicode(), 0x0300);
+    
+    iString nfc = nfd.normalized(iString::NormalizationForm_C);
+    EXPECT_EQ(nfc.length(), 1);
+    EXPECT_EQ(nfc[0].unicode(), 0x00C0);
+}

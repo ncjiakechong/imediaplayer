@@ -8,6 +8,10 @@
 #include <iostream>
 #include <cstring>
 #include <core/kernel/icoreapplication.h>
+#include <core/thread/ieventdispatcher_generic.h>
+#ifdef IBUILD_HAVE_GLIB
+#include <core/thread/ieventdispatcher_glib.h>
+#endif
 
 using namespace iShell;
 
@@ -76,12 +80,60 @@ public:
     }
 };
 
-int main(int argc, char** argv) {
-    // Create application instance for tests that need event loop
-    iCoreApplication app(argc, argv);
+class TestCoreApplicationPrivate : public iCoreApplicationPrivate {
+public:
+    bool m_useGlib;
 
+    TestCoreApplicationPrivate(int argc, char **argv) 
+        : iCoreApplicationPrivate(argc, argv), m_useGlib(false) {}
+    
+    void setUseGlib(bool use) {
+        m_useGlib = use;
+    }
+    
+    iEventDispatcher* createEventDispatcher() const override {
+        if (m_useGlib) {
+            #ifdef IBUILD_HAVE_GLIB
+            std::cout << "Creating iEventDispatcher_Glib" << std::endl;
+            return new iEventDispatcher_Glib();
+            #else
+            std::cout << "GLib not available, falling back to generic" << std::endl;
+            return new iEventDispatcher_generic();
+            #endif
+        } else {
+            std::cout << "Creating iEventDispatcher_generic" << std::endl;
+            return new iEventDispatcher_generic();
+        }
+    }
+};
+
+class TestCoreApplication : public iCoreApplication {
+    TestCoreApplicationPrivate* d_ptr;
+public:
+    TestCoreApplication(int argc, char** argv) 
+        : iCoreApplication(d_ptr = new TestCoreApplicationPrivate(argc, argv)) {}
+
+    void setUseGlib(bool use) {
+        if (d_ptr) {
+            d_ptr->setUseGlib(use);
+        }
+    }
+};
+
+// Global function to allow dynamic switching from tests
+void setUseGlibDispatcher(bool use) {
+    iCoreApplication* app = iCoreApplication::instance();
+    if (app) {
+        static_cast<TestCoreApplication*>(app)->setUseGlib(use);
+    }
+}
+
+int main(int argc, char** argv) {
     // Parse custom arguments first
     parseCustomArgs(argc, argv);
+
+    // Create application instance for tests that need event loop
+    TestCoreApplication app(argc, argv);
 
     // Initialize Google Test
     ::testing::InitGoogleTest(&argc, argv);

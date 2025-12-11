@@ -414,8 +414,10 @@ static bool _PeekMaxFunc(const iByteArray& chunk, xint64, xint64 distance, void*
     if (chunk.isEmpty())
         return true;
 
-    if (distance + chunk.length() <= data->offset)
+    if (distance + chunk.length() <= data->offset) {
+        data->lastDistance = distance + chunk.length();
         return true;
+    }
     if ((data->maxLength > 0) && (distance >= data->maxLength + data->offset))
         return false;
 

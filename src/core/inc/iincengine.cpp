@@ -116,16 +116,17 @@ iINCEngine::ParsedUrl iINCEngine::parseUrl(const iStringView& url)
     if (result.scheme == "tcp" || result.scheme == "udp") {
         // tcp://host:port or udp://host:port
         result.host = parsedUrl.host();
-        result.port = parsedUrl.port();
+        int p = parsedUrl.port();
 
         if (result.host.isEmpty()) {
             result.host = "127.0.0.1";  // Default to localhost
         }
 
-        if (result.port == 0) {
+        if (p <= 0) {
             ilog_error("Missing port in TCP/UDP URL:", url);
             return result;
         }
+        result.port = (xuint16)p;
 
         result.valid = true;
     }
