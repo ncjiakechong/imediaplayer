@@ -46,8 +46,7 @@ public:
         STATE_DETACHED,     ///< Not attached to channel
         STATE_ATTACHING,    ///< Negotiating channel
         STATE_ATTACHED,     ///< Attached and ready for I/O
-        STATE_DETACHING,    ///< Releasing channel (waiting for server confirmation)
-        STATE_ERROR         ///< Error occurred
+        STATE_DETACHING    ///< Releasing channel (waiting for server confirmation)
     };
 
     /// @brief Constructor
@@ -59,7 +58,7 @@ public:
     virtual ~iINCStream();
 
     /// Get stream state
-    State state() const { return m_state; }
+    State state() const;
     Mode mode() const IX_OVERRIDE { return m_mode; }
     xuint32 channelId() const IX_OVERRIDE { return m_channelId; }
 
@@ -118,14 +117,14 @@ public:
     void stateChanged(State previous, State current) ISIGNAL(stateChanged, previous, current);
 
     /// Emitted when binary data received
-    void dataReceived(xuint32 seqNum, xint64 pos, const iByteArray& data) ISIGNAL(dataReceived, seqNum, pos, data);
+    void dataReceived(xuint32 seqNum, xint64 pos, iByteArray data) ISIGNAL(dataReceived, seqNum, pos, data);
 
     /// Emitted on error
     void error(int errorCode) ISIGNAL(error, errorCode);
 
 private:
     /// Handle binary data received from protocol layer
-    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) IX_OVERRIDE;
+    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data) IX_OVERRIDE;
 
     /// Static callback for channel allocation completion
     static void onChannelAllocated(iINCOperation* op, void* userData);
@@ -134,7 +133,7 @@ private:
     static void onChannelReleased(iINCOperation* op, void* userData);
 
     /// Handle context state changes
-    void onContextStateChanged(int state);
+    void onContextStateChanged(iINCContext::State previous, iINCContext::State current);
 
     /// Cleanup pending operations on stream destruction
     void cleanupPendingOps();
@@ -142,10 +141,22 @@ private:
     /// Set state and emit stateChanged signal with previous state
     void setState(State newState);
 
+    void scheduleReconnect();
+    bool event(iEvent* e) IX_OVERRIDE;
+
+
     iINCContext*            m_context;      ///< Associated context (owns protocol)
     State                   m_state;        ///< Stream state
+    State                   m_customState;  ///< custom requested state
     Mode                    m_mode;         ///< Stream mode
     xuint32                 m_channelId;    ///< Channel ID for routing (0 = not allocated)
+
+    // Auto-reconnect timer ID (using iObject::startTimer/killTimer)
+    int                     m_reconnectTimerId;
+    int                     m_reconnectAttempts;
+
+    int                     m_reconnectIntervalMs;
+    int                     m_maxReconnectAttempts;
 
     // Pending operations tracking (manually manage refcount)
     std::list<iINCOperation*> m_pendingOps; ///< Track operations with our callbacks

@@ -106,6 +106,7 @@ TEST_F(IODeviceExtended2Test, TransactionStartCommit) {
 TEST_F(IODeviceExtended2Test, TransactionRollback) {
     device->open(iIODevice::ReadWrite);
     device->write("testdata");
+    device->seek(0);
 
     device->startTransaction();
     iByteArray beforeRead = device->read(4);
@@ -418,12 +419,14 @@ TEST_F(IODeviceExtended2Test, PutCharMultiple) {
 TEST_F(IODeviceExtended2Test, GetCharAtEnd) {
     device->open(iIODevice::ReadWrite);
     device->write("X");
+    device->seek(0);
 
     char ch;
     device->getChar(&ch);
 
     bool got = device->getChar(&ch);
-    EXPECT_FALSE(got || device->atEnd());
+    EXPECT_FALSE(got);
+    EXPECT_TRUE(device->atEnd());
 }
 
 // BytesToWrite

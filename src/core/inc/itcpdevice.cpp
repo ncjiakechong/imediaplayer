@@ -111,7 +111,6 @@ public:
     }
 
     bool prepare(xint64 *timeout) IX_OVERRIDE {
-        *timeout = 10 * 1000000;
         return false;
     }
 

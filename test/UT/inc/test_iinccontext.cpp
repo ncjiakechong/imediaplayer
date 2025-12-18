@@ -33,14 +33,14 @@ protected:
 TEST_F(INCContextUnitTest, BasicConstruction)
 {
     iINCContext context(iString("TestClient"));
-    EXPECT_EQ(context.state(), iINCContext::STATE_UNCONNECTED);
+    EXPECT_EQ(context.state(), iINCContext::STATE_READY);
 }
 
 TEST_F(INCContextUnitTest, DisconnectWhenNotConnected)
 {
     iINCContext context(iString("TestClient"));
     context.close();
-    EXPECT_EQ(context.state(), iINCContext::STATE_UNCONNECTED);
+    EXPECT_EQ(context.state(), iINCContext::STATE_READY);
 }
 
 TEST_F(INCContextUnitTest, MultipleDisconnectCalls)
@@ -49,7 +49,7 @@ TEST_F(INCContextUnitTest, MultipleDisconnectCalls)
     context.close();
     context.close();
     context.close();
-    EXPECT_EQ(context.state(), iINCContext::STATE_UNCONNECTED);
+    EXPECT_EQ(context.state(), iINCContext::STATE_READY);
 }
 
 TEST_F(INCContextUnitTest, InitialServerInfo)
@@ -63,7 +63,7 @@ TEST_F(INCContextUnitTest, ConstructAndDestructMultipleTimes)
 {
     for (int i = 0; i < 5; ++i) {
         iINCContext* context = new iINCContext(iString("Client") + iString::number(i));
-        EXPECT_EQ(context->state(), iINCContext::STATE_UNCONNECTED);
+        EXPECT_EQ(context->state(), iINCContext::STATE_READY);
         delete context;
     }
 }
@@ -77,9 +77,9 @@ TEST_F(INCContextUnitTest, ConnectWithInvalidURL)
     // Wait for processing
     iThread::msleep(100);
     
-    // State should remain unconnected or go to failed
-    EXPECT_TRUE(context.state() == iINCContext::STATE_UNCONNECTED || 
-                context.state() == iINCContext::STATE_FAILED);
+    // State should be FAILED or CONNECTING (if auto-reconnect is on)
+    EXPECT_TRUE(context.state() == iINCContext::STATE_FAILED || 
+                context.state() == iINCContext::STATE_CONNECTING);
 }
 
 TEST_F(INCContextUnitTest, ConnectWhileAlreadyConnecting)
@@ -97,6 +97,10 @@ TEST_F(INCContextUnitTest, ConnectWhileAlreadyConnecting)
 TEST_F(INCContextUnitTest, CloseWhileConnecting)
 {
     iINCContext context(iString("TestClient"));
+    iINCContextConfig config;
+    config.setAutoReconnect(false);
+    context.setConfig(config);
+
     // Start connecting
     context.connectTo(iString("tcp://127.0.0.1:9999"));
     
@@ -105,6 +109,5 @@ TEST_F(INCContextUnitTest, CloseWhileConnecting)
     
     // Should transition to closed/unconnected state
     iThread::msleep(50);
-    EXPECT_TRUE(context.state() == iINCContext::STATE_UNCONNECTED ||
-                context.state() == iINCContext::STATE_FAILED);
+    EXPECT_EQ(context.state(), iINCContext::STATE_TERMINATED);
 }

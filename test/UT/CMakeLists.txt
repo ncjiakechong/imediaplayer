@@ -53,6 +53,7 @@ set(INC_TEST_SOURCES
     inc/test_iincconfig.cpp
     inc/test_iinchandshake_enhanced.cpp
     inc/test_iinccontext.cpp
+    inc/test_inc_reconnection.cpp
     inc/test_iincprotocol.cpp
     inc/test_iudpclientdevice.cpp
 )

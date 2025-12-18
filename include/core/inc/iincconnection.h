@@ -32,6 +32,7 @@ class IX_CORE_EXPORT iINCChannel : public iObject
 public:
     /// Stream mode
     enum Mode {
+        MODE_NONE   = 0x00,          ///< No access
         MODE_READ   = 0x01 << 0,    ///< Read-only (receive binary data)
         MODE_WRITE  = 0x01 << 1,    ///< Write-only (send binary data)
         MODE_READWRITE = MODE_READ | MODE_WRITE ///< Bidirectional
@@ -45,7 +46,7 @@ public:
     virtual Mode mode() const = 0;
 
 protected:
-    virtual void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) = 0;
+    virtual void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data) = 0;
 
     friend class iINCConnection;
     IX_DISABLE_COPY(iINCChannel)
@@ -102,7 +103,7 @@ private: // signals
     void disconnected(iINCConnection* conn) ISIGNAL(disconnected, conn);
 
     /// Emitted when protocol message received (forwarded to server for handling)
-    void messageReceived(iINCConnection* conn, const iINCMessage& msg) ISIGNAL(messageReceived, conn, msg);
+    void messageReceived(iINCConnection* conn, iINCMessage msg) ISIGNAL(messageReceived, conn, msg);
 
     /// Emitted when device error occurs (forwarded to server for handling)
     void errorOccurred(iINCConnection* conn, xint32 errorCode) ISIGNAL(errorOccurred, conn, errorCode);
@@ -144,6 +145,9 @@ private:
     /// @return Allocated channel instance
     iINCChannel* unregeisterChannel(xuint32 channelId);
 
+    /// find allocated channel by id
+    iINCChannel* find2Channel(xuint32 channelId);
+
     /// Clear all allocated channels
     void clearChannels();
 
@@ -162,8 +166,8 @@ private:
     void setConnectionId(xuint32 connId) { m_connId = connId; }
 
     void onErrorOccurred(xint32 errorCode);
-    void onMessageReceived(const iINCMessage& msg);
-    void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data);
+    void onMessageReceived(iINCMessage msg);
+    void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data);
 
     iINCProtocol*           m_protocol;         // Owned protocol instance
     xuint32                 m_connId;           // Unique connection ID

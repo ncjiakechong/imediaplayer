@@ -109,7 +109,6 @@ public:
     }
 
     bool prepare(xint64 *timeout) IX_OVERRIDE {
-        *timeout = 10 * 1000000;
         return false;
     }
 
@@ -457,7 +456,6 @@ bool iUnixDevice::startEventMonitoring(iEventDispatcher* dispatcher)
     }
 
     m_eventSource->attach(dispatcher ? dispatcher : iEventDispatcher::instance());
-    ilog_debug("[", peerAddress(), "] EventSource monitoring started");
     return true;
 }
 

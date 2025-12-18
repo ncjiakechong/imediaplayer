@@ -32,7 +32,7 @@ public:
     void startFlushing();
     void stopFlushing();
 
-    void videoFrameProbed(const iVideoFrame &frame) ISIGNAL(videoFrameProbed, frame);
+    void videoFrameProbed(iVideoFrame frame) ISIGNAL(videoFrameProbed, frame);
     void flush() ISIGNAL(flush);
 
 private:

@@ -30,11 +30,10 @@
 namespace iShell {
 
 iINCServer::iINCServer(const iStringView& name, iObject *parent)
-    : iObject(parent)
+    : iObject(iString(name), parent)
     , m_engine(IX_NULLPTR)
     , m_listenDevice(IX_NULLPTR)
     , m_ioThread(IX_NULLPTR)
-    , m_serverName(name)
     , m_listening(false)
     , m_nextChannelId(0)
 {
@@ -136,7 +135,7 @@ void iINCServer::close()
         m_connections.erase(it);
 
         iObject::disconnect(conn, IX_NULLPTR, this, IX_NULLPTR);
-        conn->moveToThread(thread());
+        conn->moveToThread(iThread::currentThread());
         conn->close();
         conn->clearChannels();
         conn->deleteLater();
@@ -145,7 +144,8 @@ void iINCServer::close()
     // Close listening device - delete directly
     if (m_listenDevice) {
         iObject::disconnect(m_listenDevice, IX_NULLPTR, this, IX_NULLPTR);
-        m_listenDevice->moveToThread(thread());
+        m_listenDevice->moveToThread(iThread::currentThread());
+        m_listenDevice->close();
         m_listenDevice->deleteLater();
         m_listenDevice = IX_NULLPTR;
     }
@@ -214,7 +214,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     // Create handshake handler for this connection
     iINCHandshake* handshake = new iINCHandshake(iINCHandshake::ROLE_SERVER);
     iINCHandshakeData localData;
-    localData.nodeName = m_serverName;
+    localData.nodeName = objectName();
     localData.protocolVersion = m_config.protocolVersionCurrent();
     localData.capabilities = iINCHandshakeData::CAP_STREAM;
     handshake->setLocalData(localData);
@@ -279,7 +279,7 @@ void iINCServer::onClientDisconnected(iINCConnection* conn)
     conn->deleteLater();
 }
 
-void iINCServer::onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data)
+void iINCServer::onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data)
 {
     // Call virtual function for subclass to handle
     handleBinaryData(conn, channelId, seqNum, pos, data);
@@ -298,12 +298,12 @@ _iINCPStream::_iINCPStream(iINCServer* server, xuint32 channelId, Mode mode, iOb
     , m_server(server)
 {}
 
-void _iINCPStream::onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) 
+void _iINCPStream::onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data) 
 {
     m_server->onConnectionBinaryData(conn, channelId, seqNum, pos, data);
 }
 
-void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg)
+void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg)
 {
     if (msg.type() & 0x1) return;
 
@@ -483,8 +483,6 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMes
 
 void iINCServer::handleHandshake(iINCConnection* conn, const iINCMessage& msg)
 {
-    ilog_debug("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                "] Received handshake message");
     iINCHandshake* handshake = conn->m_handshake;
     if (!handshake) {
         ilog_warn("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
@@ -494,15 +492,10 @@ void iINCServer::handleHandshake(iINCConnection* conn, const iINCMessage& msg)
 
     // Process handshake - uses custom binary protocol, access raw data
     iByteArray response = handshake->processHandshake(msg.payload().data());
-    ilog_debug("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                "] Handshake state after processing:", (int)handshake->state());
-
     if (handshake->state() == iINCHandshake::STATE_COMPLETED) {
         // Send handshake ACK with raw binary response
         iINCMessage ackMsg(INC_MSG_HANDSHAKE_ACK, conn->connectionId(), msg.sequenceNumber());
         ackMsg.payload().setData(response);  // Handshake uses custom binary protocol
-        ilog_debug("[", conn->peerName(), "][", ackMsg.channelID(), "][", ackMsg.sequenceNumber(),
-                    "] Sending handshake ACK, payload size:", response.size());
         conn->sendMessage(ackMsg);
 
         // Store client info
@@ -536,6 +529,26 @@ void iINCServer::sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint3
     iINCMessage msg(INC_MSG_BINARY_DATA_ACK, channelId, seqNum);
     msg.payload().putInt32(writen);
     conn->sendMessage(msg);
+}
+
+iSharedDataPointer<iINCOperation> iINCServer::sendBinaryData(iINCConnection* conn, xuint32 channel, xint64 pos, const iByteArray& data)
+{
+    IX_ASSERT(conn);
+    _iINCPStream* stream = static_cast<_iINCPStream*>(conn->find2Channel(channel));
+    if (!stream || !(stream->mode() & iINCChannel::MODE_READ)) {
+        return iSharedDataPointer<iINCOperation>();
+    }
+
+    return conn->sendBinaryData(channel, pos, data);
+}
+
+iMemBlock* iINCServer::acquireBuffer(xsizetype size)
+{
+    if (!m_globalPool) {
+        return IX_NULLPTR;
+    }
+
+    return iMemBlock::new4Pool(m_globalPool.data(), size);
 }
 
 } // namespace iShell

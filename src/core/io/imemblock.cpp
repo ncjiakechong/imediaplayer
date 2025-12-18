@@ -396,7 +396,7 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t eleme
         return block;
     } else {
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__,
-                        "pool %s to alloc too large memory block: %llu > %zu", pool->m_name, (long long unsigned int)(allocSize - headerSize), pool->m_blockSize);
+                        "%s pool to alloc too large memory block: %llu > %zu", pool->m_name, (long long unsigned int)(allocSize - headerSize), pool->m_blockSize);
         pool->m_stat.nTooLargeForPool++;
         return IX_NULLPTR;
     }
@@ -478,7 +478,7 @@ void iMemBlock::statAdd()
     m_pool->m_stat.nAccumulatedByType[m_type] ++;
 
     iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
-                        "pool %s: add length %zu, allocatedSize %d, accumulatedSize %d",
+                        "%s pool: add length %zu, allocatedSize %d, accumulatedSize %d",
                         m_pool->m_name, m_length, m_pool->m_stat.allocatedSize.value(),
                         m_pool->m_stat.accumulatedSize.value());
 }
@@ -504,7 +504,7 @@ void iMemBlock::statRemove()
     m_pool->m_stat.nAllocatedByType[m_type]--;
 
     iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
-                    "pool %s: remove length %zu, allocatedSize %d, accumulatedSize %d",
+                    "%s pool: remove length %zu, allocatedSize %d, accumulatedSize %d",
                     m_pool->m_name, m_length, m_pool->m_stat.allocatedSize.value(),
                     m_pool->m_stat.accumulatedSize.value());
 }
@@ -679,7 +679,7 @@ iMemPool* iMemPool::create(const char* name, const char* prefix, MemType type, s
 
     iMemPool* pool = new iMemPool(name, memory, block_size, n_blocks, perClient);
     iLogger::asprintf(ILOG_TAG, iShell::ILOG_DEBUG, __FILE__, __FUNCTION__, __LINE__,
-                        "pool %s using %d type with %u slots of size %zu each, total size is %zu, maximum usable slot size is %zu",
+                        "%s pool using %d type with %u slots of size %zu each, total size is %zu, maximum usable slot size is %zu",
                         pool->m_name, type, pool->m_nBlocks, pool->m_blockSize, pool->m_nBlocks * pool->m_blockSize, pool->blockSizeMax());
 
     return pool;
@@ -761,14 +761,14 @@ iMemPool::~iMemPool()
 
             if (!k)
                 iLogger::asprintf(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__,
-                            "pool %s REF: Leaked memory block %p idx: %u", m_name, slot, idx);
+                            "%s pool REF: Leaked memory block %p idx: %u", m_name, slot, idx);
 
             while ((k = list.pop(IX_NULLPTR)))
                 while (!m_freeSlots.push(k)) {}
         }
 
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__,
-                        "pool %s destroyed but not all memory blocks freed! remain %d", m_name, m_stat.nAllocated.value());
+                        "%s pool destroyed but not all memory blocks freed! remain %d", m_name, m_stat.nAllocated.value());
     }
 
     while(m_freeSlots.pop(IX_NULLPTR)) {}
@@ -817,7 +817,7 @@ iMemPool::Slot* iMemPool::allocateSlot()
     }
 
     if (IX_NULLPTR == slot && (m_nBlocks > 0)) {
-        iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, "pool %s full", m_name);
+        iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, "%s pool full", m_name);
         m_stat.nPoolFull++;
         return slot;
     }

@@ -25,7 +25,7 @@ public:
     explicit iGstreamerAudioProbeControl(iObject *parent);
     virtual ~iGstreamerAudioProbeControl();
 
-    void audioBufferProbed(const iAudioBuffer &buffer) ISIGNAL(audioBufferProbed, buffer);
+    void audioBufferProbed(iAudioBuffer buffer) ISIGNAL(audioBufferProbed, buffer);
     void flush() ISIGNAL(flush);
 
 protected:

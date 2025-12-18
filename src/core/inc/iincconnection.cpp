@@ -120,7 +120,6 @@ iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
     auto op = m_protocol->sendMessage(msg);
     if (!op) return op;
 
-    ilog_debug("[", m_peerName, "][", msg.channelID(), "][", op->sequenceNumber(), "] Sent PING to client");
     return op;
 }
 
@@ -179,7 +178,6 @@ void iINCConnection::close()
 void iINCConnection::setHandshakeHandler(iINCHandshake* handshake)
 {
     m_handshake = handshake;
-    ilog_debug("[", m_peerName, "] Set handshake handler for connection");
 }
 
 void iINCConnection::clearHandshake()
@@ -228,6 +226,16 @@ iINCChannel* iINCConnection::unregeisterChannel(xuint32 channelId)
     return channel;
 }
 
+iINCChannel* iINCConnection::find2Channel(xuint32 channelId)
+{
+    auto it = m_channels.find(channelId);
+    if (it == m_channels.end()) {
+        return IX_NULLPTR;
+    }
+
+    return it->second;
+}
+
 void iINCConnection::clearChannels()
 {
     while (!m_channels.empty()) {
@@ -237,7 +245,7 @@ void iINCConnection::clearChannels()
     }
 }
 
-void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data)
+void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data)
 {
     auto it = m_channels.find(channelId);
     if (it == m_channels.end()) {
@@ -258,7 +266,7 @@ void iINCConnection::onErrorOccurred(xint32 errorCode)
     IEMIT errorOccurred(this, errorCode);
 }
 
-void iINCConnection::onMessageReceived(const iINCMessage& msg)
+void iINCConnection::onMessageReceived(iINCMessage msg)
 {
     IEMIT messageReceived(this, msg);
 }

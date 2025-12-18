@@ -160,7 +160,7 @@ void iGstreamerBusHelper::queueMessage(GstMessage* message)
     invokeMethod(this, &iGstreamerBusHelper::doProcessMessage, msg, QueuedConnection);
 }
 
-void iGstreamerBusHelper::doProcessMessage(const iGstreamerMessage& msg)
+void iGstreamerBusHelper::doProcessMessage(iGstreamerMessage msg)
 {
     for (std::list<iObject*>::iterator it = m_busFilters.begin();
          it != m_busFilters.end(); ++it) {

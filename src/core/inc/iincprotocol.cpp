@@ -144,12 +144,12 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         size_t offset, size;
         int exportResult = m_memExport->put(block, &memType, &blockId, &shmId, &offset, &size);
         if (exportResult != 0) {
-            ilog_info("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Failed to put binary via SHM");
+            ilog_info("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Failed to put binary via SHM, error=", exportResult);
             break;
         }
 
         // Success - build SHM reference payload with type-safe API
-        ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via SHM reference: blockId=", blockId, ", shmId=", shmId, ", size=", size);
+        ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via SHM reference: blockId=", blockId, ", shmId=", shmId, ", size=", size);
         msg.payload().putInt64(pos);
         msg.payload().putUint32(static_cast<xuint32>(memType));
         msg.payload().putUint32(blockId);
@@ -169,7 +169,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
 
     xsizetype availableSize = msg.payload().remainingBuffer(iINCMessageHeader::MAX_MESSAGE_SIZE);
     msg.payload().putBytes(iByteArrayView(data.constData(), std::min(data.size(), availableSize)));
-    ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via copy: size=", msg.payload().size(), " bytes");
+    ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via copy: size=", msg.payload().size(), " bytes");
     return sendMessage(msg);
 }
 

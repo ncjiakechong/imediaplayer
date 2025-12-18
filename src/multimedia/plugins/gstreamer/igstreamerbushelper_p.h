@@ -66,7 +66,7 @@ public:
     void installMessageFilter(iObject *filter);
     void removeMessageFilter(iObject *filter);
 
-    void message(const iGstreamerMessage& msg) ISIGNAL(message, msg);
+    void message(iGstreamerMessage msg) ISIGNAL(message, msg);
 
 private:
     GstBus* bus() const { return m_bus; }
@@ -75,7 +75,7 @@ private:
     void processMessage(GstMessage* message);
     void queueMessage(GstMessage* message);
 
-    void doProcessMessage(const iGstreamerMessage& msg);
+    void doProcessMessage(iGstreamerMessage msg);
 
     static gboolean busCallback(GstBus *, GstMessage *message, gpointer data);
     static GstBusSyncReply syncGstBusFilter(GstBus* , GstMessage* message, iGstreamerBusHelper *d);

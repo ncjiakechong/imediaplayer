@@ -76,7 +76,7 @@ public: // signal
     void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable);
     void availablePlaybackRangesChanged(const iMediaTimeRange &ranges) ISIGNAL(availablePlaybackRangesChanged, ranges);
     void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate);
-    void error(int errorNum, const iString &errorString) ISIGNAL(error, errorNum, errorString);
+    void error(int errorNum, iString errorString) ISIGNAL(error, errorNum, errorString);
 
 protected:
     explicit iMediaPlayerControl(iObject *parent = IX_NULLPTR);

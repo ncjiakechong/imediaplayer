@@ -761,7 +761,7 @@ TEST_F(ObjectExtendedTest, ObjectNameChangedSignal) {
     int callCount = 0;
 
     iObject::connect(&emitter, &iObject::objectNameChanged, &emitter,
-                    [&](const iString& name) {
+                    [&](iString name) {
         receivedName = name;
         callCount++;
     });
@@ -1165,7 +1165,7 @@ TEST_F(ObjectExtendedTest, SetObjectNameSame) {
 
     int changeCount = 0;
     iObject::connect(&emitter, &iObject::objectNameChanged, &emitter,
-                    [&](const iString&) {
+                    [&](iString) {
         changeCount++;
     });
 

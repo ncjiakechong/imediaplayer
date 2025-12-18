@@ -60,7 +60,7 @@ public:
     const iString& objectName() const { return m_objName; }
 
     /// SIGNALS start
-    void objectNameChanged(const iString& name) ISIGNAL(objectNameChanged, name);
+    void objectNameChanged(iString name) ISIGNAL(objectNameChanged, name);
     void destroyed(iObject* obj) ISIGNAL(destroyed, obj);
     /// SIGNALS end
 

@@ -40,13 +40,13 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1StringView& name, xint64 idx, size_t
     , m_maxRewind(maxrewind)
     , m_readIndex(idx)
     , m_writeIndex(idx)
-    , m_inPreBuf(false)
+    , m_inPreBuf(true)
     , m_mcalign(IX_NULLPTR)
     , m_missing(0)
     , m_requested(0)
     , m_name(name)
 {
-    ilog_debug("memblockq[", m_name, "] requested: maxlength=", maxlength,
+    ilog_verbose("[", m_name, "] requested: maxlength=", maxlength,
                 ", tlength=", tlength, ", base=", base, ", prebuf=", prebuf,
                 ", minreq=", minreq, " maxrewind=", maxrewind);
 
@@ -56,7 +56,7 @@ iMemBlockQueue::iMemBlockQueue(const iLatin1StringView& name, xint64 idx, size_t
     setPreBuf(prebuf);
     setMaxRewind(maxrewind);
 
-    ilog_debug("memblockq[", m_name, "] sanitized: maxlength=", m_maxLength,
+    ilog_debug("[", m_name, "] sanitized: maxlength=", m_maxLength,
                 ", tlength=", m_tLength, ", base=", m_base, ", prebuf=", m_preBuf,
                 ", minreq=", m_minReq, " maxrewind=", m_maxRewind);
 

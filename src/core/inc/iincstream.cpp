@@ -11,12 +11,13 @@
 
 #include <algorithm>
 #include <core/io/ilog.h>
+#include <core/kernel/ievent.h>
+#include <core/thread/imutex.h>
+#include <core/thread/iscopedlock.h>
 #include <core/inc/iincstream.h>
 #include <core/inc/iinccontext.h>
 #include <core/inc/iincoperation.h>
 #include <core/inc/iincerror.h>
-#include <core/thread/imutex.h>
-#include <core/thread/iscopedlock.h>
 
 #include "inc/iincprotocol.h"
 
@@ -34,10 +35,17 @@ iINCStream::iINCStream(const iStringView& name, iINCContext* context, iObject* p
     : iINCChannel(name.toString(), parent)
     , m_context(context)
     , m_state(STATE_DETACHED)
-    , m_mode(MODE_READWRITE)
+    , m_customState(STATE_DETACHED)
+    , m_mode(MODE_NONE)
     , m_channelId(0)  // Will be allocated by server during attach()
+    , m_reconnectTimerId(0)
+    , m_reconnectAttempts(0)
+    , m_reconnectIntervalMs(0)
+    , m_maxReconnectAttempts(0)
 {
     IX_ASSERT(context != IX_NULLPTR);
+    m_reconnectIntervalMs = context->m_config.reconnectIntervalMs();
+    m_maxReconnectAttempts = context->m_config.maxReconnectAttempts();
 
     // Monitor context state changes
     iObject::connect(context, &iINCContext::stateChanged, this, &iINCStream::onContextStateChanged);
@@ -50,13 +58,32 @@ iINCStream::~iINCStream()
     cleanupPendingOps();
 }
 
+iINCStream::State iINCStream::state() const
+{
+    if ((STATE_DETACHED != m_state) && (STATE_DETACHING != m_state)) {
+        return m_state;
+    }
+
+    if ((m_mode & MODE_READWRITE)
+        && (m_reconnectAttempts < m_maxReconnectAttempts)
+        && (iINCContext::STATE_FAILED != m_context->state())
+        && (iINCContext::STATE_TERMINATED != m_context->state())) {
+        return STATE_ATTACHING;
+    }
+
+    return m_state;
+}
+
 void iINCStream::setState(State newState)
 {
-    if (m_state == newState) return;
-
-    State previous = m_state;
     m_state = newState;
-    IEMIT stateChanged(previous, newState);
+    State current = state();
+    if (current == m_customState) return;
+
+    State previous = m_customState;
+    m_customState = current;
+    if (STATE_ATTACHED == m_state) { m_reconnectAttempts = 0; }
+    if (previous != current) { IEMIT stateChanged(previous, current); }
 }
 
 bool iINCStream::attach(Mode mode)
@@ -67,9 +94,8 @@ bool iINCStream::attach(Mode mode)
     }
 
     // Check if context is connected
-    if (!m_context || m_context->state() != iINCContext::STATE_READY) {
+    if (!m_context || m_context->state() != iINCContext::STATE_CONNECTED) {
         ilog_error("[", objectName(), "][", m_channelId, "] Context not ready, state=", m_context ? m_context->state() : -1);
-        IEMIT error(INC_ERROR_CONNECTION_FAILED);
         return false;
     }
 
@@ -81,8 +107,7 @@ bool iINCStream::attach(Mode mode)
     auto op = m_context->requestChannel(mode);
     if (!op) {
         ilog_error("[", objectName(), "][", m_channelId, "] Failed to send channel request");
-        setState(STATE_ERROR);
-        IEMIT error(INC_ERROR_CONNECTION_FAILED);
+        setState(STATE_DETACHED);
         return false;
     }
 
@@ -168,11 +193,9 @@ iSharedDataPointer<iINCOperation> iINCStream::write(xint64 pos, const iByteArray
     return op;
 }
 
-void iINCStream::onBinaryDataReceived(iINCConnection*, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data)
+void iINCStream::onBinaryDataReceived(iINCConnection*, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data)
 {
-    ilog_debug("[", objectName(), "][", m_channelId, "][", seqNum,
-                "] Received data:", data.size(), "bytes");
-    IEMIT dataReceived(seqNum, pos, data);
+    invokeMethod(this, &iINCStream::dataReceived, seqNum, pos, data);
 }
 
 void iINCStream::ackDataReceived(xuint32 seqNum, xint32 size)
@@ -195,8 +218,9 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
     if (iINCOperation::STATE_FAILED == op->getState() || iINCOperation::STATE_TIMEOUT == op->getState()) {
         ilog_error("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Channel allocation failed with error code:", op->errorCode());
-        iObject::invokeMethod(stream, &iINCStream::setState, STATE_ERROR);
+        iObject::invokeMethod(stream, &iINCStream::setState, STATE_DETACHED);
         iObject::invokeMethod(stream, &iINCStream::error, op->errorCode());
+        iObject::invokeMethod(stream, &iINCStream::scheduleReconnect);
         return;
     }
 
@@ -214,7 +238,7 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
         || !result.getBool(peerWantsShmNegotiation)) {
         ilog_error("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Failed to parse channel allocated");
-        iObject::invokeMethod(stream, &iINCStream::setState, STATE_ERROR);
+        iObject::invokeMethod(stream, &iINCStream::setState, STATE_DETACHED);
         iObject::invokeMethod(stream, &iINCStream::error, INC_ERROR_INVALID_MESSAGE);
         return;
     }
@@ -266,34 +290,68 @@ void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
     ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                 "] Stream fully detached");
     stream->m_context->unregeisterChannel(stream->m_channelId);
+    stream->m_mode = MODE_NONE;
     stream->m_channelId = 0;
 
     iObject::invokeMethod(stream, &iINCStream::setState, STATE_DETACHED);
 }
 
-void iINCStream::onContextStateChanged(int state)
+void iINCStream::onContextStateChanged(iINCContext::State previous, iINCContext::State current)
 {
-    iINCContext::State contextState = static_cast<iINCContext::State>(state);
-
-    // Only care about transition to UNCONNECTED or FAILED
-    if (contextState != iINCContext::STATE_UNCONNECTED &&
-        contextState != iINCContext::STATE_FAILED) {
+    if (iINCContext::STATE_CONNECTED == current) {
+        scheduleReconnect();
         return;  // Not an error state, ignore
-    }
-
-    // Context disconnected/failed, invalidate stream
-    if (m_state == STATE_DETACHED) {
-        return;  // Already detached, nothing to do
-    }
+    } else if ((iINCContext::STATE_FAILED == current) || (iINCContext::STATE_TERMINATED == current)) {
+        scheduleReconnect();
+    } else {}
 
     cleanupPendingOps();
-    m_context->unregeisterChannel(m_channelId);
-    ilog_warn("[", objectName(), "][", m_channelId, "] Context state changed to ERROR in stream state", m_state);
-
-    State oldState = m_state;
-    setState(STATE_ERROR);
+    setState(STATE_DETACHED);
     m_channelId = 0;
-    IEMIT error(INC_ERROR_DISCONNECTED);
+}
+
+void iINCStream::scheduleReconnect()
+{
+    // Cancel existing timer if any
+    if (m_reconnectTimerId != 0) {
+        killTimer(m_reconnectTimerId);
+        m_reconnectTimerId = 0;
+    }
+
+    if (!(m_mode & MODE_READWRITE)
+        || (m_reconnectAttempts >= m_maxReconnectAttempts)
+        || (iINCContext::STATE_FAILED == m_context->state())
+        || (iINCContext::STATE_TERMINATED == m_context->state())) {
+        ilog_warn("[", objectName(), "] do not need reattach or attempts exceed limit ", m_reconnectAttempts);
+        return;
+    }
+
+    m_reconnectTimerId = startTimer(m_reconnectIntervalMs, 0, CoarseTimer);
+}
+
+bool iINCStream::event(iEvent* e)
+{
+    do {
+        if (e->type() != iEvent::Timer) break;
+
+        iTimerEvent* te = static_cast<iTimerEvent*>(e);
+        if (te->timerId() != m_reconnectTimerId) break;
+
+        killTimer(m_reconnectTimerId);
+        m_reconnectTimerId = 0;
+        ++m_reconnectAttempts;
+
+        // Handle reconnect timer
+        ilog_info("[", objectName(), "] Attempting reattach ", m_reconnectAttempts, " times");
+        // Failed, schedule another reconnect if enabled
+        if (!attach(m_mode)) {
+            scheduleReconnect();
+        }
+
+        return true;
+    } while (false);
+
+    return iObject::event(e);
 }
 
 void iINCStream::cleanupPendingOps()

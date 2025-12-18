@@ -40,7 +40,7 @@ public:
     Mode mode() const IX_OVERRIDE { return m_mode; }
 
 protected:
-    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) IX_OVERRIDE;
+    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data) IX_OVERRIDE;
 
 private:
     Mode m_mode;
@@ -133,6 +133,14 @@ protected:
     virtual void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) = 0;
     void sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint32 writen);
 
+    /// Send binary data to client on specific channel
+    /// @param conn Client connection
+    /// @param channel Channel ID
+    /// @param pos Position/Offset
+    /// @param data Binary data
+    /// @return Operation handle
+    iSharedDataPointer<iINCOperation> sendBinaryData(iINCConnection* conn, xuint32 channel, xint64 pos, const iByteArray& data);
+
     /// Override this to handle subscription requests
     /// @param conn Client connection
     /// @param pattern Event pattern (e.g., "system.*")
@@ -145,6 +153,9 @@ protected:
     /// @param data Event payload
     void broadcastEvent(const iStringView& eventName, xuint16 version, const iByteArray& data);
 
+    /// Acquire a memory block from global pool
+    iMemBlock* acquireBuffer(xsizetype size);
+
 private:
     void handleCustomer(xintptr action);
     void handleListenDeviceDisconnected();
@@ -152,15 +163,14 @@ private:
     void handleNewConnection(iINCDevice* clientDevice);
     void onClientDisconnected(iINCConnection* conn);
     void handleHandshake(iINCConnection* conn, const iINCMessage& msg);
-    void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data);
+    void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data);
     void onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCode);
-    void onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg);
+    void onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg);
 
     iINCServerConfig m_config;          ///< Server configuration
     iINCEngine*     m_engine;           ///< Owned engine instance
     iINCDevice*     m_listenDevice;     ///< Listening socket in ioThread
     iThread*        m_ioThread;         ///< Thread for handling I/O operations
-    iString         m_serverName;
     bool            m_listening;
     iAtomicCounter<xuint32> m_nextChannelId;    ///< Global channel ID generator (server-wide unique, thread-safe atomic)
 

@@ -43,7 +43,7 @@ public: // signal
     void notifyIntervalChanged(int milliSeconds) ISIGNAL(notifyIntervalChanged, milliSeconds);
 
     void metaDataAvailableChanged(bool available) ISIGNAL(metaDataAvailableChanged, available);
-    void metaDataChanged(const iString &key, const iVariant &value) ISIGNAL(metaDataChanged, key, value);
+    void metaDataChanged(iString key, iVariant value) ISIGNAL(metaDataChanged, key, value);
 
     void availabilityChanged(iMultimedia::AvailabilityStatus availability) ISIGNAL(availabilityChanged, availability);
 

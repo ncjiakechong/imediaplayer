@@ -39,11 +39,10 @@ class IX_CORE_EXPORT iINCContext : public iObject
 public:
     /// Connection state
     enum State {
-        STATE_UNCONNECTED,    ///< Not connected
+        STATE_READY,          ///< ready
         STATE_CONNECTING,     ///< Establishing connection
         STATE_AUTHORIZING,    ///< Authenticating
-        STATE_SETTING_NAME,   ///< Sending client name
-        STATE_READY,          ///< Connected and ready
+        STATE_CONNECTED,      ///< Connected
         STATE_FAILED,         ///< Connection failed
         STATE_TERMINATED      ///< Connection closed
     };
@@ -69,7 +68,7 @@ public:
     void close();
 
     /// Get current connection state
-    State state() const { return m_state; }
+    State state() const;
 
     /// Subscribe to server events matching pattern
     /// @param pattern Event name pattern (e.g., "system.*")
@@ -99,7 +98,7 @@ public:
     /// @param current New current state
     void stateChanged(State previous, State current) ISIGNAL(stateChanged, previous, current);
     void disconnected() ISIGNAL(disconnected);
-    void eventReceived(const iString& eventName, xuint16 version, const iByteArray& data) ISIGNAL(eventReceived, eventName, version, data);
+    void eventReceived(iString eventName, xuint16 version, iByteArray data) ISIGNAL(eventReceived, eventName, version, data);
     void reconnecting(xint32 attemptCount) ISIGNAL(reconnecting, attemptCount);
 
 protected:
@@ -115,7 +114,7 @@ protected:
     iSharedDataPointer<iINCOperation> callMethod(iStringView method, xuint16 version, const iByteArray& args, xint64 timeout = 10000);
 
 private:
-    void onMessageReceived(iINCConnection* conn, const iINCMessage& msg);
+    void onMessageReceived(iINCConnection* conn, iINCMessage msg);
     void onErrorOccurred(iINCConnection* conn, xint32 errorCode);
 
     void handleHandshakeAck(iINCConnection* conn, const iINCMessage& msg);
@@ -124,6 +123,9 @@ private:
     void onReconnectTimeout();
     void attemptReconnect();
     void cleanupOperations();
+
+    /// implement Close connection and disconnect from server immediately
+    void doClose(State state);
 
     /// Set state and emit stateChanged signal with previous state
     void setState(State newState);
@@ -159,6 +161,7 @@ private:
     iINCConnection* m_connection;   ///< connection handler
     iThread*        m_ioThread;     ///< IO thread for network operations
     State           m_state;
+    State           m_customState;  ///< custom requested state
     iString         m_serverUrl;
 
     // Auto-reconnect timer ID (using iObject::startTimer/killTimer)

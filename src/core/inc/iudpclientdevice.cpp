@@ -162,7 +162,6 @@ bool iUDPClientDevice::startEventMonitoring(iEventDispatcher* dispatcher)
 {
     // Virtual device doesn't have its own EventSource
     // Events come from parent device and are forwarded via signal connections
-    ilog_debug("[", peerAddress(), "] EventSource monitoring (forwarded from parent)");
     return true;
 }
 

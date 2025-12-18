@@ -81,8 +81,8 @@ public:
     /// @param channel Channel identifier for routing to appropriate stream
     /// @param seqNum Sequence number from the message
     /// @param data Binary data (reference-counted, safe for async processing)
-    void binaryDataReceived(xuint32 channel, xuint32 seqNum, xint64 pos, const iByteArray& data) ISIGNAL(binaryDataReceived, channel, seqNum, pos, data);
-    void messageReceived(const iINCMessage& msg) ISIGNAL(messageReceived, msg);
+    void binaryDataReceived(xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data) ISIGNAL(binaryDataReceived, channel, seqNum, pos, data);
+    void messageReceived(iINCMessage msg) ISIGNAL(messageReceived, msg);
     void errorOccurred(xint32 errorCode) ISIGNAL(errorOccurred, errorCode);
 
 private:

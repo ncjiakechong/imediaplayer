@@ -158,13 +158,12 @@ public:
         ilog_info("[Helper] onStateChanged called in thread:", iThread::currentThreadId(),
                   "prev:", (int)prev, "curr:", (int)curr);
         iScopedLock<iMutex> lock(mutex);
-        if (curr == iINCContext::STATE_READY) {
+        if (curr == iINCContext::STATE_CONNECTED) {
             ilog_info("[Helper] State is READY, setting connected=true");
             connected = true;
             testCompleted = true;
             condition.broadcast();
-        } else if (curr == iINCContext::STATE_UNCONNECTED ||
-                   curr == iINCContext::STATE_FAILED ||
+        } else if (curr == iINCContext::STATE_FAILED ||
                    curr == iINCContext::STATE_TERMINATED) {
             ilog_info("[Helper] State is error/disconnected, setting testCompleted=true");
             testCompleted = true;
@@ -183,7 +182,7 @@ public:
     {
         IX_UNUSED(prev);
         iScopedLock<iMutex> lock(mutex);
-        if (curr == iINCContext::STATE_READY) {
+        if (curr == iINCContext::STATE_CONNECTED) {
             secondClientConnected = true;
             condition.broadcast();
         }
@@ -261,6 +260,10 @@ public:
         ilog_info("[Helper] waitForCondition called in thread:", iThread::currentThreadId(),
                   "timeout:", timeoutMs, "ms");
         iScopedLock<iMutex> lock(mutex);
+        if (testCompleted) {
+            ilog_info("[Helper] Condition already met (testCompleted=true)");
+            return true;
+        }
         int result = condition.wait(mutex, timeoutMs);
         ilog_info("[Helper] waitForCondition returned:", result,
                   "(0=success, non-zero=timeout)");
@@ -424,7 +427,7 @@ public:
     void sendEmptyPayload() {
         ilog_info("[Worker] sendEmptyPayload called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -454,7 +457,7 @@ public:
     void sendMaxPayload() {
         ilog_info("[Worker] sendMaxPayload called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -494,7 +497,7 @@ public:
     void sendEchoMethodCall() {
         ilog_info("[Worker] sendEchoMethodCall called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -531,7 +534,7 @@ public:
     void sendMultipleSequentialCalls() {
         ilog_info("[Worker] sendMultipleSequentialCalls called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             return;
         }
@@ -565,7 +568,7 @@ public:
     void sendPingPong() {
         ilog_info("[Worker] sendPingPong called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             return;
         }
@@ -590,7 +593,7 @@ public:
     void sendMethodCallWithShortTimeout() {
         ilog_info("[Worker] sendMethodCallWithShortTimeout called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -628,7 +631,7 @@ public:
     void sendMethodCallWithLongTimeout() {
         ilog_info("[Worker] sendMethodCallWithLongTimeout called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -726,7 +729,7 @@ public:
     void sendMethodCallWithoutTimeout() {
         ilog_info("[Worker] sendMethodCallWithoutTimeout called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -774,7 +777,7 @@ public:
         IX_UNUSED(prev);
         ilog_info("[Worker] Stream state changed to:", curr);
 
-        if (curr == iINCStream::STATE_ATTACHED || curr == iINCStream::STATE_ERROR) {
+        if (curr == iINCStream::STATE_ATTACHED || curr == iINCStream::STATE_DETACHED) {
             // Allocation complete (success or failure), now safe to detach and cleanup
             ilog_info("[Worker] Allocation complete, signaling test completion");
 
@@ -789,7 +792,7 @@ public:
     void testChannelAllocation() {
         ilog_info("[Worker] testChannelAllocation called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             return;
         }
@@ -832,7 +835,7 @@ public:
     void sendLargePayload() {
         ilog_info("[Worker] sendLargePayload called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -869,7 +872,7 @@ public:
     void testSendLargeBinaryData(iByteArray data) {
         ilog_info("[Worker] testSendLargeBinaryData called, size:", data.size());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -920,7 +923,7 @@ public:
     void testSendBinaryWithPosition(iByteArray data, xint64 pos) {
         ilog_info("[Worker] testSendBinaryWithPosition called, size:", data.size(), "pos:", pos);
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -951,7 +954,7 @@ public:
     void sendDifferentMethodCalls() {
         ilog_info("[Worker] sendDifferentMethodCalls called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             return;
         }
@@ -1028,7 +1031,7 @@ public:
     void testGetServerInfo() {
         ilog_info("[Worker] testGetServerInfo called in thread:", iThread::currentThreadId());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             return;
         }
@@ -1121,7 +1124,7 @@ public:
     void testStreamAttach(iINCStream::Mode mode) {
         ilog_info("[Worker] testStreamAttach called, mode:", mode);
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -1200,7 +1203,7 @@ public:
     void testSendBinaryToChannel(iByteArray data) {
         ilog_info("[Worker] testSendBinaryToChannel called, channel:", helper->targetChannelId, "size:", data.size());
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -1304,7 +1307,7 @@ public:
         // Store result in helper
         {
             iScopedLock<iMutex> lock(helper->mutex);
-            helper->secondClientConnected = (client2->state() == iINCContext::STATE_READY);
+            helper->secondClientConnected = (client2->state() == iINCContext::STATE_CONNECTED);
             helper->testCompleted = true;
             helper->condition.broadcast();
         }
@@ -1344,7 +1347,7 @@ public:
     void testMethodCall() {
         ilog_info("[Worker] testMethodCall called");
 
-        if (!client || client->state() != iINCContext::STATE_READY) {
+        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
             ilog_error("[Worker] Client not ready");
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = -1;
@@ -1640,7 +1643,7 @@ TEST_P(INCIntegrationTest, ClientConnect) {
     ASSERT_TRUE(startServer());
     ASSERT_TRUE(connectClient());
 
-    EXPECT_EQ(getClient()->state(), iINCContext::STATE_READY);
+    EXPECT_EQ(getClient()->state(), iINCContext::STATE_CONNECTED);
     EXPECT_TRUE(helper->connected);
 }
 
@@ -1991,7 +1994,7 @@ TEST_P(INCIntegrationTest, StreamAttachNotImplemented) {
     iString streamName("TestStream");
     iINCStream* stream = new iINCStream(streamName, getClient(), nullptr);
 
-    EXPECT_EQ(iINCContext::STATE_READY, getClient()->state());
+    EXPECT_EQ(iINCContext::STATE_CONNECTED, getClient()->state());
 
     // Try to attach - will fail because server doesn't handle requestChannel
     bool result = stream->attach(iINCStream::MODE_WRITE);
@@ -2081,7 +2084,7 @@ TEST_P(INCIntegrationTest, ClientDisconnect) {
     ASSERT_TRUE(startServer());
     ASSERT_TRUE(connectClient());
 
-    EXPECT_EQ(iINCContext::STATE_READY, getClient()->state());
+    EXPECT_EQ(iINCContext::STATE_CONNECTED, getClient()->state());
 
     // Disconnect client
     helper->testCompleted = false;
@@ -2090,7 +2093,7 @@ TEST_P(INCIntegrationTest, ClientDisconnect) {
     ASSERT_TRUE(helper->waitForCondition(3000));
 
     // Client should be disconnected now
-    EXPECT_NE(iINCContext::STATE_READY, getClient()->state());
+    EXPECT_NE(iINCContext::STATE_CONNECTED, getClient()->state());
 }
 
 /**
