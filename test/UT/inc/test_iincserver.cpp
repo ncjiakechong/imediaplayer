@@ -3,6 +3,7 @@
 #include <core/inc/iincserver.h>
 #include <core/inc/iincconnection.h>
 #include <core/inc/iincmessage.h>
+#include <core/inc/iincerror.h>
 #include <core/kernel/icoreapplication.h>
 #include <core/thread/ithread.h>
 #include <core/utils/istring.h>
@@ -126,6 +127,16 @@ public:
     {
     }
 
+    void testBroadcastEvent(const iShell::iStringView& eventName, xuint16 version, const iShell::iByteArray& data)
+    {
+        broadcastEvent(eventName, version, data);
+    }
+
+    bool testHandleSubscribe(iShell::iINCConnection* conn, const iShell::iString& pattern)
+    {
+        return handleSubscribe(conn, pattern);
+    }
+
 protected:
     void handleMethod(iShell::iINCConnection* conn, xuint32 seqNum, const iShell::iString& method,
                      xuint16 version, const iShell::iByteArray& args) override
@@ -191,5 +202,44 @@ TEST_F(INCServerTest, ServerConfigurationBeforeListen)
     
     // Configuration should be applied before listening
     EXPECT_FALSE(testServer.isListening());
+}
+
+TEST_F(INCServerTest, ListenEmptyUrl)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    int result = testServer.listenOn(iShell::iStringView(u""));
+    EXPECT_EQ(result, iShell::INC_ERROR_INVALID_ARGS);
+    EXPECT_FALSE(testServer.isListening());
+}
+
+TEST_F(INCServerTest, ListenSuccessAndAlreadyListening)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    iShell::iString url = iShell::iString("pipe:///tmp/test_server_ut_") + iShell::iString::number(12345);
+    
+    // First listen
+    int result = testServer.listenOn(url);
+    if (result == iShell::INC_OK) {
+        EXPECT_TRUE(testServer.isListening());
+        
+        // Second listen
+        result = testServer.listenOn(url);
+        EXPECT_EQ(result, iShell::INC_ERROR_INVALID_STATE);
+        
+        testServer.close();
+    }
+}
+
+TEST_F(INCServerTest, BroadcastEventSafe)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    // Should be safe to call even if not listening
+    testServer.testBroadcastEvent(iShell::iString(u"test.event"), 1, iShell::iByteArray("data"));
+}
+
+TEST_F(INCServerTest, HandleSubscribeBase)
+{
+    MinimalTestServer testServer(iShell::iString("TestServer"));
+    EXPECT_TRUE(testServer.testHandleSubscribe(nullptr, iShell::iString("any.topic")));
 }
 

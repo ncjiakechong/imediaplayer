@@ -842,7 +842,7 @@ int test_object(void)
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, (TestObject*)IX_NULLPTR, &TestObject::tst_slot_disconnect);
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 == tst_sharedObj_6_1->slot_disconnect);
-    IX_ASSERT(IX_NULLPTR == tst_sharedObj_6->sender_obj && IX_NULLPTR == tst_sharedObj_6->senderObj());
+    IX_ASSERT(IX_NULLPTR == tst_sharedObj_6_1->sender_obj && IX_NULLPTR == tst_sharedObj_6_1->senderObj());
     delete tst_sharedObj_6_1;
 
     // test for member function

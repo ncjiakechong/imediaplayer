@@ -148,6 +148,8 @@ int iINCContext::connectTo(const iStringView& url)
     handshakeMsg.payload().setData(handshakeData);
     auto op = m_connection->sendMessage(handshakeMsg);
     IX_ASSERT(op);
+    op->ref();
+    m_pendingOps.push_back(op.data());
     op->setTimeout(m_config.protocolTimeoutMs());
     op->setFinishedCallback(&iINCContext::onHandshakeTimeout, this);
 
@@ -179,6 +181,13 @@ void iINCContext::doClose(State state)
         m_ioThread->wait();
         delete m_ioThread;
         m_ioThread = IX_NULLPTR;
+    }
+
+    while (!m_pendingOps.empty()) {
+        iINCOperation* op = m_pendingOps.back();
+        m_pendingOps.pop_back();
+        op->cancel();
+        op->deref();
     }
 
     // Cleanup protocol - delete directly instead of deleteLater
@@ -307,6 +316,13 @@ void iINCContext::onErrorOccurred(iINCConnection*, xint32 errorCode)
 void iINCContext::onHandshakeTimeout(iINCOperation* operation, void* userData)
 {
     iINCContext* self = static_cast<iINCContext*>(userData);
+    // Remove from pending operations list and release reference
+    auto it = std::find(self->m_pendingOps.begin(), self->m_pendingOps.end(), operation);
+    if (it != self->m_pendingOps.end()) {
+        self->m_pendingOps.erase(it);
+        operation->deref();
+    }
+
     if (iINCOperation::STATE_TIMEOUT != operation->getState()) return;
 
     if (!self->m_config.autoReconnect() || !self->m_connection || !self->m_connection->m_handshake
@@ -329,6 +345,8 @@ void iINCContext::onHandshakeTimeout(iINCOperation* operation, void* userData)
     handshakeMsg.payload().setData(handshakeData);
     auto retryOp = self->m_connection->sendMessage(handshakeMsg);
     IX_ASSERT(retryOp);
+    retryOp->ref();
+    self->m_pendingOps.push_back(retryOp.data());
     retryOp->setTimeout(self->m_config.protocolTimeoutMs());
     retryOp->setFinishedCallback(&iINCContext::onHandshakeTimeout, userData);
 }

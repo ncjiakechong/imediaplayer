@@ -34,6 +34,8 @@ using namespace iShell;
 
 extern bool g_testINC;
 
+namespace {
+
 // Simple echo server for testing
 class TestEchoServer : public iINCServer
 {
@@ -333,7 +335,7 @@ public:
         if (helper && helper->testStream) {
             ilog_info("[Worker] Cleaning up test stream");
             // Stream destructorwill call detach() automatically
-            delete helper->testStream;
+            helper->testStream->deleteLater();
             helper->testStream = nullptr;
         }
 
@@ -350,14 +352,14 @@ public:
         if (client) {
             ilog_info("[Worker] Deleting client");
             client->close();
-            delete client;
+            client->deleteLater();
             client = nullptr;
         }
 
         // Delete server
         if (server) {
             ilog_info("[Worker] Deleting server");
-            delete server;
+            server->deleteLater();
             server = nullptr;
         }
 
@@ -918,6 +920,11 @@ public:
 
         // Wait for timeout or connection
         iThread::msleep(helper->connectTimeoutMs);
+
+        // Signal test completion after the manual timeout
+        iScopedLock<iMutex> lock(helper->mutex);
+        helper->testCompleted = true;
+        helper->condition.broadcast();
     }
 
     void testSendBinaryWithPosition(iByteArray data, xint64 pos) {
@@ -1382,6 +1389,8 @@ public:
         ilog_info("[Worker] Test method call operation created");
     }
 };
+
+} // namespace
 
 // Parameterized test fixture for testing with and without IO thread
 class INCIntegrationTest : public ::testing::TestWithParam<bool> {

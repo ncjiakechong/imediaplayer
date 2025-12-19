@@ -81,23 +81,24 @@ void iINCOperation::setFinishedCallback(FinishedCallback callback, void* userDat
 
 void iINCOperation::setState(State st)
 {
-    if ((st == m_state) || (STATE_RUNNING != m_state)) {
-        return;
-    }
+    if (st == STATE_RUNNING) return;
 
-    m_state = st;
-    if (STATE_RUNNING != st) {
+    // Use iAtomicCounter::testAndSet which wraps compare_exchange_weak (or mutex)
+    // We loop to handle spurious failures of weak CAS
+    while (m_state.value() == STATE_RUNNING) {
+        if (!m_state.testAndSet(STATE_RUNNING, st)) continue;
+
         iObject::invokeMethod(&m_timer, &iTimer::stop);
-    }
-
-    if (STATE_RUNNING != st && m_finishedCallback) {
-        m_finishedCallback(this, m_finishedUserData);
+        if (m_finishedCallback) {
+            m_finishedCallback(this, m_finishedUserData);
+        }
+        return;
     }
 }
 
 void iINCOperation::setResult(xint32 errorCode, const iByteArray& data)
 {
-    if (STATE_RUNNING != m_state) {
+    if (STATE_RUNNING != m_state.value()) {
         return;
     }
 

@@ -168,6 +168,9 @@ private:
     int             m_reconnectTimerId;
     int             m_reconnectAttempts;
 
+    // Pending operations tracking (manually manage refcount)
+    std::list<iINCOperation*> m_pendingOps; ///< Track operations with our callbacks
+
     friend class iINCStream;
     IX_DISABLE_COPY(iINCContext)
 };

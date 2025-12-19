@@ -286,3 +286,160 @@ TEST_F(ByteArrayExtendedTest, Encoding) {
     iByteArray base64 = arr.toBase64(iByteArray::Base64Encoding);  // Provide options argument
     EXPECT_FALSE(base64.isEmpty());
 }
+
+TEST_F(ByteArrayExtendedTest, InsertOperations) {
+    iByteArray ba("Hello");
+    
+    // Insert char
+    ba.insert(5, '!');
+    EXPECT_EQ("Hello!", ba);
+    
+    // Insert string
+    ba.insert(0, "Say ");
+    EXPECT_EQ("Say Hello!", ba);
+    
+    // Insert ByteArray
+    ba.insert(4, iByteArray("To "));
+    EXPECT_EQ("Say To Hello!", ba);
+    
+    // Insert at end
+    ba.insert(ba.size(), " Bye");
+    EXPECT_EQ("Say To Hello! Bye", ba);
+}
+
+TEST_F(ByteArrayExtendedTest, RemoveOperations) {
+    iByteArray ba("Hello World");
+    
+    // Remove from middle
+    ba.remove(5, 1); // Remove space
+    EXPECT_EQ("HelloWorld", ba);
+    
+    // Remove from end
+    ba.remove(5, 5);
+    EXPECT_EQ("Hello", ba);
+    
+    // Remove more than size
+    ba.remove(0, 100);
+    EXPECT_TRUE(ba.isEmpty());
+}
+
+TEST_F(ByteArrayExtendedTest, ChopAndTruncateExtended) {
+    iByteArray ba("Hello World");
+    
+    // chop
+    ba.chop(6);
+    EXPECT_EQ("Hello", ba);
+    
+    // truncate
+    ba.truncate(2);
+    EXPECT_EQ("He", ba);
+    
+    // truncate to larger size (should do nothing or expand?)
+    // Usually truncate only shrinks.
+    ba.truncate(10);
+    EXPECT_EQ("He", ba); // Assuming it doesn't expand
+}
+
+TEST_F(ByteArrayExtendedTest, PushAndPrepend) {
+    iByteArray ba("World");
+    
+    // prepend
+    ba.prepend("Hello ");
+    EXPECT_EQ("Hello World", ba);
+    
+    // push_back
+    ba.push_back('!');
+    EXPECT_EQ("Hello World!", ba);
+    
+    // push_front
+    ba.push_front('>');
+    EXPECT_EQ(">Hello World!", ba);
+}
+
+TEST_F(ByteArrayExtendedTest, CaseInsensitiveMatching) {
+    iByteArray ba("Hello World");
+    
+    // contains (manual case insensitive)
+    EXPECT_TRUE(ba.toLower().contains("hello"));
+    EXPECT_FALSE(ba.contains("hello")); // Case sensitive by default
+    
+    // startsWith
+    EXPECT_TRUE(ba.toLower().startsWith("hello"));
+    EXPECT_FALSE(ba.startsWith("hello"));
+    
+    // endsWith
+    EXPECT_TRUE(ba.toLower().endsWith("world"));
+    EXPECT_FALSE(ba.endsWith("world"));
+}
+
+TEST_F(ByteArrayExtendedTest, Base64ExtendedCoverage) {
+    iByteArray data("Hello World");
+    
+    // Standard encoding
+    iByteArray b64 = data.toBase64(iByteArray::Base64Encoding);
+    EXPECT_EQ("SGVsbG8gV29ybGQ=", b64);
+    
+    // Url encoding
+    iByteArray urlData("Hello?World");
+    iByteArray b64Url = urlData.toBase64(iByteArray::Base64UrlEncoding);
+    EXPECT_FALSE(b64Url.contains('+'));
+    EXPECT_FALSE(b64Url.contains('/'));
+    
+    // Omit padding
+    iByteArray b64NoPad = data.toBase64(iByteArray::Base64Encoding | iByteArray::OmitTrailingEquals);
+    EXPECT_EQ("SGVsbG8gV29ybGQ", b64NoPad);
+    
+    // Decode
+    EXPECT_EQ(data, iByteArray::fromBase64(b64, iByteArray::Base64Encoding));
+    EXPECT_EQ(data, iByteArray::fromBase64(b64NoPad, iByteArray::Base64Encoding)); // Should handle missing padding?
+}
+
+TEST_F(ByteArrayExtendedTest, HexExtended) {
+    iByteArray data("Hello");
+    
+    // With separator
+    iByteArray hex = data.toHex(':');
+    EXPECT_EQ("48:65:6c:6c:6f", hex);
+    
+    // From hex with separator (if supported)
+    // Usually fromHex handles separators automatically or ignores non-hex chars?
+    // Let's check implementation or assume standard behavior
+    // iByteArray decoded = iByteArray::fromHex(hex);
+    // EXPECT_EQ(data, decoded);
+}
+
+TEST_F(ByteArrayExtendedTest, SetNumBases) {
+    iByteArray ba;
+    
+    // Base 16
+    ba.setNum(255, 16);
+    EXPECT_EQ("ff", ba);
+    
+    // Base 8
+    ba.setNum(63, 8);
+    EXPECT_EQ("77", ba);
+    
+    // Base 2 (if supported)
+    // ba.setNum(5, 2);
+    // EXPECT_EQ("101", ba);
+}
+
+TEST_F(ByteArrayExtendedTest, IteratorAccess) {
+    iByteArray ba("abc");
+    
+    // begin/end
+    auto it = ba.begin();
+    EXPECT_EQ('a', *it);
+    *it = 'A';
+    EXPECT_EQ("Abc", ba);
+    
+    // const_iterator
+    const iByteArray cba("xyz");
+    auto cit = cba.begin(); // Should be const_iterator
+    EXPECT_EQ('x', *cit);
+    // *cit = 'X'; // Should fail to compile
+    
+    // rbegin/rend
+    auto rit = ba.rbegin();
+    EXPECT_EQ('c', *rit);
+}

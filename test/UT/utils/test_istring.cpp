@@ -263,7 +263,8 @@ TEST_F(StringTest, LastIndexOf_Latin1_Haystack) {
 
 TEST_F(StringTest, LastIndexOf_StringView) {
     iString str("Hello World");
-    iStringView needle = str.mid(6); // "World"
+    iString sub = str.mid(6); // "World"
+    iStringView needle = sub;
     
     EXPECT_EQ(str.lastIndexOf(needle), 6);
 }
@@ -284,7 +285,8 @@ TEST_F(StringTest, Insert_Helpers) {
     EXPECT_EQ(str, "Say Big Hello!");
     
     // Insert StringView
-    iStringView sv = str.mid(4, 3); // "Big"
+    iString sub = str.mid(4, 3);
+    iStringView sv = sub; // "Big"
     str.insert(14, sv);
     EXPECT_EQ(str, "Say Big Hello!Big");
 

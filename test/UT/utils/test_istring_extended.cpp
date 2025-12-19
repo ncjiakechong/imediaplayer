@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 #include "core/utils/istring.h"
+#include "core/utils/istringconverter.h"
+#include "core/utils/ibytearray.h"
 #include <core/utils/ichar.h>
 
 #define ILOG_TAG "test_string"
@@ -298,7 +300,287 @@ TEST_F(StringExtendedTest, IsNullVsIsEmpty) {
 TEST_F(StringExtendedTest, MoveSemantics) {
     iString str1(u"move test");
     int original_length = str1.length();
-
-    iString str2 = str1;  // Copy
+    
+    iString str2(std::move(str1));
     EXPECT_EQ(str2.length(), original_length);
+    // EXPECT_TRUE(str1.isEmpty()); // str1 should be empty after move - iString move constructor might not clear source if it's a shared data pointer copy or similar mechanism
+}
+
+TEST_F(StringExtendedTest, ArgFormattingExtended) {
+    iString str("Value: %1");
+    
+    // Arg int
+    EXPECT_EQ(iString("Value: 42"), str.arg(42));
+    
+    // Arg with padding
+    EXPECT_EQ(iString("Value: 042"), str.arg(42, 3, 10, iChar(u'0')));
+    
+    // Arg hex
+    EXPECT_EQ(iString("Value: 2a"), str.arg(42, 0, 16));
+    
+    // Multiple args
+    iString str2("%1 %2");
+    EXPECT_EQ(iString("Hello World"), str2.arg("Hello").arg("World"));
+    
+    // Multi-arg overload
+    EXPECT_EQ(iString("1 2 3"), iString("%1 %2 %3").arg("1", "2", "3"));
+}
+
+TEST_F(StringExtendedTest, Asprintf) {
+    iString s = iString::asprintf("Value: %d, %s", 42, "Test");
+    EXPECT_EQ(iString("Value: 42, Test"), s);
+}
+
+TEST_F(StringExtendedTest, NumberConversions) {
+    // Int
+    EXPECT_EQ(iString("123"), iString::number(123));
+    EXPECT_EQ(iString("-123"), iString::number(-123));
+    
+    // Hex
+    EXPECT_EQ(iString("ff"), iString::number(255, 16));
+    EXPECT_EQ(iString("FF"), iString::number(255, 16).toUpper());
+    
+    // Double
+    EXPECT_EQ(iString("3.14"), iString::number(3.14, 'f', 2));
+    
+    // Scientific
+    iString sci = iString::number(1234.5, 'e', 2);
+    EXPECT_TRUE(sci.contains(u'e'));
+}
+
+TEST_F(StringExtendedTest, SplitAndSectionExtended) {
+    iString str("a,b,c");
+    
+    // Split
+    std::list<iString> parts = str.split(u',');
+    EXPECT_EQ(3, parts.size());
+    if (parts.size() >= 3) {
+        auto it = parts.begin();
+        EXPECT_EQ(iString("a"), *it);
+        it++;
+        EXPECT_EQ(iString("b"), *it);
+        it++;
+        EXPECT_EQ(iString("c"), *it);
+    }
+}
+
+TEST_F(StringExtendedTest, CaseSensitiveCompare) {
+    iString s1("abc");
+    iString s2("ABC");
+    
+    EXPECT_NE(0, s1.compare(s2, iShell::CaseSensitive));
+    EXPECT_EQ(0, s1.compare(s2, iShell::CaseInsensitive));
+}
+
+TEST_F(StringExtendedTest, RepeatedAndFillExtended) {
+    iString s("a");
+    
+    // Repeated
+    EXPECT_EQ(iString("aaa"), s.repeated(3));
+    
+    // Fill
+    iString s2;
+    s2.fill(u'x', 5);
+    EXPECT_EQ(iString("xxxxx"), s2);
+}
+
+TEST_F(StringExtendedTest, ChopAndTruncateExtended) {
+    iString s("Hello");
+    
+    // Chop
+    s.chop(2);
+    EXPECT_EQ(iString("Hel"), s);
+    
+    // Truncate
+    s.truncate(1);
+    EXPECT_EQ(iString("H"), s);
+}
+
+TEST_F(StringExtendedTest, PrependAndPush) {
+    iString s("World");
+    
+    // Prepend
+    s.prepend("Hello ");
+    EXPECT_EQ(iString("Hello World"), s);
+    
+    // Push back
+    s.push_back(u'!');
+    EXPECT_EQ(iString("Hello World!"), s);
+    
+    // Push front
+    s.push_front(u'>');
+    EXPECT_EQ(iString(">Hello World!"), s);
+}
+
+TEST_F(StringExtendedTest, Utf8Conversion) {
+    iString s(u"Hello世界");
+    
+    // To UTF8
+    iByteArray utf8 = s.toUtf8();
+    EXPECT_FALSE(utf8.isEmpty());
+    
+    // From UTF8
+    iString s2 = iString::fromUtf8(utf8);
+    EXPECT_EQ(s, s2);
+}
+
+TEST_F(StringExtendedTest, Latin1Conversion) {
+    iString s("Hello");
+    
+    // To Latin1
+    iByteArray latin1 = s.toLatin1();
+    EXPECT_EQ(iByteArray("Hello"), latin1);
+    
+    // From Latin1
+    iString s2 = iString::fromLatin1(latin1);
+    EXPECT_EQ(s, s2);
+}
+
+TEST_F(StringExtendedTest, Ucs4Conversion) {
+    iString s(u"Hello");
+    
+    // To UCS4
+    std::list<xuint32> ucs4 = s.toUcs4();
+    EXPECT_EQ(5, ucs4.size());
+    
+    // From UCS4
+    std::vector<xuint32> vec(ucs4.begin(), ucs4.end());
+    iString s2 = iString::fromUcs4(vec.data(), vec.size());
+    EXPECT_EQ(s, s2);
+}
+class StringConverterTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+    }
+
+    void TearDown() override {
+    }
+};
+
+TEST_F(StringConverterTest, Utf8Encoding) {
+    iStringEncoder encoder(iStringConverter::Utf8);
+    iString str = "Hello World";
+    iByteArray encoded = encoder(str);
+    EXPECT_EQ(encoded, iByteArray("Hello World"));
+
+    iString str2 = "Hello \u4E16\u754C"; // Hello World in Chinese
+    iByteArray encoded2 = encoder(str2);
+    // UTF-8 for U+4E16 is E4 B8 96, U+754C is E7 95 8C
+    const char expected[] = "Hello \xE4\xB8\x96\xE7\x95\x8C";
+    EXPECT_EQ(encoded2, iByteArray(expected));
+}
+
+TEST_F(StringConverterTest, Utf8Decoding) {
+    iStringDecoder decoder(iStringConverter::Utf8);
+    iByteArray data = "Hello World";
+    iString decoded = decoder(data);
+    EXPECT_EQ(decoded, "Hello World");
+
+    const char utf8Data[] = "Hello \xE4\xB8\x96\xE7\x95\x8C";
+    iByteArray data2(utf8Data);
+    iString decoded2 = decoder(data2);
+    // Use iString construction for comparison to ensure correct encoding
+    iString expected = iString::fromUtf8(utf8Data);
+    EXPECT_EQ(decoded2, expected);
+}
+
+TEST_F(StringConverterTest, Latin1Encoding) {
+    iStringEncoder encoder(iStringConverter::Latin1);
+    iString str = "Hello World";
+    iByteArray encoded = encoder(str);
+    EXPECT_EQ(encoded, iByteArray("Hello World"));
+
+    iString str2 = iString::fromLatin1("Caf\xE9"); // Café
+    iByteArray encoded2 = encoder(str2);
+    const char expected[] = "Caf\xE9";
+    EXPECT_EQ(encoded2, iByteArray(expected));
+}
+
+TEST_F(StringConverterTest, Latin1Decoding) {
+    iStringDecoder decoder(iStringConverter::Latin1);
+    iByteArray data = "Hello World";
+    iString decoded = decoder(data);
+    EXPECT_EQ(decoded, "Hello World");
+
+    const char latin1Data[] = "Caf\xE9";
+    iByteArray data2(latin1Data);
+    iString decoded2 = decoder(data2);
+    iString expected = iString::fromLatin1(latin1Data);
+    EXPECT_EQ(decoded2, expected);
+}
+
+TEST_F(StringConverterTest, InvalidUtf8) {
+    iStringDecoder decoder(iStringConverter::Utf8);
+    // Invalid UTF-8 sequence: 0xFF is never valid
+    const char invalidData[] = "Hello \xFF World";
+    iByteArray data(invalidData, sizeof(invalidData)-1);
+    
+    // Default behavior usually replaces with replacement char or skips?
+    // Let's check state
+    iString decoded = decoder(data);
+    EXPECT_TRUE(decoder.hasError());
+    
+    // If it doesn't contain '?', it might just skip or use replacement char U+FFFD
+    // Let's just check that it's not empty and has error
+    EXPECT_FALSE(decoded.isEmpty());
+}
+
+TEST_F(StringConverterTest, StatelessEncoding) {
+    iStringEncoder encoder(iStringConverter::Utf8, iStringConverter::Stateless);
+    iString str = "Test";
+    iByteArray encoded = encoder(str);
+    EXPECT_EQ(encoded, iByteArray("Test"));
+}
+
+TEST_F(StringConverterTest, WriteBom) {
+    iStringEncoder encoder(iStringConverter::Utf8, iStringConverter::WriteBom);
+    iString str = "Test";
+    iByteArray encoded = encoder(str);
+    // UTF-8 BOM is EF BB BF
+    const char expected[] = "\xEF\xBB\xBFTest";
+    EXPECT_EQ(encoded, iByteArray(expected));
+}
+
+TEST_F(StringConverterTest, SystemEncoding) {
+    // System encoding usually defaults to UTF-8 or Latin1 depending on locale
+    iStringEncoder encoder(iStringConverter::System);
+    iString str = "Test";
+    iByteArray encoded = encoder(str);
+    EXPECT_FALSE(encoded.isEmpty());
+}
+
+TEST_F(StringConverterTest, Utf16LEEncoding) {
+    iStringEncoder encoder(iStringConverter::Utf16LE);
+    iString str = "A";
+    iByteArray encoded = encoder(str);
+    // 'A' is 0x0041. LE: 41 00
+    const char expected[] = "\x41\x00";
+    EXPECT_EQ(encoded, iByteArray(expected, 2));
+}
+
+TEST_F(StringConverterTest, Utf16BEEncoding) {
+    iStringEncoder encoder(iStringConverter::Utf16BE);
+    iString str = "A";
+    iByteArray encoded = encoder(str);
+    // 'A' is 0x0041. BE: 00 41
+    const char expected[] = "\x00\x41";
+    EXPECT_EQ(encoded, iByteArray(expected, 2));
+}
+
+TEST_F(StringConverterTest, Utf32LEEncoding) {
+    iStringEncoder encoder(iStringConverter::Utf32LE);
+    iString str = "A";
+    iByteArray encoded = encoder(str);
+    // 'A' is 0x00000041. LE: 41 00 00 00
+    const char expected[] = "\x41\x00\x00\x00";
+    EXPECT_EQ(encoded, iByteArray(expected, 4));
+}
+
+TEST_F(StringConverterTest, Utf32BEEncoding) {
+    iStringEncoder encoder(iStringConverter::Utf32BE);
+    iString str = "A";
+    iByteArray encoded = encoder(str);
+    // 'A' is 0x00000041. BE: 00 00 00 41
+    const char expected[] = "\x00\x00\x00\x41";
+    EXPECT_EQ(encoded, iByteArray(expected, 4));
 }

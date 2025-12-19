@@ -18,6 +18,7 @@
 #include <core/kernel/itimer.h>
 #include <core/utils/ishareddata.h>
 #include <core/inc/iinctagstruct.h>
+#include <core/thread/iatomiccounter.h>
 
 namespace iShell {
 
@@ -47,7 +48,7 @@ public:
     void cancel();
 
     /// Get current state
-    State getState() const { return m_state; }
+    State getState() const { return m_state.value(); }
 
     /// Get sequence number
     xuint32 sequenceNumber() const { return m_seqNum; }
@@ -81,7 +82,7 @@ private:
     void onTimeout(xintptr userData);
 
     xuint32         m_seqNum;
-    State           m_state;
+    iAtomicCounter<State> m_state;
 
     // Result data
     iByteArray      m_resultData;

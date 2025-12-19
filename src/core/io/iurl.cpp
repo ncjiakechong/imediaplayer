@@ -3300,7 +3300,7 @@ iString iUrl::toString(FormattingOptions options) const
         // also catches isEmpty()
         return url;
     }
-    if (options & iUrl::FullyDecoded) {
+    if ((options & iUrl::FullyDecoded) == iUrl::FullyDecoded) {
         ilog_warn("iUrl::FullyDecoded is not permitted when reconstructing the full URL");
         options &= ~iUrl::FullyDecoded;
     }
