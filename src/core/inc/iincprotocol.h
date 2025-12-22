@@ -76,6 +76,10 @@ public:
     void enableMempool(iSharedDataPointer<iMemPool> pool);
     iSharedDataPointer<iMemPool> mempool() const { return m_memPool; }
 
+    /// Release operation and associated resources (e.g. SHM slots)
+    /// Called when operation is cancelled or timed out by the user
+    void releaseOperation(iINCOperation* op);
+
 // signals:
     /// Emitted when binary data is received (routed by channel ID)
     /// @param channel Channel identifier for routing to appropriate stream

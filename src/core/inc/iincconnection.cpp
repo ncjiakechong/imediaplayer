@@ -123,6 +123,13 @@ iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
     return op;
 }
 
+void iINCConnection::releaseOperation(iINCOperation* op)
+{
+    if (m_protocol) {
+        m_protocol->releaseOperation(op);
+    }
+}
+
 iSharedDataPointer<iINCOperation> iINCConnection::sendMessage(const iINCMessage& msg)
 {
     IX_ASSERT(m_protocol);

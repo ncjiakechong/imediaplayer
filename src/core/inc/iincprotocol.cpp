@@ -148,14 +148,21 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
             break;
         }
 
+        // Adjust offset if data is a slice of the block
+        const char* dataPtr = data.constData();
+        const char* blockPtr = (const char*)block->data().value();
+        if (dataPtr >= blockPtr && dataPtr < blockPtr + block->length()) {
+            offset += (dataPtr - blockPtr);
+        }
+
         // Success - build SHM reference payload with type-safe API
-        ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via SHM reference: blockId=", blockId, ", shmId=", shmId, ", size=", size);
+        ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via SHM reference: blockId=", blockId, ", shmId=", shmId, ", size=", data.size());
         msg.payload().putInt64(pos);
         msg.payload().putUint32(static_cast<xuint32>(memType));
         msg.payload().putUint32(blockId);
         msg.payload().putUint32(shmId);
         msg.payload().putUint64(static_cast<xuint64>(offset));
-        msg.payload().putUint64(static_cast<xuint64>(size));
+        msg.payload().putUint64(static_cast<xuint64>(data.size()));
         msg.setFlags(INC_MSG_FLAG_SHM_DATA);
         auto op = sendMessage(msg);
         op->m_blockID = blockId;
@@ -171,6 +178,25 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
     msg.payload().putBytes(iByteArrayView(data.constData(), std::min(data.size(), availableSize)));
     ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via copy: size=", msg.payload().size(), " bytes");
     return sendMessage(msg);
+}
+
+void iINCProtocol::releaseOperation(iINCOperation* op)
+{
+    if (!op) return;
+
+    // Find and remove from map
+    auto it = m_operations.find(op->sequenceNumber());
+    if (it != m_operations.end() && it->second == op) {
+        m_operations.erase(it);
+
+        // Release SHM slot if held
+        if (m_memExport && (0 != op->m_blockID)) {
+            m_memExport->processRelease(op->m_blockID);
+            op->m_blockID = 0; // Prevent double release
+        }
+
+        op->deref(); // Release map reference
+    }
 }
 
 bool iINCProtocol::readMessage(iINCMessage& msg)

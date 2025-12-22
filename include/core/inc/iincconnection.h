@@ -82,6 +82,10 @@ public:
     /// @note Server-side operation tracking - returns iINCOperation for async monitoring
     iSharedDataPointer<iINCOperation> pingpong();
 
+    /// Release operation and associated resources (e.g. SHM slots)
+    /// Called when operation is cancelled or timed out by the user
+    void releaseOperation(iINCOperation* op);
+
     /// Check if client is subscribed to event pattern call from IO thread
     /// @param eventName Event name to check
     bool isSubscribed(const iStringView& eventName) const;
