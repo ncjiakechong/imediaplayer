@@ -9,6 +9,7 @@
 #include <core/kernel/ievent.h>
 #include <core/kernel/iobject.h>
 #include <core/kernel/ieventloop.h>
+#include <core/kernel/ieventdispatcher.h>
 #include <core/global/inamespace.h>
 
 using namespace iShell;
@@ -169,8 +170,9 @@ TEST_F(ICoreApplicationTest, Arguments) {
 TEST_F(ICoreApplicationTest, CreateEventDispatcher) {
     iEventDispatcher* dispatcher = iCoreApplication::createEventDispatcher();
     EXPECT_NE(dispatcher, nullptr);
-    // Note: Don't delete - may cause issues with incomplete type
-    (void)dispatcher;
+    if (dispatcher) {
+        delete dispatcher;
+    }
 }
 
 // Test: Instance event dispatcher

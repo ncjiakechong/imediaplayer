@@ -87,6 +87,10 @@ class TestContext : public iINCContext
 public:
     using iINCContext::iINCContext;
 
+    ~TestContext() {
+        ilog_info("[TestContext] ~TestContext called at ", (void*)this);
+    }
+
     iSharedDataPointer<iINCOperation> call(iStringView method, xuint16 version,
                                            const iByteArray& args, xint64 timeout = 30000)
     {
@@ -352,14 +356,14 @@ public:
         if (client) {
             ilog_info("[Worker] Deleting client");
             client->close();
-            client->deleteLater();
+            delete client;
             client = nullptr;
         }
 
         // Delete server
         if (server) {
             ilog_info("[Worker] Deleting server");
-            server->deleteLater();
+            delete server;
             server = nullptr;
         }
 
@@ -403,6 +407,13 @@ public:
     void createAndConnectClient(int port, bool enableIOThread) {
         ilog_info("[Worker] createAndConnectClient called in thread:", iThread::currentThreadId(),
                   "port:", port, "enableIOThread:", enableIOThread);
+
+        if (client) {
+            ilog_warn("[Worker] Client already exists, deleting it first");
+            client->close();
+            delete client;
+            client = nullptr;
+        }
 
         // Create client without parent (will live in current thread)
         client = new TestContext(iString("TestClient"), IX_NULLPTR);
@@ -1453,7 +1464,7 @@ protected:
         }
 
         // Brief wait for cleanup to process
-        iThread::msleep(100);
+        iThread::msleep(2000);
 
         // Stop and delete work thread
         if (workThread) {
@@ -1461,7 +1472,7 @@ protected:
             workThread->exit();
 
             // Give thread a brief moment to begin shutdown sequence
-            iThread::msleep(100);
+            iThread::msleep(500);
 
             // CRITICAL: Wait for thread to completely exit before deleting iThread object
             // Using wait() without timeout (default -1) to wait indefinitely until thread exits.
@@ -1474,7 +1485,7 @@ protected:
             ilog_info("[Test] Work thread exited, waiting for final cleanup");
             // Brief wait for background cleanup to complete
             // Reduced from 2000ms after fixing major cleanup issues
-            iThread::msleep(200);
+            iThread::msleep(2000);
 
             ilog_info("[Test] Deleting work thread object");
             delete workThread;

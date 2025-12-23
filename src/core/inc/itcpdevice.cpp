@@ -611,6 +611,29 @@ bool iTcpDevice::setSocketOptions()
     // Enable keepalive
     setKeepAlive(true);
 
+    // Configure Keepalive parameters for faster disconnection detection
+    // Defaults are usually too long (e.g. 7200s)
+    int keepIdle = 30;   // Start sending keepalives after 30 seconds of idleness
+    int keepIntvl = 3;   // Send keepalive every 3 seconds
+    int keepCnt = 3;     // Give up after 3 failed keepalives
+
+    setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(keepIdle));
+    setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &keepIntvl, sizeof(keepIntvl));
+    setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPCNT, &keepCnt, sizeof(keepCnt));
+
+    // Configure SYN retry count for faster connection failure
+    // Default is usually 5 or 6 (approx 63s or 127s)
+    int synCnt = 2;      // Fail after ~7 seconds (1s + 2s + 4s)
+    setsockopt(m_sockfd, IPPROTO_TCP, TCP_SYNCNT, &synCnt, sizeof(synCnt));
+
+    // Configure TCP_USER_TIMEOUT to detect dead peers during data transmission
+    // Keepalive only works when idle. If we are sending data and the peer dies,
+    // TCP will retransmit for ~15 mins. This forces a timeout much sooner.
+    #ifdef TCP_USER_TIMEOUT
+    int userTimeout = 15000; // 15 seconds
+    setsockopt(m_sockfd, IPPROTO_TCP, TCP_USER_TIMEOUT, &userTimeout, sizeof(userTimeout));
+    #endif
+
     return true;
 }
 

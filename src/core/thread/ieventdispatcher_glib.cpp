@@ -234,14 +234,13 @@ static gboolean eventSourceWraperCheck(GSource *s)
 
 static gboolean eventSourceWraperDispatch(GSource *s, GSourceFunc, gpointer)
 {
-    if (g_source_is_destroyed(s)) {
+    iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
+    if (g_source_is_destroyed(s) || !source->imp->isAttached()) {
         return FALSE;
     }
 
-    iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
-    bool continue_dispatch = source->imp->detectableDispatch(source->dispatcher->inProcess() ? source->dispatcher->sequence() : 0);
-
     // Return TRUE if dispatch wants to continue, FALSE if it wants to detach
+    bool continue_dispatch = source->imp->detectableDispatch(source->dispatcher->inProcess() ? source->dispatcher->sequence() : 0);
     return continue_dispatch ? TRUE : FALSE;
 }
 

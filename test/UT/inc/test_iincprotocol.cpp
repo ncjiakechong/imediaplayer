@@ -9,6 +9,8 @@
 #include <core/inc/iincoperation.h>
 #include <core/io/imemblock.h>
 #include <core/utils/iarraydata.h>
+#include <core/kernel/ieventdispatcher.h>
+#include <core/kernel/ieventloop.h>
 
 using namespace iShell;
 
@@ -97,6 +99,11 @@ protected:
 
     void TearDown() override {
         delete protocol; // Deletes device too
+
+        // Process deferred deletions (iINCOperation::doFree uses iTimer::singleShot)
+        if (iEventDispatcher::instance()) {
+            iEventDispatcher::instance()->processEvents(iEventLoop::AllEvents);
+        }
     }
 
     MockINCDevice* device;

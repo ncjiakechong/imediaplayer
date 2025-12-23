@@ -527,8 +527,13 @@ void iEventDispatcher_generic::eventDispatch(std::list<iEventSource *>* pendingD
     std::list<iEventSource*>::const_iterator it;
 
     for (it = pendingDispatches->cbegin(); it != pendingDispatches->cend(); ++it) {
-        bool need_deattch;
+        bool need_deattch = false;
         iEventSource* source = *it;
+
+        if (!source->isAttached()) {
+            source->deref();
+            continue;
+        }
 
         source->setFlags(source->flags() & ~IX_EVENT_SOURCE_READY);
         need_deattch = !source->detectableDispatch(((source == m_postSource) || (source == m_timerSource)) ? 0 : m_nextSeq);
