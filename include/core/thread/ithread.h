@@ -80,7 +80,7 @@ protected:
     virtual void run();
     int exec();
 
-protected:
+private:
     bool m_running;
     bool m_finished;
     bool m_isInFinish;
@@ -93,6 +93,7 @@ protected:
 
     iThreadData* m_data;
     iThreadImpl* m_impl;
+    void* __pad[2];
 
     mutable iMutex m_mutex;
     iCondition m_doneCond;

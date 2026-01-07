@@ -11,8 +11,9 @@
 #include <limits>
 #include <algorithm>
 
-#include "core/thread/iatomiccounter.h"
 #include "core/kernel/ievent.h"
+#include "core/thread/iatomiccounter.h"
+#include "core/kernel/icoreapplication.h"
 #include "utils/ibasicatomicbitfield.h"
 
 namespace iShell {

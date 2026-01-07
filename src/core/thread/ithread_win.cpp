@@ -58,12 +58,9 @@ class iAdoptedThread : public iThread
 public:
     iAdoptedThread(iThreadData *data)
         : iThread(data)
-    {
-        m_running = true;
-        m_finished = false;
-    }
+    {}
 
-    ~iAdoptedThread();
+    ~iAdoptedThread() {}
 
 protected:
     void run() {
@@ -71,10 +68,6 @@ protected:
         ilog_error("Internal error, this implementation should never be called.");
     }
 };
-
-iAdoptedThread::~iAdoptedThread()
-{
-}
 
 void ix_watch_adopted_thread(const HANDLE adoptedThreadHandle, iThreadData *xthread);
 DWORD WINAPI ix_adopted_thread_watcher_function(LPVOID);

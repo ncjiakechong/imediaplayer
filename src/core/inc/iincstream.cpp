@@ -254,8 +254,12 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
 
     // Server replied with SHM negotiation result
     xuint16 negotiontedShmType = 0;
+    iByteArray shmName;
+    xint32 shmSize = 0;
     if (!result.getUint16(negotiontedShmType)
         || (0 == negotiontedShmType)
+        || !result.getBytes(shmName)
+        || !result.getInt32(shmSize)
         || !result.eof()) {
         ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Stream attached, mode=", stream->m_mode, " and no negotiated SHM");
@@ -265,7 +269,7 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
 
     ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                 "] Stream attached, mode=", stream->m_mode, " and with SHM ", negotiontedShmType);
-    stream->m_context->regeisterChannel(stream, static_cast<MemType>(negotiontedShmType));
+    stream->m_context->regeisterChannel(stream, static_cast<MemType>(negotiontedShmType), shmName, shmSize);
     iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
 }
 

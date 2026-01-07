@@ -21,19 +21,6 @@ class iPostEvent;
 class iEventDispatcher;
 class iCoreApplication;
 
-class IX_CORE_EXPORT iCoreApplicationPrivate
-{
-public:
-    iCoreApplicationPrivate(int argc, char **argv);
-    virtual ~iCoreApplicationPrivate();
-    virtual iEventDispatcher* createEventDispatcher() const;
-
-private:
-    int  m_argc;
-    char** m_argv;
-    friend class iCoreApplication;
-};
-
 class IX_CORE_EXPORT iCoreApplication : public iObject
 {
     IX_OBJECT(iCoreApplication)
@@ -64,12 +51,11 @@ public:
     void aboutToQuit() ISIGNAL(aboutToQuit);
 
 protected:
-    iCoreApplication(iCoreApplicationPrivate* priv);
-
     virtual bool event(iEvent *) IX_OVERRIDE;
     virtual bool notify(iObject *, iEvent *);
 
     virtual bool compressEvent(iEvent *, iObject *receiver, std::list<iPostEvent> *);
+    virtual iEventDispatcher* doCreateEventDispatcher() const;
 
     static bool threadRequiresCoreApplication();
     static bool doNotify(iObject *receiver, iEvent *event);
@@ -81,7 +67,9 @@ private:
     static iCoreApplication* s_self;
 
     bool m_aboutToQuitEmitted;
-    iCoreApplicationPrivate* m_private;
+
+    int  m_argc;
+    char** m_argv;
     friend class iEventLoop;
 };
 

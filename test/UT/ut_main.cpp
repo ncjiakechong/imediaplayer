@@ -80,18 +80,17 @@ public:
     }
 };
 
-class TestCoreApplicationPrivate : public iCoreApplicationPrivate {
-public:
+class TestCoreApplication : public iCoreApplication {
     bool m_useGlib;
+public:
+    TestCoreApplication(int argc, char** argv) 
+        : iCoreApplication(argc, argv), m_useGlib(false) {}
 
-    TestCoreApplicationPrivate(int argc, char **argv) 
-        : iCoreApplicationPrivate(argc, argv), m_useGlib(false) {}
-    
     void setUseGlib(bool use) {
         m_useGlib = use;
     }
-    
-    iEventDispatcher* createEventDispatcher() const override {
+
+    iEventDispatcher* doCreateEventDispatcher() const override {
         if (m_useGlib) {
             #ifdef IBUILD_HAVE_GLIB
             std::cout << "Creating iEventDispatcher_Glib" << std::endl;
@@ -103,19 +102,6 @@ public:
         } else {
             std::cout << "Creating iEventDispatcher_generic" << std::endl;
             return new iEventDispatcher_generic();
-        }
-    }
-};
-
-class TestCoreApplication : public iCoreApplication {
-    TestCoreApplicationPrivate* d_ptr;
-public:
-    TestCoreApplication(int argc, char** argv) 
-        : iCoreApplication(d_ptr = new TestCoreApplicationPrivate(argc, argv)) {}
-
-    void setUseGlib(bool use) {
-        if (d_ptr) {
-            d_ptr->setUseGlib(use);
         }
     }
 };

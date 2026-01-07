@@ -11,8 +11,9 @@
 #define IEVENTDISPATCHER_GENERIC_H
 
 #include <vector>
-#include <core/thread/iatomiccounter.h>
+#include <core/thread/iwakeup.h>
 #include <core/thread/icondition.h>
+#include <core/thread/iatomiccounter.h>
 #include <core/kernel/ieventdispatcher.h>
 #include "kernel/itimerinfo.h"
 
@@ -65,10 +66,10 @@ private:
     bool m_pollChanged;
     int m_inCheckOrPrepare;
 
-    iWakeup* m_wakeup;
+    iWakeup m_wakeup;
     iPollFD m_wakeUpRec;
 
-    std::list<iPollRec*> m_pollRecords;
+    std::list<iPollRec> m_pollRecords;
     iPollFD* m_cachedPollArray;
     uint m_cachedPollArraySize;
 

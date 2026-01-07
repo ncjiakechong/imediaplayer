@@ -10,6 +10,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #include "core/utils/ishareddata.h"
+#include "core/kernel/icoreapplication.h"
 
 namespace iShell {
 

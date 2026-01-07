@@ -34,7 +34,6 @@ public:
     inline int count() const { return _ref.value(); }
     inline bool ref(bool force = false) { return _ref.ref(force); }
     bool deref();
-
 protected:
     virtual void doFree();
 

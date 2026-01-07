@@ -261,7 +261,8 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), -1>
     typedef Ret (Obj::*Function) ();
     enum {ArgumentCount = 0, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void*) {
+    static void* cloneArgs(void*, void*, int* size) {
+        if (size) *size = 0;
         return IX_NULLPTR;
     }
 
@@ -285,15 +286,18 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
     typedef Ret (Obj::*Function) (Arg1);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -315,15 +319,18 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
     typedef Ret (Obj::*Function) (Arg1, Arg2);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -347,15 +354,18 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), -1>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -380,16 +390,19 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), -1>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -415,16 +428,19 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -451,16 +467,19 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -487,17 +506,20 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), 
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -525,17 +547,20 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -563,17 +588,20 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -602,18 +630,21 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>(),
                              tArgs->template get<9>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -641,7 +672,8 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const, 
     typedef Ret (Obj::*Function) () const;
     enum {ArgumentCount = 0, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void*) {
+    static void* cloneArgs(void*, void*, int* size) {
+        if (size) *size = 0;
         return IX_NULLPTR;
     }
 
@@ -665,15 +697,18 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
     typedef Ret (Obj::*Function) (Arg1) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -695,15 +730,18 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
     typedef Ret (Obj::*Function) (Arg1, Arg2) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -727,15 +765,18 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, -1>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -760,16 +801,19 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, -1>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -795,16 +839,19 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, -1>
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -831,16 +878,19 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, 
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -867,17 +917,20 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) c
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -905,17 +958,20 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -943,17 +999,20 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -982,18 +1041,21 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     typedef Ret (Obj::*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const;
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = true};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>(),
                              tArgs->template get<9>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1022,11 +1084,12 @@ template<typename Ret> struct FunctionPointer<Ret (*) (), -1>
     typedef Ret (*Function) ();
     enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void*) {
+    static void* cloneArgs(void*, void*, int* size) {
+        if (size) *size = 0;
         return IX_NULLPTR;
     }
 
-    static void freeArgs(void*) {
+    static void freeArgs(void*, bool) {
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1046,15 +1109,18 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1), -1>
     typedef Ret (*Function) (Arg1);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1076,15 +1142,18 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
     typedef Ret (*Function) (Arg1, Arg2);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1108,15 +1177,18 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), -1>
     typedef Ret (*Function) (Arg1, Arg2, Arg3);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>());
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1141,16 +1213,19 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), -1>
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1176,16 +1251,19 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1212,16 +1290,19 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1248,17 +1329,20 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1286,17 +1370,20 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8),
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1324,17 +1411,20 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1363,18 +1453,21 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
     enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    static void* cloneArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
+    static void* cloneArgs(void* args, void* buffer, int* size) {
+        if (size) *size = sizeof(Arguments);
+        if (!args && buffer) static_cast<Arguments*>(buffer)->~Arguments();
+        if (!args) return IX_NULLPTR;
 
-        return new Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
+        Arguments* tArgs = static_cast<Arguments*>(args);
+        void* p = buffer ? buffer : ::operator new(sizeof(Arguments));
+        return new (p) Arguments(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
                              tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
                              tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>(),
                              tArgs->template get<9>());
     }
 
     static void freeArgs(void* args) {
-        Arguments* tArgs = static_cast<Arguments*>(args);
-        delete tArgs;
+        delete static_cast<Arguments*>(args);
     }
 
     static bool equal(Function func1, Function func2) {
@@ -1640,7 +1733,7 @@ template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR), IX_TYPEOF(IX_NULLPTR)>
 class IX_CORE_EXPORT _iConnection
 {
 public:
-    typedef void* (*ArgumentWraper)(void* args);
+    typedef void* (*ArgumentWraper)(void* args, void* buffer, int* size);
     typedef void (*ArgumentDeleter)(void* args);
 
     void ref();
@@ -1650,7 +1743,6 @@ public:
     inline bool compare(const _iConnection* other) const {return (IX_NULLPTR != _impl(Compare, this, other, IX_NULLPTR, IX_NULLPTR));}
 
     void emits(void* args, void* ret) const;
-
 protected:
     enum Operation {
         Destroy,
@@ -1910,21 +2002,24 @@ public:
         return true;
     }
 
-    static void* argumentWraper(void* args) {
+    static void* argumentWraper(void* args, void* buffer, int* size) {
         typedef FunctionPointer<SignalFunc, -1> SignalFuncType;
         typedef iTuple<iVariant> ArgumentsAdaptor;
         typedef typename SignalFuncType::Arguments Arguments;
         IX_COMPILER_VERIFY((1 == SignalFuncType::ArgumentCount));
 
+        if (size) *size = sizeof(ArgumentsAdaptor);
+        if (!args && buffer) static_cast<ArgumentsAdaptor*>(buffer)->~ArgumentsAdaptor();
+        if (!args) return IX_NULLPTR;
+
         Arguments* tArgs = static_cast<Arguments*>(args);
-        return new ArgumentsAdaptor(iVariant(tArgs->template get<0>()));
+        void* p = buffer ? buffer : ::operator new(sizeof(ArgumentsAdaptor));
+        return new (p) ArgumentsAdaptor(iVariant(tArgs->template get<0>()));
     }
 
     static void argumentDeleter(void* args) {
         typedef iTuple<iVariant> ArgumentsAdaptor;
-
-        ArgumentsAdaptor* tArgs = static_cast<ArgumentsAdaptor*>(args);
-        delete tArgs;
+        delete static_cast<ArgumentsAdaptor*>(args);
     }
 
     template<typename NewGetFunc>

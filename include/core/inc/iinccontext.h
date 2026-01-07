@@ -143,7 +143,7 @@ private:
     iSharedDataPointer<iINCOperation> releaseChannel(xuint32 channelId);
 
     /// record channel for stream
-    xuint32 regeisterChannel(iINCChannel* channel, MemType type);
+    xuint32 regeisterChannel(iINCChannel* channel, MemType type, const iByteArray& shmName = iByteArray(), xint32 shmSize = 0);
 
     /// unrecord channel for stream
     iINCChannel* unregeisterChannel(xuint32 channelId);

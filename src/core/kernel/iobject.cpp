@@ -8,16 +8,17 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include "core/kernel/ievent.h"
 #include "core/kernel/iobject.h"
+#include "core/thread/ithread.h"
 #include "core/utils/isharedptr.h"
 #include "core/thread/isemaphore.h"
-#include "core/thread/ithread.h"
-#include "core/kernel/ievent.h"
 #include "core/kernel/icoreapplication.h"
 #include "core/kernel/ieventdispatcher.h"
-#include "core/io/ilog.h"
-#include "thread/ithread_p.h"
 #include "thread/iorderedmutexlocker_p.h"
+#include "core/utils/ivarlengtharray.h"
+#include "thread/ithread_p.h"
+#include "core/io/ilog.h"
 
 #ifdef IX_HAVE_CXX11
 #include <algorithm>
@@ -759,31 +760,37 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
 
     struct ConnectArgHelper {
         void* _args;
+        void* _adaptorArgs;
+        _iConnection::ArgumentWraper _adaptorWraper;
+        iVarLengthArray<char, 128> _adaptorBuffer;
 
-        iSharedPtr<void> _rawArg;
         iSharedPtr<void> _cloneArg;
-        iSharedPtr<void> _cloneAdaptorArg;
-        ConnectArgHelper(void* a) :_args(a) {}
+        ConnectArgHelper(void* a) :_args(a), _adaptorArgs(IX_NULLPTR), _adaptorWraper(IX_NULLPTR) {}
+        ~ConnectArgHelper() {
+            if (_adaptorWraper && _adaptorArgs)
+                _adaptorWraper(IX_NULLPTR, _adaptorArgs, IX_NULLPTR);
+        }
 
-        static void fakefree(void*) {}
+        void* arg(const _iConnection& c) {
+            if (!c._isArgAdapter) return _args;
+            if (_adaptorArgs) return _adaptorArgs;
 
-        const iSharedPtr<void>& arg(const _iConnection& c, bool clone) {
-            if (c._isArgAdapter && _cloneAdaptorArg.isNull())
-                _cloneAdaptorArg = iSharedPtr<void>(c._argWraper(_args), c._argDeleter);
+            int size = 0;
+            c._argWraper(_args, IX_NULLPTR, &size);
+            if (size > 0) {
+                _adaptorBuffer.resize(size);
+                _adaptorArgs = c._argWraper(_args, _adaptorBuffer.data(), IX_NULLPTR);
+                _adaptorWraper = c._argWraper;
+            }
+            return _adaptorArgs;
+        }
 
-            if (c._isArgAdapter)
-                return _cloneAdaptorArg;
+        const iSharedPtr<void>& argShared(const _iConnection& c) {
+            if (_cloneArg.isNull()) {
+                _cloneArg = iSharedPtr<void>(c._argWraper(_args, IX_NULLPTR, IX_NULLPTR), c._argDeleter);
+            }
 
-            if (clone && _cloneArg.isNull())
-                _cloneArg = iSharedPtr<void>(c._argWraper(_args), c._argDeleter);
-
-            if (clone)
-                return _cloneArg;
-
-            if (_rawArg.isNull())
-                _rawArg = iSharedPtr<void>(_args, fakefree);
-
-            return _rawArg;
+            return _cloneArg;
         }
 
         IX_DISABLE_COPY(ConnectArgHelper)
@@ -816,8 +823,6 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
     // during the signal emission are not emitted in this emission.
     _iConnection* last = list.last;
     ConnectArgHelper argHelper(args);
-    iSharedPtr<void> _cloneArgs;
-    iSharedPtr<void> _cloneArgsAdaptor;
 
     do {
         if (connectionLists->orphaned)
@@ -832,7 +837,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
             receiverInSameThread = (currentThreadData == receiver->m_threadData);
         } else {
             // need to lock before reading the threadId, because moveToThread() could interfere
-            iScopedLock<iMutex> locker(receiver->m_signalSlotLock);
+            iScopedLock<iMutex> locker2(receiver->m_signalSlotLock);
             receiverInSameThread = (currentThreadData == receiver->m_threadData);
         }
 
@@ -843,7 +848,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
             || (DirectConnection == _type)) {
             locker.unlock();
             _iSender sender(receiver, this, receiverInSameThread);
-            conn->emits(argHelper.arg(*conn, false).data(), ret);
+            conn->emits(argHelper.arg(*conn), ret);
 
             if (connectionLists->orphaned)
                 break;
@@ -853,7 +858,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         } else if (BlockingQueuedConnection != _type) {
             conn->ref();
             iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-            iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.arg(*conn, true));
+            iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.argShared(*conn));
             iCoreApplication::postEvent(receiver, event);
             continue;
         } else {}
@@ -866,7 +871,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         conn->ref();
         iSemaphore semaphore;
         iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-        iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.arg(*conn, true), &semaphore);
+        iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.argShared(*conn), &semaphore);
         iCoreApplication::postEvent(receiver, event);
         locker.unlock();
         semaphore.acquire();
@@ -1057,7 +1062,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
         }
         iSemaphore semaphore;
         iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
-        iSharedPtr<void> _a(c._argWraper(args), c._argDeleter);
+        iSharedPtr<void> _a(c._argWraper(args, IX_NULLPTR, IX_NULLPTR), c._argDeleter);
         iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
         iCoreApplication::postEvent(receiver, event);
         semaphore.acquire();
@@ -1065,7 +1070,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
     }
 
     iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
-    iSharedPtr<void> _a(c._argWraper(args), c._argDeleter);
+    iSharedPtr<void> _a(c._argWraper(args, IX_NULLPTR, IX_NULLPTR), c._argDeleter);
     iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
     iCoreApplication::postEvent(receiver, event);
     return true;

@@ -42,17 +42,11 @@ static xint64 roundToSecs(xint64 interval)
 
 iTimerInfoList::iTimerInfoList()
     : m_currentTime(0)
-    , m_firstTimerInfo(IX_NULLPTR)
 {}
 
 iTimerInfoList::~iTimerInfoList()
 {
-    while (m_timers.size() > 0) {
-        TimerInfo* info = m_timers.front();
-        m_timers.pop_front();
-
-        delete info;
-    }
+    m_timers.clear();
 }
 
 xint64 iTimerInfoList::updateCurrentTime()
@@ -64,25 +58,23 @@ xint64 iTimerInfoList::updateCurrentTime()
 /*
   insert timer info into list
 */
-void iTimerInfoList::timerInsert(TimerInfo *ti)
+std::list<iTimerInfoList::TimerInfo>::iterator iTimerInfoList::timerInsert(const TimerInfo& ti)
 {
-    std::list<TimerInfo*>::iterator insert_it = m_timers.begin();
+    std::list<TimerInfo>::iterator insert_it = m_timers.begin();
 
     while (insert_it != m_timers.end()) {
-        const TimerInfo * const t = *insert_it;
-        if (ti->timeout < t->timeout) {
-            m_timers.insert(insert_it, ti);
-            return;
+        if (ti.timeout < insert_it->timeout) {
+            return m_timers.insert(insert_it, ti);
         }
 
         ++insert_it;
     }
 
     m_timers.push_back(ti);
+    return --m_timers.end();
 }
 
-
-static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 currentTime)
+static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo &t, xint64 currentTime)
 {
     // The coarse timer works like this:
     //  - interval under 40 ms: round to even
@@ -100,8 +92,8 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
     //
     // The objective is to make most timers wake up at the same time, thereby reducing CPU wakeups.
 
-    xint64 interval = xint64((t->interval + 999999LL) / (1000LL * 1000LL)); // convert to milliseconds
-    xint64 timeout = xint64((t->timeout + 999999LL) / (1000LL * 1000LL)); // convert to milliseconds
+    xint64 interval = xint64((t.interval + 999999LL) / (1000LL * 1000LL)); // convert to milliseconds
+    xint64 timeout = xint64((t.timeout + 999999LL) / (1000LL * 1000LL)); // convert to milliseconds
     xint64 msec = xint64(timeout % 1000LL);
     xint64 timeoutInSecs = xint64(timeout / 1000LL);
     IX_ASSERT(interval >= 20);
@@ -183,31 +175,31 @@ static void calculateCoarseTimerTimeout(iTimerInfoList::TimerInfo *t, xint64 cur
     }
 
 recalculate:
-    t->timeout = (timeoutInSecs * 1000LL + msec) * (1000LL * 1000LL); // convert to nanoseconds
-    if (t->timeout < currentTime)
-        t->timeout += t->interval;
+    t.timeout = (timeoutInSecs * 1000LL + msec) * (1000LL * 1000LL); // convert to nanoseconds
+    if (t.timeout < currentTime)
+        t.timeout += t.interval;
 }
 
-static void calculateNextTimeout(iTimerInfoList::TimerInfo *t, xint64 currentTime)
+static void calculateNextTimeout(iTimerInfoList::TimerInfo &t, xint64 currentTime)
 {
-    switch (t->timerType) {
+    switch (t.timerType) {
     case PreciseTimer:
     case CoarseTimer:
-        t->timeout += t->interval;
-        if (t->timeout < currentTime) {
-            t->timeout = currentTime;
-            t->timeout += t->interval;
+        t.timeout += t.interval;
+        if (t.timeout < currentTime) {
+            t.timeout = currentTime;
+            t.timeout += t.interval;
         }
 
-        if (t->timerType == CoarseTimer)
+        if (t.timerType == CoarseTimer)
             calculateCoarseTimerTimeout(t, currentTime);
         return;
 
     case VeryCoarseTimer:
-        // we don't need to take care of the microsecond component of t->interval
-        t->timeout += t->interval;
-        if (t->timeout <= currentTime)
-            t->timeout = roundToSecs(currentTime + t->interval);
+        // we don't need to take care of the microsecond component of t.interval
+        t.timeout += t.interval;
+        if (t.timeout <= currentTime)
+            t.timeout = roundToSecs(currentTime + t.interval);
 
         return;
     }
@@ -222,10 +214,10 @@ bool iTimerInfoList::timerWait(xint64 &tm)
     xint64 currentTime = updateCurrentTime();
 
     // Find first waiting timer not already active
-    TimerInfo *t = IX_NULLPTR;
-    for (std::list<TimerInfo*>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
-        if (!(*it)->activateRef) {
-            t = *it;
+    const TimerInfo *t = IX_NULLPTR;
+    for (std::list<TimerInfo>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
+        if (!it->activateRef) {
+            t = &(*it);
             break;
         }
     }
@@ -252,15 +244,14 @@ bool iTimerInfoList::timerWait(xint64 &tm)
 xint64 iTimerInfoList::timerRemainingTime(int timerId)
 {
     xint64 currentTime = updateCurrentTime();
-    for (std::list<TimerInfo*>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
-        TimerInfo *t = *it;
-        if (t->id == timerId) {
-            if (currentTime < t->timeout) {
-                // time to wait
-                return t->timeout - currentTime;
-            } else {
-                return 0;
-            }
+    for (std::list<TimerInfo>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
+        if (it->id != timerId) continue;
+
+        // time to wait
+        if (currentTime < it->timeout) {
+            return it->timeout - currentTime;
+        } else {
+            return 0;
         }
     }
 
@@ -282,13 +273,12 @@ void iTimerInfoList::registerTimer(int timerId, xint64 interval, TimerType timer
             timerType = PreciseTimer;
     }
 
-    TimerInfo *t = new TimerInfo;
-    t->id = timerId;
-    t->interval = interval;
-    t->userdata = userdata;
-    t->timerType = timerType;
-    t->obj = object;
-    t->activateRef = IX_NULLPTR;
+    TimerInfo t;
+    t.id = timerId;
+    t.interval = interval;
+    t.userdata = userdata;
+    t.timerType = timerType;
+    t.obj = object;
 
     xint64 expected = updateCurrentTime() + interval;
 
@@ -296,19 +286,19 @@ void iTimerInfoList::registerTimer(int timerId, xint64 interval, TimerType timer
     case PreciseTimer:
         // high precision timer is based on millisecond precision
         // so no adjustment is necessary
-        t->timeout = expected;
+        t.timeout = expected;
         break;
 
     case CoarseTimer:
-        t->timeout = expected;
+        t.timeout = expected;
         calculateCoarseTimerTimeout(t, m_currentTime);
         break;
 
     case VeryCoarseTimer:
         // the very coarse timer is based on full second precision,
         // so we keep the interval in seconds (round to closest second)
-        t->interval = roundToSecs(t->interval);
-        t->timeout = roundToSecs(m_currentTime + interval);
+        t.interval = roundToSecs(t.interval);
+        t.timeout = roundToSecs(m_currentTime + interval);
         break;
     }
 
@@ -318,17 +308,16 @@ void iTimerInfoList::registerTimer(int timerId, xint64 interval, TimerType timer
 bool iTimerInfoList::unregisterTimer(int timerId)
 {
     iEventDispatcher::releaseTimerId(timerId);
-    std::list<TimerInfo*>::iterator it = m_timers.begin();
+    std::list<TimerInfo>::iterator it = m_timers.begin();
     while (it != m_timers.end()) {
-        TimerInfo *t = *it;
-        if (t->id == timerId) {
+        if (it->id == timerId) {
             // found it
+            if (it->id == m_firstTimerInfo.id)
+                m_firstTimerInfo = TimerInfo();
+            if (it->activateRef)
+                *(it->activateRef) = IX_NULLPTR;
+
             it = m_timers.erase(it);
-            if (t == m_firstTimerInfo)
-                m_firstTimerInfo = IX_NULLPTR;
-            if (t->activateRef)
-                *(t->activateRef) = IX_NULLPTR;
-            delete t;
 
             return true;
         }
@@ -345,20 +334,18 @@ bool iTimerInfoList::unregisterTimers(iObject *object, bool releaseId)
     if (m_timers.size() <= 0)
         return false;
 
-    std::list<TimerInfo*>::iterator it = m_timers.begin();
+    std::list<TimerInfo>::iterator it = m_timers.begin();
     while (it != m_timers.end()) {
-        TimerInfo *t = *it;
-        if (t->obj == object) {
+        if (it->obj == object) {
             // object found
-            it = m_timers.erase(it);
             if (releaseId)
-                iEventDispatcher::releaseTimerId(t->id);
-            if (t == m_firstTimerInfo)
-                m_firstTimerInfo = IX_NULLPTR;
-            if (t->activateRef)
-                *(t->activateRef) = IX_NULLPTR;
-            delete t;
+                iEventDispatcher::releaseTimerId(it->id);
+            if (it->id == m_firstTimerInfo.id)
+                m_firstTimerInfo = TimerInfo();
+            if (it->activateRef)
+                *(it->activateRef) = IX_NULLPTR;
 
+            it = m_timers.erase(it);
             continue;
         }
 
@@ -371,10 +358,9 @@ bool iTimerInfoList::unregisterTimers(iObject *object, bool releaseId)
 std::list<iEventDispatcher::TimerInfo> iTimerInfoList::registeredTimers(iObject *object) const
 {
     std::list<iEventDispatcher::TimerInfo> list;
-    for (std::list<TimerInfo*>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
-        TimerInfo *t = *it;
-        if (t->obj == object) {
-            iEventDispatcher::TimerInfo insert(t->id, t->interval, t->timerType, t->userdata);
+    for (std::list<TimerInfo>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
+        if (it->obj == object) {
+            iEventDispatcher::TimerInfo insert(it->id, it->interval, it->timerType, it->userdata);
             list.push_back(insert);
         }
     }
@@ -391,13 +377,13 @@ int iTimerInfoList::activateTimers()
         return 0; // nothing to do
 
     int n_act = 0, maxCount = 0;
-    m_firstTimerInfo = IX_NULLPTR;
+    m_firstTimerInfo = TimerInfo();
 
     xint64 currentTime = updateCurrentTime();
 
     // Find out how many timer have expired
-    for (std::list<TimerInfo*>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
-        if (currentTime < (*it)->timeout)
+    for (std::list<TimerInfo>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
+        if (currentTime < it->timeout)
             break;
         maxCount++;
     }
@@ -407,17 +393,16 @@ int iTimerInfoList::activateTimers()
         if (m_timers.size() <= 0)
             break;
 
-        TimerInfo *currentTimerInfo = m_timers.front();
-        if (currentTime < currentTimerInfo->timeout)
+        TimerInfo currentTimerInfo = m_timers.front();
+        if (currentTime < currentTimerInfo.timeout)
             break; // no timer has expired
 
-        if (!m_firstTimerInfo) {
+        if (0 == m_firstTimerInfo.id) {
             m_firstTimerInfo = currentTimerInfo;
-        } else if (m_firstTimerInfo == currentTimerInfo) {
+        } else if (m_firstTimerInfo.id == currentTimerInfo.id) {
             // avoid sending the same timer multiple times
             break;
-        } else if (currentTimerInfo->interval < m_firstTimerInfo->interval
-                   || currentTimerInfo->interval == m_firstTimerInfo->interval) {
+        } else if (currentTimerInfo.interval <= m_firstTimerInfo.interval) {
             m_firstTimerInfo = currentTimerInfo;
         }
 
@@ -428,23 +413,25 @@ int iTimerInfoList::activateTimers()
         calculateNextTimeout(currentTimerInfo, currentTime);
 
         // reinsert timer
-        timerInsert(currentTimerInfo);
-        if (currentTimerInfo->interval > 0)
+        auto cur_it = timerInsert(currentTimerInfo);
+        IX_ASSERT(cur_it != m_timers.end());
+        if (cur_it->interval > 0)
             n_act++;
 
-        if (!currentTimerInfo->activateRef) {
+        TimerInfo *tracker = &(*cur_it);
+        if (!tracker->activateRef) {
             // send event, but don't allow it to recurse
-            currentTimerInfo->activateRef = &currentTimerInfo;
+            tracker->activateRef = &tracker;
 
-            iTimerEvent e(currentTimerInfo->id, currentTimerInfo->userdata);
-            iCoreApplication::sendEvent(currentTimerInfo->obj, &e);
+            iTimerEvent e(tracker->id, tracker->userdata);
+            iCoreApplication::sendEvent(tracker->obj, &e);
 
-            if (currentTimerInfo)
-                currentTimerInfo->activateRef = IX_NULLPTR;
+            if (tracker)
+                tracker->activateRef = IX_NULLPTR;
         }
     }
 
-    m_firstTimerInfo = IX_NULLPTR;
+    m_firstTimerInfo = TimerInfo();
     return n_act;
 }
 
@@ -452,7 +439,7 @@ bool iTimerInfoList::existTimeout()
 {
     if (m_timers.empty())
         return false;
-    if (m_currentTime < m_timers.front()->timeout)
+    if (m_currentTime < m_timers.front().timeout)
         return false;
 
     return true;

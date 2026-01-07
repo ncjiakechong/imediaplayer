@@ -103,8 +103,11 @@ iThread::iThread(iObject *parent)
     , m_stackSize(0)
     , m_priority(InheritPriority)
     , m_data(new iThreadData())
-    , m_impl(new iThreadImpl(this))
+    , m_impl(IX_NULLPTR)
 {
+    IX_COMPILER_VERIFY(sizeof(iThreadImpl) <= sizeof(__pad));
+    m_impl = new (__pad) iThreadImpl(this);
+
     m_data->thread = this;
     moveToThread(this);
     setParent(parent);
@@ -120,11 +123,15 @@ iThread::iThread(iThreadData* data, iObject *parent)
     , m_stackSize(0)
     , m_priority(InheritPriority)
     , m_data(data)
-    , m_impl(new iThreadImpl(this))
+    , m_impl(IX_NULLPTR)
 {
+    IX_COMPILER_VERIFY(sizeof(iThreadImpl) <= sizeof(__pad));
+    m_impl = new (__pad) iThreadImpl(this);
+
     if (!data)
         m_data = new iThreadData();
 
+    m_running = m_data->isAdopted;
     m_data->thread = this;
     moveToThread(this);
     setParent(parent);
@@ -143,7 +150,12 @@ iThread::~iThread()
         ilog_error("Destroyed while thread is still running");
 
     m_data->thread = IX_NULLPTR;
-    delete m_impl;
+    if (m_impl) {
+        // Since we used placement new on __pad, we must manually call the destructor
+        // and NOT use 'delete', which would attempt to free stack memory.
+        m_impl->~iThreadImpl();
+        m_impl = IX_NULLPTR;
+    }
 
     m_data->deref();
 }

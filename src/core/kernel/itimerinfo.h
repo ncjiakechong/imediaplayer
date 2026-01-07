@@ -29,6 +29,9 @@ public:
         xint64 timeout;  // - when to actually fire
         iObject *obj;     // - object to receive event
         TimerInfo **activateRef; // - ref from activateTimers
+
+        TimerInfo() : id(0), userdata(0), timerType(PreciseTimer), interval(0), timeout(0), obj(IX_NULLPTR), activateRef(IX_NULLPTR) {}
+        ~TimerInfo() { id = 0; obj = IX_NULLPTR; if (activateRef) *activateRef = IX_NULLPTR; }
     };
 
     iTimerInfoList();
@@ -50,13 +53,13 @@ public:
     bool existTimeout();
 
 private:
-    void timerInsert(TimerInfo *);
+    std::list<TimerInfo>::iterator timerInsert(const TimerInfo&);
 
-    xint64 m_currentTime; // millisecond
+    xint64 m_currentTime; // nanosecond
 
     // state variables used by activateTimers()
-    TimerInfo *m_firstTimerInfo;
-    std::list<TimerInfo*> m_timers;
+    TimerInfo m_firstTimerInfo;
+    std::list<TimerInfo> m_timers;
 };
 
 } // namespace iShell

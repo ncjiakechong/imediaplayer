@@ -55,6 +55,10 @@ public:
 
 private:
     iConditionImpl* m_cond;
+    union {
+        char __pad[128];
+        void* __align;
+    };
 
     IX_DISABLE_COPY(iCondition)
 };

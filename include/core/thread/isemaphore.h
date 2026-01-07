@@ -11,10 +11,9 @@
 #define ISEMAPHORE_H
 
 #include <core/global/iglobal.h>
+#include <core/thread/icondition.h>
 
 namespace iShell {
-
-class iSemaphoreImp;
 
 class IX_CORE_EXPORT iSemaphore
 {
@@ -57,7 +56,9 @@ public:
         /// semaphore. This number can never be negative.
 
 private:
-    iSemaphoreImp* m_semph;
+    int m_avail;
+    iMutex m_mutex;
+    iCondition m_cond;
 
     IX_DISABLE_COPY(iSemaphore)
 };

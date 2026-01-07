@@ -45,7 +45,6 @@ public:
     inline void ignore() { m_accept = false; }
 
     static int registerEventType(int hint = -1);
-
 protected:
     unsigned short m_type;
 

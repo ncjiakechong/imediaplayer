@@ -28,24 +28,13 @@
 
 namespace iShell {
 
+#ifdef IX_HAVE_CXX11
+
 class iConditionImpl
 {
 public:
     iConditionImpl() {}
-    virtual ~iConditionImpl() {}
-    virtual int wait(iMutex& mutex) = 0;
-    virtual int tryWait(iMutex& mutex, long milliseconds) = 0;
-    virtual int signal() = 0;
-    virtual int broadcast() = 0;
-};
-
-#ifdef IX_HAVE_CXX11
-
-class platform_cond_imp : public iConditionImpl
-{
-public:
-    platform_cond_imp() {}
-    ~platform_cond_imp() {}
+    ~iConditionImpl() {}
 
     int wait(iMutex& mutex)
     {
@@ -58,7 +47,7 @@ public:
         return 0;
     }
 
-    virtual int tryWait(iMutex& mutex, long milliseconds)
+    int tryWait(iMutex& mutex, long milliseconds)
     {
         std::cv_status retValue = std::cv_status::no_timeout;
 
@@ -71,7 +60,7 @@ public:
         return (std::cv_status::no_timeout == retValue) ? 0 : -1;
     }
 
-    virtual int signal()
+    int signal()
     {
         _mutex.lock();
         _cond.notify_one();
@@ -80,7 +69,7 @@ public:
         return 0;
     }
 
-    virtual int broadcast()
+    int broadcast()
     {
         _mutex.lock();
         _cond.notify_all();
@@ -92,15 +81,14 @@ public:
 private:
     std::mutex _mutex;
     std::condition_variable _cond;
-
 };
 
 #else
 
-class platform_cond_imp : public iConditionImpl
+class iConditionImpl
 {
 public:
-    platform_cond_imp() {
+    iConditionImpl() {
         pthread_mutexattr_t attr;
         pthread_mutexattr_init(&attr);
 
@@ -115,7 +103,7 @@ public:
             ilog_error("pthread_cond_init error");
         }
     }
-    ~platform_cond_imp()
+    ~iConditionImpl()
     {
         pthread_mutex_destroy(&_mutex);
         pthread_cond_destroy(&_cond);
@@ -132,7 +120,7 @@ public:
         return -retValue;
     }
 
-    virtual int tryWait(iMutex& mutex, long milliseconds)
+    int tryWait(iMutex& mutex, long milliseconds)
     {
         int retValue = 0;
         pthread_mutex_lock(&_mutex);
@@ -156,7 +144,7 @@ public:
         return -retValue;
     }
 
-    virtual int signal()
+    int signal()
     {
         pthread_mutex_lock(&_mutex);
         pthread_cond_signal(&_cond);
@@ -165,7 +153,7 @@ public:
         return 0;
     }
 
-    virtual int broadcast()
+    int broadcast()
     {
         pthread_mutex_lock(&_mutex);
         pthread_cond_broadcast(&_cond);
@@ -182,11 +170,19 @@ private:
 #endif
 
 iCondition::iCondition()
-    : m_cond(new platform_cond_imp)
-{}
+    : m_cond(IX_NULLPTR)
+{
+    IX_COMPILER_VERIFY(sizeof(iConditionImpl) <= sizeof(__pad));
+    m_cond = new (__pad) iConditionImpl();
+}
 
 iCondition::~iCondition()
-{ delete m_cond; }
+{
+    if (m_cond) {
+        m_cond->~iConditionImpl();
+        m_cond = IX_NULLPTR;
+    }
+}
 
 int iCondition::wait(iMutex &mutex, long milliseconds)
 {

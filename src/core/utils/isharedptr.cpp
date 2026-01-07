@@ -10,6 +10,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #include "core/utils/isharedptr.h"
+#include "core/kernel/icoreapplication.h"
 #include "core/kernel/iobject.h"
 #include "core/io/ilog.h"
 
@@ -85,7 +86,6 @@ ExternalRefCountData* ExternalRefCountData::getAndTest(const iObject* obj, Exter
 
     return that;
 }
-
 } // namespace isharedpointer
 
 } // namespace iShell

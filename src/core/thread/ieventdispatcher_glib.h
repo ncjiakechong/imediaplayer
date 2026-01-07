@@ -52,12 +52,6 @@ protected:
     virtual int updatePoll(iPollFD* fd, iEventSource* source) IX_OVERRIDE;
 
 protected:
-    struct iPollRec
-    {
-      iPollFD *fd;
-      int priority;
-    };
-
     bool    m_inProcess;
     xuint32 m_nextSeq;
 

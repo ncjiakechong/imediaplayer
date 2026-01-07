@@ -77,12 +77,9 @@ class iAdoptedThread : public iThread
 public:
     iAdoptedThread(iThreadData *data)
         : iThread(data)
-    {
-        m_running = true;
-        m_finished = false;
-    }
+    {}
 
-    ~iAdoptedThread();
+    ~iAdoptedThread() {}
 
 protected:
     void run() IX_OVERRIDE {
@@ -90,9 +87,6 @@ protected:
         ilog_error("Internal error, this implementation should never be called.");
     }
 };
-
-iAdoptedThread::~iAdoptedThread()
-{}
 
 // Utility functions for getting, setting and clearing thread specific data.
 static iThreadData *get_thread_data()

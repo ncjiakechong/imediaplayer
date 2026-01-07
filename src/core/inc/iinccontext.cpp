@@ -507,11 +507,15 @@ iSharedDataPointer<iINCOperation> iINCContext::releaseChannel(xuint32 channelId)
     return op;
 }
 
-xuint32 iINCContext::regeisterChannel(iINCChannel* channel, MemType type)
+xuint32 iINCContext::regeisterChannel(iINCChannel* channel, MemType type, const iByteArray& shmName, xint32 shmSize)
 {
     IX_ASSERT(STATE_CONNECTED == m_state && m_connection);
     if ((0 != type) && !m_connection->mempool()) {
-        iMemPool* memPool = iMemPool::create(objectName().toUtf8().constData(), m_config.sharedMemoryName().constData(), type, m_config.sharedMemorySize(), true);
+        iByteArray useName = shmName.isEmpty() ? m_config.sharedMemoryName() : shmName;
+        xint32 useSize = (shmSize <= 0)  ? m_config.sharedMemorySize() : shmSize;
+
+        ilog_info("[", objectName(), "] Create mempool with name:", useName, " size:", useSize);
+        iMemPool* memPool = iMemPool::create((const char*)objectName().toUtf8().constData(), useName.constData(), type, useSize, true);
         m_connection->enableMempool(iSharedDataPointer<iMemPool>(memPool));
     }
 

@@ -25,16 +25,16 @@ class iScopedLock
     /// The destructor unlocks the mutex.
 {
 public:
-    explicit iScopedLock(M& mutex): m_mutex(xuintptr(&mutex))
+    IX_ALWAYS_INLINE explicit iScopedLock(M& mutex): m_mutex(xuintptr(&mutex))
     {
         IX_ASSERT((m_mutex & xuintptr(1u)) == xuintptr(0));
         mutex.lock();
         m_mutex |= xuintptr(1u);
     }
 
-    ~iScopedLock() { unlock(); }
+    IX_ALWAYS_INLINE ~iScopedLock() { unlock(); }
 
-    inline void unlock()
+    IX_ALWAYS_INLINE void unlock()
     {
         if ((m_mutex & xuintptr(1u)) == xuintptr(1u)) {
             m_mutex &= ~xuintptr(1u);
@@ -42,7 +42,7 @@ public:
         }
     }
 
-    inline void relock()
+    IX_ALWAYS_INLINE void relock()
     {
         if ((m_mutex & xuintptr(1u)) == xuintptr(0u)) {
             mutex()->lock();
@@ -50,7 +50,7 @@ public:
         }
     }
 
-    inline M* mutex() const
+    IX_ALWAYS_INLINE M* mutex() const
     { return reinterpret_cast<M*>(m_mutex & ~xuintptr(1u)); }
 
 private:
@@ -69,10 +69,10 @@ class iScopedUnlock
     /// The destructor locks the mutex.
 {
 public:
-    inline iScopedUnlock(M& mutex, bool unlockNow = true): m_mutex(&mutex)
+    IX_ALWAYS_INLINE iScopedUnlock(M& mutex, bool unlockNow = true): m_mutex(&mutex)
     { if (unlockNow) m_mutex->unlock(); }
 
-    inline ~iScopedUnlock()
+    IX_ALWAYS_INLINE ~iScopedUnlock()
     { m_mutex->lock(); }
 
 private:

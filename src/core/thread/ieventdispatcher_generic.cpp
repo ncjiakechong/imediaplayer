@@ -95,15 +95,13 @@ iEventDispatcher_generic::iEventDispatcher_generic(iObject *parent)
     : iEventDispatcher(parent)
     , m_pollChanged(false)
     , m_inCheckOrPrepare(0)
-    , m_wakeup(IX_NULLPTR)
     , m_cachedPollArray(IX_NULLPTR)
     , m_cachedPollArraySize(0)
     , m_nextSeq(0)
     , m_postSource(IX_NULLPTR)
     , m_timerSource(IX_NULLPTR)
 {
-    m_wakeup = new iWakeup();
-    m_wakeup->getPollfd(&m_wakeUpRec);
+    m_wakeup.getPollfd(&m_wakeUpRec);
     addPoll(&m_wakeUpRec, IX_NULLPTR);
 
     m_postSource = new iPostEventSource(0);
@@ -136,25 +134,19 @@ iEventDispatcher_generic::~iEventDispatcher_generic()
         }
     }
 
-    std::list<iPollRec*>::iterator it =  m_pollRecords.begin();
-    std::list<iPollRec*>::iterator itEnd = m_pollRecords.end();
+    std::list<iPollRec>::iterator it =  m_pollRecords.begin();
+    std::list<iPollRec>::iterator itEnd = m_pollRecords.end();
 
-    while(it != itEnd) {
-        iPollRec* rec = *it;
-        it = m_pollRecords.erase(it);
-        delete rec;
-    }
+    m_pollRecords.clear();
 
     if (m_cachedPollArray)
         delete[] m_cachedPollArray;
-
-    delete m_wakeup;
 }
 
 void iEventDispatcher_generic::wakeUp()
 {
     ++m_postSource->serialNumber;
-    m_wakeup->signal();
+    m_wakeup.signal();
 }
 
 void iEventDispatcher_generic::interrupt()
@@ -292,14 +284,14 @@ int iEventDispatcher_generic::addPoll(iPollFD* fd, iEventSource* source)
         priority = source->priority();
 
     /* This file descriptor may be checked before we ever poll */
-    iPollRec *newrec = new iPollRec;
+    iPollRec newrec;
     fd->revents = 0;
-    newrec->fd = fd;
-    newrec->priority = priority;
+    newrec.fd = fd;
+    newrec.priority = priority;
 
-    std::list<iPollRec*>::iterator it;
+    std::list<iPollRec>::iterator it;
     for (it = m_pollRecords.begin(); it != m_pollRecords.end(); ++it) {
-        if ((*it)->fd->fd > fd->fd)
+        if (it->fd->fd > fd->fd)
             break;
     }
 
@@ -316,16 +308,14 @@ int iEventDispatcher_generic::removePoll(iPollFD* fd, iEventSource*)
         return -1;
     }
 
-    std::list<iPollRec*>::iterator it = m_pollRecords.begin();
+    std::list<iPollRec>::iterator it = m_pollRecords.begin();
     while (it != m_pollRecords.end()) {
-        iPollRec* rec = *it;
-        if (rec->fd != fd) {
+        if (it->fd != fd) {
             ++it;
             continue;
         }
 
         it = m_pollRecords.erase(it);
-        delete rec;
     }
 
     m_pollChanged = true;
@@ -413,9 +403,9 @@ int iEventDispatcher_generic::eventQuery(int max_priority, xint64*, iPollFD* fds
 
     n_poll = 0;
     lastpollrec = IX_NULLPTR;
-    for (std::list<iPollRec*>::iterator it = m_pollRecords.begin();
+    for (std::list<iPollRec>::iterator it = m_pollRecords.begin();
          it != m_pollRecords.end(); ++it) {
-        iPollRec* pollrec = *it;
+        iPollRec* pollrec = &(*it);
         if (pollrec->priority > max_priority)
             continue;
 
@@ -456,7 +446,7 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
     for (int i = 0; i < n_fds; i++) {
         if (fds[i].fd == m_wakeUpRec.fd) {
             if (fds[i].revents) {
-                m_wakeup->acknowledge();
+                m_wakeup.acknowledge();
             }
             break;
         }
@@ -468,11 +458,11 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
     if (m_pollChanged)
         return false;
 
-    std::list<iPollRec*>::iterator itRec = m_pollRecords.begin();
+    std::list<iPollRec>::iterator itRec = m_pollRecords.begin();
     for (int i = 0; i < n_fds; ++i) {
         while ((itRec != m_pollRecords.end())
-                && ((*itRec)->fd->fd == fds[i].fd)) {
-            iPollRec *pollrec = *itRec;
+                && (itRec->fd->fd == fds[i].fd)) {
+            iPollRec *pollrec = &(*itRec);
             if (pollrec->priority <= max_priority) {
                 pollrec->fd->revents = fds[i].revents & (pollrec->fd->events | IX_IO_ERR | IX_IO_HUP | IX_IO_NVAL);
             }

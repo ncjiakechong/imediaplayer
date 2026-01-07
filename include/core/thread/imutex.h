@@ -14,16 +14,7 @@
 
 namespace iShell {
 
-class iMutexImpl
-{
-public:
-    iMutexImpl();
-    virtual ~iMutexImpl();
-    virtual int lockImpl() = 0;
-    virtual int tryLockImpl(long milliseconds) = 0;
-    virtual int unlockImpl() = 0;
-};
-
+class iMutexImpl;
 
 class IX_CORE_EXPORT iMutex
     /// A iMutex (mutual exclusion) is a synchronization
@@ -72,6 +63,10 @@ public:
 private:
     RecursionMode m_recMode;
     iMutexImpl* m_mutex;
+    union {
+        char __pad[64];
+        void* __align;
+    };
 
     IX_DISABLE_COPY(iMutex)
 };
@@ -94,15 +89,6 @@ public:
     bool tryLock() { return true; }
     bool tryLock(long) { return true; }
 };
-
-inline int iMutex::lock()
-{ return m_mutex->lockImpl(); }
-
-inline int iMutex::tryLock(long milliseconds)
-{ return m_mutex->tryLockImpl(milliseconds); }
-
-inline int iMutex::unlock()
-{ return m_mutex->unlockImpl(); }
 
 } // namespace iShell
 

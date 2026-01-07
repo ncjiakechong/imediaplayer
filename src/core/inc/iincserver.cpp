@@ -396,6 +396,8 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
             reply.payload().putBool(peerWantsShmNegotiation);
             if (peerWantsShmNegotiation) {
                 reply.payload().putUint16(negotiontedShmType);
+                reply.payload().putBytes(conn->mempool() ? iByteArray(conn->mempool()->prefix()) : iByteArray());
+                reply.payload().putInt32(conn->mempool() ? conn->mempool()->size() : 0);
             }
 
             ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(),

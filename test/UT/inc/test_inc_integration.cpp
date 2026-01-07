@@ -1464,15 +1464,13 @@ protected:
         }
 
         // Brief wait for cleanup to process
-        iThread::msleep(2000);
+        // Reduced from 2000ms to 50ms to speed up tests
+        iThread::msleep(50);
 
         // Stop and delete work thread
         if (workThread) {
             ilog_info("[Test] Exiting work thread");
             workThread->exit();
-
-            // Give thread a brief moment to begin shutdown sequence
-            iThread::msleep(500);
 
             // CRITICAL: Wait for thread to completely exit before deleting iThread object
             // Using wait() without timeout (default -1) to wait indefinitely until thread exits.
@@ -1482,10 +1480,7 @@ protected:
             ilog_info("[Test] Waiting for work thread to exit...");
             workThread->wait();  // Wait indefinitely until thread exits
 
-            ilog_info("[Test] Work thread exited, waiting for final cleanup");
-            // Brief wait for background cleanup to complete
-            // Reduced from 2000ms after fixing major cleanup issues
-            iThread::msleep(2000);
+            ilog_info("[Test] Work thread exited");
 
             ilog_info("[Test] Deleting work thread object");
             delete workThread;

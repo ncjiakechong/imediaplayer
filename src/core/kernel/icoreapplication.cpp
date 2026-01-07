@@ -8,14 +8,16 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include <core/thread/iatomiccounter.h>
+#include <core/thread/iatomicpointer.h>
 #include "core/kernel/ieventdispatcher.h"
 #include "core/kernel/icoreapplication.h"
 #include "core/kernel/ieventloop.h"
 #include "core/thread/ithread.h"
 #include "core/kernel/ievent.h"
 #include "core/io/imemtrap.h"
-#include "core/io/ilog.h"
 #include "thread/ithread_p.h"
+#include "core/io/ilog.h"
 
 #if defined(IX_OS_WIN)
 #include <windows.h>
@@ -35,10 +37,13 @@
 
 namespace iShell {
 
+// class iMemoryPool {};
+
 iCoreApplication* iCoreApplication::s_self = IX_NULLPTR;
 
-iCoreApplicationPrivate::iCoreApplicationPrivate(int argc, char **argv)
-    : m_argc(argc)
+iCoreApplication::iCoreApplication(int argc, char** argv)
+    : m_aboutToQuitEmitted(false)
+    , m_argc(argc)
     , m_argv(argv)
 {
     static const char *const empty = "";
@@ -46,36 +51,6 @@ iCoreApplicationPrivate::iCoreApplicationPrivate(int argc, char **argv)
         argc = 0;
         argv = const_cast<char **>(&empty);
     }
-}
-
-iCoreApplicationPrivate::~iCoreApplicationPrivate()
-{
-}
-
-iEventDispatcher* iCoreApplicationPrivate::createEventDispatcher() const
-{
-    iEventDispatcher* dispatcher = IX_NULLPTR;
-
-    #if 0 // ifdef IBUILD_HAVE_GLIB
-    dispatcher = new iEventDispatcher_Glib();
-    #else
-    dispatcher = new iEventDispatcher_generic();
-    #endif
-
-    return dispatcher;
-}
-
-iCoreApplication::iCoreApplication(iCoreApplicationPrivate* priv)
-    : m_private(priv)
-{
-    s_self = this;
-    init();
-}
-
-iCoreApplication::iCoreApplication(int argc, char** argv)
-    : m_aboutToQuitEmitted(false)
-    , m_private(new iCoreApplicationPrivate(argc, argv))
-{
     s_self = this;
     init();
 }
@@ -89,7 +64,6 @@ iCoreApplication::~iCoreApplication()
         delete dispatcher;
     }
 
-    delete m_private;
     s_self = IX_NULLPTR;
 }
 
@@ -101,7 +75,7 @@ void iCoreApplication::init()
     dispatcher = m_threadData->dispatcher.load();
     bool needStarting = false;
     if (IX_NULLPTR == dispatcher) {
-        dispatcher = m_private->createEventDispatcher();
+        dispatcher = doCreateEventDispatcher();
         needStarting = true;
     }
 
@@ -123,8 +97,8 @@ std::list<iString> iCoreApplication::arguments()
         return list;
     }
 
-    const int ac = s_self->m_private->m_argc;
-    char ** const av = s_self->m_private->m_argv;
+    const int ac = s_self->m_argc;
+    char ** const av = s_self->m_argv;
 
     for (int a = 0; a < ac; ++a) {
         list.push_back(iString::fromLocal8Bit(av[a]));
@@ -161,7 +135,20 @@ iEventDispatcher* iCoreApplication::createEventDispatcher()
         return IX_NULLPTR;
     }
 
-    return app->m_private->createEventDispatcher();
+    return app->doCreateEventDispatcher();
+}
+
+iEventDispatcher* iCoreApplication::doCreateEventDispatcher() const
+{
+    iEventDispatcher* dispatcher = IX_NULLPTR;
+
+    #if 0 // ifdef IBUILD_HAVE_GLIB
+    dispatcher = new iEventDispatcher_Glib();
+    #else
+    dispatcher = new iEventDispatcher_generic();
+    #endif
+
+    return dispatcher;
 }
 
 int iCoreApplication::exec()

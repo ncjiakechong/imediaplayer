@@ -28,95 +28,54 @@ namespace iShell {
 
 #ifdef IX_HAVE_CXX11
 
-class MutexImpl_BaseMutex
-    // Helper class to make std::recursive_timed_mutex and std::timed_mutex generic
+class iMutexImpl
 {
 public:
-    virtual ~MutexImpl_BaseMutex();
-
-    virtual int lock() = 0;
-    virtual int tryLock() = 0;
-    virtual int tryLock(long milliseconds) = 0;
-    virtual int unlock() = 0;
-};
-
-MutexImpl_BaseMutex::~MutexImpl_BaseMutex()
-{}
-
-template <class T>
-class MutexImpl_MutexI : public MutexImpl_BaseMutex
-{
-public:
-    MutexImpl_MutexI() : m_mutex() {}
-
-    int lock()
-    {
-        m_mutex.lock();
-        return 0;
+    iMutexImpl(bool fast) : m_fast(fast) {
+        if (m_fast) new (getFast()) std::timed_mutex();
+        else new (getRecur()) std::recursive_timed_mutex();
     }
 
-    int tryLock()
-    {
-        if (m_mutex.try_lock())
-            return 0;
-
-        return -1;
+    ~iMutexImpl() {
+        if (m_fast) getFast()->~timed_mutex();
+        else getRecur()->~recursive_timed_mutex();
     }
 
-    int tryLock(long milliseconds)
-    {
-        if (m_mutex.try_lock_for(std::chrono::milliseconds(milliseconds)))
-            return 0;
-
-        return -1;
+    inline int lockImpl() {
+        if (m_fast) { getFast()->lock(); return 0; }
+        else { getRecur()->lock(); return 0; }
     }
 
-    int unlock()
-    {
-        m_mutex.unlock();
-        return 0;
-    }
-private:
-    T m_mutex;
-};
-
-class platform_lock_imp : public iMutexImpl
-{
-public:
-    platform_lock_imp(bool fast)
-        : m_mutex((fast ?
-                    std::unique_ptr<MutexImpl_BaseMutex>(new MutexImpl_MutexI<std::timed_mutex>()) :
-                    std::unique_ptr<MutexImpl_BaseMutex>(new MutexImpl_MutexI<std::recursive_timed_mutex>())))
-    {}
-
-    virtual ~platform_lock_imp()
-    {}
-
-    virtual int lockImpl() IX_OVERRIDE
-    { return m_mutex->lock(); }
-
-    virtual int tryLockImpl(long milliseconds) IX_OVERRIDE
-    {
-        if (0 == milliseconds) {
-            return m_mutex->tryLock();
+    inline int tryLockImpl(long milliseconds) {
+        if (m_fast) {
+            if (milliseconds == 0) return getFast()->try_lock() ? 0 : -1;
+            else return getFast()->try_lock_for(std::chrono::milliseconds(milliseconds)) ? 0 : -1;
+        } else {
+            if (milliseconds == 0) return getRecur()->try_lock() ? 0 : -1;
+            else return getRecur()->try_lock_for(std::chrono::milliseconds(milliseconds)) ? 0 : -1;
         }
-
-        return m_mutex->tryLock(milliseconds);
     }
 
-    virtual int unlockImpl() IX_OVERRIDE
-    { return m_mutex->unlock(); }
+    inline int unlockImpl() {
+        if (m_fast) { getFast()->unlock(); return 0; }
+        else { getRecur()->unlock(); return 0; }
+    }
 
 private:
-    std::unique_ptr<MutexImpl_BaseMutex> m_mutex;
+    bool m_fast;
+    typedef std::aligned_union<0, std::timed_mutex, std::recursive_timed_mutex>::type MutexStorage;
+    MutexStorage m_storage;
+
+    std::timed_mutex* getFast() { return reinterpret_cast<std::timed_mutex*>(&m_storage); }
+    std::recursive_timed_mutex* getRecur() { return reinterpret_cast<std::recursive_timed_mutex*>(&m_storage); }
 };
 
 #else
 
-class platform_lock_imp : public iMutexImpl
+class iMutexImpl
 {
 public:
-    platform_lock_imp(bool fast)
+    iMutexImpl(bool fast)
     {
         pthread_mutexattr_t attr;
         pthread_mutexattr_init(&attr);
@@ -130,17 +89,17 @@ public:
         pthread_mutexattr_destroy(&attr);
     }
 
-    virtual ~platform_lock_imp()
+    ~iMutexImpl()
     {
         pthread_mutex_destroy(&m_mutex);
     }
 
-    virtual int lockImpl() IX_OVERRIDE
+    inline int lockImpl()
     {
         return pthread_mutex_lock(&m_mutex);
     }
 
-    virtual int tryLockImpl(long milliseconds) IX_OVERRIDE
+    inline int tryLockImpl(long milliseconds)
     {
         if (0 == milliseconds) {
             return - pthread_mutex_trylock(&m_mutex);
@@ -166,7 +125,7 @@ public:
         return rc;
     }
 
-    virtual int unlockImpl() IX_OVERRIDE
+    inline int unlockImpl()
     {
         return - pthread_mutex_unlock(&m_mutex);
     }
@@ -177,21 +136,31 @@ private:
 
 #endif
 
-iMutexImpl::iMutexImpl()
-{}
-
-iMutexImpl::~iMutexImpl()
-{}
-
 iMutex::iMutex(RecursionMode mode)
     : m_recMode(mode)
-    , m_mutex(new platform_lock_imp(NonRecursive == mode))
-{}
+    , m_mutex(IX_NULLPTR)
+{
+    IX_COMPILER_VERIFY(sizeof(iMutexImpl) <= sizeof(__pad));
+    m_mutex = new (__pad) iMutexImpl(NonRecursive == mode);
+}
 
 iMutex::~iMutex()
 {
-    delete m_mutex;
-    m_mutex = IX_NULLPTR;
+    // Since we used placement new on __pad, we must manually call the destructor
+    // and NOT use 'delete', which would attempt to free stack memory.
+    if (m_mutex) {
+        m_mutex->~iMutexImpl();
+        m_mutex = IX_NULLPTR;
+    }
 }
+
+int iMutex::lock()
+{ return m_mutex->lockImpl(); }
+
+int iMutex::tryLock(long milliseconds)
+{ return m_mutex->tryLockImpl(milliseconds); }
+
+int iMutex::unlock()
+{ return m_mutex->unlockImpl(); }
 
 } // namespace iShell

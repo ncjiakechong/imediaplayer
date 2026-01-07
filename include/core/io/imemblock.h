@@ -212,12 +212,16 @@ public:
     void vacuum();
     bool isShared() const;
     bool isMemfdBacked() const;
-    MemType type() const { return m_memory ? m_memory->type() : MEMTYPE_PRIVATE; }
     inline bool isGlobal() const { return m_global; }
     inline bool isPerClient() const { return !m_global; }
     inline bool isRemoteWritable() const { return m_isRemoteWritable; }
     void setIsRemoteWritable(bool writable);
     size_t blockSizeMax() const;
+
+    inline const char* name() const { return m_name; }
+    inline size_t size() const { return m_memory ? m_memory->size() : 0; }
+    inline MemType type() const { return m_memory ? m_memory->type() : MEMTYPE_PRIVATE; }
+    inline const char* prefix() const { return m_memory ? m_memory->prefix() : IX_NULLPTR; }
 
 private:
     struct Slot;
