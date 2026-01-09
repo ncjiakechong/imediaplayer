@@ -153,7 +153,6 @@ TEST_F(INCContextConfigTest, DefaultConstruction) {
     EXPECT_EQ(config.reconnectIntervalMs(), 500);
     EXPECT_EQ(config.maxReconnectAttempts(), 5);
     EXPECT_EQ(config.connectTimeoutMs(), 3000);
-    EXPECT_EQ(config.operationTimeoutMs(), 2000);
     EXPECT_TRUE(config.enableIOThread());
 }
 
@@ -214,9 +213,6 @@ TEST_F(INCContextConfigTest, SetTimeouts) {
 
     config.setConnectTimeoutMs(5000);
     EXPECT_EQ(config.connectTimeoutMs(), 5000);
-
-    config.setOperationTimeoutMs(3000);
-    EXPECT_EQ(config.operationTimeoutMs(), 3000);
 }
 
 TEST_F(INCContextConfigTest, SetThreadingSettings) {

@@ -1185,6 +1185,7 @@ public:
         
         if (op) {
             ilog_info("[Worker] Stream write operation created");
+            op->setTimeout(500);
             iScopedLock<iMutex> lock(helper->mutex);
             helper->errorCode = 0;
             helper->testCompleted = true;

@@ -84,9 +84,9 @@ xint32 iINCMessage::parseHeader(iByteArrayView header)
     return hdr.length;
 }
 
-iByteArray iINCMessage::header() const
+iINCMessageHeader iINCMessage::header() const
 {
-    // Create header
+    IX_COMPILER_VERIFY(sizeof(iINCMessageHeader) == iINCMessageHeader::HEADER_SIZE);
     iINCMessageHeader header;
     header.magic = iINCMessageHeader::MAGIC;
     header.protocolVersion = m_protocolVersion;
@@ -98,11 +98,7 @@ iByteArray iINCMessage::header() const
     header.length = m_payload.size();
     header.dts = m_dts;
 
-    // Write header (32 bytes fixed)
-    iByteArray data;
-    data.append(reinterpret_cast<const char*>(&header), sizeof(header));
-    IX_COMPILER_VERIFY(sizeof(iINCMessageHeader) == iINCMessageHeader::HEADER_SIZE);
-    return data;
+    return header;
 }
 
 bool iINCMessage::isValid() const

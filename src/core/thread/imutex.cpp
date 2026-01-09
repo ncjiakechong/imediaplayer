@@ -140,7 +140,7 @@ iMutex::iMutex(RecursionMode mode)
     : m_recMode(mode)
     , m_mutex(IX_NULLPTR)
 {
-    IX_COMPILER_VERIFY(sizeof(iMutexImpl) <= sizeof(__pad));
+    IX_COMPILER_VERIFY(sizeof(iMutexImpl) + sizeof(void*) <= sizeof(__pad));
     m_mutex = new (__pad) iMutexImpl(NonRecursive == mode);
 }
 

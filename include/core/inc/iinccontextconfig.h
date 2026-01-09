@@ -95,9 +95,6 @@ public:
     int connectTimeoutMs() const { return m_connectTimeoutMs; }
     void setConnectTimeoutMs(int timeout) { m_connectTimeoutMs = timeout; }
 
-    int operationTimeoutMs() const { return m_operationTimeoutMs; }
-    void setOperationTimeoutMs(int timeout) { m_operationTimeoutMs = timeout; }
-
     /// Protocol operation timeout (handshake, ping-pong, etc.)
     int protocolTimeoutMs() const { return m_protocolTimeoutMs; }
     void setProtocolTimeoutMs(int timeout) { m_protocolTimeoutMs = timeout; }
@@ -135,7 +132,6 @@ private:
 
     // Timeouts
     int m_connectTimeoutMs = 3000;
-    int m_operationTimeoutMs = 2000;
     int m_protocolTimeoutMs = 500; // 500ms for protocol operations (handshake, ping-pong)
 
     // Threading

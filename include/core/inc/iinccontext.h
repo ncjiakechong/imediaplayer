@@ -111,7 +111,7 @@ protected:
     /// @param timeout Operation timeout in ms (0 = no timeout)
     /// @return Operation handle for tracking
     /// @note Subclasses should wrap this with typed method calls
-    iSharedDataPointer<iINCOperation> callMethod(iStringView method, xuint16 version, const iByteArray& args, xint64 timeout = 10000);
+    iSharedDataPointer<iINCOperation> callMethod(iStringView method, xuint16 version, const iByteArray& args, xint64 timeout = 1000);
 
 private:
     void onMessageReceived(iINCConnection* conn, iINCMessage msg);

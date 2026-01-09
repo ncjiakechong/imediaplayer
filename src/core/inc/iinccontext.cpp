@@ -226,7 +226,7 @@ iSharedDataPointer<iINCOperation> iINCContext::callMethod(iStringView method, xu
     auto op = m_connection->sendMessage(msg);
     if (!op) return op;
 
-    op->setTimeout(timeout > 0 ? timeout : m_config.operationTimeoutMs());
+    op->setTimeout(timeout);
     return op;
 }
 

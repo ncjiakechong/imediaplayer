@@ -472,11 +472,11 @@ void iINCProtocol::onReadyWrite()
         const iINCMessage& msg = m_sendQueue.front();
 
         // Prepare header and payload separately (zero-copy for payload)
-        iByteArray header = msg.header();
+        iINCMessageHeader header = msg.header();
         const iByteArray& payload = msg.payload().data();
 
-        // Write header first (24 bytes)
-        xint64 written = m_device->write(header.constData(), header.size());
+        // Write header first (32 bytes)
+        xint64 written = m_device->write(reinterpret_cast<const char*>(&header), sizeof(iINCMessageHeader));
 
         if (written < 0) {
             ilog_error("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
@@ -485,9 +485,10 @@ void iINCProtocol::onReadyWrite()
             return;
         }
 
-        if (written < header.size()) {
+        if (written < sizeof(iINCMessageHeader)) {
             // Partial header write - merge header + payload for retry
-            iByteArray data = header;
+            iByteArray data;
+            data.append(reinterpret_cast<const char*>(&header), sizeof(iINCMessageHeader));
             if (!payload.isEmpty()) {
                 data.append(payload);
             }

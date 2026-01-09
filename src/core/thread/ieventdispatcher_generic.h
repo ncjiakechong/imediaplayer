@@ -60,8 +60,8 @@ private:
     bool eventIterate(bool block, bool dispatch);
     bool eventPrepare(int* priority, xint64* timeout);
     int  eventQuery(int max_priority, xint64* timeout, iPollFD* fds, int n_fds);
-    bool eventCheck(int max_priority, iPollFD* fds, int n_fds, std::list<iEventSource *>* pendingDispatches);
-    void eventDispatch(std::list<iEventSource *>* pendingDispatches);
+    bool eventCheck(int max_priority, iPollFD* fds, int n_fds, std::vector<iEventSource *>* pendingDispatches);
+    void eventDispatch(std::vector<iEventSource *>* pendingDispatches);
 
     bool m_pollChanged;
     int m_inCheckOrPrepare;
@@ -69,7 +69,6 @@ private:
     iWakeup m_wakeup;
     iPollFD m_wakeUpRec;
 
-    std::list<iPollRec> m_pollRecords;
     iPollFD* m_cachedPollArray;
     uint m_cachedPollArraySize;
 
@@ -79,6 +78,9 @@ private:
 
     iPostEventSource* m_postSource;
     iTimerEventSource* m_timerSource;
+
+    std::vector<iPollRec> m_pollRecords;
+    std::vector<iEventSource *> m_pendingDispatches;
 };
 
 } // namespace iShell

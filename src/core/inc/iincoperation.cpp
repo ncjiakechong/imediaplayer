@@ -30,16 +30,20 @@ iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent)
     , m_finishedUserData(IX_NULLPTR)
 {
     m_timer.setSingleShot(true);
-    iObject::connect(&m_timer, &iTimer::timeout, this, &iINCOperation::onTimeout);
 }
 
 iINCOperation::~iINCOperation()
 {
-    iObject::disconnect(&m_timer, &iTimer::timeout, this, &iINCOperation::onTimeout);
 }
 
 void iINCOperation::doFree()
 {
+    iThread* _currentThread = iThread::currentThread();
+    if (!_currentThread || !_currentThread->isRunning()) {
+        delete this;
+        return;
+    }
+
     iTimer::singleShot(0, reinterpret_cast<xintptr>(this), &m_timer,
                 [](xintptr userdata) {
                     iINCOperation* op = reinterpret_cast<iINCOperation*>(userdata);
@@ -60,6 +64,7 @@ void iINCOperation::setTimeout(xint64 timeout)
 
     m_timeout = timeout;
     if (timeout > 0) {
+        iObject::connect(&m_timer, &iTimer::timeout, this, &iINCOperation::onTimeout, ConnectionType(DirectConnection | UniqueConnection));
         iObject::invokeMethod(&m_timer, static_cast<void (iTimer::*)(int, xintptr)>(&iTimer::start), timeout, 0);
     }
 }

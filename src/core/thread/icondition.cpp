@@ -172,7 +172,7 @@ private:
 iCondition::iCondition()
     : m_cond(IX_NULLPTR)
 {
-    IX_COMPILER_VERIFY(sizeof(iConditionImpl) <= sizeof(__pad));
+    IX_COMPILER_VERIFY(sizeof(iConditionImpl) + sizeof(void*) <= sizeof(__pad));
     m_cond = new (__pad) iConditionImpl();
 }
 

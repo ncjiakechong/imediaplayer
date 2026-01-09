@@ -40,7 +40,6 @@ iString iINCContextConfig::dump() const
     result += iString::asprintf("Shared Memory Size: %d bytes\n", m_sharedMemorySize);
     result += iString::asprintf("Auto Reconnect: %s\n", m_autoReconnect ? "true" : "false");
     result += iString::asprintf("Connect Timeout: %d ms\n", m_connectTimeoutMs);
-    result += iString::asprintf("Operation Timeout: %d ms\n", m_operationTimeoutMs);
     result += iString::asprintf("Enable IO Thread: %s\n", m_enableIOThread ? "true" : "false");
 
     return result;

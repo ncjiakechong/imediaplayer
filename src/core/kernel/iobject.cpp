@@ -31,22 +31,51 @@ namespace iShell {
 class  iMetaCallEvent : public iEvent
 {
 public:
-    iMetaCallEvent(const iSharedPtr<_iConnection>& conn, const iSharedPtr<void>& arg, iSemaphore* semph = IX_NULLPTR);
+    iMetaCallEvent(iSemaphore* semph = IX_NULLPTR);
     ~iMetaCallEvent();
 
+    void* arg(_iConnection* conn, void* arg, _iConnection::ArgumentWraper wraper, _iConnection::ArgumentDeleter deleter, bool userWraper = true);
+
     iSemaphore* semaphore;
-    iSharedPtr<void> arguments;
-    iSharedPtr<_iConnection> connection;
+    _iConnection* connection;
+    _iConnection::ArgumentWraper argWraper;
+    _iConnection::ArgumentDeleter argDeleter;
+    iVarLengthArray<char, 128> arguments; // 128 bytes for inline buffer
 };
 
-iMetaCallEvent::iMetaCallEvent(const iSharedPtr<_iConnection>& conn, const iSharedPtr<void>& arg, iSemaphore* semph)
-    : iEvent(MetaCall), semaphore(semph), arguments(arg), connection(conn)
-    {}
+iMetaCallEvent::iMetaCallEvent(iSemaphore* semph)
+    : iEvent(MetaCall), semaphore(semph), connection(IX_NULLPTR), argWraper(IX_NULLPTR), argDeleter(IX_NULLPTR)
+{}
 
 iMetaCallEvent::~iMetaCallEvent()
 {
+    if (arguments.size() > 0 && argDeleter)
+        argDeleter(arguments.data(), false);
+
+    if (connection)
+        connection->deref();
+
     if (semaphore)
         semaphore->release();
+}
+
+void* iMetaCallEvent::arg(_iConnection* conn, void* arg, _iConnection::ArgumentWraper wraper, _iConnection::ArgumentDeleter deleter, bool userWraper) {
+    IX_ASSERT(!connection);
+    connection = conn;
+
+    if (!userWraper) return arg;
+    if (argWraper) return arguments.data();
+
+    int size = 0;
+    argWraper = wraper;
+    argDeleter = deleter;
+    argWraper(IX_NULLPTR, IX_NULLPTR, &size);
+    if (size > 0) {
+        arguments.resize(size);
+        argWraper(arg, arguments.data(), IX_NULLPTR);
+    }
+
+    return arguments.data();
 }
 
 iMetaObject::iMetaObject(const char* className, const iMetaObject* supper)
@@ -758,44 +787,6 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         IX_DISABLE_COPY(ConnectionListsRef)
     };
 
-    struct ConnectArgHelper {
-        void* _args;
-        void* _adaptorArgs;
-        _iConnection::ArgumentWraper _adaptorWraper;
-        iVarLengthArray<char, 128> _adaptorBuffer;
-
-        iSharedPtr<void> _cloneArg;
-        ConnectArgHelper(void* a) :_args(a), _adaptorArgs(IX_NULLPTR), _adaptorWraper(IX_NULLPTR) {}
-        ~ConnectArgHelper() {
-            if (_adaptorWraper && _adaptorArgs)
-                _adaptorWraper(IX_NULLPTR, _adaptorArgs, IX_NULLPTR);
-        }
-
-        void* arg(const _iConnection& c) {
-            if (!c._isArgAdapter) return _args;
-            if (_adaptorArgs) return _adaptorArgs;
-
-            int size = 0;
-            c._argWraper(_args, IX_NULLPTR, &size);
-            if (size > 0) {
-                _adaptorBuffer.resize(size);
-                _adaptorArgs = c._argWraper(_args, _adaptorBuffer.data(), IX_NULLPTR);
-                _adaptorWraper = c._argWraper;
-            }
-            return _adaptorArgs;
-        }
-
-        const iSharedPtr<void>& argShared(const _iConnection& c) {
-            if (_cloneArg.isNull()) {
-                _cloneArg = iSharedPtr<void>(c._argWraper(_args, IX_NULLPTR, IX_NULLPTR), c._argDeleter);
-            }
-
-            return _cloneArg;
-        }
-
-        IX_DISABLE_COPY(ConnectArgHelper)
-    };
-
     if (m_blockSig)
         return;
 
@@ -822,7 +813,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
     // We need to check against last here to ensure that signals added
     // during the signal emission are not emitted in this emission.
     _iConnection* last = list.last;
-    ConnectArgHelper argHelper(args);
+    iMetaCallEvent propertyArg;
 
     do {
         if (connectionLists->orphaned)
@@ -848,7 +839,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
             || (DirectConnection == _type)) {
             locker.unlock();
             _iSender sender(receiver, this, receiverInSameThread);
-            conn->emits(argHelper.arg(*conn), ret);
+            conn->emits(propertyArg.arg(IX_NULLPTR, args, conn->_argWraper, conn->_argDeleter, conn->_isArgAdapter), ret);
 
             if (connectionLists->orphaned)
                 break;
@@ -857,8 +848,8 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
             continue;
         } else if (BlockingQueuedConnection != _type) {
             conn->ref();
-            iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-            iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.argShared(*conn));
+            iMetaCallEvent* event = new iMetaCallEvent;
+            event->arg(conn, args, conn->_argWraper, conn->_argDeleter);
             iCoreApplication::postEvent(receiver, event);
             continue;
         } else {}
@@ -870,8 +861,8 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
 
         conn->ref();
         iSemaphore semaphore;
-        iSharedPtr<_iConnection> _c(conn, &_iConnection::deref);
-        iMetaCallEvent* event = new iMetaCallEvent(_c, argHelper.argShared(*conn), &semaphore);
+        iMetaCallEvent* event = new iMetaCallEvent(&semaphore);
+        event->arg(conn, args, conn->_argWraper, conn->_argDeleter);
         iCoreApplication::postEvent(receiver, event);
         locker.unlock();
         semaphore.acquire();
@@ -1060,18 +1051,21 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
             ilog_warn("iObject Dead lock detected while activating a BlockingQueuedConnection: "
                 "receiver ", receiver, " ", receiver->objectName(), "@", receiver->metaObject()->className());
         }
+
         iSemaphore semaphore;
-        iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
-        iSharedPtr<void> _a(c._argWraper(args, IX_NULLPTR, IX_NULLPTR), c._argDeleter);
-        iMetaCallEvent* event = new iMetaCallEvent(_c, _a, &semaphore);
+        _iConnection* _cloned = const_cast<_iConnection*>(&c);
+
+        _cloned->ref();
+        iMetaCallEvent* event = new iMetaCallEvent(&semaphore);
+        event->arg(_cloned, args, _cloned->_argWraper, _cloned->_argDeleter);
         iCoreApplication::postEvent(receiver, event);
         semaphore.acquire();
         return true;
     }
 
-    iSharedPtr<_iConnection> _c(c.clone(), &_iConnection::deref);
-    iSharedPtr<void> _a(c._argWraper(args, IX_NULLPTR, IX_NULLPTR), c._argDeleter);
-    iMetaCallEvent* event = new iMetaCallEvent(_c, _a);
+    _iConnection* _cloned = c.clone();
+    iMetaCallEvent* event = new iMetaCallEvent;
+    event->arg(_cloned, args, _cloned->_argWraper, _cloned->_argDeleter);
     iCoreApplication::postEvent(receiver, event);
     return true;
 }

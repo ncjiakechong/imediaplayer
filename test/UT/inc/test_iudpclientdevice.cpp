@@ -139,7 +139,8 @@ TEST_F(iUDPClientDeviceTest, WriteData) {
     iINCMessage msg(INC_MSG_SUBSCRIBE, 0, 123);
     msg.payload().putBytes(payload);
     
-    iByteArray packet = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray packet(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     packet.append(msg.payload().data());
     
     // 5. Write data
@@ -182,7 +183,8 @@ TEST_F(iUDPClientDeviceTest, WritePartialData) {
     iINCMessage msg(INC_MSG_SUBSCRIBE, 0, 123);
     msg.payload().putBytes(payload);
     
-    iByteArray packet = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray packet(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     packet.append(msg.payload().data());
     
     // Write first byte

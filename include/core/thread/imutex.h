@@ -63,9 +63,14 @@ public:
 private:
     RecursionMode m_recMode;
     iMutexImpl* m_mutex;
-    union {
+    union
+    {
+        #ifdef IX_OS_DARWIN
+        char __pad[152];
+        #else
         char __pad[64];
-        void* __align;
+        #endif
+        void *__align;
     };
 
     IX_DISABLE_COPY(iMutex)

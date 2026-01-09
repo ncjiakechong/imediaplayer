@@ -186,11 +186,7 @@ iSharedDataPointer<iINCOperation> iINCStream::write(xint64 pos, const iByteArray
 
     // Delegate to protocol for zero-copy binary data transfer
     // sendBinaryData now returns seqNum for tracking
-    auto op = m_context->sendBinaryData(m_channelId, pos, data);
-    if (!op) return op;
-
-    op->setTimeout(m_context->m_config.operationTimeoutMs());  // Use configured timeout
-    return op;
+    return m_context->sendBinaryData(m_channelId, pos, data);
 }
 
 void iINCStream::onBinaryDataReceived(iINCConnection*, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data)

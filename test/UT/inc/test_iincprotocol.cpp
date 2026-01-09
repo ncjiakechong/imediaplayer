@@ -159,7 +159,8 @@ TEST_F(INCProtocolUnitTest, ReceiveMessage) {
     tags.putInt32(200);
     msg.payload().setData(tags.data());
     
-    iByteArray header = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray header(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     iByteArray payload = msg.payload().data();
     
     // Simulate receiving header
@@ -274,7 +275,8 @@ TEST_F(INCProtocolUnitTest, ReceiveBinaryDataCopy) {
     msg.payload().putInt64(0);
     msg.payload().putBytes(iByteArray(10, 'B'));
     
-    iByteArray header = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray header(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     iByteArray payload = msg.payload().data();
     
     bool binaryReceived = false;
@@ -343,7 +345,8 @@ TEST_F(INCProtocolUnitTest, PartialRead_Header) {
     });
 
     iINCMessage msg(INC_MSG_METHOD_CALL, 1, 1);
-    iByteArray data = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray data(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     
     // Feed first 10 bytes
     device->simulateDataReceived(data.left(10));
@@ -365,7 +368,8 @@ TEST_F(INCProtocolUnitTest, PartialRead_Payload) {
     iByteArray payload(20, 'B');
     msg.payload().setData(payload);
     
-    iByteArray header = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray header(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     iByteArray fullData = header + payload;
     
     // Feed header + half payload
@@ -448,7 +452,8 @@ TEST_F(INCProtocolUnitTest, ReceiveSHM_NoImport) {
     iINCMessage msg(INC_MSG_BINARY_DATA, 1, 100);
     msg.setFlags(INC_MSG_FLAG_SHM_DATA);
     
-    iByteArray header = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray header(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     device->simulateDataReceived(header);
     
     // Protocol should send ACK with -1 because m_memImport is null

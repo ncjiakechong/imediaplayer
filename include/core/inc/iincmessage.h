@@ -78,9 +78,9 @@ public:
     iINCMessage& operator=(const iINCMessage& other);
     ~iINCMessage();
 
-    /// Get message header as byte array (24 bytes fixed)
+    /// Get message header as byte array
     /// This allows sending header separately for better performance
-    iByteArray header() const;
+    iINCMessageHeader header() const;
 
     /// Validate message integrity
     /// @return true if message is valid

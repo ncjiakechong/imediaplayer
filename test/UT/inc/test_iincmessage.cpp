@@ -100,7 +100,8 @@ TEST_F(INCMessageTest, HeaderGeneration) {
     msg.setChannelID(7);
     msg.setFlags(INC_MSG_FLAG_SHM_DATA);
 
-    iByteArray header = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray header(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
 
     // Header should be 32 bytes (with dts field)
     EXPECT_EQ(header.size(), iINCMessageHeader::HEADER_SIZE);
@@ -126,7 +127,8 @@ TEST_F(INCMessageTest, HeaderWithPayload) {
     payload.putUint32(12345);
     payload.putString(iString(u"test"));
 
-    iByteArray header = msg.header();
+    iINCMessageHeader hdr = msg.header();
+    iByteArray header(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     const iINCMessageHeader* headerPtr = reinterpret_cast<const iINCMessageHeader*>(header.constData());
 
     // Header should contain valid data
