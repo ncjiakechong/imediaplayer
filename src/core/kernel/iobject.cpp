@@ -175,6 +175,12 @@ iObject::~iObject()
     m_wasDeleted = true;
     m_blockSig = false; // unblock signals so we always emit destroyed()
 
+    // Remove all posted events ASAP to prevent them from being delivered
+    // to a partially destructed object. This must be done before emitting
+    // destroyed() signal as the signal handlers might post new events.
+    if (m_postedEvents)
+        iCoreApplication::removePostedEvents(this, iEvent::None);
+
     isharedpointer::ExternalRefCountData *refcount = m_refCount.load();
     if (refcount) {
         if (refcount->strongCount() > 0) {
@@ -303,9 +309,6 @@ iObject::~iObject()
         }
     }
 
-    if (m_postedEvents)
-        iCoreApplication::removePostedEvents(this, iEvent::None);
-
     m_threadData->deref();
 }
 
@@ -345,7 +348,8 @@ bool iObject::moveToThread(iThread *targetThread)
 
     iThreadData *currentData = iThreadData::current();
     iThreadData *targetData = targetThread ? iThread::get2(targetThread) : IX_NULLPTR;
-    if ((m_threadData->thread == IX_NULLPTR) && (currentData == targetData)) {
+    if ((IX_NULLPTR == m_threadData->thread || !m_threadData->thread.load()->isRunning()) 
+        && (currentData == targetData)) {
         // one exception to the rule: we allow moving objects with no thread affinity to the current thread
         currentData = m_threadData;
     } else if (m_threadData != currentData) {

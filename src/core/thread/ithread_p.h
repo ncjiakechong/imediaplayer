@@ -17,6 +17,7 @@
 #include <core/thread/imutex.h>
 #include <core/thread/icondition.h>
 #include <core/utils/irefcount.h>
+#include "thread/icacheallocator.h"
 
 namespace iShell {
 
@@ -46,7 +47,7 @@ inline bool operator<(const iPostEvent &first, const iPostEvent &second)
 
 // This class holds the list of posted events.
 //  The list has to be kept sorted by priority
-class iPostEventList : public std::list<iPostEvent>
+class iPostEventList : public std::list<iPostEvent, iCacheAllocator<iPostEvent>>
 {
 public:
     // recursion == recursion count for sendPostedEvents()
@@ -59,7 +60,7 @@ public:
 
     iMutex mutex;
 
-    inline iPostEventList() : std::list<iPostEvent>(), recursion(0), startOffset(0), insertionOffset(0) { }
+    inline iPostEventList() : std::list<iPostEvent, iCacheAllocator<iPostEvent>>(), recursion(0), startOffset(0), insertionOffset(0) { }
 
     void addEvent(const iPostEvent &ev) {
         int priority = ev.priority;
@@ -80,9 +81,9 @@ public:
 
 private:
     //hides because they do not keep that list sorted. addEvent must be used
-    using std::list<iPostEvent>::push_front;
-    using std::list<iPostEvent>::push_back;
-    using std::list<iPostEvent>::insert;
+    using std::list<iPostEvent, iCacheAllocator<iPostEvent>>::push_front;
+    using std::list<iPostEvent, iCacheAllocator<iPostEvent>>::push_back;
+    using std::list<iPostEvent, iCacheAllocator<iPostEvent>>::insert;
 };
 
 class iThreadData

@@ -22,7 +22,8 @@
 #include <core/kernel/iobject.h>
 #include <core/inc/iincmessage.h>
 #include <core/inc/iincoperation.h>
-
+#include <core/utils/ifreelist.h>
+#include "thread/icacheallocator.h"
 #include "inc/iincdevice.h"
 
 namespace iShell {
@@ -97,6 +98,7 @@ private:
 
     /// Process received binary data message
     void processBinaryDataMessage(const iINCMessage& msg);
+    static void operationNotifier(iINCOperation* op, bool deleter, void* userData);
 
     iINCDevice*             m_device;
     iAtomicCounter<xuint32> m_seqCounter;
@@ -117,8 +119,13 @@ private:
     iMemExport*             m_memExport;
     iMemImport*             m_memImport;
 
-    // Operation tracking (centralized in protocol layer)
-    std::unordered_map<xuint32, iINCOperation*> m_operations;  ///< Maps seqNum -> operation
+    // Operation tracking (centralized in protocol layer) with custom allocator
+    typedef std::unordered_map<xuint32, iINCOperation*, 
+                               std::hash<xuint32>, 
+                               std::equal_to<xuint32>,
+                               iCacheAllocator<std::pair<const xuint32, iINCOperation*>>> OperationsMap;
+    OperationsMap               m_operations;  ///< Maps seqNum -> operation (uses lock-free pool)
+    iFreeList<iINCOperation*>   m_opPool;
 
     IX_DISABLE_COPY(iINCProtocol)
 };

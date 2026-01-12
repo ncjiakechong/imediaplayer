@@ -95,6 +95,7 @@ iEventDispatcher_generic::iEventDispatcher_generic(iObject *parent)
     : iEventDispatcher(parent)
     , m_pollChanged(false)
     , m_inCheckOrPrepare(0)
+    , m_sourceCount(0)
     , m_cachedPollArray(IX_NULLPTR)
     , m_cachedPollArraySize(0)
     , m_nextSeq(0)
@@ -134,10 +135,11 @@ iEventDispatcher_generic::~iEventDispatcher_generic()
         }
     }
 
-    std::vector<iPollRec>::iterator it =  m_pollRecords.begin();
-    std::vector<iPollRec>::iterator itEnd = m_pollRecords.end();
+    std::list<iPollRec>::iterator it =  m_pollRecords.begin();
+    std::list<iPollRec>::iterator itEnd = m_pollRecords.end();
 
     m_pollRecords.clear();
+    m_sourceCount = 0;
 
     if (m_cachedPollArray)
         delete[] m_cachedPollArray;
@@ -242,6 +244,7 @@ int iEventDispatcher_generic::addEventSource(iEventSource* source)
     source->ref();
     std::list<iEventSource*>& item = it->second;
     item.push_back(source);
+    ++m_sourceCount;
     return 0;
 }
 
@@ -262,12 +265,14 @@ int iEventDispatcher_generic::removeEventSource(iEventSource* source)
     std::list<iEventSource*>::iterator itemIt;
     for (itemIt = item.begin(); itemIt != item.end(); ++itemIt) {
         if ((*itemIt) == source) {
+            --m_sourceCount;
             item.erase(itemIt);
             source->deref();
             break;
         }
     }
 
+    IX_ASSERT(m_sourceCount >= 0);
     return 0;
 }
 
@@ -289,7 +294,7 @@ int iEventDispatcher_generic::addPoll(iPollFD* fd, iEventSource* source)
     newrec.fd = fd;
     newrec.priority = priority;
 
-    std::vector<iPollRec>::iterator it;
+    std::list<iPollRec>::iterator it;
     for (it = m_pollRecords.begin(); it != m_pollRecords.end(); ++it) {
         if (it->fd->fd > fd->fd)
             break;
@@ -308,7 +313,7 @@ int iEventDispatcher_generic::removePoll(iPollFD* fd, iEventSource*)
         return -1;
     }
 
-    std::vector<iPollRec>::iterator it = m_pollRecords.begin();
+    std::list<iPollRec>::iterator it = m_pollRecords.begin();
     while (it != m_pollRecords.end()) {
         if (it->fd != fd) {
             ++it;
@@ -403,7 +408,7 @@ int iEventDispatcher_generic::eventQuery(int max_priority, xint64*, iPollFD* fds
 
     n_poll = 0;
     lastpollrec = IX_NULLPTR;
-    for (std::vector<iPollRec>::iterator it = m_pollRecords.begin();
+    for (std::list<iPollRec>::iterator it = m_pollRecords.begin();
          it != m_pollRecords.end(); ++it) {
         iPollRec* pollrec = &(*it);
         if (pollrec->priority > max_priority)
@@ -458,7 +463,7 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, iPollFD* fds, int n_
     if (m_pollChanged)
         return false;
 
-    std::vector<iPollRec>::iterator itRec = m_pollRecords.begin();
+    std::list<iPollRec>::iterator itRec = m_pollRecords.begin();
     for (int i = 0; i < n_fds; ++i) {
         while ((itRec != m_pollRecords.end())
                 && (itRec->fd->fd == fds[i].fd)) {
@@ -572,20 +577,20 @@ bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
     if (ret < 0)
         ilog_warn("poll error:", ret);
 
-    size_t totalSources = 0;
-    for (const auto& pair : m_sources) {
-        totalSources += pair.second.size();
+    std::vector<iEventSource *> pendingDispatches;
+    m_pendingDispatches.swap(pendingDispatches);
+    pendingDispatches.clear();
+
+    if (pendingDispatches.capacity() < (size_t)m_sourceCount) {
+        pendingDispatches.reserve(m_sourceCount + 4);
     }
 
-    m_pendingDispatches.clear();
-    if (m_pendingDispatches.capacity() < totalSources) {
-        m_pendingDispatches.reserve(totalSources);
-    }
-
-    some_ready = eventCheck (max_priority, fds, nfds, &m_pendingDispatches);
+    some_ready = eventCheck(max_priority, fds, nfds, &pendingDispatches);
 
     if (dispatch)
-      eventDispatch(&m_pendingDispatches);
+      eventDispatch(&pendingDispatches);
+
+    m_pendingDispatches.swap(pendingDispatches);
 
     return some_ready;
 }

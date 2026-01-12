@@ -516,7 +516,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
     cleanup.exceptionCaught = false;
 }
 
-bool iCoreApplication::compressEvent(iEvent * event, iObject *receiver, std::list<iPostEvent>* postedEvents)
+bool iCoreApplication::compressEvent(iEvent * event, iObject *receiver, iPostEventList* postedEvents)
 {
     if (event->type() == iEvent::DeferredDelete) {
         if (receiver->m_deleteLaterCalled) {

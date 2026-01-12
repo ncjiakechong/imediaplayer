@@ -1076,9 +1076,10 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 };
 
 // template for NonMember function
+class iObject;
 template<typename Ret> struct FunctionPointer<Ret (*) (), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<iNullTypeList> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) ();
@@ -1103,7 +1104,7 @@ template<typename Ret> struct FunctionPointer<Ret (*) (), -1>
 };
 template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1);
@@ -1136,7 +1137,7 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1), -1>
 };
 template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (*) (Arg1, Arg2), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2);
@@ -1171,7 +1172,7 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3);
@@ -1207,7 +1208,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), -1>
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4);
@@ -1245,7 +1246,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5);
@@ -1284,7 +1285,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
@@ -1323,7 +1324,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
@@ -1364,7 +1365,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
@@ -1405,7 +1406,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9);
@@ -1447,7 +1448,7 @@ template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), -1>
 {
-    typedef void Object;
+    typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
     typedef Ret ReturnType;
     typedef Ret (*Function) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10);
@@ -1705,7 +1706,6 @@ template <>
 struct _iFuncRequiresRet<void>
 { enum { value = 0 }; };
 
-class iObject;
 typedef void (iObject::*_iMemberFunction)();
 
 template<typename Obj, typename Func> struct FunctionHelper
@@ -1864,11 +1864,7 @@ class _iConnectionHelper : public _iConnection
     inline void configSlot(const iObject* slotObj, void* const* slot) {
         _slot = slot;
         _slotObj = slotObj;
-        if (SlotFuncType::IsPointerToMemberFunction) {
-            _receiver = slotObj;
-        } else {
-            _receiver = _sender;
-        }
+        _receiver = (IX_NULLPTR != slotObj) ? slotObj : _sender;
     }
 
     inline void configSlot(const void* slotObj, void* const* slot) {
@@ -1891,7 +1887,28 @@ class _iConnectionHelper : public _iConnection
     }
 
 public:
+    // Constructor for nullptr slotObj (used in disconnect with IX_NULLPTR)
     _iConnectionHelper(const iObject* sender, SignalFunc signal, bool signalValid, const SlotObject* slotObj, SlotFunc slot, bool slotValid, ConnectionType type)
+        : _iConnection(&impl, type, (signalValid ? sizeof(SignalFunc) : 0), (slotValid ? sizeof(SlotFunc) : 0))
+        , _funcObj(slotObj)
+        , _func(slot) {
+        typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
+
+        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
+        _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
+        setSignal(sender, tSignal);
+        _argWraper = &SignalFuncType::cloneArgs;
+        _argDeleter = &SignalFuncType::freeArgs;
+
+        void* const* tSlot = IX_NULLPTR;
+        if (slotValid)
+            tSlot = reinterpret_cast<void* const*>(&_func);
+
+        configSlot(slotObj, tSlot);
+    }
+
+    template<typename Context>
+    _iConnectionHelper(const iObject* sender, SignalFunc signal, bool signalValid, const Context* slotObj, SlotFunc slot, bool slotValid, ConnectionType type)
         : _iConnection(&impl, type, (signalValid ? sizeof(SignalFunc) : 0), (slotValid ? sizeof(SlotFunc) : 0))
         , _funcObj(slotObj)
         , _func(slot) {

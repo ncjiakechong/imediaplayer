@@ -70,7 +70,8 @@ public:
     void setFinishedCallback(FinishedCallback callback, void* userData = IX_NULLPTR);
 
 private:
-    iINCOperation(xuint32 seqNum, iObject* parent);
+    typedef void (*Notify)(iINCOperation* op, bool deleter, void* userData);
+    iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier = IX_NULLPTR, void* ownerData = IX_NULLPTR);
     virtual ~iINCOperation();
 
     void doFree() IX_OVERRIDE;
@@ -95,6 +96,13 @@ private:
     // Callbacks
     FinishedCallback m_finishedCallback;
     void*           m_finishedUserData;
+
+    // Custom deleter support
+    Notify m_ownerNotify;
+    void*   m_ownerData;
+
+    iTimer* m_safeDeleteTimer;
+    char    __pad[sizeof(iTimer) + sizeof(void*)];
 
     friend class iINCProtocol;
     IX_DISABLE_COPY(iINCOperation)

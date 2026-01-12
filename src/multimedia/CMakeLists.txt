@@ -41,6 +41,7 @@ pkg_check_modules(GST_PKG_PBUTILS REQUIRED gstreamer-pbutils-1.0)
 include_directories(
     ${PROJECT_SOURCE_DIR}
     ${PROJECT_SOURCE_DIR}/../../include
+    ${PROJECT_SOURCE_DIR}/../core
     ${GLIB_PKG_INCLUDE_DIRS}
     ${GST_PKG_INCLUDE_DIRS}
     ${GST_PKG_APP_INCLUDE_DIRS}

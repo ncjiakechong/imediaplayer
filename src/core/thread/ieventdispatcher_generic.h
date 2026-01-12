@@ -65,6 +65,7 @@ private:
 
     bool m_pollChanged;
     int m_inCheckOrPrepare;
+    int m_sourceCount;
 
     iWakeup m_wakeup;
     iPollFD m_wakeUpRec;
@@ -74,13 +75,12 @@ private:
 
     xuint32 m_nextSeq;
 
-    std::map<int, std::list<iEventSource*>> m_sources;
-
     iPostEventSource* m_postSource;
     iTimerEventSource* m_timerSource;
 
-    std::vector<iPollRec> m_pollRecords;
+    std::list<iPollRec> m_pollRecords;
     std::vector<iEventSource *> m_pendingDispatches;
+    std::map<int, std::list<iEventSource*>> m_sources;
 };
 
 } // namespace iShell

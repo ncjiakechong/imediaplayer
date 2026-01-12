@@ -13,12 +13,13 @@
 #include <core/kernel/iobject.h>
 #include <core/kernel/itimer.h>
 #include <core/thread/ithread.h>
+#include <core/io/ilog.h>
 
 #define ILOG_TAG "ix_inc"
 
 namespace iShell {
 
-iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent)
+iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier, void* ownerData)
     : iSharedData()
     , m_seqNum(seqNum)
     , m_state(STATE_RUNNING)
@@ -28,27 +29,52 @@ iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent)
     , m_timeout(0)
     , m_finishedCallback(IX_NULLPTR)
     , m_finishedUserData(IX_NULLPTR)
+    , m_ownerNotify(notifier)
+    , m_ownerData(ownerData)
+    , m_safeDeleteTimer(IX_NULLPTR)
 {
     m_timer.setSingleShot(true);
 }
 
 iINCOperation::~iINCOperation()
 {
+    if (m_safeDeleteTimer) {
+        m_safeDeleteTimer->~iTimer();
+        m_safeDeleteTimer = IX_NULLPTR;
+    }
 }
 
 void iINCOperation::doFree()
 {
-    iThread* _currentThread = iThread::currentThread();
-    if (!_currentThread || !_currentThread->isRunning()) {
-        delete this;
+    struct __DeleterHelper {
+        static void doDelete(xintptr userdata) {
+            iINCOperation* op = reinterpret_cast<iINCOperation*>(userdata);
+            if (op->m_ownerNotify) {
+                op->m_ownerNotify(op, true, op->m_ownerData);
+                return;
+            }
+
+            delete op;
+        }
+    };
+
+    if (!m_timer.isActive()) {
+        __DeleterHelper::doDelete(reinterpret_cast<xintptr>(this));
         return;
     }
 
-    iTimer::singleShot(0, reinterpret_cast<xintptr>(this), &m_timer,
-                [](xintptr userdata) {
-                    iINCOperation* op = reinterpret_cast<iINCOperation*>(userdata);
-                    delete op;
-                });
+    iThread* _workThread = m_timer.thread();
+    iThread* _curThread = iThread::currentThread();
+    if (!_workThread || !_workThread->isRunning() || _workThread == _curThread) {
+        m_timer.moveToThread(_curThread);
+        __DeleterHelper::doDelete(reinterpret_cast<xintptr>(this));
+        return;
+    }
+
+    m_safeDeleteTimer = new (__pad) iTimer();
+    m_safeDeleteTimer->setSingleShot(true);
+    iObject::connect(m_safeDeleteTimer, &iTimer::timeout, &m_timer, &__DeleterHelper::doDelete);
+    m_safeDeleteTimer->start(0, reinterpret_cast<xintptr>(this));
 }
 
 void iINCOperation::cancel()
@@ -94,6 +120,9 @@ void iINCOperation::setState(State st)
         if (!m_state.testAndSet(STATE_RUNNING, st)) continue;
 
         iObject::invokeMethod(&m_timer, &iTimer::stop);
+        if (m_ownerNotify) {
+            m_ownerNotify(this, false, m_ownerData);
+        }
         if (m_finishedCallback) {
             m_finishedCallback(this, m_finishedUserData);
         }

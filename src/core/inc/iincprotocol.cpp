@@ -36,6 +36,7 @@ iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
     , m_partialSendOffset(0)
     , m_memExport(IX_NULLPTR)
     , m_memImport(IX_NULLPTR)
+    , m_opPool(128)
 {
     IX_ASSERT(device != IX_NULLPTR);
 
@@ -60,7 +61,8 @@ iINCProtocol::~iINCProtocol()
         if (op && op->getState() == iINCOperation::STATE_RUNNING) {
             op->cancel();
         }
-        op->deref();  // Release reference held by map
+
+        op->deref();
     }
 
     // Clean up shared memory resources
@@ -73,6 +75,11 @@ iINCProtocol::~iINCProtocol()
         m_memImport = IX_NULLPTR;
     }
 
+    iINCOperation* cachedOp = IX_NULLPTR;
+    while( (cachedOp = m_opPool.pop(IX_NULLPTR)) != IX_NULLPTR ) {
+        ::operator delete(cachedOp);
+    }
+
     delete m_device;
 }
 
@@ -81,12 +88,35 @@ xuint32 iINCProtocol::nextSequence()
     return m_seqCounter++;
 }
 
+void iINCProtocol::operationNotifier(iINCOperation* op, bool deleter, void* userData)
+{
+    iINCProtocol* protocol = static_cast<iINCProtocol*>(userData);
+    if (!deleter) {
+        // TODO: timeout handling can be added here
+        return;
+    }
+
+    op->~iINCOperation();
+
+    if(!protocol->m_opPool.push(op))
+        ::operator delete(op);
+}
+
 iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& msg)
 {
     // Create operation for tracking this request
     iSharedDataPointer<iINCOperation> op;
-    if (!(msg.type() & 0x1))
-        op = new iINCOperation(msg.sequenceNumber(), IX_NULLPTR);
+    do {
+        if (msg.type() & 0x1) break;
+
+        iINCOperation* tmpOp = m_opPool.pop(IX_NULLPTR);
+        if (IX_NULLPTR == tmpOp) {
+            op = new iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, this);
+            break;
+        }
+
+        op = new (tmpOp) iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, this);
+    } while(false);
 
     if (!msg.isValid()) {
         ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
@@ -195,7 +225,7 @@ void iINCProtocol::releaseOperation(iINCOperation* op)
             op->m_blockID = 0; // Prevent double release
         }
 
-        op->deref(); // Release map reference
+        op->deref();
     }
 }
 
@@ -322,7 +352,7 @@ void iINCProtocol::onReadyRead()
 
                 // Complete the operation
                 op->setResult(INC_OK, msg.payload().data());
-                op->deref();  // Release reference held by map
+                op->deref();
             }
         }
 
