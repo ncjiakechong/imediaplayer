@@ -78,9 +78,9 @@ iINCHandshake::iINCHandshake(Role role)
     , m_serverConfig(nullptr)
 {
     // Generate unique node ID using PID + timestamp
-    m_localData.nodeId = iString::asprintf("node_%ld_%ld",
-                                           iCoreApplication::applicationPid(),
-                                           iDateTime::currentSecsSinceEpoch());
+    m_localData.nodeId = iString::asprintf("node_%lld_%lld",
+                                           (long long)iCoreApplication::applicationPid(),
+                                           (long long)iDateTime::currentSecsSinceEpoch());
 }
 
 iINCHandshake::~iINCHandshake()
@@ -149,9 +149,9 @@ void iINCHandshake::setLocalData(const iINCHandshakeData& data)
 
     // Ensure we have a node ID
     if (m_localData.nodeId.isEmpty()) {
-        m_localData.nodeId = iString::asprintf("node_%ld_%ld",
-                                               iCoreApplication::applicationPid(),
-                                               iDateTime::currentSecsSinceEpoch());
+        m_localData.nodeId = iString::asprintf("node_%lld_%lld",
+                                               (long long)iCoreApplication::applicationPid(),
+                                               (long long)iDateTime::currentSecsSinceEpoch());
     }
 }
 

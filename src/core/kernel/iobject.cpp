@@ -200,6 +200,20 @@ iObject::~iObject()
         m_currentSender = IX_NULLPTR;
     }
 
+    // delete children objects
+    // don't use iDeleteAll as the destructor of the child might
+    // delete siblings
+    m_isDeletingChildren = true;
+    for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
+        m_currentChildBeingDeleted = *it;
+        *it = IX_NULLPTR;
+        delete m_currentChildBeingDeleted;
+    }
+
+    m_children.clear();
+    m_currentChildBeingDeleted = IX_NULLPTR;
+    m_isDeletingChildren = false;
+
     if ((IX_NULLPTR != m_connectionLists) || (IX_NULLPTR != m_senders)) {
         iMutex *signalSlotMutex = &m_signalSlotLock;
         iScopedLock<iMutex> locker(*signalSlotMutex);
@@ -279,20 +293,6 @@ iObject::~iObject()
             oldNode->deref();
         }
     }
-
-    m_isDeletingChildren = true;
-    // delete children objects
-    // don't use iDeleteAll as the destructor of the child might
-    // delete siblings
-    for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
-        m_currentChildBeingDeleted = *it;
-        *it = IX_NULLPTR;
-        delete m_currentChildBeingDeleted;
-    }
-
-    m_children.clear();
-    m_currentChildBeingDeleted = IX_NULLPTR;
-    m_isDeletingChildren = false;
 
     // remove it from parent object
     if (m_parent)

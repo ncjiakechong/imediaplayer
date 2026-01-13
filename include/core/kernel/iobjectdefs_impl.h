@@ -251,9 +251,8 @@ template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgu
     };
 };
 
-template<typename Func, int N> struct FunctionPointer { enum {ArgumentCount = -1, IsPointerToMemberFunction = false}; };
-
-template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), -1>
+template<typename Func, bool IsFunctor = false > struct FunctionPointer { enum {ArgumentCount = -1, IsPointerToMemberFunction = false}; };
+template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), false>
 {
     typedef Obj Object;
     typedef iTuple<iNullTypeList> Arguments;
@@ -278,7 +277,7 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), -1>
         (const_cast<Object*>(o)->*f)(), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1), -1>
+template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1> Arguments;
@@ -311,7 +310,7 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
         (const_cast<Object*>(o)->*f)(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2), -1>
+template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2> Arguments;
@@ -346,7 +345,7 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3> Arguments;
@@ -382,7 +381,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), -1>
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
@@ -420,7 +419,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), -1>
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
@@ -459,7 +458,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
@@ -498,7 +497,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
@@ -539,7 +538,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), 
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
@@ -580,7 +579,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
@@ -622,7 +621,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
@@ -664,7 +663,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
     }
 };
 
-template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const, -1>
+template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const, false>
 {
     typedef Obj Object;
     typedef iTuple<iNullTypeList> Arguments;
@@ -689,7 +688,7 @@ template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const, 
         (o->*f)(), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1) const, -1>
+template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1> Arguments;
@@ -722,7 +721,7 @@ template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj
         (o->*f)(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2) const, -1>
+template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2> Arguments;
@@ -757,7 +756,7 @@ template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionP
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3> Arguments;
@@ -793,7 +792,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, -1>
     }
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
@@ -831,7 +830,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, -1>
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
@@ -870,7 +869,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, -1>
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
@@ -909,7 +908,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, 
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const, -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
@@ -950,7 +949,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) c
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const, -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
@@ -991,7 +990,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const, -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
@@ -1033,7 +1032,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 };
 template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
-struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const, -1>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const, false>
 {
     typedef Obj Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
@@ -1077,7 +1076,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 
 // template for NonMember function
 class iObject;
-template<typename Ret> struct FunctionPointer<Ret (*) (), -1>
+template<typename Ret> struct FunctionPointer<Ret (*) (), false>
 {
     typedef iObject Object;
     typedef iTuple<iNullTypeList> Arguments;
@@ -1102,7 +1101,7 @@ template<typename Ret> struct FunctionPointer<Ret (*) (), -1>
         f(), ApplyReturnValue<R>(ret);
     }
 };
-template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1), -1>
+template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1> Arguments;
@@ -1135,7 +1134,7 @@ template<typename Ret, typename Arg1> struct FunctionPointer<Ret (*) (Arg1), -1>
         f(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
-template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (*) (Arg1, Arg2), -1>
+template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (*) (Arg1, Arg2), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2> Arguments;
@@ -1170,7 +1169,7 @@ template<typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret 
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), -1>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3> Arguments;
@@ -1206,7 +1205,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3), -1>
     }
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), -1>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
@@ -1244,7 +1243,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), -1>
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
@@ -1283,7 +1282,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), -1>
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
@@ -1322,7 +1321,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), -1>
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
@@ -1363,7 +1362,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), -1>
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), -1>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
@@ -1404,7 +1403,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8),
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), -1>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
@@ -1446,7 +1445,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
 };
 template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
          typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
-struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), -1>
+struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), false>
 {
     typedef iObject Object;
     typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
@@ -1489,214 +1488,459 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, 
 };
 
 // hack code for lambda functor
-template<typename Func> struct FunctionPointer<Func, 0>
+template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), true>
 {
     typedef void Object;
-    typedef Func Function;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<iNullTypeList> Arguments;
     enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void*, void* ret) {
+    static void call(const Function& f, const void*, void*, void* ret) {
         f(), ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 1>
+template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 1, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 2>
+template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 2, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>())),
+            ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 3>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 3, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>())), ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 4>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 4, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>()), ApplyReturnValue<R>(ret);
+       f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>())),
+            ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 5>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 5, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>())), ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 6>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 6, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>())),
+            ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 7>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 7, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-          tArgs->template get<6>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>())),
+            ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 8>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 8, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-          tArgs->template get<6>(), tArgs->template get<7>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>())),
+            ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 9>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 9, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-          tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
+            static_cast<Arg9>(tArgs->template get<8>())),
+            ApplyReturnValue<R>(ret);
     }
 };
-template<typename Func> struct FunctionPointer<Func, 10>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10), true>
 {
     typedef void Object;
-    typedef Func Function;
-    enum {ArgumentCount = 10, IsPointerToMemberFunction = false};
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
 
-    // hack code to compare slot function because lambda doesn't support operator== and operator!=
-    static bool equal(const Function&, const Function&) {
-        return true;
-    }
+    static bool equal(const Function&, const Function&) { return true; }
 
     template <typename SignalArgs, typename R>
-    static void call(const Function& f, const Object*, void* args, void* ret) {
+    static void call(const Function& f, const void*, void* args, void* ret) {
         SignalArgs* tArgs = static_cast< SignalArgs* >(args);
 
-        f(tArgs->template get<0>(), tArgs->template get<1>(), tArgs->template get<2>(),
-          tArgs->template get<3>(), tArgs->template get<4>(), tArgs->template get<5>(),
-          tArgs->template get<6>(), tArgs->template get<7>(), tArgs->template get<8>(),
-          tArgs->template get<9>()), ApplyReturnValue<R>(ret);
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
+            static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>())),
+            ApplyReturnValue<R>(ret);
     }
 };
+template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) () const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<iNullTypeList> Arguments;
+    enum {ArgumentCount = 0, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void*, void* ret) {
+        f(), ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1> struct FunctionPointer<Ret (Obj::*) (Arg1) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>())), ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2> struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>())), ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+       f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>())), ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
+            static_cast<Arg9>(tArgs->template get<8>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
+         typename Arg5, typename Arg6, typename Arg7, typename Arg8, typename Arg9, typename Arg10>
+struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10) const, true>
+{
+    typedef void Object;
+    typedef Obj Function;
+    typedef Ret ReturnType;
+    typedef iTuple<Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10> Arguments;
+    enum {ArgumentCount = Arguments::length, IsPointerToMemberFunction = false};
+
+    static bool equal(const Function&, const Function&) { return true; }
+
+    template <typename SignalArgs, typename R>
+    static void call(const Function& f, const void*, void* args, void* ret) {
+        SignalArgs* tArgs = static_cast< SignalArgs* >(args);
+
+        f(static_cast<Arg1>(tArgs->template get<0>()), static_cast<Arg2>(tArgs->template get<1>()),
+            static_cast<Arg3>(tArgs->template get<2>()), static_cast<Arg4>(tArgs->template get<3>()),
+            static_cast<Arg5>(tArgs->template get<4>()), static_cast<Arg6>(tArgs->template get<5>()),
+            static_cast<Arg7>(tArgs->template get<6>()), static_cast<Arg8>(tArgs->template get<7>()),
+            static_cast<Arg9>(tArgs->template get<8>()), static_cast<Arg10>(tArgs->template get<9>())),
+            ApplyReturnValue<R>(ret);
+    }
+};
+
 
 template <typename T>
 struct _iFuncRequiresRet
@@ -1796,11 +2040,21 @@ struct iConKeyHashFunc
     size_t operator()(const _iMemberFunction& key) const;
 };
 
-template<typename SignalFunc, typename SlotFunc, int N>
+template <typename T, bool IsFunctor>
+struct SlotResolver {
+    typedef FunctionPointer<T, false> Type;
+};
+
+template <typename T>
+struct SlotResolver<T, true> {
+    typedef FunctionPointer<decltype(&T::operator()), true> Type;
+};
+
+template<typename SignalFunc, typename SlotFunc, bool IsFunctor = false >
 class _iConnectionHelper : public _iConnection
 {
-    typedef FunctionPointer<SignalFunc, -1> SignalFuncType;
-    typedef FunctionPointer<SlotFunc, N> SlotFuncType; // hack code to lambda
+    typedef FunctionPointer<SignalFunc> SignalFuncType;
+    typedef typename SlotResolver<SlotFunc, IsFunctor>::Type SlotFuncType; // hack code to lambda
     typedef typename SlotFuncType::Object SlotObject;
     const SlotObject* _funcObj;
     SlotFunc _func;
@@ -1966,7 +2220,7 @@ public:
     _iPropertyHelper(GetFunc _getfunc = IX_NULLPTR, SetFunc _setfunc = IX_NULLPTR, SignalFunc _signalfunc = IX_NULLPTR)
         : _iProperty(&getFunc, &setFunc, &signalFunc)
         , _getFunc(_getfunc), _setFunc(_setfunc), _signalFunc(_signalfunc) {
-        typedef void (FunctionPointer<SignalFunc, -1>::Object::*SignalFuncAdaptor)();
+        typedef void (FunctionPointer<SignalFunc>::Object::*SignalFuncAdaptor)();
 
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(_signalfunc);
         _signalRaw = static_cast<_iMemberFunction>(tSignalAdptor);
@@ -1976,7 +2230,7 @@ public:
     }
 
     static iVariant getFunc(const _iProperty* _this, const iObject* obj) {
-        typedef typename FunctionPointer<GetFunc, -1>::Object Obj;
+        typedef typename FunctionPointer<GetFunc>::Object Obj;
 
         const Obj* _classThis = static_cast<const Obj*>(obj);
         const _iPropertyHelper* _typedThis = static_cast<const _iPropertyHelper *>(_this);
@@ -1989,7 +2243,7 @@ public:
     }
 
     static bool setFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
-        typedef FunctionPointer<SetFunc, -1> SetFuncType;
+        typedef FunctionPointer<SetFunc> SetFuncType;
         typedef typename SetFuncType::Object Obj;
 
         Obj* _classThis = static_cast<Obj*>(obj);
@@ -2004,7 +2258,7 @@ public:
     }
 
     static bool signalFunc(const _iProperty* _this, iObject* obj, const iVariant& value) {
-        typedef FunctionPointer<SignalFunc, -1> SignalFuncType;
+        typedef FunctionPointer<SignalFunc> SignalFuncType;
         typedef typename SignalFuncType::Object Obj;
         IX_COMPILER_VERIFY((1 == SignalFuncType::ArgumentCount));
 
@@ -2020,7 +2274,7 @@ public:
     }
 
     static void* argumentWraper(void* args, void* buffer, int* size) {
-        typedef FunctionPointer<SignalFunc, -1> SignalFuncType;
+        typedef FunctionPointer<SignalFunc> SignalFuncType;
         typedef iTuple<iVariant> ArgumentsAdaptor;
         typedef typename SignalFuncType::Arguments Arguments;
         IX_COMPILER_VERIFY((1 == SignalFuncType::ArgumentCount));
@@ -2041,19 +2295,19 @@ public:
 
     template<typename NewGetFunc>
     _iPropertyHelper<NewGetFunc, SetFunc, SignalFunc> parseProperty(READ, NewGetFunc get) const {
-        IX_COMPILER_VERIFY(0 == int(FunctionPointer<NewGetFunc, -1>::ArgumentCount));
+        IX_COMPILER_VERIFY(0 == int(FunctionPointer<NewGetFunc>::ArgumentCount));
         return _iPropertyHelper<NewGetFunc, SetFunc, SignalFunc>(get, _setFunc, _signalFunc);
     }
 
     template<typename NewSetFunc>
     _iPropertyHelper<GetFunc, NewSetFunc, SignalFunc> parseProperty(WRITE, NewSetFunc set) const {
-        IX_COMPILER_VERIFY(1 == int(FunctionPointer<NewSetFunc, -1>::ArgumentCount));
+        IX_COMPILER_VERIFY(1 == int(FunctionPointer<NewSetFunc>::ArgumentCount));
         return _iPropertyHelper<GetFunc, NewSetFunc, SignalFunc>(_getFunc, set, _signalFunc);
     }
 
     template<typename NewSignalFunc>
     _iPropertyHelper<GetFunc, SetFunc, NewSignalFunc> parseProperty(NOTIFY, NewSignalFunc signal) const {
-        IX_COMPILER_VERIFY(1 == int(FunctionPointer<NewSignalFunc, -1>::ArgumentCount));
+        IX_COMPILER_VERIFY(1 == int(FunctionPointer<NewSignalFunc>::ArgumentCount));
         return _iPropertyHelper<GetFunc, SetFunc, NewSignalFunc>(_getFunc, _setFunc, signal);
     }
 
@@ -2111,8 +2365,8 @@ private:
 
 #define IX_OBJECT(TYPE)                                                                                                    \
     inline void _getThisTypeHelper() const;                                                                                \
-    using IX_ThisType = iShell::FunctionPointer< IX_TYPEOF(&TYPE::_getThisTypeHelper), -1 >::Object;                       \
-    using IX_BaseType = iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::metaObject), -1 >::Object;                        \
+    using IX_ThisType = iShell::FunctionPointer< IX_TYPEOF(&TYPE::_getThisTypeHelper)>::Object;                            \
+    using IX_BaseType = iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::metaObject)>::Object;                             \
     /* Since metaObject for ThisType will be declared later, the pointer to member function will be */                     \
     /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */                       \
 public:                                                                                                                    \
@@ -2141,7 +2395,7 @@ private:
         std::unordered_map<iShell::iLatin1StringView, iSharedPtr< iShell::_iProperty >, iShell::iKeyHashFunc> pptImp;
 
 #define IPROPERTY_ITEM(NAME, ...) IPROPERTY_ITEM2(NAME, __VA_ARGS__)
-#define IPROPERTY_ITEM2(NAME, ...)                                                                                     \
+#define IPROPERTY_ITEM2(NAME, ...)                                                                                         \
         pptImp.insert(std::pair< iShell::iLatin1StringView, iShell::iSharedPtr< iShell::_iProperty > >(                    \
                     iShell::iLatin1StringView(NAME), iShell::iSharedPtr< iShell::_iProperty >(newProperty(__VA_ARGS__))));
 
@@ -2150,7 +2404,7 @@ private:
     }
 
 #define ISIGNAL(name, ...)  {                                                                                             \
-    typedef iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::name), -1 > ThisFuncitonPointer;                             \
+    typedef iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::name)> ThisFuncitonPointer;                                  \
     typedef void (IX_ThisType::*SignalFuncAdaptor)();                                                                     \
     typedef typename ThisFuncitonPointer::Arguments Arguments;                                                            \
                                                                                                                           \

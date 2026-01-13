@@ -84,115 +84,74 @@ public:
     bool setProperty(const char *name, const iVariant& value);
 
     template<typename Func>
-    bool observeProperty(const char *name, const typename FunctionPointer<Func, -1>::Object* obj, Func slot) {
-        typedef FunctionPointer<Func, -1> FuncType;
+    bool observeProperty(const char *name, const typename FunctionPointer<Func>::Object* obj, Func slot) {
+        typedef FunctionPointer<Func> FuncType;
         typedef void (FuncType::Object::*SignalFunc)(iVariant);
         IX_COMPILER_VERIFY(int(FuncType::ArgumentCount) <= 1);
 
-        _iConnectionHelper<SignalFunc, Func, -1> conn(this, IX_NULLPTR, true, obj, slot, true, AutoConnection);
+        _iConnectionHelper<SignalFunc, Func> conn(this, IX_NULLPTR, true, obj, slot, true, AutoConnection);
         return observePropertyImp(name, conn);
     }
 
-    /// Connect a signal to a slot(member function or unary function)
-    template <typename Func1, typename Func2>
-    static inline typename enable_if< FunctionPointer<Func2, -1>::ArgumentCount >= 0, bool>::type
-        connect(const typename FunctionPointer<Func1, -1>::Object *sender, Func1 signal,
-                const typename FunctionPointer<Func2, -1>::Object *receiver, Func2 slot,
-                ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func1, -1> SignalType;
-        typedef FunctionPointer<Func2, -1> SlotType;
+    /// Connect a signal to a slot(member function or unary function or lambda/functor)
+    template <typename Func1, typename Func2, typename Object>
+    static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, const Object *receiver, Func2 slot, ConnectionType type = AutoConnection) {
+        enum { IsFunctor = (FunctionPointer<Func2>::ArgumentCount == -1) };
 
-        // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
-        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
+        typedef FunctionPointer<Func1> SignalType;
+        typedef typename SlotResolver<Func2, IsFunctor>::Type SlotType;
+
+        // compilation error if receiver type is not compatible with slot object type.
+        IX_COMPILER_VERIFY((is_convertible< const Object *, const typename SlotType::Object *>::value));
+        // compilation error if the slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)) && (int(SlotType::ArgumentCount) >= 0));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
         // Return type of the slot is not compatible with the return type of the signal.
-        IX_COMPILER_VERIFY((is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
+        IX_COMPILER_VERIFY(IsFunctor || (is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
-        _iConnectionHelper<Func1, Func2, -1> conn(sender, signal, true, receiver, slot, true, type);
-        return connectImpl(conn);
-    }
-
-    /// connect to a function pointer (not a member)
-    template <typename Func1, typename Func2, typename Object>
-    static inline typename enable_if< FunctionPointer<Func2, -1>::ArgumentCount == -1 && !is_convertible<Func2, const char*>::value, bool>::type
-        connect(const typename FunctionPointer<Func1, -1>::Object *sender, Func1 signal,
-                const Object *indicator, Func2 slot, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func1, -1> SignalType;
-        const int FunctorArgumentCount = ComputeFunctorArgumentCount<Func2 , typename SignalType::Arguments::Type, SignalType::ArgumentCount>::value;
-
-        // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
-        IX_COMPILER_VERIFY((FunctorArgumentCount >= 0));
-        // TODO: check Return type convertible
-
-        _iConnectionHelper<Func1, Func2, FunctorArgumentCount> conn(sender, signal, true, indicator, slot, true, type);
+        _iConnectionHelper<Func1, Func2, IsFunctor> conn(sender, signal, true, receiver, slot, true, type);
         return connectImpl(conn);
     }
 
     /// connect to a function pointer (not a member)
     /// NOTICE: forbid lambda function because lambda can't be correct disconnect without receiver arg
     template <typename Func1, typename Func2>
-    static inline bool connect(const typename FunctionPointer<Func1, -1>::Object *sender, Func1 signal, Func2 slot) {
-        typedef FunctionPointer<Func1, -1> SignalType;
-        typedef FunctionPointer<Func2, -1> SlotType;
+    static inline bool connect(const typename FunctionPointer<Func1>::Object *sender, Func1 signal, Func2 slot) {
+        typedef FunctionPointer<Func1> SignalType;
+        typedef FunctionPointer<Func2> SlotType;
 
-        // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
-        IX_COMPILER_VERIFY(((int(SlotType::ArgumentCount) >= 0) && (int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount))));
+        // compilation error if the slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)) && (int(SlotType::ArgumentCount) >= 0));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY((is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
-        _iConnectionHelper<Func1, Func2, -1> conn(sender, signal, true, IX_NULLPTR, slot, true, DirectConnection);
+        _iConnectionHelper<Func1, Func2> conn(sender, signal, true, IX_NULLPTR, slot, true, DirectConnection);
         return connectImpl(conn);
     }
 
     /// Disconnect signal/slot link
     template <typename Obj1, typename Func1, typename Obj2, typename Func2>
-    static inline typename enable_if< FunctionPointer<typename FunctionHelper<Obj2, Func2>::Function, -1>::ArgumentCount >= 0, bool>::type
-        disconnect(Obj1 sender, Func1 signal, Obj2 receiver, Func2 slot) {
+    static inline bool disconnect(Obj1 sender, Func1 signal, Obj2 receiver, Func2 slot) {
         typedef FunctionHelper<Obj1, Func1> SignalHelper;
         typedef FunctionHelper<Obj2, Func2> SlotHelper;
-        typedef FunctionPointer<typename SignalHelper::Function, -1> SignalType;
-        typedef FunctionPointer<typename SlotHelper::Function, -1> SlotType;
 
-        // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
-        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)));
+        enum { IsFunctor = (FunctionPointer< typename SlotHelper::Function >::ArgumentCount == -1) };
+        typedef FunctionPointer<typename SignalHelper::Function> SignalType;
+        typedef typename SlotResolver<typename SlotHelper::Function, IsFunctor>::Type SlotType;
+
+        // compilation error if the slot requires more arguments than the signal provides.
+        IX_COMPILER_VERIFY((int(SignalType::ArgumentCount) >= int(SlotType::ArgumentCount)) && (int(SlotType::ArgumentCount) >= 0));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<SlotType::ArgumentCount, typename SignalType::Arguments::Type, typename SlotType::Arguments::Type>::value));
         // Return type of the slot is not compatible with the return type of the signal.
-        IX_COMPILER_VERIFY((is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
+        IX_COMPILER_VERIFY(IsFunctor || (is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
-        _iConnectionHelper<typename SignalHelper::Function, typename SlotHelper::Function, -1> conn(sender, SignalHelper::safeFunc(signal), SignalHelper::valid,
+        _iConnectionHelper<typename SignalHelper::Function, typename SlotHelper::Function, IsFunctor> conn(sender, SignalHelper::safeFunc(signal), SignalHelper::valid,
                                                                                             receiver, SlotHelper::safeFunc(slot), SlotHelper::valid,
                                                                                             AutoConnection);
-        return disconnectImpl(conn);
-    }
-
-    /// Disconnect signal/slot link for lambda
-    /// NOTICE: lambda doesn't support comparing operator(operator== and operator!=)
-    ///         one hack way to disconnect lambda is to use receiver as the lambda tag
-    template <typename Obj1, typename Func1, typename Obj2, typename Func2>
-    static inline typename enable_if< FunctionPointer<typename FunctionHelper<Obj2, Func2>::Function, -1>::ArgumentCount == -1 && !is_convertible<Func2, const char*>::value, bool>::type
-        disconnect(Obj1 sender, Func1 signal, Obj2 receiver, Func2 slot) {
-        typedef FunctionHelper<Obj1, Func1> SignalHelper;
-        typedef FunctionHelper<Obj2, Func2> SlotHelper;
-        typedef FunctionPointer<typename SignalHelper::Function, -1> SignalType;
-
-        const int FunctorArgumentCount = ComputeFunctorArgumentCount<Func2 , typename SignalType::Arguments::Type, SignalType::ArgumentCount>::value;
-
-        // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
-        IX_COMPILER_VERIFY((FunctorArgumentCount >= 0));
-        // TODO: check Return type convertible
-
-        _iConnectionHelper<typename SignalHelper::Function, typename SlotHelper::Function, FunctorArgumentCount> conn(sender, SignalHelper::safeFunc(signal), SignalHelper::valid,
-                                                                                                                receiver, SlotHelper::safeFunc(slot), SlotHelper::valid,
-                                                                                                                AutoConnection);
         return disconnectImpl(conn);
     }
 
@@ -206,152 +165,144 @@ public:
     ///
     /// You can pass up to eight arguments (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) to the member function.
     template<typename Func>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func, ConnectionType type = AutoConnection) {
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func, ConnectionType type = AutoConnection) {
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, IX_NULLPTR);
     }
 
     template<typename Func, typename Arg1>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func,
                             Arg1 a1, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef FunctionPointer<Func> InvokeType;
         typedef void (iObject::*ArgFunc)(Arg1);
-        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
+        typedef FunctionPointer<ArgFunc> ArgumentsType;
 
         // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
         typename InvokeType::Arguments args(a1);
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
     template<typename Func, typename Arg1, typename Arg2>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func,
                              Arg1 a1, Arg2 a2, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef FunctionPointer<Func> InvokeType;
         typedef void (iObject::*ArgFunc)(Arg1, Arg2);
-        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
+        typedef FunctionPointer<ArgFunc> ArgumentsType;
 
         // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
         typename InvokeType::Arguments args(a1, a2);
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
     template<typename Func, typename Arg1, typename Arg2, typename Arg3>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func,
                              Arg1 a1, Arg2 a2, Arg3 a3, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef FunctionPointer<Func> InvokeType;
         typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3);
-        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
+        typedef FunctionPointer<ArgFunc> ArgumentsType;
 
         // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
         typename InvokeType::Arguments args(a1, a2, a3);
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
     template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func,
                              Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef FunctionPointer<Func> InvokeType;
         typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4);
-        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
+        typedef FunctionPointer<ArgFunc> ArgumentsType;
 
         // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
         typename InvokeType::Arguments args(a1, a2, a3, a4);
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
     template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func,
                              Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, Arg5 a5, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef FunctionPointer<Func> InvokeType;
         typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4, Arg5);
-        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
+        typedef FunctionPointer<ArgFunc> ArgumentsType;
 
         // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
         typename InvokeType::Arguments args(a1, a2, a3, a4, a5);
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
     template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func,
                              Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, Arg5 a5, Arg6 a6, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef FunctionPointer<Func> InvokeType;
         typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6);
-        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
+        typedef FunctionPointer<ArgFunc> ArgumentsType;
 
         // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
         typename InvokeType::Arguments args(a1, a2, a3, a4, a5, a6);
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
     template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func,
                              Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, Arg5 a5, Arg6 a6, Arg7 a7, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef FunctionPointer<Func> InvokeType;
         typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7);
-        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
+        typedef FunctionPointer<ArgFunc> ArgumentsType;
 
         // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
         typename InvokeType::Arguments args(a1, a2, a3, a4, a5, a6, a7);
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
     template<typename Func, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6, typename Arg7, typename Arg8>
-    static bool invokeMethod(typename FunctionPointer<Func, -1>::Object *obj, Func func,
+    static bool invokeMethod(typename FunctionPointer<Func>::Object *obj, Func func,
                              Arg1 a1, Arg2 a2, Arg3 a3, Arg4 a4, Arg5 a5, Arg6 a6, Arg7 a7, Arg8 a8, ConnectionType type = AutoConnection) {
-        typedef FunctionPointer<Func, -1> InvokeType;
+        typedef FunctionPointer<Func> InvokeType;
         typedef void (iObject::*ArgFunc)(Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8);
-        typedef FunctionPointer<ArgFunc, -1> ArgumentsType;
+        typedef FunctionPointer<ArgFunc> ArgumentsType;
 
         // compilation error if the arguments does not match.
-        // The slot requires more arguments than the signal provides.
         IX_COMPILER_VERIFY((int(InvokeType::ArgumentCount) == int(ArgumentsType::ArgumentCount)));
         // Signal and slot arguments are not compatible.
         IX_COMPILER_VERIFY((CheckCompatibleArguments<ArgumentsType::ArgumentCount, typename ArgumentsType::Arguments::Type, typename InvokeType::Arguments::Type>::value));
 
         typename InvokeType::Arguments args(a1, a2, a3, a4, a5, a6, a7, a8);
-        _iConnectionHelper<Func, Func, -1> conn(obj, func, true, obj, func, true, type);
+        _iConnectionHelper<Func, Func> conn(obj, func, true, obj, func, true, type);
         return invokeMethodImpl(conn, &args);
     }
 
@@ -400,9 +351,8 @@ private:
 
     typedef std::unordered_map<_iMemberFunction, _iConnectionList, iConKeyHashFunc> sender_map;
 
-    class _iObjectConnectionList
+    struct _iObjectConnectionList
     {
-    public:
         bool orphaned; //the iObject owner of this vector has been destroyed while the vector was inUse
         bool dirty; //some Connection have been disconnected (their receiver is 0) but not removed from the list yet
         int inUse; //number of functions that are currently accessing this object or its connections

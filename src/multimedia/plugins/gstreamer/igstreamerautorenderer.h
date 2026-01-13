@@ -23,7 +23,7 @@ public:
     iGstreamerAutoRenderer(iObject *parent = IX_NULLPTR);
     virtual ~iGstreamerAutoRenderer();
 
-    GstElement *videoSink();
+    GstElement *videoSink() IX_OVERRIDE;
 
 private:
     void renderFrame();

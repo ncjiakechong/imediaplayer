@@ -108,7 +108,7 @@ public:
     Error error() const;
     iString errorString() const;
 
-    iMultimedia::AvailabilityStatus availability() const;
+    iMultimedia::AvailabilityStatus availability() const IX_OVERRIDE;
 
 public: // slot
     void play();
@@ -146,8 +146,8 @@ public: // signal
     void errorEvent(Error errorNum) ISIGNAL(errorEvent, errorNum);
 
 public:
-    bool bind(iObject *);
-    void unbind(iObject *);
+    bool bind(iObject *) IX_OVERRIDE;
+    void unbind(iObject *) IX_OVERRIDE;
 
 protected:
     void stateChangedNotify(iMediaPlayer::State state);

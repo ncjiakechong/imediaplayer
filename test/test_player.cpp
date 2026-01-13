@@ -49,12 +49,12 @@ public:
         m_trackIOMem = track;
     }
 
-    virtual bool isSequential() const
+    bool isSequential() const IX_OVERRIDE
     {
         return true;
     }
 
-    virtual bool open(OpenMode mode)
+    bool open(OpenMode mode) IX_OVERRIDE
     {
         if (mode != ReadOnly && mode != ReadWrite)
             return false;
@@ -67,7 +67,7 @@ public:
         return (-1 != m_fd);
     }
 
-    virtual void close()
+    void close() IX_OVERRIDE
     {
         if (-1 == m_fd)
             return;
@@ -79,7 +79,7 @@ public:
         iIODevice::close();
     }
 
-    virtual xint64 size() const {
+    xint64 size() const IX_OVERRIDE {
         struct stat stat_results;
         if (fstat (m_fd, &stat_results) < 0)
             return 0;
@@ -87,7 +87,7 @@ public:
         return stat_results.st_size;
     }
 
-    virtual xint64 bytesAvailable() const
+    xint64 bytesAvailable() const IX_OVERRIDE
     {
         struct stat stat_results;
         if (fstat (m_fd, &stat_results) < 0)
@@ -100,7 +100,7 @@ public:
         return remainSize;
     }
 
-    virtual iByteArray readData(xint64 maxlen, xint64* readLen)
+    iByteArray readData(xint64 maxlen, xint64* readLen) IX_OVERRIDE
     {
         xint64 dummy = 0;
         iByteArray buffer;
@@ -127,7 +127,7 @@ public:
 
         return iByteArray();
     }
-    virtual xint64 writeData(const iByteArray& data)
+    xint64 writeData(const iByteArray& data) IX_OVERRIDE
     {
         IX_ASSERT(m_createdBuffer.size() > 0);
         std::unordered_map<const iMemBlock*, xint64>::iterator it = m_createdBuffer.find(data.data_ptr().d_ptr());
@@ -164,7 +164,7 @@ public:
     {
     }
 
-    virtual bool event(iEvent *e) {
+    bool event(iEvent *e) IX_OVERRIDE {
         if (e->type() != iEvent::Timer) {
             return iObject::event(e);
         }

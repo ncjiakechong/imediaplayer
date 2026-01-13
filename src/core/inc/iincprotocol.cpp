@@ -503,11 +503,7 @@ void iINCProtocol::onReadyWrite()
 
         // Prepare header and payload separately (zero-copy for payload)
         iINCMessageHeader header = msg.header();
-        const iByteArray& payload = msg.payload().data();
-
-        // Write header first (32 bytes)
         xint64 written = m_device->write(reinterpret_cast<const char*>(&header), sizeof(iINCMessageHeader));
-
         if (written < 0) {
             ilog_error("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                         "] Failed to write message header");
@@ -515,6 +511,7 @@ void iINCProtocol::onReadyWrite()
             return;
         }
 
+        const iByteArray& payload = msg.payload().data();
         if (written < sizeof(iINCMessageHeader)) {
             // Partial header write - merge header + payload for retry
             iByteArray data;

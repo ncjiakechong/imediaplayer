@@ -139,7 +139,7 @@ public:
     void pipelineChanged() ISIGNAL(pipelineChanged);
 
 protected:
-    bool event(iEvent *e);
+    bool event(iEvent *e) IX_OVERRIDE;
 
 private:
     void getStreamsInfo();

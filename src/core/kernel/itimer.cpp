@@ -142,7 +142,7 @@ bool iSingleShotTimer::event(iEvent *e)
     // If the receiver was destroyed, skip this part
     if (!receiver.isNull()) {
         typedef void (iTimer::*SignalFunc)(xintptr userdata);
-        typedef typename FunctionPointer< SignalFunc, -1>::Arguments Arguments;
+        typedef typename FunctionPointer< SignalFunc >::Arguments Arguments;
 
         Arguments arg(event->userData());
         connection->emits(&arg, IX_NULLPTR);

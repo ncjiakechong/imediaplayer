@@ -26,8 +26,8 @@ public:
     explicit iGstreamerVideoProbeControl(iObject *parent);
     virtual ~iGstreamerVideoProbeControl();
 
-    void probeCaps(GstCaps *caps);
-    bool probeBuffer(GstBuffer *buffer);
+    void probeCaps(GstCaps *caps) IX_OVERRIDE;
+    bool probeBuffer(GstBuffer *buffer) IX_OVERRIDE;
 
     void startFlushing();
     void stopFlushing();
