@@ -238,7 +238,12 @@ void iMemBlock::doFree()
     switch (m_type) {
         case MEMBLOCK_USER:
         case MEMBLOCK_FIXED: {
-            delete this;
+            iSharedDataPointer<iMemPool> pool = m_pool;
+            void* ptr = this;
+            this->~iMemBlock();
+            if (!pool || !pool->m_cacheHeads.push(ptr)) {
+                ::free(ptr);
+            }
             break;
         }
 
@@ -268,7 +273,12 @@ void iMemBlock::doFree()
             _importLock.unlock();
             import->m_releaseCb(import, m_imported.id, import->m_userdata);
 
-            delete this;
+            iSharedDataPointer<iMemPool> pool = m_pool;
+            void* ptr = this;
+            this->~iMemBlock();
+            if (!pool || !pool->m_cacheHeads.push(ptr)) {
+                ::free(ptr);
+            }
             break;
         }
 
@@ -283,7 +293,12 @@ void iMemBlock::doFree()
             while (!m_pool->m_freeSlots.push(slot)) {}
 
             if (MEMBLOCK_POOL_EXTERNAL == m_type) {
-                delete this;
+                iSharedDataPointer<iMemPool> pool = m_pool;
+                void* ptr = this;
+                this->~iMemBlock();
+                if (!pool || !pool->m_cacheHeads.push(ptr)) {
+                    ::free(ptr);
+                }
             } else {
                 this->~iMemBlock();
             }
@@ -391,8 +406,12 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t eleme
          if (IX_NULLPTR == slot)
             return IX_NULLPTR;
 
-        iMemBlock* block = new iMemBlock(pool, MEMBLOCK_POOL_EXTERNAL, DefaultAllocationFlags, pool->slotData(slot),
-                                        allocSize - headerSize, capacity);
+        void* buffer = pool->m_cacheHeads.pop(IX_NULLPTR);
+        if (IX_NULLPTR == buffer) {
+            buffer = ::malloc(sizeof(iMemBlock));
+        }
+        iMemBlock* block = new (buffer) iMemBlock(pool, MEMBLOCK_POOL_EXTERNAL, DefaultAllocationFlags,
+                                        pool->slotData(slot), allocSize - headerSize, capacity);
         return block;
     } else {
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_INFO, __FILE__, __FUNCTION__, __LINE__,
@@ -411,7 +430,11 @@ iMemBlock* iMemBlock::new4Fixed(iMemPool* pool, void* data, size_t length, bool 
         pool = iMemPool::fakeAdaptor();
 
     IX_ASSERT(pool && data && length && (length != (size_t) -1));
-    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_FIXED, DefaultAllocationFlags, data, length, length);
+    void* buffer = pool->m_cacheHeads.pop(IX_NULLPTR);
+    if (IX_NULLPTR == buffer) {
+        buffer = ::malloc(sizeof(iMemBlock));
+    }
+    iMemBlock* block = new (buffer) iMemBlock(pool, MEMBLOCK_FIXED, DefaultAllocationFlags, data, length, length);
     block->m_readOnly = readOnly;
 
     return block;
@@ -424,7 +447,11 @@ iMemBlock* iMemBlock::new4User(iMemPool* pool, void* data, size_t length, iFreeC
         pool = iMemPool::fakeAdaptor();
 
     IX_ASSERT(pool && data && length && (length != (size_t) -1));
-    iMemBlock* block = new iMemBlock(pool, MEMBLOCK_USER, DefaultAllocationFlags, data, length, length);
+    void* buffer = pool->m_cacheHeads.pop(IX_NULLPTR);
+    if (IX_NULLPTR == buffer) {
+        buffer = ::malloc(sizeof(iMemBlock));
+    }
+    iMemBlock* block = new (buffer) iMemBlock(pool, MEMBLOCK_USER, DefaultAllocationFlags, data, length, length);
     block->m_readOnly = readOnly;
     block->m_user.freeCb = freeCb;
     block->m_user.freeCbData = freeCbData;
@@ -477,10 +504,10 @@ void iMemBlock::statAdd()
     m_pool->m_stat.nAllocatedByType[m_type] ++;
     m_pool->m_stat.nAccumulatedByType[m_type] ++;
 
-    iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
+    /* iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
                         "%s pool: add length %zu, allocatedSize %d, accumulatedSize %d",
                         m_pool->m_name, m_length, m_pool->m_stat.allocatedSize.value(),
-                        m_pool->m_stat.accumulatedSize.value());
+                        m_pool->m_stat.accumulatedSize.value()); */
 }
 
 /* No lock necessary */
@@ -503,10 +530,10 @@ void iMemBlock::statRemove()
 
     m_pool->m_stat.nAllocatedByType[m_type]--;
 
-    iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
+    /* iLogger::asprintf(ILOG_TAG, iShell::ILOG_VERBOSE, __FILE__, __FUNCTION__, __LINE__,
                     "%s pool: remove length %zu, allocatedSize %d, accumulatedSize %d",
                     m_pool->m_name, m_length, m_pool->m_stat.allocatedSize.value(),
-                    m_pool->m_stat.accumulatedSize.value());
+                    m_pool->m_stat.accumulatedSize.value()); */
 }
 
 /* No lock necessary */
@@ -704,6 +731,7 @@ iMemPool::iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint
     , m_semaphore(0)
     , m_mutex(iMutex::Recursive)
     , m_freeSlots(n_blocks)
+    , m_cacheHeads(128)
 {
     IX_ASSERT(m_memory && (m_memory->size() >= (block_size * n_blocks)));
     m_stat.nAllocated = 0;
@@ -1018,15 +1046,19 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, size_t offset
     if ((offset+size) > seg->memory.size())
         return IX_NULLPTR;
 
-    iMemBlock* b = new iMemBlock(m_pool.data(), iMemBlock::MEMBLOCK_IMPORTED, iMemBlock::DefaultAllocationFlags, (xuint8*)seg->memory.data() + offset, size, size);
-    b->m_readOnly = !writable;
-    b->m_imported.id = blockId;
-    b->m_imported.segment = seg;
+    void* buffer = m_pool->m_cacheHeads.pop(IX_NULLPTR);
+    if (IX_NULLPTR == buffer) {
+        buffer = ::malloc(sizeof(iMemBlock));
+    }
+    iMemBlock* block = new (buffer) iMemBlock(m_pool.data(), iMemBlock::MEMBLOCK_IMPORTED, iMemBlock::DefaultAllocationFlags, (xuint8*)seg->memory.data() + offset, size, size);
+    block->m_readOnly = !writable;
+    block->m_imported.id = blockId;
+    block->m_imported.segment = seg;
 
-    m_blocks.insert(std::pair<uint, iMemBlock*>(blockId, b));
+    m_blocks.insert(std::pair<uint, iMemBlock*>(blockId, block));
     seg->n_blocks++;
 
-    return b;
+    return block;
 }
 
 int iMemImport::processRevoke(uint blockId)

@@ -218,11 +218,12 @@ public:
         if (id < ConstantsType::InitialNextValue)
             return defaultValue;
 
-        this->release4list(this->_empty, id);
         const int block = this->blockfor(id);
-
         IX_ASSERT(block >= 0);
-        return (this->_v[block].load())[id].t();
+        T ret = (this->_v[block].load())[id].t();
+
+        this->release4list(this->_empty, id);
+        return ret;
     }
 };
 

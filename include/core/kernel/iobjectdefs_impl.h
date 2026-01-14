@@ -69,188 +69,6 @@ void operator,(T value, const ApplyReturnValue<U>& container) {
 template<typename T>
 void operator,(T, const ApplyReturnValue<void>&) {}
 
-/*
-   Find the maximum number of arguments a functor object can take and be still compatible with
-   the arguments from the signal.
-   Value is the number of arguments, or -1 if nothing matches.
- */
-template <class Functor, class ArgList, int N> struct ComputeFunctorArgumentCount;
-
-template <class Functor, class ArgList, int N, bool Done>
-struct ComputeFunctorArgumentCountHelper
-{ enum { value = -1 }; };
-template <int N, class Functor, class ArgHead, class ArgTail>
-struct ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N, false>
-    : ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, N > {};
-
-template <class Functor, class ArgHead, class ArgTail>
-struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 0>
-{
-    static const int N = 0;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()()), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : N - 1
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 1>
-{
-    static const int N = 1;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 2>
-{
-    static const int N = 2;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 3>
-{
-    static const int N = 3;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 3, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 4>
-{
-    static const int N = 4;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 4, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 3, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 5>
-{
-    static const int N = 5;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 5, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 4, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 3, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 6>
-{
-    static const int N = 6;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 6, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 5, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 4, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 3, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 7>
-{
-    static const int N = 7;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 7, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 6, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 5, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 4, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 3, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 8>
-{
-    static const int N = 8;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 8, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 7, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 6, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 5, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 4, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 3, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 9>
-{
-    static const int N = 9;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 9, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 8, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 7, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 6, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 5, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 4, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 3, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-template <class Functor, class ArgHead, class ArgTail> struct ComputeFunctorArgumentCount<Functor, iTypeList<ArgHead, ArgTail>, 10>
-{
-    static const int N = 10;
-    template <typename D> static D dummy();
-    template <typename F> static auto test(F f) -> decltype(((f.operator()(dummy< typename iTypeGetter<N - 10, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 9, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 8, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 7, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 6, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 5, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 4, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 3, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 2, iTypeList<ArgHead, ArgTail> >::HeadType >(),
-                                                                           dummy< typename iTypeGetter<N - 1, iTypeList<ArgHead, ArgTail> >::HeadType >())), int()));
-    static char test(...);
-    enum {
-        Ok = sizeof(test(dummy<Functor>())) == sizeof(int),
-        value = Ok ? N : int(ComputeFunctorArgumentCountHelper<Functor, iTypeList<ArgHead, ArgTail>, N - 1, Ok>::value)
-    };
-};
-
 template<typename Func, bool IsFunctor = false > struct FunctionPointer { enum {ArgumentCount = -1, IsPointerToMemberFunction = false}; };
 template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), false>
 {
@@ -417,8 +235,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), false>
                 ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
 struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), false>
 {
     typedef Obj Object;
@@ -456,8 +273,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), false>
                 ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
 struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), false>
 {
     typedef Obj Object;
@@ -828,8 +644,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, false>
                 ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
 struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, false>
 {
     typedef Obj Object;
@@ -867,8 +682,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, false>
                 ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
 struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, false>
 {
     typedef Obj Object;
@@ -1241,8 +1055,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4), false>
             ApplyReturnValue<R>(ret);
     }
 };
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5>
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), false>
 {
     typedef iObject Object;
@@ -1280,8 +1093,7 @@ struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5), false>
             ApplyReturnValue<R>(ret);
     }
 };
-template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6>
+template<typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
 struct FunctionPointer<Ret (*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), false>
 {
     typedef iObject Object;
@@ -1577,8 +1389,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4), true>
             ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
 struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), true>
 {
     typedef void Object;
@@ -1598,8 +1409,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5), true>
             static_cast<Arg5>(tArgs->template get<4>())), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
 struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6), true>
 {
     typedef void Object;
@@ -1803,8 +1613,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4) const, true>
             ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5>
 struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, true>
 {
     typedef void Object;
@@ -1824,8 +1633,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5) const, true>
             static_cast<Arg5>(tArgs->template get<4>())), ApplyReturnValue<R>(ret);
     }
 };
-template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4,
-         typename Arg5, typename Arg6>
+template<class Obj, typename Ret, typename Arg1, typename Arg2, typename Arg3, typename Arg4, typename Arg5, typename Arg6>
 struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6) const, true>
 {
     typedef void Object;
@@ -2047,7 +1855,7 @@ struct SlotResolver {
 
 template <typename T>
 struct SlotResolver<T, true> {
-    typedef FunctionPointer<decltype(&T::operator()), true> Type;
+    typedef FunctionPointer<IX_TYPEOF(&T::operator()), true> Type;
 };
 
 template<typename SignalFunc, typename SlotFunc, bool IsFunctor = false >

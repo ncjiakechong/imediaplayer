@@ -248,6 +248,7 @@ private:
 
     /* A list of free slots that may be reused */
     iFreeList<Slot*> m_freeSlots;
+    iFreeList<void*> m_cacheHeads;
 
     iAtomicCounter<int> m_nInit;
     iSemaphore m_semaphore;
