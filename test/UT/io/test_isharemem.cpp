@@ -179,7 +179,9 @@ TEST_F(ShareMemTest, PunchPrivateMem) {
 
 TEST_F(ShareMemTest, PunchPosixSharedMem) {
     // Clean up any stale shm segments first
+    #ifndef __ANDROID__
     shm_unlink("0");
+    #endif
 
     iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 16384, 0600);
     ASSERT_NE(shm, nullptr);
@@ -194,7 +196,9 @@ TEST_F(ShareMemTest, PunchPosixSharedMem) {
     // Should not crash
 
     delete shm;
+    #ifndef __ANDROID__
     shm_unlink("0"); // Clean up after test
+    #endif
 }
 
 // === Size and Alignment Tests ===
@@ -234,7 +238,9 @@ TEST_F(ShareMemTest, AccessorGetters) {
 
 TEST_F(ShareMemTest, PosixAccessorGetters) {
     // Clean up any stale shm segment
+    #ifndef __ANDROID__
     shm_unlink("0");
+    #endif
 
     iShareMem* shm = iShareMem::create("ix_test", MEMTYPE_SHARED_POSIX, 4096, 0600);
     ASSERT_NE(shm, nullptr);
@@ -245,7 +251,9 @@ TEST_F(ShareMemTest, PosixAccessorGetters) {
     EXPECT_GT(shm->id(), 0u);  // POSIX shared memory should have an ID
 
     delete shm;
+    #ifndef __ANDROID__
     shm_unlink("0");  // Clean up after test
+    #endif
 }
 
 // === Mode Permission Tests ===

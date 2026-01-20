@@ -30,7 +30,7 @@ iUDPClientDevice::iUDPClientDevice(iUDPDevice* serverDevice, iObject* parent)
     memset(&m_clientAddr, 0, sizeof(m_clientAddr));
     
     // Mark as open (virtual device is always "open" while referenced)
-    iIODevice::open(iIODevice::ReadWrite);
+    iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 }
 
 iUDPClientDevice::iUDPClientDevice(iUDPDevice* serverDevice, const struct sockaddr_in& clientAddr, iObject* parent)
@@ -41,7 +41,7 @@ iUDPClientDevice::iUDPClientDevice(iUDPDevice* serverDevice, const struct sockad
     , m_monitorEvents(0)
 {
     // Mark as open (virtual device is always "open" while referenced)
-    iIODevice::open(iIODevice::ReadWrite);
+    iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 }
 
 void iUDPClientDevice::updateClientInfo(const struct sockaddr_in& clientAddr)
@@ -76,72 +76,33 @@ xint64 iUDPClientDevice::bytesAvailable() const
 
 iByteArray iUDPClientDevice::readData(xint64 maxlen, xint64* readErr)
 {
-    IX_ASSERT(m_serverDevice);
-    return m_serverDevice->receiveFrom(this, maxlen, readErr);
+    IX_ASSERT(0);
+    if (readErr) *readErr = 0;
+    return iByteArray();
 }
 
 void iUDPClientDevice::receivedData(const iByteArray& data)
 {
-    m_buffer.append(data);
-    IEMIT readyRead();
+    if (data.size() < sizeof(iINCMessageHeader)) return;
+
+    iINCMessage msg(INC_MSG_INVALID, 0, 0);
+    xint32 payloadLen = msg.parseHeader(iByteArrayView(data.constData(), sizeof(iINCMessageHeader)));
+    if (payloadLen < 0 && static_cast<xint64>(data.size()) < (sizeof(iINCMessageHeader) + payloadLen)) return;
+    msg.payload().setData(data.mid(sizeof(iINCMessageHeader), payloadLen));
+    IEMIT messageReceived(msg);
+}
+
+xint64 iUDPClientDevice::writeMessage(const iINCMessage& msg, xint64 offset)
+{
+    if (offset > 0) return 0; // Not supported
+    
+    return m_serverDevice->sendTo(this, msg);
 }
 
 xint64 iUDPClientDevice::writeData(const iByteArray& data)
 {
-    IX_ASSERT(m_serverDevice);
-    
-    // Accumulate data in write buffer (using iIODevice's m_writeBuffer)
-    m_writeBuffer.append(data);    
-    // Check if we have a complete INC message
-    if (m_writeBuffer.size() < iINCMessageHeader::HEADER_SIZE) {
-        // Not enough data for header yet
-        return data.size();
-    }
-
-    iByteArray peekData;
-    xint64 offset = 0;
-    while (peekData.size() < iINCMessageHeader::HEADER_SIZE) {
-        iByteArray chunk = m_writeBuffer.peek(iINCMessageHeader::HEADER_SIZE - peekData.size(), offset);
-        if (chunk.isEmpty()) break;
-        peekData.append(chunk);
-        offset += chunk.size();
-    }
-    
-    if (peekData.size() < iINCMessageHeader::HEADER_SIZE) {
-         // Should not happen if m_writeBuffer.size() >= HEADER_SIZE
-         return data.size();
-    }
-
-    iINCMessage fake(INC_MSG_INVALID, 0, 0);
-    xint32 payloadLength = fake.parseHeader(iByteArrayView(peekData.constData(), iINCMessageHeader::HEADER_SIZE));
-    if (payloadLength < 0) {
-        // Invalid header - clear buffer and report error
-        m_writeBuffer.clear();
-        return -1;
-    }
-    
-    xuint32 totalMessageSize = iINCMessageHeader::HEADER_SIZE + payloadLength;
-    if (static_cast<xuint32>(m_writeBuffer.size()) < totalMessageSize) {
-        // Message not complete yet, wait for more data
-        return data.size();
-    }
-    
-    xuint32 remaindSize = totalMessageSize;
-    iByteArray completeMessage;
-    while (remaindSize > 0) {
-        iByteArray chunk = m_writeBuffer.read(remaindSize);
-        IX_ASSERT(chunk.size() <= remaindSize);
-        completeMessage.append(chunk);
-        remaindSize -= static_cast<xuint32>(chunk.size());
-    }
-
-    // We have a complete message, send it atomically
-    xint64 bytesSent = m_serverDevice->sendTo(this, completeMessage);
-    if (bytesSent <= 0) {
-        ilog_warn("[UDPClientDevice::writeData] Failed to send, will retry");
-    }
-
-    return data.size();
+    IX_ASSERT(0);
+    return -1;
 }
 
 void iUDPClientDevice::close()

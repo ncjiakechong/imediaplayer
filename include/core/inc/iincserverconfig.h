@@ -126,7 +126,11 @@ private:
 
     // Resource limits
     bool m_disableSharedMemory = false;
+    #ifdef __ANDROID__
+    xuint16 m_sharedMemoryType = MEMTYPE_SHARED_MEMFD | MEMTYPE_PRIVATE;
+    #else
     xuint16 m_sharedMemoryType = MEMTYPE_SHARED_POSIX | MEMTYPE_PRIVATE;  // Auto-select best type
+    #endif
     xuint32 m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
     iByteArray m_sharedMemoryName = "ix-shm";  // Default shared memory name
 

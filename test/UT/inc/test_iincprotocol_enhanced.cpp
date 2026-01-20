@@ -29,6 +29,15 @@ public:
 
     bool isConnected() const override { return m_connected; }
 
+    xint64 writeMessage(const iINCMessage& msg, xint64 offset) override {
+        iINCMessageHeader header = msg.header();
+        iByteArray d;
+        d.append((const char*)&header, sizeof(header));
+        d.append(msg.payload().data());
+        if (offset >= d.size()) return 0;
+        return write(d.constData() + offset, d.size() - offset);
+    }
+
     xint64 bytesAvailable() const override {
         return m_receiveBuffer.size();
     }
@@ -354,7 +363,7 @@ TEST_F(INCProtocolEnhancedTest, ReadMessageInvalidHeader) {
 
     // Create invalid message header (wrong magic number)
     iByteArray invalidData;
-    invalidData.resize(iINCMessageHeader::HEADER_SIZE);
+    invalidData.resize(sizeof(iINCMessageHeader));
     
     // Set invalid magic (should be 0x494E4300 = "INC\0")
     xuint32 invalidMagic = 0x12345678;
@@ -386,7 +395,7 @@ TEST_F(INCProtocolEnhancedTest, ReadMessageTooLarge) {
 
     // Create message header with excessive payload length
     iByteArray invalidData;
-    invalidData.resize(iINCMessageHeader::HEADER_SIZE);
+    invalidData.resize(sizeof(iINCMessageHeader));
     
     // Set valid magic
     xuint32 magic = 0x494E4300; // "INC\0" in little-endian
@@ -419,7 +428,7 @@ TEST_F(INCProtocolEnhancedTest, ReadIncompleteMessage) {
 
     // Send only partial header
     iByteArray partialHeader;
-    partialHeader.resize(iINCMessageHeader::HEADER_SIZE / 2);
+    partialHeader.resize(sizeof(iINCMessageHeader) / 2);
     
     m_mockDevice->simulateReceiveData(partialHeader);
     

@@ -27,6 +27,17 @@ public:
 
     iString peerAddress() const override { return "mock://localhost"; }
     bool isLocal() const override { return true; }
+
+    // Mock implementation for new API
+    xint64 writeMessage(const iINCMessage& msg, xint64 offset) override {
+        iINCMessageHeader header = msg.header();
+        iByteArray d;
+        d.append((const char*)&header, sizeof(header));
+        d.append(msg.payload().data());
+        
+        if (offset >= d.size()) return 0;
+        return writeData(d.mid(offset));
+    }
     
     // iIODevice implementation
     iByteArray readData(xint64 maxlen, xint64* readErr) override { 
@@ -79,7 +90,39 @@ public:
     
     void simulateDataReceived(const iByteArray& data) {
         readBuffer.append(data);
-        readyRead(); // Emit signal
+        processBuffer();
+    }
+
+    void processBuffer() {
+         while (static_cast<xint32>(readBuffer.size()) >= sizeof(iINCMessageHeader)) {
+             iINCMessage tempMsg(INC_MSG_INVALID, 0, 0);
+             xint32 payloadLength = tempMsg.parseHeader(iByteArrayView(readBuffer.constData(), sizeof(iINCMessageHeader)));
+             
+             if (payloadLength < 0) {
+                 readBuffer.clear();
+                 errorOccurred(INC_ERROR_PROTOCOL_ERROR);
+                 return;
+             }
+             
+             if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
+                 readBuffer.clear();
+                 errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
+                 return;
+             }
+             
+             if (static_cast<xint32>(readBuffer.size()) >= sizeof(iINCMessageHeader) + payloadLength) {
+                 iINCMessage msg(INC_MSG_INVALID, 0, 0);
+                 msg.parseHeader(iByteArrayView(readBuffer.constData(), sizeof(iINCMessageHeader)));
+                 if (payloadLength > 0) {
+                     msg.payload().setData(readBuffer.mid(sizeof(iINCMessageHeader), payloadLength));
+                 }
+                 
+                 readBuffer.remove(0, sizeof(iINCMessageHeader) + payloadLength);
+                 messageReceived(msg);
+             } else {
+                 break; // Not enough data for payload
+             }
+         }
     }
     
     void simulateReadyWrite() {
@@ -232,7 +275,7 @@ TEST_F(INCProtocolUnitTest, ReceiveInvalidHeader) {
     iByteArray badHeader(32, 'X'); 
     
     bool errorEmitted = false;
-    iObject::connect(protocol, &iINCProtocol::errorOccurred, protocol, [&](int err) {
+    iObject::connect(device, &iINCDevice::errorOccurred, protocol, [&](int err) {
         errorEmitted = true;
         EXPECT_EQ(err, INC_ERROR_PROTOCOL_ERROR);
     });
@@ -252,7 +295,7 @@ TEST_F(INCProtocolUnitTest, ReceiveMessageTooLarge) {
     data.append(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
     
     bool errorEmitted = false;
-    iObject::connect(protocol, &iINCProtocol::errorOccurred, protocol, [&](int err) {
+    iObject::connect(device, &iINCDevice::errorOccurred, protocol, [&](int err) {
         errorEmitted = true;
         EXPECT_EQ(err, INC_ERROR_MESSAGE_TOO_LARGE);
     });
@@ -329,12 +372,17 @@ TEST_F(INCProtocolUnitTest, PartialWrite_Payload) {
     
     protocol->sendMessage(msg);
     
-    // First write: 32 (header) + 32 (partial payload) = 64 bytes
-    EXPECT_EQ(device->lastWrittenData.size(), 64);
+    // First write: 32 (header) - Limit hit
+    EXPECT_EQ(device->lastWrittenData.size(), 32);
     
     // Simulate readyWrite
     device->simulateReadyWrite();
-    // Second write: +8 bytes (remaining payload) = 72 (Total)
+    // Second write: +32 bytes = 64
+    EXPECT_EQ(device->lastWrittenData.size(), 64);
+
+    // Simulate readyWrite
+    device->simulateReadyWrite();
+    // Third write: +8 bytes = 72
     EXPECT_EQ(device->lastWrittenData.size(), 72);
 }
 
@@ -393,6 +441,9 @@ TEST_F(INCProtocolUnitTest, WriteError) {
     iINCMessage msg(INC_MSG_METHOD_CALL, 1, 1);
     protocol->sendMessage(msg);
     
+    // First write succeeds (header), but partial. Wait for readyWrite event.
+    device->simulateReadyWrite();
+
     EXPECT_TRUE(errorOccurred);
 }
 
@@ -426,7 +477,6 @@ TEST_F(INCProtocolUnitTest, PartialWrite_Error) {
 
 TEST_F(INCProtocolUnitTest, PayloadWrite_Error) {
     device->maxWriteSize = 32; // Header size
-    device->failOnWriteCount = 2; // Fail on 2nd write (payload)
     
     iINCMessage msg(INC_MSG_METHOD_CALL, 1, 1);
     iByteArray payload(10, 'A');
@@ -437,15 +487,21 @@ TEST_F(INCProtocolUnitTest, PayloadWrite_Error) {
         errorOccurred = true;
         EXPECT_EQ(err, INC_ERROR_WRITE_FAILED);
     });
-
+    
     protocol->sendMessage(msg);
     
     // First write: 32 bytes (header) should have succeeded.
-    // Second write: Failed.
-    // So lastWrittenData should contain only header (32 bytes).
     EXPECT_EQ(device->lastWrittenData.size(), 32);
+
+    // Set error for next write
+    device->simulateWriteError = true;
     
+    // Trigger next write (payload)
+    device->simulateReadyWrite();
+
     EXPECT_TRUE(errorOccurred);
+    // lastWrittenData size should remain 32 because second write failed
+    EXPECT_EQ(device->lastWrittenData.size(), 32); 
 }
 
 TEST_F(INCProtocolUnitTest, ReceiveSHM_NoImport) {

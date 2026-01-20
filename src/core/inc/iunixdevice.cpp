@@ -15,10 +15,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <cstring>
+#include <sys/types.h>
 
 #include <core/inc/iincerror.h>
 #include <core/kernel/ieventsource.h>
 #include <core/kernel/ieventdispatcher.h>
+#include <core/inc/iincmessage.h>
 #include <core/io/ilog.h>
 
 #include "inc/iunixdevice.h"
@@ -134,10 +136,11 @@ public:
 
         if (unixDev->role() == iINCDevice::ROLE_SERVER && readReady) {
             unixDev->acceptConnection();
+            return true;
         }
 
         if (readReady) {
-            IEMIT unixDev->readyRead();
+            unixDev->processRx();
         }
 
         if (writeReady) {
@@ -165,6 +168,7 @@ iUnixDevice::iUnixDevice(Role role, iObject *parent)
     : iINCDevice(role, parent)
     , m_sockfd(-1)
     , m_eventSource(IX_NULLPTR)
+    , m_pendingFd(-1)
 {
 }
 
@@ -370,13 +374,60 @@ xint64 iUnixDevice::bytesAvailable() const
 
 iByteArray iUnixDevice::readData(xint64 maxlen, xint64* readErr)
 {
+    IX_ASSERT(0);
+    if (readErr) *readErr = 0;
+    return iByteArray();
+}
+
+xint64 iUnixDevice::writeData(const iByteArray& data)
+{
+    IX_ASSERT(0);
+    return -1;
+}
+
+iByteArray iUnixDevice::recvWithFd(xint64 maxlen, int* fd, xint64* readErr)
+{
     iByteArray result;
     result.resize(static_cast<int>(maxlen));
 
-    ssize_t bytesRead = ::recv(m_sockfd, result.data(), maxlen, 0);
+    struct msghdr msg;
+    struct iovec iov;
+    union {
+        char buf[CMSG_SPACE(sizeof(int))];
+        struct cmsghdr align;
+    } u;
+
+    std::memset(&msg, 0, sizeof(msg));
+    std::memset(&u, 0, sizeof(u));
+
+    // Setup data buffer
+    iov.iov_base = result.data();
+    iov.iov_len = maxlen;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    // Setup control message buffer for receiving FD
+    msg.msg_control = u.buf;
+    msg.msg_controllen = sizeof(u.buf);
+
+    ssize_t bytesRead = ::recvmsg(m_sockfd, &msg, 0);
+    
+    // Initialize fd output to -1
+    if (fd) *fd = -1;
+
     if (bytesRead > 0) {
         static_cast<iUnixEventSource*>(m_eventSource)->m_readBytes += 1;
         result.resize(static_cast<int>(bytesRead));
+
+        // Check if we received a file descriptor
+        if (fd) {
+            struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+            if (cmsg && cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS) {
+                std::memcpy(fd, CMSG_DATA(cmsg), sizeof(int));
+                ilog_info("[", peerAddress(), "] Received FD=", *fd, " via SCM_RIGHTS");
+            }
+        }
+
         if (readErr) *readErr = bytesRead;
         return result;
     }
@@ -397,28 +448,9 @@ iByteArray iUnixDevice::readData(xint64 maxlen, xint64* readErr)
 
     m_eventSource->detach();
     if (readErr) *readErr = -1;
-    ilog_error("[", peerAddress(), "] Read failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] recvWithFd failed:", strerror(errno));
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return iByteArray();
-}
-
-xint64 iUnixDevice::writeData(const iByteArray& data)
-{
-    ssize_t bytesWritten = ::send(m_sockfd, data.constData(), data.size(), MSG_NOSIGNAL);
-    if (bytesWritten >= 0) {
-        static_cast<iUnixEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesWritten);
-        return static_cast<xint64>(bytesWritten);
-    }
-
-    // bytesWritten < 0 and error occur
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        return 0;
-    }
-
-    m_eventSource->detach();
-    ilog_error("[", peerAddress(), "] Write failed:", strerror(errno));
-    IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
-    return -1;
 }
 
 void iUnixDevice::close()
@@ -523,6 +555,181 @@ void iUnixDevice::handleConnectionComplete()
 
     ilog_info("[", peerAddress(), "] Connected to", m_socketPath);
     IEMIT connected();
+}
+
+xint64 iUnixDevice::writeMessage(const iINCMessage& msg, xint64 offset)
+{
+    // Serialize message
+    iINCMessageHeader header = msg.header();
+    
+    iByteArray messageData;
+    messageData.append(reinterpret_cast<const char*>(&header), sizeof(iINCMessageHeader));
+    const iByteArray& payload = msg.payload().data();
+    if (!payload.isEmpty()) {
+        messageData.append(payload);
+    }
+    
+    if (offset >= messageData.size()) {
+        return 0; 
+    }
+    
+    // Determine data chunk to send
+    iByteArray chunk;
+    if (offset == 0) {
+        chunk = messageData;
+    } else {
+        chunk = messageData.mid(offset);
+    }
+    
+    // Only attach FD on the very first chunk of the message (offset == 0)
+    int fdToSend = -1;
+    if (offset == 0 && msg.extFd() >= 0) {
+        fdToSend = msg.extFd();
+    }
+    
+    struct msghdr msgh;
+    struct iovec iov;
+    union {
+        char buf[CMSG_SPACE(sizeof(int))];
+        struct cmsghdr align;
+    } u;
+
+    std::memset(&msgh, 0, sizeof(msgh));
+    std::memset(&u, 0, sizeof(u));
+
+    // Setup data buffer
+    iov.iov_base = const_cast<char*>(chunk.constData());
+    iov.iov_len = chunk.size();
+    msgh.msg_iov = &iov;
+    msgh.msg_iovlen = 1;
+
+    // Setup control message for FD passing if FD is valid
+    if (fdToSend >= 0) {
+        msgh.msg_control = u.buf;
+        msgh.msg_controllen = sizeof(u.buf);
+
+        struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msgh);
+        cmsg->cmsg_level = SOL_SOCKET;
+        cmsg->cmsg_type = SCM_RIGHTS;
+        cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+        std::memcpy(CMSG_DATA(cmsg), &fdToSend, sizeof(int));
+    }
+
+    ssize_t bytesWritten = ::sendmsg(m_sockfd, &msgh, MSG_NOSIGNAL);
+    if (bytesWritten >= 0) {
+        if (m_eventSource) {
+            static_cast<iUnixEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesWritten);
+        }
+
+        if (fdToSend >= 0) {
+            ilog_info("[", peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+                    "] Sent msg with FD=", fdToSend, " via SCM_RIGHTS");
+        }
+        
+        return static_cast<xint64>(bytesWritten);
+    }
+
+    // bytesWritten < 0 and error occur
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        return 0;
+    }
+
+    if (m_eventSource) {
+        m_eventSource->detach();
+    }
+    ilog_error("[", peerAddress(), "] writeMessage failed:", strerror(errno));
+    IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
+    return -1;
+}
+
+void iUnixDevice::processRx()
+{
+    // Step 1: Ensure header
+    if (m_recvBuffer.size() < sizeof(iINCMessageHeader)) {
+        xint64 needed = sizeof(iINCMessageHeader) - m_recvBuffer.size();
+        xint64 readErr = 0;
+        int receivedFd = -1;
+
+        iByteArray chunk = recvWithFd(needed, &receivedFd, &readErr);
+        if (receivedFd >= 0) {
+            if (m_pendingFd >= 0) {
+                ilog_warn("[", peerAddress(), "] Replacing unconsumed FD ", m_pendingFd, " with ", receivedFd);
+                ::close(m_pendingFd);
+            }
+            m_pendingFd = receivedFd;
+            ilog_info("[", peerAddress(), "] Buffered Recv FD=", receivedFd);
+        }
+
+        m_recvBuffer.append(chunk);
+
+        if (m_recvBuffer.size() < sizeof(iINCMessageHeader)) {
+            return;
+        }
+    }
+
+    // Step 2: Parse header to get payload size
+    iINCMessage msg(INC_MSG_INVALID, 0, 0);
+    xint32 payloadLength = msg.parseHeader(iByteArrayView(m_recvBuffer.constData(), sizeof(iINCMessageHeader)));
+    if (payloadLength < 0) {
+        ilog_error("[", peerAddress(), "] Invalid message header");
+        IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
+        m_recvBuffer.clear();
+        if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+        return;
+    }
+
+    if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
+        ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
+        IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
+        m_recvBuffer.clear();
+        if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+        return;
+    }
+
+    // Step 3: Ensure we have complete message (header + payload)
+    iByteArray chunk;
+    xuint32 totalSize = sizeof(iINCMessageHeader) + payloadLength;
+    if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
+        int receivedFd = -1;
+        chunk = recvWithFd(totalSize - m_recvBuffer.size(), &receivedFd, IX_NULLPTR);
+        if (receivedFd >= 0) {
+            if (m_pendingFd >= 0) {
+                ilog_warn("[", peerAddress(), "] Replacing unconsumed FD ", m_pendingFd, " with ", receivedFd);
+                ::close(m_pendingFd);
+            }
+            m_pendingFd = receivedFd;
+            ilog_info("[", peerAddress(), "] Buffered Recv FD=", receivedFd);
+        }
+    }
+
+    // Check if we now have complete message
+    if (static_cast<xuint32>(m_recvBuffer.size() + chunk.size()) < totalSize) {
+        m_recvBuffer.append(chunk);
+        return;  // Wait for more data (incomplete message)
+    }
+
+    // Step 4: Complete message received - parse header and extract payload
+    if (payloadLength > 0 && (chunk.size() == payloadLength)) {
+        msg.payload().setData(chunk);
+    } else if (payloadLength > 0) {
+        m_recvBuffer.append(chunk);
+        msg.payload().setData(m_recvBuffer.mid(sizeof(iINCMessageHeader), payloadLength));
+    } else {
+        msg.payload().clear();
+    }
+
+    // Attach pending FD if available
+    if (m_pendingFd >= 0) {
+        msg.setExtFd(m_pendingFd);
+        ilog_info("[", peerAddress(), "] Attached FD=", m_pendingFd, " to msg seq=", msg.sequenceNumber());
+        m_pendingFd = -1;
+    }
+
+    // Emit signal
+    IEMIT messageReceived(msg);
+
+    // Step 5: Remove consumed data from buffer
+    m_recvBuffer.clear();
 }
 
 bool iUnixDevice::createSocket()

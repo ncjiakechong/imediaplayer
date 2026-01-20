@@ -140,21 +140,8 @@ public:
             return true;  // Return here - protocol stack not ready yet, wait for next dispatch
         }
 
-        // Forward signals to first client to trigger read event
-        // This handles: 1) After pending registered 2) Fallback clients 3) Normal multi-client routing
-        if (readReady && !udp->m_addrToChannel.empty()) {
-            iUDPClientDevice* clientDevice = udp->m_addrToChannel.begin()->second;
-            IEMIT clientDevice->readyRead();
-        }
-
-        // Forward signals to pending client if it exists (after protocol connected)
-        // Only forward to pending if it's not yet registered in the map
-        if (readReady && udp->m_pendingClient) {
-            IEMIT udp->m_pendingClient->readyRead();
-        }
-
         if (readReady) {
-            IEMIT udp->readyRead();
+            udp->processRx();
         }
 
         if (writeReady) {
@@ -241,8 +228,7 @@ int iUDPDevice::connectToHost(const iString& host, xuint16 port)
     updateLocalInfo();
 
     // Open the device using base class (sets m_openMode for isOpen())
-    // Don't use Unbuffered - we need iIODevice::m_buffer to handle datagram fragmentation
-    iIODevice::open(iIODevice::ReadWrite);
+    iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 
     // Create EventSource for this connection
     if (m_eventSource) {
@@ -311,7 +297,7 @@ int iUDPDevice::bindOn(const iString& address, xuint16 port)
 
     // Open the device using base class (sets m_openMode for isOpen())
     // Don't use Unbuffered - we need iIODevice::m_buffer to handle datagram fragmentation
-    iIODevice::open(iIODevice::ReadWrite);
+    iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 
     // Create EventSource for this socket
     if (m_eventSource) {
@@ -354,47 +340,12 @@ xint64 iUDPDevice::bytesAvailable() const
 
 iByteArray iUDPDevice::readData(xint64 maxlen, xint64* readErr)
 {
-    do {
-        if (role() != ROLE_SERVER) break;
-
-        return receiveFrom(m_pendingClient, maxlen, readErr);
-    } while (false);
-
-    iByteArray result;
-    // Always allocate full datagram size to avoid truncation
-    // iIODevice::m_buffer will handle excess data
-    result.resize(static_cast<int>(maxDatagramSize()));
-
-    // Connected socket (client mode or single-client server)
-    ssize_t bytesRead = ::recv(m_sockfd, result.data(), result.size(), 0);
-
-    // Client mode: simple single-connection handling
-    if (bytesRead > 0) {
-        static_cast<iUDPEventSource*>(m_eventSource)->m_readBytes += bytesRead;
-        result.resize(static_cast<int>(bytesRead));
-        if (readErr) *readErr = bytesRead;
-        return result;
-    }
-
-    if (bytesRead == 0) {
-        // UDP doesn't have EOF, this shouldn't normally happen
-        if (readErr) *readErr = 0;
-        return iByteArray();
-    }
-
-    // bytesRead < 0 - error occurred
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        if (readErr) *readErr = 0;
-        return iByteArray();
-    }
-
-    if (readErr) *readErr = -1;
-    ilog_error("[", peerAddress(), "] UDP read failed:", strerror(errno));
-    IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
+    IX_ASSERT(0);
+    if (readErr) *readErr = 0;
     return iByteArray();
 }
 
-iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64 maxlen, xint64* readErr)
+iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
 {
     iByteArray result;
     // Always allocate full datagram size to avoid truncation
@@ -403,8 +354,6 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64 maxlen, xint
 
     struct sockaddr_in srcAddr;
     socklen_t addrLen = sizeof(srcAddr);
-
-    IX_ASSERT(role() == ROLE_SERVER);
     ssize_t bytesRead = ::recvfrom(m_sockfd, result.data(), result.size(), 0, (struct sockaddr*)&srcAddr, &addrLen);
 
     do {
@@ -413,6 +362,10 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64 maxlen, xint
         static_cast<iUDPEventSource*>(m_eventSource)->m_readBytes += bytesRead;
         result.resize(static_cast<int>(bytesRead));
         if (readErr) *readErr = bytesRead;
+
+        if (role() != ROLE_SERVER) {
+            return result;
+        }
 
         // Check if this is a new client
         xuint64 addrSrcKey = packAddrKey(srcAddr);
@@ -468,78 +421,31 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64 maxlen, xint
 
 xint64 iUDPDevice::writeData(const iByteArray& data)
 {
-    IX_ASSERT(m_isConnected && role() == ROLE_CLIENT);
-    
-    // Accumulate data in write buffer (using iIODevice's m_writeBuffer)
-    m_writeBuffer.append(data);
-
-    // Check if we have a complete INC message
-    if (m_writeBuffer.size() < iINCMessageHeader::HEADER_SIZE) {
-        // Not enough data for header yet
-        return data.size();
-    }
-    
-    // Check magic number (0x494E4300 = "INC\0")
-    iByteArray peekData = m_writeBuffer.peek(iINCMessageHeader::HEADER_SIZE);
-    IX_ASSERT(peekData.size() == iINCMessageHeader::HEADER_SIZE);
-
-    iINCMessage fake(INC_MSG_INVALID, 0, 0);
-    xint32 payloadLength = fake.parseHeader(iByteArrayView(peekData.constData(), iINCMessageHeader::HEADER_SIZE));
-    if (payloadLength < 0) {
-        // Invalid magic - clear buffer and report error
-        ilog_error("[", peerAddress(), "] Invalid header ");
-        m_writeBuffer.clear();
-        return -1;
-    }
-    
-    xuint32 totalMessageSize = iINCMessageHeader::HEADER_SIZE + payloadLength;
-    if (static_cast<xuint32>(m_writeBuffer.size()) < totalMessageSize) {
-        // Message not complete yet, wait for more data
-        return data.size();
-    }
-    
-    xuint32 remaindSize = totalMessageSize;
-    iByteArray completeMessage;
-    while (remaindSize > 0) {
-        iByteArray chunk = m_writeBuffer.read(remaindSize);
-        IX_ASSERT(chunk.size() <= remaindSize);
-        completeMessage.append(chunk);
-        remaindSize -= static_cast<xuint32>(chunk.size());
-    }
-
-    ssize_t bytesWritten = ::send(m_sockfd, completeMessage.constData(), completeMessage.size(), 0);
-    if (bytesWritten >= 0) {
-        static_cast<iUDPEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesWritten);
-        // Data already removed from buffer by read() call above
-        // Return the size of input data (not complete message size)
-        return data.size();
-    }
-
-    // bytesWritten < 0 - error occurred
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        // Can't send now, but data was already read from buffer - this is a problem
-        // Put data back would be complex, so just log warning
-        ilog_warn("[", peerAddress(), "] UDP write would block after reading from buffer");
-        return 0;  // Would block
-    }
-
-    ilog_error("[", peerAddress(), "] UDP write failed:", strerror(errno));
-    IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
+    IX_ASSERT(0);
     return -1;
 }
 
-xint64 iUDPDevice::sendTo(iUDPClientDevice* client, const iByteArray& data)
+xint64 iUDPDevice::sendTo(iUDPClientDevice* client, const iINCMessage& msg)
 {
-    if (data.size() > maxDatagramSize()) {
-        ilog_warn("[", peerAddress(), "] Datagram too large:", data.size(), " > ", maxDatagramSize());
+    iINCMessageHeader header = msg.header();
+    iByteArray finalData;
+    finalData.append(reinterpret_cast<const char*>(&header), sizeof(header));
+    finalData.append(msg.payload().data());
+
+    if (finalData.size() > maxDatagramSize()) {
+        ilog_warn("[", peerAddress(), "] Datagram too large:", msg.payload().size(), " > ", maxDatagramSize());
         return -1;
     }
 
-    xuint32 magic = 0;
-    struct sockaddr_in addr = client->clientAddr();
-    std::memcpy(&magic, data.constData(), sizeof(xuint32));
-    IX_ASSERT(iINCMessageHeader::MAGIC == magic);
-    ssize_t bytesSent = ::sendto(m_sockfd, data.constData(), data.size(), 0, (const struct sockaddr*)&addr, sizeof(addr));
+    ssize_t bytesSent = 0;
+    if (client) {
+        struct sockaddr_in addr = client->clientAddr();
+        bytesSent = ::sendto(m_sockfd, finalData.constData(), finalData.size(), 0, (const struct sockaddr*)&addr, sizeof(addr));
+    } else {
+        // No client specified - use connected peer (client mode)
+        bytesSent = ::send(m_sockfd, finalData.constData(), finalData.size(), 0);
+    }
+
     if (bytesSent >= 0) {
         static_cast<iUDPEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesSent);
         return static_cast<xint64>(bytesSent);
@@ -552,6 +458,27 @@ xint64 iUDPDevice::sendTo(iUDPClientDevice* client, const iByteArray& data)
 
     ilog_error("[", peerAddress(), "] UDP sendto failed:", strerror(errno));
     return -1;
+}
+
+xint64 iUDPDevice::writeMessage(const iINCMessage& msg, xint64 offset)
+{
+    if (offset > 0) return 0; // Not supported
+
+    return sendTo(IX_NULLPTR, msg);
+}
+
+void iUDPDevice::processRx()
+{
+    iByteArray data = receiveFrom(m_pendingClient, IX_NULLPTR);
+    if (data.size() < sizeof(iINCMessageHeader)) return;
+
+    iINCMessage msg(INC_MSG_INVALID, 0, 0);
+    xint32 payloadLen = msg.parseHeader(iByteArrayView(data.constData(), sizeof(iINCMessageHeader)));
+    if (payloadLen < 0 && static_cast<xint64>(data.size()) < (sizeof(iINCMessageHeader) + payloadLen))
+        return;
+
+    msg.payload().setData(data.mid(sizeof(iINCMessageHeader), payloadLen));
+    IEMIT messageReceived(msg);
 }
 
 void iUDPDevice::close()

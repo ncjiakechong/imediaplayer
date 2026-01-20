@@ -398,10 +398,10 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
                 reply.payload().putUint16(negotiontedShmType);
                 reply.payload().putBytes(conn->mempool() ? iByteArray(conn->mempool()->prefix()) : iByteArray());
                 reply.payload().putInt32(conn->mempool() ? conn->mempool()->size() : 0);
+                reply.setExtFd(conn->mempool() ? conn->mempool()->fd() : -1);
             }
 
-            ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(),
-                        "] Allocated channel, mode=", mode);
+            ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Allocated channel, mode=", mode);
             conn->sendMessage(reply);
             iObject::invokeMethod(this, &iINCServer::streamOpened, conn, channelId, mode);
             break;

@@ -45,6 +45,9 @@ public:
     /// @return 0 on success, negative on error
     int connectToHost(const iString& host, xuint16 port);
 
+    virtual xint64 writeMessage(const iINCMessage& msg, xint64 offset) IX_OVERRIDE;
+    void processRx();
+
     // --- Server Mode Methods ---
 
     /// Bind to local address and start receiving (server mode)
@@ -97,8 +100,8 @@ public:
     /// @param data Data to send
     /// @param addr Destination address
     /// @return Bytes sent, or -1 on error
-    xint64 sendTo(iUDPClientDevice* client, const iByteArray& data);
-    iByteArray receiveFrom(iUDPClientDevice* client, xint64 maxlen, xint64* readErr);
+    xint64 sendTo(iUDPClientDevice* client, const iINCMessage& msg);
+    iByteArray receiveFrom(iUDPClientDevice* client, xint64* readErr);
     
     /// Remove client from tracking (called when client device closes)
     /// @param client Client device pointer

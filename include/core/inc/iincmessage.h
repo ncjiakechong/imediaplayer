@@ -63,7 +63,6 @@ struct iINCMessageHeader {
 
     /// Magic number for INC messages: "INC\0"
     static const xuint32 MAGIC;
-    static const xint32 HEADER_SIZE;
     static const xint32 MAX_MESSAGE_SIZE;
 };
 #pragma pack(pop)
@@ -112,6 +111,11 @@ public:
     /// Set payload from iINCTagStruct
     void setPayload(const iINCTagStruct& payload) { m_payload = payload; }
 
+    /// Set external file descriptor to send with this message (for SCM_RIGHTS)
+    void setExtFd(int fd) { m_extFd = fd; }
+    /// Get external file descriptor associated with this message
+    int extFd() const { return m_extFd; }
+
     /// Clear message data
     void clear();
 
@@ -124,6 +128,7 @@ private:
     xuint32         m_seqNum;
     xint64          m_dts;
     iINCTagStruct   m_payload;      ///< Type-safe payload
+    int             m_extFd;           ///< File descriptor for SCM_RIGHTS (-1 if none)
 };
 
 } // namespace iShell

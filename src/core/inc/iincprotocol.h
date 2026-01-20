@@ -63,10 +63,6 @@ public:
     ///       falls back to data copy if shared memory export fails
     iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data);
 
-    /// Read next message (non-blocking)
-    /// @return true if message read successfully
-    bool readMessage(iINCMessage& msg);
-
     /// Flush send queue (write pending messages)
     void flush();
 
@@ -91,7 +87,7 @@ public:
     void errorOccurred(xint32 errorCode) ISIGNAL(errorOccurred, errorCode);
 
 private:
-    void onReadyRead();
+    void onMessageReceived(iINCMessage msg);
     void onReadyWrite();
     void onDeviceConnected();  // Handle device connected signal
     void sendMessageImpl(iINCMessage msg, iINCOperation* op);
@@ -106,12 +102,10 @@ private:
     // Message queuing
     std::queue<iINCMessage> m_sendQueue;
 
-    // Partial write buffer (for incomplete writes)
-    iByteArray              m_partialSendBuffer;  ///< Unsent portion of current message
-    xint64                  m_partialSendOffset;  ///< Bytes already sent
+    int                     m_cachedPeerMemFd;
 
-    // Receive buffer
-    iByteArray              m_recvBuffer;
+    // Partial write buffer (for incomplete writes)
+    xint64                  m_partialSendOffset;  ///< Bytes already sent
 
     // Shared memory support for zero-copy binary transfer
     iByteArray              m_pollName;

@@ -29,11 +29,15 @@
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
 
+#ifdef __ANDROID__
+#include <android/sharedmem.h>
+#endif
+
 #if defined(IX_OS_LINUX) && !defined(MADV_REMOVE)
 #define MADV_REMOVE 9
 #endif
 
-#ifdef IX_OS_LINUX
+#if defined(IX_OS_LINUX) && !defined(__ANDROID__)
 /* On Linux we know that the shared memory blocks are files in
  * /dev/shm. We can use that information to list all blocks and
  * cleanup unused ones */
@@ -139,19 +143,40 @@ iShareMem* iShareMem::createSharedMem(const char* prefix, MemType type, size_t s
 
     switch (type) {
     case MEMTYPE_SHARED_POSIX: {
+        #ifdef __ANDROID__
+        ilog_warn("MEMTYPE_SHARED_POSIX is deprecated on Android. Please use MEMTYPE_SHARED_MEMFD.");
+        delete shm;
+        return IX_NULLPTR;
+        #else
         char fn[32] = { 0 };
         segmentName(fn, sizeof(fn), shm->m_prefix, shm->m_id);
         shm->m_memfd = shm_open(fn, O_RDWR|O_CREAT|O_EXCL, mode);
         shm->m_doUnlink = true;
+        #endif
         break;
     }
 
-    #ifdef IX_HAVE_MEMFD
     case MEMTYPE_SHARED_MEMFD: {
+        #ifdef __ANDROID__
+        char fn[32] = { 0 };
+        segmentName(fn, sizeof(fn), shm->m_prefix, shm->m_id);
+        // On Android, use ASharedMemory_create (Ashmem) which acts like memfd
+        size_t fullSize = size + SHMMarkerSize(type);
+        shm->m_memfd = ASharedMemory_create(fn, fullSize);
+
+        if (shm->m_memfd >= 0) {
+             ASharedMemory_setProt(shm->m_memfd, PROT_READ | PROT_WRITE);
+             shm->m_doUnlink = false;
+        }
+        #elif defined(IX_HAVE_MEMFD)
         shm->m_memfd = memfd_create(shm->m_prefix, MFD_ALLOW_SEALING);
+        #else
+        ilog_warn("MEMTYPE_SHARED_MEMFD not supported on this platform.");
+        delete shm;
+        return IX_NULLPTR;
+        #endif
         break;
     }
-    #endif
 
     default:
         delete shm;
@@ -167,7 +192,12 @@ iShareMem* iShareMem::createSharedMem(const char* prefix, MemType type, size_t s
     shm->m_type = type;
     shm->m_size = size + SHMMarkerSize(type);
 
+    #ifdef __ANDROID__
+    // ASharedMemory_create already set the size, and ftruncate might fail on it (EINVAL) for MEMFD (Ashmem)
+    if (type != MEMTYPE_SHARED_MEMFD && ftruncate(shm->m_memfd, (off_t) shm->m_size) < 0) {
+    #else
     if (ftruncate(shm->m_memfd, (off_t) shm->m_size) < 0) {
+    #endif
         ilog_info("shm ftruncate() failed: ", errno);
         delete shm;
         return IX_NULLPTR;
@@ -191,9 +221,14 @@ iShareMem* iShareMem::createSharedMem(const char* prefix, MemType type, size_t s
         marker->marker = SHM_MARKER;
     }
 
-    /* For memfds, we keep the fd open until we pass it
-     * to the other PA endpoint over unix domain socket. */
-    if (type != MEMTYPE_SHARED_MEMFD) {
+    /* For memfds and Android POSIX shm, we keep the fd open until we pass it
+     * to the other PA endpoint. */
+    bool keepFd = false;
+    #if defined(IX_HAVE_MEMFD) || defined(__ANDROID__)
+    if (type == MEMTYPE_SHARED_MEMFD) keepFd = true;
+    #endif
+
+    if (!keepFd) {
         int ret = close(shm->m_memfd);
         IX_ASSERT(ret == 0);
         shm->m_memfd = -1;
@@ -246,20 +281,25 @@ int iShareMem::detach()
 
         if (munmap(m_ptr, ix_page_align(m_size)) < 0)
             ilog_warn("munmap() failed: ", errno);
-
+        
+        #if !defined(__ANDROID__)
         if ((MEMTYPE_SHARED_POSIX == m_type) && m_doUnlink) {
             char fn[32] = { 0 };
             segmentName(fn, sizeof(fn), m_prefix, m_id);
             if (shm_unlink(fn) < 0)
                 ilog_warn(" shm_unlink(", fn, ") failed: ", errno);
         }
+        #endif
 
-        #ifdef IX_HAVE_MEMFD
-        if (m_type == PA_MEM_TYPE_SHARED_MEMFD && m_memfd != -1) {
+        bool closeFd = false;
+        #if defined(IX_HAVE_MEMFD) || defined(__ANDROID__)
+        if (m_type == MEMTYPE_SHARED_MEMFD) closeFd = true;
+        #endif
+
+        if (closeFd && m_memfd != -1) {
             int ret = close(m_memfd);
             IX_ASSERT(ret == 0);
         }
-        #endif
     } while (0);
 
     m_size = 0;
@@ -324,45 +364,70 @@ int iShareMem::doAttach(MemType type, uint id, xintptr memfd, bool writable, boo
     int fd = -1;
     switch (type) {
     case MEMTYPE_SHARED_POSIX: {
+        #ifdef __ANDROID__
+        ilog_warn("MEMTYPE_SHARED_POSIX attach failed on Android");
+        return -1;
+        #else
         IX_ASSERT(-1 == memfd);
         char fn[32] = { 0 };
         segmentName(fn, sizeof(fn), m_prefix, id);
         fd = shm_open(fn, writable ? O_RDWR : O_RDONLY, 0);
 
-        if (fd < 0) {
+	    if (fd < 0) {
             if ((errno != EACCES && errno != ENOENT) || !for_cleanup)
                 ilog_warn("shm_open('", fn, "') failed: ", errno, " (", strerror(errno), ")");
             return -1;
         }
+        #endif
         break;
     }
-    #ifdef IX_HAVE_MEMFD
+
+    /* On Android, we treat MEMTYPE_SHARED_MEMFD (Ashmem) like memfd - we get the FD passed in */
     case MEMTYPE_SHARED_MEMFD: {
-        IX_ASSERT(-1 == memfd);
+        IX_ASSERT(-1 != memfd);
+        #ifdef __ANDROID__
+        fd = (int)memfd;
+        #elif defined(IX_HAVE_MEMFD)
         fd = memfd;
+        #else
+        return -1;
+        #endif
         break;
     }
-    #endif
 
     default:
         return -1;
     }
 
     struct stat st;
-    if (fstat(fd, &st) < 0) {
-        ilog_warn("fstat() failed: ", errno);
+    #ifdef __ANDROID__
+    // On Android, ASharedMemory FDs don't reliably report size via fstat
+    // Use ASharedMemory_getSize instead
+    if (type == MEMTYPE_SHARED_MEMFD) {
+        st.st_size = ASharedMemory_getSize(fd);
 
-        /* In case of memfds, caller maintains fd ownership */
-        if (fd >= 0 && type != MEMTYPE_SHARED_MEMFD)
-            close(fd);
+        if (st.st_size <= 0 && fstat(fd, &st) < 0) {
+            ilog_warn("ASharedMemory_getSize and fstat failed for FD ", fd);
+            return -1;
+        }
+    } else
+    #endif
+    {
+        if (fstat(fd, &st) < 0) {
+            ilog_warn("fstat() failed: ", errno);
 
-        return -1;
+            /* In case of memfds, caller maintains fd ownership */
+            if (fd >= 0 && type != MEMTYPE_SHARED_MEMFD)
+                close(fd);
+
+            return -1;
+        }
     }
 
     if (st.st_size <= 0 ||
         st.st_size > (off_t) MAX_SHM_SIZE + (off_t) SHMMarkerSize(type) ||
         IX_ALIGN((size_t) st.st_size) != (size_t) st.st_size) {
-        ilog_warn("Invalid shared memory segment size");
+        ilog_warn("Invalid shared memory segment size: ", st.st_size);
 
         /* In case of memfds, caller maintains fd ownership */
         if (fd >= 0 && type != MEMTYPE_SHARED_MEMFD)
@@ -509,9 +574,11 @@ int iShareMem::cleanup(const char* prefix)
         char fn[128] = { 0 };
         segmentName(fn, sizeof(fn), seg.m_prefix, id);
 
+        #ifndef __ANDROID__
         if (shm_unlink(fn) < 0 && errno != EACCES && errno != ENOENT) {
             ilog_warn("Failed to remove SHM segment ", fn, ": ", errno);
         }
+        #endif
     }
 
     closedir(d);

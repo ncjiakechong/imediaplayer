@@ -104,7 +104,7 @@ TEST_F(INCMessageTest, HeaderGeneration) {
     iByteArray header(reinterpret_cast<const char*>(&hdr), sizeof(hdr));
 
     // Header should be 32 bytes (with dts field)
-    EXPECT_EQ(header.size(), iINCMessageHeader::HEADER_SIZE);
+    EXPECT_EQ(header.size(), sizeof(iINCMessageHeader));
     EXPECT_EQ(header.size(), 32);
 
     // Parse header to verify content
@@ -302,7 +302,6 @@ TEST_F(INCMessageTest, HeaderConstants) {
     EXPECT_EQ(iINCMessageHeader::MAGIC, 0x494E4300u);  // "INC\0"
 
     // Verify header size (32 bytes with dts field)
-    EXPECT_EQ(iINCMessageHeader::HEADER_SIZE, 32);
     EXPECT_EQ(sizeof(iINCMessageHeader), 32u);
 
     // Verify max message size (1 KB - enforces use of shared memory for large data)

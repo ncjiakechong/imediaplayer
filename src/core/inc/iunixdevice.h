@@ -85,7 +85,14 @@ public:
 
     bool isLocal() const IX_OVERRIDE { return true; }
 
+    /// Write message implementation
+    xint64 writeMessage(const iINCMessage& msg, xint64 offset) IX_OVERRIDE;
+
+    /// Process incoming data (called by EventSource)
+    void processRx();
+
 protected:
+    iByteArray recvWithFd(xint64 maxlen, int* fd, xint64* readErr);
     iByteArray readData(xint64 maxlen, xint64* readErr) IX_OVERRIDE;
     xint64 writeData(const iByteArray& data) IX_OVERRIDE;
 
@@ -96,6 +103,9 @@ private:
     int                 m_sockfd;
     iString             m_socketPath;
     iEventSource*       m_eventSource;  ///< Internal EventSource (created in connectToPath/listenOn)
+
+    iByteArray          m_recvBuffer;
+    int                 m_pendingFd;
 
     IX_DISABLE_COPY(iUnixDevice)
 };

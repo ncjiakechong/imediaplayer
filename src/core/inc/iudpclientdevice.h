@@ -57,6 +57,7 @@ public:
     void updateClientInfo(const struct sockaddr_in& clientAddr);
     struct sockaddr_in clientAddr() const { return m_clientAddr; }
 
+    virtual xint64 writeMessage(const iINCMessage& msg, xint64 offset) IX_OVERRIDE;
     void receivedData(const iByteArray& data);
 
 protected:
@@ -68,6 +69,7 @@ private:
     struct sockaddr_in  m_clientAddr;    ///< Client address
     xuint64             m_addrKey;       ///< Address key (ip:port packed into uint64)
     int                 m_monitorEvents;
+    iByteArray          m_recvBuffer;
 
     IX_DISABLE_COPY(iUDPClientDevice)
 };

@@ -19,6 +19,7 @@
 #include <cstring>
 
 #include <core/inc/iincerror.h>
+#include <core/inc/iincmessage.h>
 #include <core/kernel/ieventsource.h>
 #include <core/kernel/ieventdispatcher.h>
 #include <core/io/ilog.h>
@@ -136,10 +137,11 @@ public:
 
         if (tcp->role() == iINCDevice::ROLE_SERVER && readReady) {
             tcp->acceptConnection();
+            return true;
         }
 
         if (readReady) {
-            IEMIT tcp->readyRead();
+            tcp->processRx();
         }
 
         if (writeReady) {
@@ -440,6 +442,19 @@ xint64 iTcpDevice::bytesAvailable() const
 
 iByteArray iTcpDevice::readData(xint64 maxlen, xint64* readErr)
 {
+    IX_ASSERT(0);
+    if (readErr) *readErr = 0;
+    return iByteArray();
+}
+
+xint64 iTcpDevice::writeData(const iByteArray& data)
+{
+    IX_ASSERT(0);
+    return -1;
+}
+
+iByteArray iTcpDevice::readImpl(xint64 maxlen, xint64* readErr)
+{
     iByteArray result;
     result.resize(static_cast<int>(maxlen));
 
@@ -470,25 +485,6 @@ iByteArray iTcpDevice::readData(xint64 maxlen, xint64* readErr)
     ilog_error("[", peerAddress(), "] Read failed:", strerror(errno));
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return iByteArray();
-}
-
-xint64 iTcpDevice::writeData(const iByteArray& data)
-{
-    ssize_t bytesWritten = ::send(m_sockfd, data.constData(), data.size(), MSG_NOSIGNAL);
-    if (bytesWritten >= 0) {
-        static_cast<iTcpEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesWritten);
-        return static_cast<xint64>(bytesWritten);
-    }
-
-    // bytesWritten < 0 and error occur
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-        return 0;  // Would block
-    }
-
-    m_eventSource->detach();
-    ilog_error("[", peerAddress(), "] Write failed:", strerror(errno));
-    IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
-    return -1;
 }
 
 void iTcpDevice::close()
@@ -720,5 +716,118 @@ void iTcpDevice::handleConnectionComplete()
     ilog_info("[] Connected to ", m_peerAddr, ":", m_peerPort);
     IEMIT connected();
 }
+
+xint64 iTcpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
+{
+    // Serialize message
+    iINCMessageHeader header = msg.header();
+    const iByteArray& payload = msg.payload().data();
+    if (offset >= sizeof(iINCMessageHeader) + payload.size()) {
+        return 0; 
+    }
+
+    ssize_t bytesWritten = 0;
+    do {
+        if (offset >= sizeof(iINCMessageHeader)) break;
+
+        bytesWritten = ::send(m_sockfd, reinterpret_cast<const char*>(&header) + offset, sizeof(iINCMessageHeader) - offset, MSG_NOSIGNAL);
+    } while (false);
+
+    do {
+        if (bytesWritten <= sizeof(iINCMessageHeader) && offset < sizeof(iINCMessageHeader)) break;
+
+        xint64 payloadOffset = 0;
+        if (offset > sizeof(iINCMessageHeader)) {
+            payloadOffset = offset - sizeof(iINCMessageHeader);
+        }
+
+        ssize_t writtenPayload = ::send(m_sockfd, payload.constData() + payloadOffset, payload.size() - payloadOffset, MSG_NOSIGNAL);
+        if (writtenPayload > 0) { 
+            bytesWritten += writtenPayload;
+        } else if (writtenPayload < 0) {
+            bytesWritten = writtenPayload; // Propagate error
+        } else {}
+    } while (false);
+
+    if (bytesWritten >= 0) {
+        if (m_eventSource) {
+            static_cast<iTcpEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesWritten);
+        }
+        return static_cast<xint64>(bytesWritten);
+    }
+
+    // bytesWritten < 0 and error occur
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        return 0;  // Would block
+    }
+
+    if (m_eventSource) {
+        m_eventSource->detach();
+    }
+    ilog_error("[", peerAddress(), "] Write failed:", strerror(errno));
+    IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
+    return -1;
+}
+
+void iTcpDevice::processRx()
+{
+    if (m_recvBuffer.size() < sizeof(iINCMessageHeader)) {
+        xint64 needed = sizeof(iINCMessageHeader) - m_recvBuffer.size();
+        iByteArray chunk = readImpl(needed, IX_NULLPTR);
+        m_recvBuffer.append(chunk);
+
+        if (m_recvBuffer.size() < sizeof(iINCMessageHeader)) {
+            return;
+        }
+    }
+
+    // Step 2: Parse header to get payload size
+    iINCMessage msg(INC_MSG_INVALID, 0, 0);
+    xint32 payloadLength = msg.parseHeader(iByteArrayView(m_recvBuffer.constData(), sizeof(iINCMessageHeader)));
+    if (payloadLength < 0) {
+        ilog_error("[", peerAddress(), "] Invalid message header");
+        IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
+        m_recvBuffer.clear();
+        return;
+    }
+
+    if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
+        ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
+        IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
+        m_recvBuffer.clear();
+        return;
+    }
+
+    // Step 3: Ensure we have complete message (header + payload)
+    iByteArray chunk;
+    xuint32 totalSize = sizeof(iINCMessageHeader) + payloadLength;
+    if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
+        chunk = readImpl(totalSize - m_recvBuffer.size(), IX_NULLPTR);
+    }
+
+    // Check if we now have complete message
+    if (static_cast<xuint32>(m_recvBuffer.size() + chunk.size()) < totalSize) {
+        m_recvBuffer.append(chunk);
+        return;  // Wait for more data (incomplete message)
+    }
+
+    // Step 4: Complete message received - parse header and extract payload
+    // Extract payload (zero-copy using mid)
+    if (payloadLength > 0 && (chunk.size() == payloadLength)) {
+        msg.payload().setData(chunk);
+    } else if (payloadLength > 0) {
+        m_recvBuffer.append(chunk);
+        msg.payload().setData(m_recvBuffer.mid(sizeof(iINCMessageHeader), payloadLength));
+    } else {
+        msg.payload().clear();
+    }
+
+    // Emit signal
+    IEMIT messageReceived(msg);
+
+    // Step 5: Remove consumed data from buffer
+    m_recvBuffer.clear();
+}
+
 
 } // namespace iShell

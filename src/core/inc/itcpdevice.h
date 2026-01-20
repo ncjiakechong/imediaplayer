@@ -48,6 +48,9 @@ public:
     /// @return 0 on success, negative on error
     int listenOn(const iString& address, xuint16 port);
 
+    virtual xint64 writeMessage(const iINCMessage& msg, xint64 offset) IX_OVERRIDE;
+    void processRx();
+
     /// Accept pending connection (server mode only)
     /// Emits newConnection(iTcpDevice*) signal with the client device
     void acceptConnection();
@@ -100,6 +103,7 @@ public:
 protected:
     iByteArray readData(xint64 maxlen, xint64* readErr) IX_OVERRIDE;
     xint64 writeData(const iByteArray& data) IX_OVERRIDE;
+    iByteArray readImpl(xint64 maxlen, xint64* readErr);
 
 private:
     bool createSocket();
@@ -113,6 +117,7 @@ private:
     iString             m_localAddr;
     xuint16             m_localPort;
     iEventSource*       m_eventSource;  ///< Internal EventSource (created in connectToHost/listenOn)
+    iByteArray          m_recvBuffer;
 
     IX_DISABLE_COPY(iTcpDevice)
 };

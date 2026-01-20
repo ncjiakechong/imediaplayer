@@ -30,6 +30,7 @@ public:
     int detach();
 
     inline uint id() const { return m_id; }
+    inline int fd() const { return (int)m_memfd; }
     inline void* data() const { return m_ptr; }
     inline size_t size() const { return m_size; }
     inline MemType type() const { return m_type; }

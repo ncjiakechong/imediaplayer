@@ -68,7 +68,7 @@ private:
         #ifdef IX_OS_DARWIN
         char __pad[152];
         #else
-        char __pad[64];
+        char __pad[128];
         #endif
         void *__align;
     };

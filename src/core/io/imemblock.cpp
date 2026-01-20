@@ -78,7 +78,7 @@ struct iMemImportSegment {
         : import(IX_NULLPTR), memory(prefix), trap(IX_NULLPTR), n_blocks(0), writable(false)
     {}
 
-    bool isPermanent() const { return memory.type() == MEMTYPE_SHARED_MEMFD; }
+    bool isPermanent() const { return memory.type() == MEMTYPE_SHARED_MEMFD || memory.type() == MEMTYPE_SHARED_POSIX; }
 };
 
 iMemDataWraper::iMemDataWraper(const iMemBlock* block, size_t offset)
@@ -267,7 +267,7 @@ void iMemBlock::doFree()
             import->m_blocks.erase(m_imported.id);
 
             IX_ASSERT(segment->n_blocks >= 1);
-            if (-- segment->n_blocks <= 0)
+            if (-- segment->n_blocks <= 0 && !segment->isPermanent())
                 iMemImport::segmentDetach(segment);
 
             _importLock.unlock();
@@ -714,7 +714,7 @@ iMemPool* iMemPool::create(const char* name, const char* prefix, MemType type, s
 
 iMemPool* iMemPool::fakeAdaptor()
 {
-    static iSharedDataPointer<iMemPool> s_fakeMemPool(new iMemPool("FakePool", new iShareMem("ix-shm"), 1024, 0, false));
+    static iSharedDataPointer<iMemPool> s_fakeMemPool(new iMemPool("FakePool", new iShareMem("ix-shm"), 256, 0, false));
     return s_fakeMemPool.data();
 }
 
@@ -801,6 +801,11 @@ iMemPool::~iMemPool()
 
     while(m_freeSlots.pop(IX_NULLPTR)) {}
     delete m_memory;
+
+    void* buffer = IX_NULLPTR;
+    while ((buffer = m_cacheHeads.pop(IX_NULLPTR)) != IX_NULLPTR) {
+        ::free(buffer);
+    }
 }
 
 /* No lock necessary */
@@ -939,7 +944,7 @@ iMemImportSegment* iMemImport::segmentAttach(MemType type, uint shmId, int memfd
 void iMemImport::segmentDetach(iMemImportSegment* seg)
 {
     IX_ASSERT(seg);
-    IX_ASSERT(seg && (seg->n_blocks == (seg->isPermanent() ? 1u : 0u)));
+    IX_ASSERT(seg && (seg->n_blocks <= (seg->isPermanent() ? 1u : 0u)));
 
     seg->import->m_segments.erase(seg->memory.id());
     seg->memory.detach();
@@ -1007,7 +1012,7 @@ int iMemImport::attachMemfd(uint shmId, int memfd_fd, bool writable)
 }
 
 /* Self-locked */
-iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, size_t offset, size_t size, bool writable)
+iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, int memfd_fd, size_t offset, size_t size, bool writable)
 {
     IX_ASSERT((type == MEMTYPE_SHARED_POSIX) || (type == MEMTYPE_SHARED_MEMFD));
 
@@ -1024,14 +1029,13 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, size_t offset
     iMemImportSegment* seg = IX_NULLPTR;
     std::unordered_map<uint, iMemImportSegment*>::iterator sit = m_segments.find(shmId);
     if (sit == m_segments.end()) {
-        if (type == MEMTYPE_SHARED_MEMFD) {
+        if (type == MEMTYPE_SHARED_MEMFD && -1 == memfd_fd) {
             ilog_warn("Bailing out! No cached memimport segment for memfd ID ", shmId);
             ilog_warn("Did the other endpoint forget registering its memfd pool?");
             return IX_NULLPTR;
         }
 
-        IX_ASSERT(type == MEMTYPE_SHARED_POSIX);
-        seg = segmentAttach(type, shmId, -1, writable);
+        seg = segmentAttach(type, shmId, memfd_fd, writable);
         if (IX_NULLPTR == seg)
             return IX_NULLPTR;
     } else {
@@ -1184,7 +1188,7 @@ iMemBlock* iMemExport::sharedCopy(iMemPool* pool, iMemBlock* block) const
 }
 
 /* Self-locked */
-int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId, size_t* offset, size_t* size)
+int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId, int* memfd_fd, size_t* offset, size_t* size)
 {
     IX_ASSERT(block && type && blockId && shmId && offset && size);
 
@@ -1228,6 +1232,7 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
 
     *type = memory->type();
     *shmId = memory->id();
+    *memfd_fd = memory->fd();
     *offset = (size_t) ((xuint8*) data.value() - (xuint8*) memory->data());
     *size = block->m_length;
 

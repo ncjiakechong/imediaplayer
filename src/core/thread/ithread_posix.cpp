@@ -204,7 +204,9 @@ void iThreadImpl::internalThreadFunc()
 {
     iThread * thread = this->m_thread;
     iThreadData *data = thread->m_data;
+    #ifndef __ANDROID__
     pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, IX_NULLPTR);
+    #endif
 
     {
         iMutex::ScopedLock locker(thread->m_mutex);

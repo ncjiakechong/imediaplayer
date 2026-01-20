@@ -10,6 +10,7 @@
 /////////////////////////////////////////////////////////////////
 
 #include <cstring>
+#include <unistd.h>
 
 #include <core/io/ilog.h>
 #include <core/inc/iincmessage.h>
@@ -33,6 +34,7 @@ iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
     : iObject(parent)
     , m_device(device)
     , m_seqCounter(1)
+    , m_cachedPeerMemFd(-1)
     , m_partialSendOffset(0)
     , m_memExport(IX_NULLPTR)
     , m_memImport(IX_NULLPTR)
@@ -43,7 +45,7 @@ iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
     // Set device as child so it's deleted automatically
     device->setParent(parent);
 
-    iObject::connect(m_device, &iINCDevice::readyRead, this, &iINCProtocol::onReadyRead);
+    iObject::connect(m_device, &iINCDevice::messageReceived, this, &iINCProtocol::onMessageReceived);
     iObject::connect(m_device, &iINCDevice::bytesWritten, this, &iINCProtocol::onReadyWrite);
     iObject::connect(m_device, &iINCDevice::connected, this, &iINCProtocol::onDeviceConnected);
 }
@@ -73,6 +75,10 @@ iINCProtocol::~iINCProtocol()
     if (m_memImport) {
         delete m_memImport;
         m_memImport = IX_NULLPTR;
+    }
+    if (m_cachedPeerMemFd >= 0) {
+        ::close(m_cachedPeerMemFd);
+        m_cachedPeerMemFd = -1;
     }
 
     iINCOperation* cachedOp = IX_NULLPTR;
@@ -170,9 +176,10 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
 
         // Try to export memblock for zero-copy transfer
         MemType memType;
-        xuint32 blockId, shmId;
+        uint blockId, shmId;
+        int memfd_fd;
         size_t offset, size;
-        int exportResult = m_memExport->put(block, &memType, &blockId, &shmId, &offset, &size);
+        int exportResult = m_memExport->put(block, &memType, &blockId, &shmId, &memfd_fd, &offset, &size);
         if (exportResult != 0) {
             ilog_info("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Failed to put binary via SHM, error=", exportResult);
             break;
@@ -186,13 +193,15 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         }
 
         // Success - build SHM reference payload with type-safe API
-        ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via SHM reference: blockId=", blockId, ", shmId=", shmId, ", size=", data.size());
+        // Store FD in message for SCM_RIGHTS transmission, NOT in payload
+        ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via SHM reference: blockId=", blockId, ", shmId=", shmId, ", memfd=", memfd_fd, ", size=", data.size());
         msg.payload().putInt64(pos);
         msg.payload().putUint32(static_cast<xuint32>(memType));
         msg.payload().putUint32(blockId);
         msg.payload().putUint32(shmId);
         msg.payload().putUint64(static_cast<xuint64>(offset));
         msg.payload().putUint64(static_cast<xuint64>(data.size()));
+
         msg.setFlags(INC_MSG_FLAG_SHM_DATA);
         auto op = sendMessage(msg);
         op->m_blockID = blockId;
@@ -227,69 +236,6 @@ void iINCProtocol::releaseOperation(iINCOperation* op)
 
         op->deref();
     }
-}
-
-bool iINCProtocol::readMessage(iINCMessage& msg)
-{
-    if (!m_device) {
-        return false;
-    }
-
-    if (m_recvBuffer.size() < iINCMessageHeader::HEADER_SIZE) {
-        xint64 readErr = 0;
-        xint64 needed = iINCMessageHeader::HEADER_SIZE - m_recvBuffer.size();
-        iByteArray chunk = m_device->read(needed, &readErr);
-        m_recvBuffer.append(chunk);
-
-        if (m_recvBuffer.size() < iINCMessageHeader::HEADER_SIZE) {
-            return false;
-        }
-    }
-
-    // Step 2: Parse header to get payload size
-    xint32 payloadLength = msg.parseHeader(iByteArrayView(m_recvBuffer.constData(), iINCMessageHeader::HEADER_SIZE));
-    if (payloadLength < 0) {
-        ilog_error("[", m_device->peerAddress(), "] Invalid message header");
-        IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
-        m_recvBuffer.clear();
-        msg.clear();
-        return false;
-    }
-
-    if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
-        ilog_error("[", m_device->peerAddress(), "] Message too large: ", payloadLength);
-        IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
-        m_recvBuffer.clear();
-        msg.clear();
-        return false;
-    }
-
-    // Step 3: Ensure we have complete message (header + payload)
-    xuint32 totalSize = iINCMessageHeader::HEADER_SIZE + payloadLength;
-    if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
-        // Try to read more data - read up to what we need for complete message
-        xint64 readErr = 0;
-        xint64 needed = totalSize - m_recvBuffer.size();
-        iByteArray chunk = m_device->read(needed, &readErr);
-        m_recvBuffer.append(chunk);
-
-        // Check if we now have complete message
-        if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
-            return false;  // Wait for more data (incomplete message)
-        }
-    }
-
-    // Step 4: Complete message received - parse header and extract payload
-    // Extract payload (zero-copy using mid)
-    if (payloadLength > 0) {
-        msg.payload().setData(m_recvBuffer.mid(sizeof(iINCMessageHeader), payloadLength));
-    } else {
-        msg.payload().clear();
-    }
-
-    // Step 5: Remove consumed data from buffer
-    m_recvBuffer = m_recvBuffer.mid(totalSize);
-    return true;
 }
 
 void iINCProtocol::flush()
@@ -331,37 +277,44 @@ void iINCProtocol::enableMempool(iSharedDataPointer<iMemPool> pool)
     m_memImport = new iMemImport(m_memPool.data(), memImportRevokeCallback, this);
 }
 
-void iINCProtocol::onReadyRead()
+void iINCProtocol::onMessageReceived(iINCMessage msg)
 {
-    // Read messages, readMessage() will populate type and seqNum
-    iINCMessage msg(INC_MSG_INVALID, 0, 0);
-    while (readMessage(msg)) {
-        // Check if this is a reply message that completes an operation
-        xuint32 seqNum = msg.sequenceNumber();
-        if ((msg.type() & 0x1) && seqNum > 0) {
-            // Find and complete the corresponding operation
-            auto it = m_operations.find(seqNum);
-            if (it != m_operations.end()) {
-                iINCOperation* op = it->second;
-                m_operations.erase(it);
+    do {
+        // Cache peer memfd if provided
+        if (msg.extFd() < 0)
+            break;
 
-                // Special handling for BINARY_DATA_ACK: release shared memory slot
-                if (m_memExport && (msg.type() == INC_MSG_BINARY_DATA_ACK) && (0 != op->m_blockID)) {
-                    m_memExport->processRelease(op->m_blockID);
-                }
+        if (m_cachedPeerMemFd >= 0)
+            ::close(m_cachedPeerMemFd);
 
-                // Complete the operation
-                op->setResult(INC_OK, msg.payload().data());
-                op->deref();
+        m_cachedPeerMemFd = msg.extFd();
+    } while (false);
+
+    // Check if this is a reply message that completes an operation
+    xuint32 seqNum = msg.sequenceNumber();
+    if ((msg.type() & 0x1) && seqNum > 0) {
+        // Find and complete the corresponding operation
+        auto it = m_operations.find(seqNum);
+        if (it != m_operations.end()) {
+            iINCOperation* op = it->second;
+            m_operations.erase(it);
+
+            // Special handling for BINARY_DATA_ACK: release shared memory slot
+            if (m_memExport && (msg.type() == INC_MSG_BINARY_DATA_ACK) && (0 != op->m_blockID)) {
+                m_memExport->processRelease(op->m_blockID);
             }
-        }
 
-        // Handle binary data messages specially
-        if (msg.type() == INC_MSG_BINARY_DATA) {
-            processBinaryDataMessage(msg);
-        } else {
-            IEMIT messageReceived(msg);
+            // Complete the operation
+            op->setResult(INC_OK, msg.payload().data());
+            op->deref();
         }
+    }
+
+    // Handle binary data messages specially
+    if (msg.type() == INC_MSG_BINARY_DATA) {
+        processBinaryDataMessage(msg);
+    } else {
+        IEMIT messageReceived(msg);
     }
 }
 
@@ -423,7 +376,7 @@ void iINCProtocol::processBinaryDataMessage(const iINCMessage& msg)
     }
 
     // Import the memory block
-    iMemBlock* importedBlock = m_memImport->get(static_cast<MemType>(memTypeU32), blockId, shmId,
+    iMemBlock* importedBlock = m_memImport->get(static_cast<MemType>(memTypeU32), blockId, shmId, m_cachedPeerMemFd,
                                                 static_cast<size_t>(offset64), static_cast<size_t>(size64), false);
     if (!importedBlock) {
         ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
@@ -458,95 +411,38 @@ void iINCProtocol::onReadyWrite()
 
     // State machine loop: process all sendable data
     while (true) {
-        // State 1: Priority - send partial data (resume incomplete write)
-        if (!m_partialSendBuffer.isEmpty()) {
-            xint64 remaining = m_partialSendBuffer.size() - m_partialSendOffset;
-            const char* dataPtr = m_partialSendBuffer.constData() + m_partialSendOffset;
-
-            // Perform write
-            xint64 written = m_device->write(dataPtr, remaining);
-
-            if (written < 0) {
-                // Write error
-                ilog_error("[", m_device->peerAddress(), "] Failed to write partial data");
-                IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
-                m_partialSendBuffer.clear();
-                m_partialSendOffset = 0;
-                return;
-            }
-
-            m_partialSendOffset += written;
-            if (m_partialSendOffset < m_partialSendBuffer.size()) {
-                // Still have data to send, wait for next ready-write event
-                return;
-            }
-
-            // Partial data completely sent, cleanup and pop message from queue
-            m_partialSendBuffer.clear();
-            m_partialSendOffset = 0;
-            if (!m_sendQueue.empty()) {
-                m_sendQueue.pop();
-            }
-            // Continue loop to process next message in queue
-            continue;
-        }
-
-        // State 2: Send messages from queue
+        // Queue empty
         if (m_sendQueue.empty()) {
-            // State 3: Queue empty - complete sending
             m_device->configEventAbility(true, false);
             return;
         }
 
         // Get message from queue
         const iINCMessage& msg = m_sendQueue.front();
-
-        // Prepare header and payload separately (zero-copy for payload)
-        iINCMessageHeader header = msg.header();
-        xint64 written = m_device->write(reinterpret_cast<const char*>(&header), sizeof(iINCMessageHeader));
+        xint64 written = m_device->writeMessage(msg, m_partialSendOffset);
         if (written < 0) {
             ilog_error("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                        "] Failed to write message header");
+                        "] Failed to write message");
             IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
+            // Drop message and reset offset to avoid infinite loop on error
+            m_sendQueue.pop();
+            m_partialSendOffset = 0;
             return;
         }
 
-        const iByteArray& payload = msg.payload().data();
-        if (written < sizeof(iINCMessageHeader)) {
-            // Partial header write - merge header + payload for retry
-            iByteArray data;
-            data.append(reinterpret_cast<const char*>(&header), sizeof(iINCMessageHeader));
-            if (!payload.isEmpty()) {
-                data.append(payload);
-            }
-            m_partialSendBuffer = data;
-            m_partialSendOffset = written;
+        // Calculate total size of the message (header + payload)
+        // Note: writeMessage re-serializes, but we can assume total size matches
+        xint64 totalSize = sizeof(iINCMessageHeader) + msg.payload().size();
+        m_partialSendOffset += written;
+        if (m_partialSendOffset < totalSize) {
+            // Partial write - wait for next writes
             m_device->configEventAbility(true, true);
             return;
         }
 
-        // Header sent completely, now send payload if present
-        if (!payload.isEmpty()) {
-            written = m_device->write(payload.constData(), payload.size());
-
-            if (written < 0) {
-                ilog_error("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to write message payload");
-                IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
-                return;
-            }
-
-            if (written < payload.size()) {
-                // Partial payload write - save remaining data
-                m_partialSendBuffer = payload.mid(written);
-                m_partialSendOffset = 0;
-                m_device->configEventAbility(true, true);
-                return;
-            }
-        }
-
         // Complete write - pop message and continue loop
         m_sendQueue.pop();
+        m_partialSendOffset = 0;
     }
 }
 

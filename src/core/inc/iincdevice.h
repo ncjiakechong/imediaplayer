@@ -11,6 +11,7 @@
 #define IINCDEVICE_H
 
 #include <core/io/iiodevice.h>
+#include <core/inc/iincmessage.h>
 
 namespace iShell {
 
@@ -58,12 +59,21 @@ public:
     /// @param write Enable/disable write event monitoring
     virtual void configEventAbility(bool read, bool write) = 0;
 
+    /// Write message to device
+    /// @param msg Message object to write
+    /// @param offset Offset in message payload
+    /// @return Bytes written or -1 on error
+    virtual xint64 writeMessage(const iINCMessage& msg, xint64 offset) = 0;
+
 // signals:
     /// @brief New connection signal (server mode)
     /// @param client The newly connected client device
     /// @details Emitted when a new client connection is accepted.
     ///          The client device is a child of this server device.
     void newConnection(iINCDevice* client) ISIGNAL(newConnection, client);
+
+    /// Signal emitted when a complete message is received
+    void messageReceived(iINCMessage msg) ISIGNAL(messageReceived, msg);
 
     void connected() ISIGNAL(connected);
     void disconnected() ISIGNAL(disconnected);

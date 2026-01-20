@@ -28,7 +28,9 @@
 #include <sys/types.h>
 
 #include "thread/ieventdispatcher_generic.h"
+#ifdef IBUILD_HAVE_GLIB
 #include "thread/ieventdispatcher_glib.h"
+#endif
 #else
 #error "What system is this?"
 #endif

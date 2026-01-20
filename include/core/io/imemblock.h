@@ -220,6 +220,7 @@ public:
 
     inline const char* name() const { return m_name; }
     inline size_t size() const { return m_memory ? m_memory->size() : 0; }
+    inline int fd() const { return m_memory ? m_memory->fd() : -1; }
     inline MemType type() const { return m_memory ? m_memory->type() : MEMTYPE_PRIVATE; }
     inline const char* prefix() const { return m_memory ? m_memory->prefix() : IX_NULLPTR; }
 
@@ -272,7 +273,7 @@ public:
     iMemImport(iMemPool* pool, iMemImportReleaseCb cb, void* userdata);
     virtual ~iMemImport();
 
-    iMemBlock* get(MemType type, uint blockId, uint shmId, size_t offset, size_t size, bool writable);
+    iMemBlock* get(MemType type, uint blockId, uint shmId, int memfd_fd, size_t offset, size_t size, bool writable);
     int processRevoke(uint blockId);
 
     int attachMemfd(uint shmId, int memfd_fd, bool writable);
@@ -306,7 +307,7 @@ public:
     iMemExport(iMemPool* pool, iMemExportRevokeCb cb, void* userdata);
     ~iMemExport();
 
-    int put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId, size_t* offset, size_t* size);
+    int put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId, int* memfd_fd, size_t* offset, size_t* size);
     int processRelease(uint id);
 
 private:
