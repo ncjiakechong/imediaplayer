@@ -30,6 +30,19 @@ const xint32 INC_MAX_SEND_QUEUE = 100;
 
 namespace iShell {
 
+class iINCOperationPool : public iSharedData {
+public:
+    iFreeList<iINCOperation*> m_list;
+    iINCOperationPool(xuint32 size) : m_list(size) {}
+    virtual ~iINCOperationPool() {
+        iINCOperation* cachedOp = IX_NULLPTR;
+        while( (cachedOp = m_list.pop(IX_NULLPTR)) != IX_NULLPTR ) {
+            ::operator delete(cachedOp);
+        }
+    }
+    void doFree() IX_OVERRIDE { delete this; }
+};
+
 iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
     : iObject(parent)
     , m_device(device)
@@ -38,7 +51,7 @@ iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
     , m_partialSendOffset(0)
     , m_memExport(IX_NULLPTR)
     , m_memImport(IX_NULLPTR)
-    , m_opPool(128)
+    , m_opPool(new iINCOperationPool(128))
 {
     IX_ASSERT(device != IX_NULLPTR);
 
@@ -81,11 +94,6 @@ iINCProtocol::~iINCProtocol()
         m_cachedPeerMemFd = -1;
     }
 
-    iINCOperation* cachedOp = IX_NULLPTR;
-    while( (cachedOp = m_opPool.pop(IX_NULLPTR)) != IX_NULLPTR ) {
-        ::operator delete(cachedOp);
-    }
-
     delete m_device;
 }
 
@@ -96,7 +104,7 @@ xuint32 iINCProtocol::nextSequence()
 
 void iINCProtocol::operationNotifier(iINCOperation* op, bool deleter, void* userData)
 {
-    iINCProtocol* protocol = static_cast<iINCProtocol*>(userData);
+    iINCOperationPool* pool = static_cast<iINCOperationPool*>(userData);
     if (!deleter) {
         // TODO: timeout handling can be added here
         return;
@@ -104,8 +112,10 @@ void iINCProtocol::operationNotifier(iINCOperation* op, bool deleter, void* user
 
     op->~iINCOperation();
 
-    if(!protocol->m_opPool.push(op))
+    if(!pool->m_list.push(op))
         ::operator delete(op);
+    
+    pool->deref();
 }
 
 iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& msg)
@@ -115,13 +125,15 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& m
     do {
         if (msg.type() & 0x1) break;
 
-        iINCOperation* tmpOp = m_opPool.pop(IX_NULLPTR);
+        iINCOperation* tmpOp = m_opPool->m_list.pop(IX_NULLPTR);
+        m_opPool->ref();
+
         if (IX_NULLPTR == tmpOp) {
-            op = new iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, this);
+            op = new iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, m_opPool.data());
             break;
         }
 
-        op = new (tmpOp) iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, this);
+        op = new (tmpOp) iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, m_opPool.data());
     } while(false);
 
     if (!msg.isValid()) {

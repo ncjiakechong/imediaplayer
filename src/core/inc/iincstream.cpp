@@ -53,6 +53,11 @@ iINCStream::iINCStream(const iStringView& name, iINCContext* context, iObject* p
 
 iINCStream::~iINCStream()
 {
+    if (m_reconnectTimerId != 0) {
+        killTimer(m_reconnectTimerId);
+        m_reconnectTimerId = 0;
+    }
+
     // CRITICAL: First detach to trigger graceful channel release
     detach();
     cleanupPendingOps();
@@ -362,6 +367,7 @@ void iINCStream::cleanupPendingOps()
     while (!m_pendingOps.empty()) {
         iINCOperation* op = m_pendingOps.back();
         m_pendingOps.pop_back();
+        op->setFinishedCallback(IX_NULLPTR, IX_NULLPTR);
         op->cancel();
         op->deref();
     }

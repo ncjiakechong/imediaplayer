@@ -98,7 +98,7 @@ private:
     void*           m_finishedUserData;
 
     // Custom deleter support
-    Notify m_ownerNotify;
+    Notify  m_ownerNotify;
     void*   m_ownerData;
 
     iTimer* m_safeDeleteTimer;

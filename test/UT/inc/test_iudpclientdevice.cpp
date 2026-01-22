@@ -64,8 +64,8 @@ TEST_F(iUDPClientDeviceTest, BytesAvailable) {
 }
 
 
-class TestReceiver : public iObject {
-    IX_OBJECT(TestReceiver)
+class UdpTestReceiver : public iObject {
+    IX_OBJECT(UdpTestReceiver)
 public:
     void onMessage(iINCMessage msg) {
         m_msg = msg;
@@ -78,14 +78,14 @@ public:
 class TestConnectionListener : public iObject {
     IX_OBJECT(TestConnectionListener)
 public:
-    TestReceiver* m_receiver;
-    explicit TestConnectionListener(TestReceiver* r) : m_receiver(r) {}
+    UdpTestReceiver* m_receiver;
+    explicit TestConnectionListener(UdpTestReceiver* r) : m_receiver(r) {}
     
     void onNewConnection(iINCDevice* device) {
         m_device = dynamic_cast<iUDPClientDevice*>(device);
         m_connected = true;
         if (m_device && m_receiver) {
-             iObject::connect(m_device, &iINCDevice::messageReceived, m_receiver, &TestReceiver::onMessage);
+             iObject::connect(m_device, &iINCDevice::messageReceived, m_receiver, &UdpTestReceiver::onMessage);
         }
     }
     iUDPClientDevice* m_device = IX_NULLPTR;
@@ -99,7 +99,7 @@ TEST_F(iUDPClientDeviceTest, ReadData) {
     ASSERT_GT(serverPort, 0);
 
     // 2. Setup Server Listener
-    TestReceiver receiver;
+    UdpTestReceiver receiver;
     TestConnectionListener listener(&receiver);
     iObject::connect(m_serverDevice, &iINCDevice::newConnection, &listener, &TestConnectionListener::onNewConnection);
 
@@ -145,6 +145,12 @@ TEST_F(iUDPClientDeviceTest, ReadData) {
     ASSERT_NE(listener.m_device, nullptr);
     ASSERT_TRUE(receiver.m_received);
     EXPECT_EQ(receiver.m_msg.payload().data().toStdString(), "HelloUDP");
+
+    if (listener.m_device) {
+        listener.m_device->close();
+        delete listener.m_device;
+        listener.m_device = IX_NULLPTR;
+    }
     
     close(clientSock);
 }

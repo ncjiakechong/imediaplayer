@@ -398,13 +398,13 @@ TEST_F(IMemPoolTest, PoolStatistics) {
     const iMemPool::Stat& stat = pool->getStat();
 
     // Initially, stats should be zero or minimal
-    int initialAllocated = stat.nAllocated.value();
+    int initialAllocated = stat.nAllocated;
 
     // Allocate a block
     iSharedDataPointer<iMemBlock> block(iMemBlock::newOne(pool.data(), 100, sizeof(char)));
     if (block.data() != nullptr) {
         // Stats should have changed
-        EXPECT_GE(stat.nAllocated.value(), initialAllocated);
+        EXPECT_GE(stat.nAllocated, initialAllocated);
     }
 }
 

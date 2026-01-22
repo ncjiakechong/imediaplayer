@@ -92,7 +92,7 @@ public:
     void processRx();
 
 protected:
-    iByteArray recvWithFd(xint64 maxlen, int* fd, xint64* readErr);
+    ssize_t readImpl(char* data, xint64 maxlen, int* fd);
     iByteArray readData(xint64 maxlen, xint64* readErr) IX_OVERRIDE;
     xint64 writeData(const iByteArray& data) IX_OVERRIDE;
 

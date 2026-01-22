@@ -206,7 +206,8 @@ public:
     iString sliced(xsizetype pos) const
     { verify(pos, 0); return sliced(pos, size() - pos); }
     iString sliced(xsizetype pos, xsizetype n) const
-    { verify(pos, n); return iString(begin() + pos, n); }
+    { verify(pos, n);
+      return iString(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data() + pos, n)); }
     iString chopped(xsizetype n) const
     { verify(0, n); return sliced(0, size() - n); }
 

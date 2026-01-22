@@ -1939,13 +1939,15 @@ class _iConnectionHelper : public _iConnection
         : _iConnection(&impl, other._type, other._signalSize, other._slotSize)
         , _funcObj(other._funcObj)
         , _func(other._func) {
-        this->_slot = other._slot;
         this->_slotObj = other._slotObj;
         this->_receiver = other._receiver;
         this->_argWraper = other._argWraper;
         this->_argDeleter = other._argDeleter;
         this->_isArgAdapter = other._isArgAdapter;
         this->setSignal(other._sender, other._signal);
+
+        if (other._slot != IX_NULLPTR)
+            this->_slot = reinterpret_cast<void* const*>(&this->_func);
     }
 
 public:

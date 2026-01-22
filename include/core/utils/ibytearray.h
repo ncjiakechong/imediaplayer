@@ -111,13 +111,17 @@ public:
     iByteArray mid(xsizetype index, xsizetype len = -1) const;
 
     iByteArray first(xsizetype n) const
-    { IX_ASSERT(n >= 0); IX_ASSERT(n <= size()); return iByteArray(data(), n); }
+    { IX_ASSERT(n >= 0); IX_ASSERT(n <= size());
+      return iByteArray(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data(), n)); }
     iByteArray last(xsizetype n) const
-    { IX_ASSERT(n >= 0); IX_ASSERT(n <= size()); return iByteArray(data() + size() - n, n); }
+    { IX_ASSERT(n >= 0); IX_ASSERT(n <= size());
+      return iByteArray(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data() + size() - n, n)); }
     iByteArray sliced(xsizetype pos) const
-    { IX_ASSERT(pos >= 0); IX_ASSERT(pos <= size()); return iByteArray(data() + pos, size() - pos); }
+    { IX_ASSERT(pos >= 0); IX_ASSERT(pos <= size());
+      return iByteArray(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data() + pos, size() - pos)); }
     iByteArray sliced(xsizetype pos, xsizetype n) const
-    { IX_ASSERT(pos >= 0); IX_ASSERT(n >= 0); IX_ASSERT(size_t(pos) + size_t(n) <= size_t(size())); return iByteArray(data() + pos, n); }
+    { IX_ASSERT(pos >= 0); IX_ASSERT(n >= 0); IX_ASSERT(size_t(pos) + size_t(n) <= size_t(size()));
+      return iByteArray(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data() + pos, n)); }
     iByteArray chopped(xsizetype len) const
     { IX_ASSERT(len >= 0); IX_ASSERT(len <= size()); return first(size() - len); }
 
@@ -380,21 +384,21 @@ inline int iByteArray::compare(iByteArrayView bv, iShell::CaseSensitivity cs) co
 inline bool operator==(const iByteArray &a1, const iByteArray &a2)
 { return (a1.size() == a2.size()) && (memcmp(a1.constData(), a2.constData(), size_t(a1.size()))==0); }
 inline bool operator==(const iByteArray &a1, const char *a2)
-{ return a2 ? istrcmp(a1.data(), a2) == 0 : a1.isEmpty(); }
+{ return a2 ? istrncmp(a1.data(), a1.length(), a2, -1) == 0 : a1.isEmpty(); }
 inline bool operator==(const char *a1, const iByteArray &a2)
-{ return a1 ? istrcmp(a1,a2.data()) == 0 : a2.isEmpty(); }
+{ return a1 ? istrncmp(a2.data(), a2.length(), a1, -1) == 0 : a2.isEmpty(); }
 inline bool operator<(const iByteArray &a1, const iByteArray &a2)
 { return istrncmp(a1.data(),a1.length(),a2.data(), a2.length()) < 0; }
  inline bool operator<(const iByteArray &a1, const char *a2)
-{ return istrcmp(a1.data(), a2) < 0; }
+{ return istrncmp(a1.data(), a1.length(), a2, -1) < 0; }
 inline bool operator<(const char *a1, const iByteArray &a2)
-{ return istrcmp(a1, a2.data()) < 0; }
+{ return istrncmp(a2.data(), a2.length(), a1, -1) > 0; }
 inline bool operator>(const iByteArray &a1, const iByteArray &a2)
 { return istrncmp(a1.data(),a1.length(),a2.data(), a2.length()) > 0; }
 inline bool operator>(const iByteArray &a1, const char *a2)
-{ return istrcmp(a1.data(), a2) > 0; }
+{ return istrncmp(a1.data(), a1.length(), a2, -1) > 0; }
 inline bool operator>(const char *a1, const iByteArray &a2)
-{ return istrcmp(a1, a2.data()) > 0; }
+{ return istrncmp(a2.data(), a2.length(), a1, -1) < 0; }
 
 inline bool operator!=(const iByteArray &a1, const iByteArray &a2)
 { return !operator==(a1, a2); }

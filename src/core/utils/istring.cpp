@@ -2843,7 +2843,7 @@ iString iString::mid(xsizetype position, xsizetype n) const
     case iContainerImplHelper::Full:
         return *this;
     case iContainerImplHelper::Subset:
-        return iString(constData() + p, l);
+        return iString(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data() + p, l));
     }
 
     return iString();

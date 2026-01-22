@@ -163,6 +163,10 @@ struct __Action
 
 void iINCServer::broadcastEvent(const iStringView& eventName, xuint16 version, const iByteArray& data)
 {
+    if (!m_listenDevice) {
+        return;
+    }
+
     __Action* action = new __Action;
     action->eventName = eventName.toString();
     action->version = version;
@@ -276,6 +280,7 @@ void iINCServer::onClientDisconnected(iINCConnection* conn)
     }
 
     ilog_info("[", conn->peerName(), "] Client disconnected, ID:", conn->connectionId());
+    conn->clearChannels();
     conn->deleteLater();
 }
 

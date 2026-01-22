@@ -65,11 +65,7 @@ private:
     iMutexImpl* m_mutex;
     union
     {
-        #ifdef IX_OS_DARWIN
-        char __pad[152];
-        #else
-        char __pad[128];
-        #endif
+        char __pad[152]; // use MACOS size
         void *__align;
     };
 

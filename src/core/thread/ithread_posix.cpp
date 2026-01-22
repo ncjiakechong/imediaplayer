@@ -31,14 +31,11 @@
 
 namespace iShell {
 
-static thread_local iThreadData *currentThreadData = IX_NULLPTR;
-
 static pthread_once_t current_thread_data_once = PTHREAD_ONCE_INIT;
 static pthread_key_t current_thread_data_key;
 
 static void destroy_current_thread_data(void *p)
 {
-
     // POSIX says the value in our key is set to zero before calling
     // this destructor function, so we need to set it back to the
     // right value...
@@ -91,19 +88,19 @@ protected:
 // Utility functions for getting, setting and clearing thread specific data.
 static iThreadData *get_thread_data()
 {
-    return currentThreadData;
+    pthread_once(&current_thread_data_once, create_current_thread_data_key);
+    return static_cast<iThreadData *>(pthread_getspecific(current_thread_data_key));
 }
 
 static void set_thread_data(iThreadData *data)
 {
-    currentThreadData = data;
     pthread_once(&current_thread_data_once, create_current_thread_data_key);
     pthread_setspecific(current_thread_data_key, data);
 }
 
 static void clear_thread_data()
 {
-    currentThreadData = IX_NULLPTR;
+    pthread_once(&current_thread_data_once, create_current_thread_data_key);
     pthread_setspecific(current_thread_data_key, IX_NULLPTR);
 }
 
@@ -116,7 +113,6 @@ iThreadData* iThreadData::current(bool createIfNecessary)
         data->isAdopted = true;
         data->thread = new iAdoptedThread(data);
         data->threadHd = iThread::currentThreadHd();
-        data->deref();
     }
 
     return data;

@@ -296,7 +296,6 @@ int iUDPDevice::bindOn(const iString& address, xuint16 port)
     m_localPort = port;
 
     // Open the device using base class (sets m_openMode for isOpen())
-    // Don't use Unbuffered - we need iIODevice::m_buffer to handle datagram fragmentation
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 
     // Create EventSource for this socket
@@ -348,9 +347,8 @@ iByteArray iUDPDevice::readData(xint64 maxlen, xint64* readErr)
 iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
 {
     iByteArray result;
-    // Always allocate full datagram size to avoid truncation
-    // iIODevice::m_buffer will handle excess data
-    result.resize(static_cast<int>(maxDatagramSize()));
+    // Always allocate full INCMessage size to avoid truncation
+    result.resize(sizeof(iINCMessageHeader) + iINCMessageHeader::MAX_MESSAGE_SIZE);
 
     struct sockaddr_in srcAddr;
     socklen_t addrLen = sizeof(srcAddr);
@@ -428,23 +426,37 @@ xint64 iUDPDevice::writeData(const iByteArray& data)
 xint64 iUDPDevice::sendTo(iUDPClientDevice* client, const iINCMessage& msg)
 {
     iINCMessageHeader header = msg.header();
-    iByteArray finalData;
-    finalData.append(reinterpret_cast<const char*>(&header), sizeof(header));
-    finalData.append(msg.payload().data());
-
-    if (finalData.size() > maxDatagramSize()) {
-        ilog_warn("[", peerAddress(), "] Datagram too large:", msg.payload().size(), " > ", maxDatagramSize());
+    const iByteArray& payload = msg.payload().data();
+    xuint32 totalSize = sizeof(header) + payload.size();
+    if (totalSize > maxDatagramSize()) {
+        ilog_warn("[", peerAddress(), "] Datagram too large:", totalSize, " > ", maxDatagramSize());
         return -1;
     }
 
-    ssize_t bytesSent = 0;
+    struct msghdr msgh;
+    struct iovec iov[2];
+    std::memset(&msgh, 0, sizeof(msgh));
+
+    // Prepare IO vectors (zero-copy)
+    iov[0].iov_base = reinterpret_cast<void*>(&header);
+    iov[0].iov_len = sizeof(header);
+    iov[1].iov_base = const_cast<char*>(payload.constData());
+    iov[1].iov_len = payload.size();
+
+    msgh.msg_iov = iov;
+    msgh.msg_iovlen = payload.isEmpty() ? 1 : 2;
+
+    struct sockaddr_in addr;
     if (client) {
-        struct sockaddr_in addr = client->clientAddr();
-        bytesSent = ::sendto(m_sockfd, finalData.constData(), finalData.size(), 0, (const struct sockaddr*)&addr, sizeof(addr));
+        addr = client->clientAddr();
+        msgh.msg_name = &addr;
+        msgh.msg_namelen = sizeof(addr);
     } else {
-        // No client specified - use connected peer (client mode)
-        bytesSent = ::send(m_sockfd, finalData.constData(), finalData.size(), 0);
+        msgh.msg_name = IX_NULLPTR;
+        msgh.msg_namelen = 0;
     }
+
+    ssize_t bytesSent = ::sendmsg(m_sockfd, &msgh, 0);
 
     if (bytesSent >= 0) {
         static_cast<iUDPEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesSent);
@@ -495,7 +507,13 @@ void iUDPDevice::close()
         m_sockfd = -1;
     }
 
+    if (m_pendingClient) {
+        delete m_pendingClient;
+        m_pendingClient = IX_NULLPTR;
+    }
+
     m_isConnected = false;
+    m_addrToChannel.clear();
     m_peerAddr.clear();
     m_peerPort = 0;
 

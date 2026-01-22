@@ -28,6 +28,8 @@
 
 namespace iShell {
 
+class iINCOperationPool;
+
 /// @brief Protocol layer for message encoding/decoding and zero-copy binary data transfer
 /// @details Unified for both client and server.
 ///          Manages sequence numbers, message queuing, and flow control.
@@ -119,7 +121,7 @@ private:
                                std::equal_to<xuint32>,
                                iCacheAllocator<std::pair<const xuint32, iINCOperation*>>> OperationsMap;
     OperationsMap               m_operations;  ///< Maps seqNum -> operation (uses lock-free pool)
-    iFreeList<iINCOperation*>   m_opPool;
+    iSharedDataPointer<iINCOperationPool> m_opPool;
 
     IX_DISABLE_COPY(iINCProtocol)
 };

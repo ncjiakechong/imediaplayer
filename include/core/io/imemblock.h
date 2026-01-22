@@ -190,20 +190,20 @@ public:
      * they are here for purely statistical reasons.
      */
     struct Stat {
-        iAtomicCounter<int> nAllocated;
-        iAtomicCounter<int> nAccumulated;
-        iAtomicCounter<int> nImported;
-        iAtomicCounter<int> nExported;
-        iAtomicCounter<int> allocatedSize;
-        iAtomicCounter<int> accumulatedSize;
-        iAtomicCounter<int> importedSize;
-        iAtomicCounter<int> exportedSize;
+        int nAllocated;
+        int nAccumulated;
+        int nImported;
+        int nExported;
+        int allocatedSize;
+        int accumulatedSize;
+        int importedSize;
+        int exportedSize;
 
-        iAtomicCounter<int> nTooLargeForPool;
-        iAtomicCounter<int> nPoolFull;
+        int nTooLargeForPool;
+        int nPoolFull;
 
-        iAtomicCounter<int> nAllocatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
-        iAtomicCounter<int> nAccumulatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
+        int nAllocatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
+        int nAccumulatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
     };
 
     static iMemPool* create(const char* name, const char* prefix, MemType type, size_t size, bool perClient);

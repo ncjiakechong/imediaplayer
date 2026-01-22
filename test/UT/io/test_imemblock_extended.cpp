@@ -28,7 +28,7 @@ TEST_F(IMemBlockExtendedTest, PoolBasic) {
 
 TEST_F(IMemBlockExtendedTest, PoolStats) {
     const iMemPool::Stat& s = pool->getStat();
-    EXPECT_GE(s.nAllocated.value(), 0);
+    EXPECT_GE(s.nAllocated, 0);
 }
 
 TEST_F(IMemBlockExtendedTest, PoolVacuum) {
@@ -211,11 +211,11 @@ TEST_F(IMemBlockExtendedTest, GrowBack) {
 
 TEST_F(IMemBlockExtendedTest, StatsAfterAlloc) {
     const iMemPool::Stat& s1 = pool->getStat();
-    int before = s1.nAllocated.value();
+    int before = s1.nAllocated;
     iSharedDataPointer<iMemBlock> b1(iMemBlock::newOne(pool, 100, 1));
     iSharedDataPointer<iMemBlock> b2(iMemBlock::newOne(pool, 200, 1));
     const iMemPool::Stat& s2 = pool->getStat();
-    EXPECT_GE(s2.nAllocated.value(), before);
+    EXPECT_GE(s2.nAllocated, before);
 }
 
 TEST_F(IMemBlockExtendedTest, PoolDiffSizes) {

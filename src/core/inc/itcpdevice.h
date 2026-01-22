@@ -103,7 +103,7 @@ public:
 protected:
     iByteArray readData(xint64 maxlen, xint64* readErr) IX_OVERRIDE;
     xint64 writeData(const iByteArray& data) IX_OVERRIDE;
-    iByteArray readImpl(xint64 maxlen, xint64* readErr);
+    ssize_t readImpl(char* data, xint64 maxlen);
 
 private:
     bool createSocket();

@@ -2236,7 +2236,7 @@ iByteArray iByteArray::left(xsizetype len)  const
         return *this;
     if (len < 0)
         len = 0;
-    return iByteArray(data(), len);
+    return iByteArray(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data(), len));
 }
 
 /*!
@@ -2254,7 +2254,7 @@ iByteArray iByteArray::right(xsizetype len) const
         return *this;
     if (len < 0)
         len = 0;
-    return iByteArray(end() - len, len);
+    return iByteArray(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data() + size() - len, len));
 }
 
 /*!
@@ -2279,7 +2279,7 @@ iByteArray iByteArray::mid(xsizetype pos, xsizetype len) const
     case iContainerImplHelper::Full:
         return *this;
     case iContainerImplHelper::Subset:
-        return iByteArray(d.data() + p, l);
+        return iByteArray(DataPointer(const_cast<DataPointer&>(d).d_ptr(), const_cast<DataPointer&>(d).data() + p, l));
     }
 
     return iByteArray();

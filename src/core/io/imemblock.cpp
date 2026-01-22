@@ -514,15 +514,11 @@ void iMemBlock::statAdd()
 void iMemBlock::statRemove()
 {
     IX_ASSERT(m_pool);
-    IX_ASSERT(m_pool->m_stat.nAllocated > 0);
-    IX_ASSERT(m_pool->m_stat.allocatedSize >= (int) m_length);
 
     m_pool->m_stat.nAllocated--;
     m_pool->m_stat.allocatedSize -= (int) m_length;
 
     if (m_type == MEMBLOCK_IMPORTED) {
-        IX_ASSERT(m_pool->m_stat.nImported > 0);
-        IX_ASSERT(m_pool->m_stat.importedSize >= (int) m_length);
 
         m_pool->m_stat.nImported--;
         m_pool->m_stat.importedSize -= (int) m_length;
@@ -636,8 +632,6 @@ void iMemBlock::replaceImport()
 {
     IX_ASSERT(MEMBLOCK_IMPORTED == m_type);
 
-    IX_ASSERT(m_pool->m_stat.nImported.value() > 0);
-    IX_ASSERT(m_pool->m_stat.importedSize.value() >= (int) m_length);
     --m_pool->m_stat.nImported;
     m_pool->m_stat.importedSize -= (int) m_length;
 
@@ -771,7 +765,7 @@ iMemPool::~iMemPool()
 
     _lock.unlock();
 
-    if (m_stat.nAllocated.value() > 0) {
+    if (m_stat.nAllocated > 0) {
         /* Ouch, somebody is retaining a memory block reference! */
         iFreeList<Slot*> list(m_nBlocks);
 
@@ -796,7 +790,7 @@ iMemPool::~iMemPool()
         }
 
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__,
-                        "%s pool destroyed but not all memory blocks freed! remain %d", m_name, m_stat.nAllocated.value());
+                        "%s pool destroyed but not all memory blocks freed! remain %d", m_name, m_stat.nAllocated);
     }
 
     while(m_freeSlots.pop(IX_NULLPTR)) {}
@@ -1135,9 +1129,6 @@ int iMemExport::processRelease(uint id)
     IX_LLIST_PREPEND(Slot, m_freeSlots, &m_slots[id]);
 
     _lock.unlock();
-
-    IX_ASSERT(m_pool->m_stat.nExported.value() > 0);
-    IX_ASSERT(m_pool->m_stat.exportedSize.value() >= (int) b->m_length);
 
     --m_pool->m_stat.nExported;
     m_pool->m_stat.exportedSize -= (int) b->m_length;
