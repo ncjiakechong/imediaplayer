@@ -120,7 +120,6 @@ public:
         if (maxlen > 0)
             return buffer;
 
-        ilog_debug("try to ", *readLen, " buffer the stream data!!!");
         if (*readLen > 0 && 0 >= maxlen) {
             m_buffer.append(buffer);
         }

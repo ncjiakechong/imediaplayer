@@ -47,6 +47,9 @@ namespace iShell {
 
 void iMediaPlayer::stateChangedNotify(State ps)
 {
+    if (m_isShuttingDown)
+        return;
+
     if (ps != m_state) {
         m_state = ps;
 
@@ -61,6 +64,9 @@ void iMediaPlayer::stateChangedNotify(State ps)
 
 void iMediaPlayer::mediaStatusChangedNotify(iMediaPlayer::MediaStatus s)
 {
+    if (m_isShuttingDown)
+        return;
+
     if (int(s) == m_ignoreNextStatusChange) {
         m_ignoreNextStatusChange = -1;
         return;
@@ -129,6 +135,7 @@ iMediaPlayer::iMediaPlayer(iObject *parent, iMediaPlayer::Flags flags)
     , m_ignoreNextStatusChange(-1)
     , m_nestedPlaylists(0)
     , m_hasStreamPlaybackFeature(false)
+    , m_isShuttingDown(false)
 {
     IX_UNUSED(flags);
 
@@ -171,6 +178,22 @@ iMediaPlayer::iMediaPlayer(iObject *parent, iMediaPlayer::Flags flags)
 
 iMediaPlayer::~iMediaPlayer()
 {
+    m_isShuttingDown = true;
+
+    // Stop property watches early (before base destructor clears storage).
+    removePropertyWatch("position");
+    removePropertyWatch("bufferStatus");
+
+    // Disconnect and destroy control before base destructor runs to avoid
+    // signals landing on a partially destructed object.
+    if (m_control != IX_NULLPTR) {
+        iObject::disconnect(m_control, IX_NULLPTR, this, IX_NULLPTR);
+        m_control->blockSignals(true);
+        m_control->setParent(IX_NULLPTR);
+        delete m_control;
+        m_control = IX_NULLPTR;
+    }
+
     // Disconnect everything to prevent notifying
     // when a receiver is already destroyed.
     disconnect(this, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);

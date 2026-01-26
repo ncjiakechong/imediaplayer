@@ -60,8 +60,12 @@ xint64 iTimerInfoList::updateCurrentTime()
 */
 std::list<iTimerInfoList::TimerInfo>::iterator iTimerInfoList::timerInsert(const TimerInfo& ti)
 {
-    std::list<TimerInfo>::iterator insert_it = m_timers.begin();
+    if (m_timers.empty() || ti.timeout >= m_timers.back().timeout) {
+        m_timers.push_back(ti);
+        return --m_timers.end();
+    }
 
+    std::list<TimerInfo>::iterator insert_it = m_timers.begin();
     while (insert_it != m_timers.end()) {
         if (ti.timeout < insert_it->timeout) {
             return m_timers.insert(insert_it, ti);

@@ -11,6 +11,7 @@
 #define IEVENTDISPATCHER_GENERIC_H
 
 #include <vector>
+#include <core/kernel/ipoll.h>
 #include <core/thread/iwakeup.h>
 #include <core/thread/icondition.h>
 #include <core/thread/iatomiccounter.h>
@@ -51,34 +52,23 @@ protected:
     virtual int updatePoll(iPollFD* fd, iEventSource* source) IX_OVERRIDE;
 
 private:
-    struct iPollRec
-    {
-      iPollFD *fd;
-      int priority;
-    };
-
     bool eventIterate(bool block, bool dispatch);
     bool eventPrepare(int* priority, xint64* timeout);
-    int  eventQuery(int max_priority, xint64* timeout, iPollFD* fds, int n_fds);
-    bool eventCheck(int max_priority, iPollFD* fds, int n_fds, std::vector<iEventSource *>* pendingDispatches);
+    bool eventCheck(int max_priority, std::vector<iEventSource *>* pendingDispatches);
     void eventDispatch(std::vector<iEventSource *>* pendingDispatches);
 
-    bool m_pollChanged;
     int m_inCheckOrPrepare;
     int m_sourceCount;
 
     iWakeup m_wakeup;
     iPollFD m_wakeUpRec;
 
-    iPollFD* m_cachedPollArray;
-    uint m_cachedPollArraySize;
-
     xuint32 m_nextSeq;
 
     iPostEventSource* m_postSource;
     iTimerEventSource* m_timerSource;
+    iPoller m_poller;
 
-    std::list<iPollRec> m_pollRecords;
     std::vector<iEventSource *> m_pendingDispatches;
     std::map<int, std::list<iEventSource*>> m_sources;
 };

@@ -29,6 +29,17 @@
 #include <sys/select.h>
 #endif
 
+#ifdef IX_OS_LINUX
+#include <sys/epoll.h>
+#endif
+
+#if defined(IX_OS_MACOS) || defined(IX_OS_FREEBSD) || defined(IX_OS_DARWIN) || defined(IX_OS_BSD4)
+#include <sys/event.h>
+#endif
+
+#include <vector>
+#include <list>
+#include <unistd.h>
 
 #define ILOG_TAG "ix_core"
 
@@ -114,287 +125,376 @@ static int poll_rest (iPollFD *msg_fd,
     return 0;
 }
 
-xint32 iPoll (iPollFD *fds, xuint32 nfds, xint64 timeout)
-{
-    HANDLE handles[MAXIMUM_WAIT_OBJECTS];
-    iPollFD *handle_to_fd[MAXIMUM_WAIT_OBJECTS];
-    iPollFD *msg_fd = IX_NULLPTR;
-    int nhandles = 0;
-    int retval;
+class iPollerWin32 {
+public:
+    int addFd(iPollFD* fd) {
+        m_fds.push_back(fd);
+        return 0;
+    }
 
-    for (xuint32 idx = 0; idx < nfds; ++idx) {
-        iPollFD* f = &fds[idx];
-        if (f->fd == IX_WIN32_MSG_HANDLE && (f->events & IX_IO_IN)) {
-            msg_fd = f;
-        } else if (f->fd > 0) {
-            if (nhandles == MAXIMUM_WAIT_OBJECTS) {
-                ilog_warn ("Too many handles to wait for!");
-                break;
-            } else {
-              handle_to_fd[nhandles] = f;
-              handles[nhandles++] = (HANDLE) f->fd;
+    int removeFd(iPollFD* fd) {
+        for (std::vector<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
+            if (*it == fd) {
+                m_fds.erase(it);
+                return 0;
             }
         }
-        f->revents = 0;
-    }
-
-    // change ns to ms
-    if (timeout == -1) {
-        timeout = INFINITE;
-    } else {
-        timeout = (timeout + 999999LL) / (1000LL * 1000LL);
-    }
-
-    /* Polling for several things? */
-    if (nhandles > 1 || (nhandles > 0 && msg_fd != IX_NULLPTR)) {
-        /* First check if one or several of them are immediately
-        * available
-        */
-        retval = poll_rest (msg_fd, handles, handle_to_fd, nhandles, 0);
-
-        /* If not, and we have a significant timeout, poll again with
-        * timeout then. Note that this will return indication for only
-        * one event, or only for messages.
-        */
-        if (retval == 0 && (timeout == INFINITE || timeout > 0))
-            retval = poll_rest (msg_fd, handles, handle_to_fd, nhandles, timeout);
-    } else {
-        /* Just polling for one thing, so no need to check first if
-        * available immediately
-        */
-        retval = poll_rest (msg_fd, handles, handle_to_fd, nhandles, timeout);
-    }
-
-    if (retval == -1) {
-        for (xuint32 idx = 0; idx < nfds; ++idx) {
-            iPollFD* f = &fds[idx];
-            f->revents = 0;
-        }
-    }
-
-    return retval;
-}
-
-#elif defined(IX_OS_MAC) /* MACOS */
-
-/* The following implementation of poll() comes from the GNU C Library.
- * Copyright (C) 1994, 1996, 1997 Free Software Foundation, Inc.
- */
-
-#include <cstring> /* for bzero on BSD systems */
-#include <sys/select.h>
-
-#define EINTR_LOOP(var, cmd)                    \
-    do {                                        \
-        var = cmd;                              \
-    } while (var == -1 && errno == EINTR)
-
-static inline int ipoll_prepare(iPollFD *fds, xuint32 nfds,
-                                  fd_set *read_fds, fd_set *write_fds, fd_set *except_fds)
-{
-    int max_fd = -1;
-
-    FD_ZERO(read_fds);
-    FD_ZERO(write_fds);
-    FD_ZERO(except_fds);
-
-    for (xuint32 i = 0; i < nfds; ++i) {
-        if (fds[i].fd >= FD_SETSIZE) {
-            errno = EINVAL;
-            return -1;
-        }
-
-        if ((fds[i].fd < 0) || (fds[i].revents & (IX_IO_ERR | IX_IO_NVAL)))
-            continue;
-
-        if (fds[i].events & IX_IO_IN)
-            FD_SET(fds[i].fd, read_fds);
-
-        if (fds[i].events & IX_IO_OUT)
-            FD_SET(fds[i].fd, write_fds);
-
-        if (fds[i].events & IX_IO_PRI)
-            FD_SET(fds[i].fd, except_fds);
-
-        if (fds[i].events & (IX_IO_IN|IX_IO_OUT|IX_IO_PRI))
-            max_fd = std::max(max_fd, (int)fds[i].fd);
-    }
-
-    return max_fd + 1;
-}
-
-static inline void ipoll_examine_ready_read(iPollFD& pfd)
-{
-    int res;
-    char data;
-
-    /* support for POLLHUP.  An hung up descriptor does not
-       increase the return value! */
-    /* There is a bug in Mac OS X that causes it to ignore MSG_PEEK
-     * for some kinds of descriptors.  Detect if this descriptor is a
-     * connected socket, a server socket, or something else using a
-     * 0-byte recv, and use ioctl(2) to detect POLLHUP.  */
-    EINTR_LOOP(res, ::recv(pfd.fd, &data, sizeof(data), MSG_PEEK));
-    const int error = (res < 0) ? errno : 0;
-
-    if (res == 0) {
-        pfd.revents |= IX_IO_HUP;
-    } else if (res > 0 || error == ENOTSOCK || error == ENOTCONN) {
-        pfd.revents |= IX_IO_IN & pfd.events;
-    } else {
-        switch (error) {
-        case ESHUTDOWN:
-        case ECONNRESET:
-        case ECONNABORTED:
-        case ENETRESET:
-            pfd.revents |= IX_IO_HUP;
-            break;
-        default:
-            pfd.revents |= IX_IO_ERR;
-            break;
-        }
-    }
-}
-
-static inline int ipoll_sweep(iPollFD *fds, xuint32 nfds,
-                                fd_set *read_fds, fd_set *write_fds, fd_set *except_fds)
-{
-    int result = 0;
-
-    for (xuint32 i = 0; i < nfds; ++i) {
-        if (fds[i].fd < 0)
-            continue;
-
-        if (FD_ISSET(fds[i].fd, read_fds))
-            ipoll_examine_ready_read(fds[i]);
-
-        if (FD_ISSET(fds[i].fd, write_fds))
-            fds[i].revents |= IX_IO_OUT & fds[i].events;
-
-        if (FD_ISSET(fds[i].fd, except_fds))
-            fds[i].revents |= IX_IO_PRI & fds[i].events;
-
-        if (fds[i].revents != 0)
-            result++;
-    }
-
-    return result;
-}
-
-static inline bool ipoll_is_bad_fd(int fd)
-{
-    int ret;
-    EINTR_LOOP(ret, fcntl(fd, F_GETFD));
-    return (ret == -1 && errno == EBADF);
-}
-
-static inline int ipoll_mark_bad_fds(iPollFD *fds, xuint32 nfds)
-{
-    int n_marked = 0;
-
-    for (xuint32 i = 0; i < nfds; i++) {
-        if (fds[i].fd < 0)
-            continue;
-
-        if (fds[i].revents & (IX_IO_ERR | IX_IO_NVAL))
-            continue;
-
-        if (ipoll_is_bad_fd(fds[i].fd)) {
-            ilog_warn("ipoll fd(", fds[i].fd, ") is bad");
-            fds[i].revents |= IX_IO_NVAL;
-            n_marked++;
-        }
-   }
-
-   return n_marked;
-}
-
-int iPoll(iPollFD *fds, xuint32 nfds, xint64 timeout)
-{
-    if (!fds && nfds) {
-        ilog_warn("invalid argument");
         return -1;
     }
 
-    fd_set read_fds, write_fds, except_fds;
-    struct timeval tv, *ptv = IX_NULLPTR;
+    int updateFd(iPollFD* /*fd*/) {
+        // No special update needed as we rebuild the list on wait, 
+        // effectively we just use the pointer which has updated events.
+        return 0;
+    }
 
-    int n_bad_fds = 0;
+    int wait(xint64 timeout) {
+        HANDLE handles[MAXIMUM_WAIT_OBJECTS];
+        iPollFD *handle_to_fd[MAXIMUM_WAIT_OBJECTS];
+        iPollFD *msg_fd = IX_NULLPTR;
+        int nhandles = 0;
+        int retval;
 
-    if (timeout > 0) {
+        size_t nfds = m_fds.size();
+        for (size_t idx = 0; idx < nfds; ++idx) {
+            iPollFD* f = m_fds[idx];
+            if (f->fd == IX_WIN32_MSG_HANDLE && (f->events & IX_IO_IN)) {
+                msg_fd = f;
+            } else if (f->fd > 0) {
+                if (nhandles == MAXIMUM_WAIT_OBJECTS) {
+                    ilog_warn ("Too many handles to wait for!");
+                    break;
+                } else {
+                  handle_to_fd[nhandles] = f;
+                  handles[nhandles++] = (HANDLE) f->fd;
+                }
+            }
+            f->revents = 0;
+        }
+
         // change ns to ms
-        timeout = (timeout + 999999LL) / (1000LL * 1000LL);
-        tv.tv_sec = timeout / 1000;
-        tv.tv_usec = (timeout % 1000) * 1000;
-        ptv = &tv;
-    } else if (0 == timeout) {
-        tv.tv_sec = 0;
-        tv.tv_usec = 0;
-        ptv = &tv;
-    }
-
-    for (xuint32 i = 0; i < nfds; i++) {
-        fds[i].revents = 0;
-
-        if (fds[i].fd < 0)
-            continue;
-
-        if (fds[i].events & (IX_IO_IN|IX_IO_OUT|IX_IO_PRI))
-            continue;
-
-        if (ipoll_is_bad_fd(fds[i].fd)) {
-            // Mark bad file descriptors that have no event flags set
-            // here, as we won't be passing them to select below and therefore
-            // need to do the check ourselves
-            ilog_warn("fd(", fds[i].fd, ") is bad");
-            fds[i].revents = IX_IO_NVAL;
-            n_bad_fds++;
-        }
-    }
-
-    do {
-        const int max_fd = ipoll_prepare(fds, nfds, &read_fds, &write_fds, &except_fds);
-
-        if (max_fd < 0)
-            return max_fd;
-
-        if (n_bad_fds > 0) {
-            tv.tv_sec = 0;
-            tv.tv_usec = 0;
-            ptv = &tv;
+        if (timeout == -1) {
+            timeout = INFINITE;
+        } else {
+            timeout = (timeout + 999999LL) / (1000LL * 1000LL);
         }
 
-        const int ret = ::select(max_fd, &read_fds, &write_fds, &except_fds, ptv);
+        /* Polling for several things? */
+        if (nhandles > 1 || (nhandles > 0 && msg_fd != IX_NULLPTR)) {
+            /* First check if one or several of them are immediately
+            * available
+            */
+            retval = poll_rest (msg_fd, handles, handle_to_fd, nhandles, 0);
 
-        if (ret == 0)
+            /* If not, and we have a significant timeout, poll again with
+            * timeout then. Note that this will return indication for only
+            * one event, or only for messages.
+            */
+            if (retval == 0 && (timeout == INFINITE || timeout > 0))
+                retval = poll_rest (msg_fd, handles, handle_to_fd, nhandles, timeout);
+        } else {
+            /* Just polling for one thing, so no need to check first if
+            * available immediately
+            */
+            retval = poll_rest (msg_fd, handles, handle_to_fd, nhandles, timeout);
+        }
+
+        if (retval == -1) {
+            for (size_t idx = 0; idx < nfds; ++idx) {
+                iPollFD* f = m_fds[idx];
+                f->revents = 0;
+            }
+        }
+
+        return retval;
+    }
+    
+private:
+    std::vector<iPollFD*> m_fds;
+};
+
+#elif defined(IX_OS_MAC) /* MACOS KQUEUE Fallback removal of Select */
+// Previous Select implementation is removed in favor of Kqueue or Poll fallback.
+// We keep this empty or remove the block completely.
+// Since iPollerKqueue is defined later using the same macros, we can just close the elif here
+// and move to the generic fallback.
+// But wait, ipoll_mark_bad_fds etc were used by Select. 
+// If removing Select, we remove those helpers too.
+
+#endif 
+
+#if !defined(IX_OS_WIN) 
+// Common poll/ppoll implementation for non-windows platforms (Linux Fallback, QNX, etc)
+// Note: Linux uses Epoll class below, Mac uses Kqueue class below. This is strictly fallback.
+
+class iPollerPoll {
+public:
+    int addFd(iPollFD* fd) {
+        m_fds.push_back(fd);
+        return 0;
+    }
+
+    int removeFd(iPollFD* fd) {
+        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
+            if (*it != fd) continue;
+
+            m_fds.erase(it);
             return 0;
-
-        if (ret > 0)
-            return ipoll_sweep(fds, nfds, &read_fds, &write_fds, &except_fds);
-
-        if (errno != EBADF)
-            return -1;
-
-        // We have at least one bad file descriptor that we waited on, find out which and try again
-        n_bad_fds += ipoll_mark_bad_fds(fds, nfds);
-    } while (true);
-}
-
-#else /* !IX_OS_WIN && !IX_OS_MAC */
-
-xint32 iPoll(iPollFD *fds, xuint32 nfds, xint64 timeout)
-{
-    if (timeout < 0) {
-        return ::poll(fds, nfds, -1);
+        }
+        return -1;
     }
 
-    struct timespec timeout_ts;
-    timeout_ts.tv_sec = timeout / (1000LL * 1000LL *1000LL);
-    timeout_ts.tv_nsec = timeout % (1000LL * 1000LL *1000LL);
+    int updateFd(iPollFD* ) {
+        return 0;
+    }
 
-    return ::ppoll(fds, nfds, &timeout_ts, IX_NULLPTR);
+    int wait(xint64 timeout) {
+        if (m_fds.size() > m_pollFds.size())
+            m_pollFds.resize(m_fds.size());
+
+        size_t i = 0;
+        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it, ++i) {
+            m_pollFds[i].fd = (*it)->fd;
+            m_pollFds[i].events = (*it)->events;
+            m_pollFds[i].revents = 0;
+        }
+
+        // Inline ppoll/poll logic
+        int ret = 0;
+        size_t nfds = m_fds.size();
+        #if defined(IX_OS_LINUX) || defined(IX_OS_ANDROID) || defined(IX_OS_QNX)
+        if (timeout < 0) {
+             ret = ::poll(m_pollFds.data(), nfds, -1);
+        } else {
+             struct timespec timeout_ts;
+             timeout_ts.tv_sec = timeout / (1000LL * 1000LL *1000LL);
+             timeout_ts.tv_nsec = timeout % (1000LL * 1000LL *1000LL);
+             ret = ::ppoll(m_pollFds.data(), nfds, &timeout_ts, IX_NULLPTR);
+        }
+        #else
+        // Standard poll fallback (e.g. Mac/BSD if Kqueue fails, though we use Kqueue class)
+        // Convert timeout to ms
+        int ms = (timeout == -1) ? -1 : (timeout + 999999LL) / 1000000LL;
+        ret = ::poll(m_pollFds.data(), nfds, ms);
+        #endif
+
+        if (ret <= 0) return ret;
+
+        i = 0;
+        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it, ++i) {
+            (*it)->revents = m_pollFds[i].revents;
+        }
+        return ret;
+    }
+
+private:
+   std::list<iPollFD*> m_fds;
+   std::vector<iPollFD> m_pollFds;
+};
+#endif
+
+#if defined(IX_OS_LINUX)
+class iPollerEpoll {
+public:
+    iPollerEpoll() : m_epfd(-1) {
+        m_epfd = epoll_create1(EPOLL_CLOEXEC);
+        if (m_epfd < 0) {
+             ilog_error("epoll_create1 failed");
+        }
+        m_events.resize(16);
+    }
+
+    ~iPollerEpoll() {
+        if (m_epfd >= 0) ::close(m_epfd);
+    }
+
+    int addFd(iPollFD* fd) {
+        m_fds.push_back(fd);
+        struct epoll_event ev;
+        ev.events = fd->events; 
+        ev.data.ptr = fd;
+        return epoll_ctl(m_epfd, EPOLL_CTL_ADD, fd->fd, &ev);
+    }
+
+    int removeFd(iPollFD* fd) {
+        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
+            if (*it == fd) {
+                m_fds.erase(it);
+                break;
+            }
+        }
+        return epoll_ctl(m_epfd, EPOLL_CTL_DEL, fd->fd, IX_NULLPTR);
+    }
+
+    int updateFd(iPollFD* fd) {
+        struct epoll_event ev;
+        ev.events = fd->events;
+        ev.data.ptr = fd;
+        return epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd->fd, &ev);
+    }
+
+    int wait(xint64 timeout) {
+        // Clear revents for all fds
+        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
+            (*it)->revents = 0;
+        }
+
+        int ms = -1;
+        if (timeout >= 0) {
+             ms = (timeout + 999999LL) / 1000000LL;
+        }
+
+        int nfds = epoll_wait(m_epfd, m_events.data(), m_events.size(), ms);
+        if (nfds < 0) return -1;
+
+        for (int i=0; i<nfds; ++i) {
+            iPollFD* fd = (iPollFD*)m_events[i].data.ptr;
+            if (fd) fd->revents = m_events[i].events;
+        }
+
+        if (nfds >= (int)m_events.size()) {
+            m_events.resize(m_events.size() + 4);
+        }
+
+        return nfds;
+    }
+
+private:
+    int m_epfd;
+    std::vector<struct epoll_event> m_events;
+    std::list<iPollFD*> m_fds;
+};
+#endif 
+
+#if defined(IX_OS_MACOS) || defined(IX_OS_FREEBSD) || defined(IX_OS_DARWIN) || defined(IX_OS_BSD4)
+class iPollerKqueue {
+public:
+    iPollerKqueue() : m_kqfd(-1) {
+        m_kqfd = kqueue();
+        if (m_kqfd < 0) {
+             ilog_error("kqueue failed");
+        }
+        m_events.resize(16);
+    }
+
+    ~iPollerKqueue() {
+        if (m_kqfd >= 0) ::close(m_kqfd);
+    }
+
+    int addFd(iPollFD* fd) {
+        m_fds.push_back(fd);
+
+        int n = 0;
+        struct kevent kev[2];
+        EV_SET(&kev[n++], fd->fd, EVFILT_READ, EV_ADD | EV_CLEAR | ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+        EV_SET(&kev[n++], fd->fd, EVFILT_WRITE, EV_ADD | EV_CLEAR | ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+
+        return kevent(m_kqfd, kev, n, IX_NULLPTR, 0, IX_NULLPTR);
+    }
+
+    int removeFd(iPollFD* fd) {
+        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
+            if (*it == fd) {
+                m_fds.erase(it);
+                break;
+            }
+        }
+        struct kevent kev[2];
+        int n = 0;
+        EV_SET(&kev[n++], fd->fd, EVFILT_READ, EV_DELETE, 0, 0, fd);
+        EV_SET(&kev[n++], fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, fd);
+        kevent(m_kqfd, kev, n, IX_NULLPTR, 0, IX_NULLPTR);
+        return 0;
+    }
+
+    int updateFd(iPollFD* fd) {
+        int n = 0;
+        struct kevent kev[2];
+        EV_SET(&kev[n++], fd->fd, EVFILT_READ,  EV_CLEAR | ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+        EV_SET(&kev[n++], fd->fd, EVFILT_WRITE, EV_CLEAR | ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+
+        return kevent(m_kqfd, kev, n, IX_NULLPTR, 0, IX_NULLPTR);
+    }
+
+    int wait(xint64 timeout) {
+        // Clear revents for all fds
+        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
+            (*it)->revents = 0;
+        }
+
+        struct timespec ts;
+        struct timespec* pts = IX_NULLPTR;
+        if (timeout >= 0) {
+            ts.tv_sec = timeout / 1000000000;
+            ts.tv_nsec = timeout % 1000000000;
+            pts = &ts;
+        }
+
+        int nfds = kevent(m_kqfd, IX_NULLPTR, 0, m_events.data(), m_events.size(), pts);
+        if (nfds < 0) return -1;
+
+        for (int i=0; i<nfds; ++i) {
+            iPollFD* fd = (iPollFD*)m_events[i].udata;
+            if (!m_events[i].filter && !m_events[i].flags) continue;
+
+            if (EVFILT_READ == m_events[i].filter) {
+                fd->revents |= IX_IO_IN;
+            } else if (EVFILT_WRITE == m_events[i].filter) {
+                fd->revents |= IX_IO_OUT;
+            }
+
+            if (m_events[i].flags & EV_EOF) {
+                fd->revents |= IX_IO_HUP;
+            }
+            if (m_events[i].flags & EV_ERROR) {
+                fd->revents |= IX_IO_ERR;
+            }
+        }
+
+        if (nfds >= (int)m_events.size()) {
+            m_events.resize(m_events.size() + 4);
+        }
+
+        return nfds;
+    }
+
+private:
+    int m_kqfd;
+    std::vector<struct kevent> m_events;
+    std::list<iPollFD*> m_fds;
+};
+#endif
+
+#if defined(IX_OS_LINUX)
+using iPollerImpl = iPollerEpoll;
+#elif defined(IX_OS_MACOS) || defined(IX_OS_FREEBSD) || defined(IX_OS_DARWIN) || defined(IX_OS_BSD4)
+using iPollerImpl = iPollerKqueue;
+#elif defined(IX_OS_WIN)
+using iPollerImpl = iPollerWin32;
+#else
+using iPollerImpl = iPollerPoll;
+#endif
+
+iPoller::iPoller() : m_impl(new iPollerImpl()) {}
+
+iPoller::~iPoller() {
+    delete static_cast<iPollerImpl*>(m_impl);
 }
 
-#endif /* !IX_OS_WIN && !IX_OS_MAC */
+int iPoller::addFd(iPollFD* fd) {
+    return static_cast<iPollerImpl*>(m_impl)->addFd(fd);
+}
+
+int iPoller::removeFd(iPollFD* fd) {
+    return static_cast<iPollerImpl*>(m_impl)->removeFd(fd);
+}
+
+int iPoller::updateFd(iPollFD* fd) {
+    return static_cast<iPollerImpl*>(m_impl)->updateFd(fd);
+}
+
+int iPoller::wait(xint64 timeout) {
+    return static_cast<iPollerImpl*>(m_impl)->wait(timeout);
+}
 
 } // namespace iShell

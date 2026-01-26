@@ -169,6 +169,7 @@ private:
     int m_ignoreNextStatusChange;
     int m_nestedPlaylists;
     bool m_hasStreamPlaybackFeature;
+    bool m_isShuttingDown;
 
     IX_DISABLE_COPY(iMediaPlayer)
 };

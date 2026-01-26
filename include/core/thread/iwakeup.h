@@ -12,6 +12,7 @@
 #define IWAKEUP_H
 
 #include <core/kernel/ipoll.h>
+#include <core/thread/iatomiccounter.h>
 
 namespace iShell {
 
@@ -28,6 +29,7 @@ public:
 
 private:
     xintptr m_fds[2];
+    iAtomicCounter<int> m_signaled;
 
     IX_DISABLE_COPY(iWakeup)
 };
