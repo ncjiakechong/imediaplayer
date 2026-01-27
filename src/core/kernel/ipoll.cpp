@@ -382,14 +382,13 @@ public:
     }
 
     int addFd(iPollFD* fd) {
+        fd->revents = 0;
         m_fds.push_back(fd);
 
-        int n = 0;
         struct kevent kev[2];
-        EV_SET(&kev[n++], fd->fd, EVFILT_READ, EV_ADD | EV_CLEAR | ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-        EV_SET(&kev[n++], fd->fd, EVFILT_WRITE, EV_ADD | EV_CLEAR | ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-
-        return kevent(m_kqfd, kev, n, IX_NULLPTR, 0, IX_NULLPTR);
+        EV_SET(&kev[0], fd->fd, EVFILT_READ, EV_ADD | ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, EV_ADD | ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+        return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
     }
 
     int removeFd(iPollFD* fd) {
@@ -399,25 +398,23 @@ public:
                 break;
             }
         }
+
         struct kevent kev[2];
-        int n = 0;
-        EV_SET(&kev[n++], fd->fd, EVFILT_READ, EV_DELETE, 0, 0, fd);
-        EV_SET(&kev[n++], fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, fd);
-        kevent(m_kqfd, kev, n, IX_NULLPTR, 0, IX_NULLPTR);
+        EV_SET(&kev[0], fd->fd, EVFILT_READ, EV_DELETE, 0, 0, fd);
+        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, EV_DELETE, 0, 0, fd);
+        kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
         return 0;
     }
 
     int updateFd(iPollFD* fd) {
-        int n = 0;
         struct kevent kev[2];
-        EV_SET(&kev[n++], fd->fd, EVFILT_READ,  EV_CLEAR | ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-        EV_SET(&kev[n++], fd->fd, EVFILT_WRITE, EV_CLEAR | ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+        EV_SET(&kev[0], fd->fd, EVFILT_READ, ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
 
-        return kevent(m_kqfd, kev, n, IX_NULLPTR, 0, IX_NULLPTR);
+        return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
     }
 
     int wait(xint64 timeout) {
-        // Clear revents for all fds
         for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
             (*it)->revents = 0;
         }
