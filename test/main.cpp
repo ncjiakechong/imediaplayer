@@ -15,15 +15,22 @@
 #include "core/thread/iwakeup.h"
 #include "core/kernel/ieventsource.h"
 #include "core/thread/ithread.h"
+#include <signal.h>
 
 #define ILOG_TAG "test"
+
+void signalHandler(int signum)
+{
+    iShell::iCoreApplication::instance()->quit();
+}
 
 extern int test_iconvertible(void);
 extern int test_object(void);
 extern int test_ivariant(void);
 extern int test_thread(void);
 extern int test_timer(void);
-extern int test_player(const iShell::iString&, void (*callback)());
+extern int test_player(void (*callback)());
+extern int test_inc_pref(void (*callback)());
 
 class TestCase : public iShell::iObject
 {
@@ -31,7 +38,8 @@ class TestCase : public iShell::iObject
 public:
     TestCase(iObject* parent = IX_NULLPTR) : iObject(parent) { s_testCase = this; }
 
-    static void playFinish() { if (s_testCase) s_testCase->doTestCase(6); };
+    static void playFinish() { if (s_testCase) s_testCase->doTestCase(7); };
+    static void incFinish() { if (s_testCase) s_testCase->doTestCase(6); };
 
     int start() const {
         TestCase* _This = const_cast<TestCase*>(this);
@@ -59,17 +67,16 @@ public:
         case 4:
             test_timer();
             break;
-        #ifdef ITEST_PLAYER
         case 5:
         {
-            std::list<iShell::iString> args = iShell::iCoreApplication::arguments();
-            iShell::iString url;
-            if (args.size() > 1) {
-                std::list<iShell::iString>::iterator tmpIt = args.begin();
-                std::advance(tmpIt, 1);
-                url = *tmpIt;
-            }
-            if (!url.isEmpty() && 0 == test_player(url, &playFinish))
+            if (0 == test_inc_pref(&incFinish))
+                return;
+        }
+            break;
+        #ifdef ITEST_PLAYER
+        case 6:
+        {
+            if (0 == test_player(&playFinish))
                 return;
         }
             break;
@@ -100,6 +107,7 @@ int main(int argc, char **argv)
 {
     ilog_debug(iStringLiteral("test app"));
     iShell::iCoreApplication app(argc, argv);
+    signal(SIGINT, signalHandler);
     TestCase* tstCase = new TestCase;
 
     tstCase->invokeMethod(tstCase, &TestCase::start, iShell::QueuedConnection);

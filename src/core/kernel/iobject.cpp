@@ -78,11 +78,11 @@ void* iMetaCallEvent::arg(_iConnection* conn, void* arg, _iConnection::ArgumentW
     return arguments.data();
 }
 
-iMetaObject::iMetaObject(const char* className, const iMetaObject* supper)
+iMetaObject::iMetaObject(const char* className, const iMetaObject* super)
     : m_propertyCandidate(false)
     , m_propertyInited(false)
     , m_className(className)
-    , m_superdata(supper)
+    , m_superdata(super)
 {
 }
 

@@ -7,7 +7,8 @@ set (Source
     test_iobject.cpp
     test_ivariant.cpp
     test_thread.cpp
-    test_timer.cpp)
+    test_timer.cpp
+    test_inc.cpp)
 
 set (Depend_Libs icore)
 

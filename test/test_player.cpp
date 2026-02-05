@@ -18,11 +18,20 @@
 #include <core/io/iiodevice.h>
 #include <core/kernel/ievent.h>
 #include "core/io/ilog.h"
+#include <vector>
+#include <list>
 
 #define ILOG_TAG "test"
 
 using namespace iShell;
 
+struct PlayerConfig {
+    iString url;
+    int loopCount = 1;           // Default loop 1 time (play once)
+    bool enableVerify = false;   // Enable raw IO verification
+    bool useCustomIO = false;    // Use custom IO device (appsrc://) or default file playback
+    int ioInterval = 10;         // IO check interval in ms
+};
 
 class TestStreamDevice : public iIODevice
 {
@@ -33,10 +42,10 @@ public:
     xint64 m_currPos;
     iString m_filePath;
     // to verify zero copy in iIODevice
-    std::unordered_map<const iMemBlock*, xint64> m_createdBuffer;
+    std::unordered_map<const iMemBlock*, xint64> m_verifiedBuffer;
 
     TestStreamDevice(const iString& path, iObject *parent = IX_NULLPTR)
-        : iIODevice(parent), m_trackIOMem(false), m_fd(0), m_currPos(0), m_filePath(path)
+        : iIODevice(parent), m_trackIOMem(false), m_fd(-1), m_currPos(0), m_filePath(path)
     {}
 
     virtual ~TestStreamDevice()
@@ -110,7 +119,7 @@ public:
         *readLen = ::read(m_fd, buffer.data(), buffer.capacity());
 
         if (m_trackIOMem)
-            m_createdBuffer.insert({buffer.data_ptr().d_ptr(), *readLen});
+            m_verifiedBuffer.insert({buffer.data_ptr().d_ptr(), *readLen});
 
         if (*readLen > 0) {
             m_currPos += *readLen;
@@ -128,12 +137,12 @@ public:
     }
     xint64 writeData(const iByteArray& data) IX_OVERRIDE
     {
-        IX_ASSERT(m_createdBuffer.size() > 0);
-        std::unordered_map<const iMemBlock*, xint64>::iterator it = m_createdBuffer.find(data.data_ptr().d_ptr());
-        IX_ASSERT(it != m_createdBuffer.end());
+        IX_ASSERT(m_verifiedBuffer.size() > 0);
+        std::unordered_map<const iMemBlock*, xint64>::iterator it = m_verifiedBuffer.find(data.data_ptr().d_ptr());
+        IX_ASSERT(it != m_verifiedBuffer.end());
         it->second -= data.length();
         if (it->second <= 0)
-            m_createdBuffer.erase(it);
+            m_verifiedBuffer.erase(it);
 
         return data.length();
     }
@@ -145,12 +154,13 @@ class TestPlayer : public iObject
 {
     IX_OBJECT(TestPlayer)
 public:
-    TestPlayer(iObject* parent = IX_NULLPTR)
+    TestPlayer(const PlayerConfig& config, iObject* parent = IX_NULLPTR)
     : iObject(parent)
-    , m_loopTime(0)
+    , m_config(config)
+    , m_loopCount(0)
     , m_ioTimer(0)
     , m_fileSize(0)
-    , varifyIO(IX_NULLPTR)
+    , verifyIO(IX_NULLPTR)
     , streamDevice(IX_NULLPTR)
     {
         player = new iMediaPlayer(this);
@@ -172,35 +182,36 @@ public:
         if (m_ioTimer != event->timerId())
             return true;
 
-        iByteArray data = varifyIO->read(2048);
+        iByteArray data = verifyIO->read(2048);
         m_fileSize += data.length();
         if (data.isEmpty()) {
-            ilog_debug("player varifyIO filesize: ", m_fileSize);
+            ilog_debug("player verifyIO filesize: ", m_fileSize);
             killTimer(m_ioTimer);
-            varifyIO->close();
+            verifyIO->close();
             m_ioTimer = 0;
             return true;
         }
 
-        varifyIO->write(data);
+        verifyIO->write(data);
         return true;
     }
     void errorEvent(iMediaPlayer::Error errorNum)
     {
-        ilog_warn(": ", errorNum);
+        ilog_warn("MediaPlayer Error: ", errorNum);
     }
 
     void stateChanged(iMediaPlayer::State newState)
     {
-        ilog_debug(newState);
+        ilog_debug("State Changed: ", newState);
         if (newState != iMediaPlayer::StoppedState)
             return;
 
-        if (2 >= m_loopTime) {
-            ++ m_loopTime;
-            ilog_info("player replay times ----", m_loopTime, "----");
-            iObject::invokeMethod(this, &TestPlayer::rePlay, QueuedConnection);
-            return;
+        m_loopCount++;
+        ilog_info("Playback finished. Iteration: ", m_loopCount, "/", m_config.loopCount);
+
+        if (m_loopCount < m_config.loopCount) {
+             iObject::invokeMethod(this, &TestPlayer::rePlay, QueuedConnection);
+             return;
         }
 
         player->stop();
@@ -209,22 +220,36 @@ public:
 
     void positionChanged(xint64 position)
     {
-        ilog_debug(position / 1000.0, "/", player->duration() / 1000.0);
+        if (player->duration() > 0) {
+            ilog_debug(position / 1000.0, "s /", player->duration() / 1000.0, "s");
+        }
     }
 
-    int play(const iString& path) {
-        varifyIO = new TestStreamDevice(path, this);
-        varifyIO->setTrackIOMem(true);
-        varifyIO->open(iIODevice::ReadWrite);
-        m_ioTimer = startTimer(10);
-        m_fileSize = 0;
+    int play() {
+        if (m_config.enableVerify) {
+            verifyIO = new TestStreamDevice(m_config.url, this);
+            verifyIO->setTrackIOMem(true);
+            if (verifyIO->open(iIODevice::ReadWrite)) {
+                m_ioTimer = startTimer(m_config.ioInterval);
+                m_fileSize = 0;
+            } else {
+                 ilog_error("Failed to open file for IO verification: ", m_config.url);
+                 return -1;
+            }
+        }
 
-        streamDevice = new TestStreamDevice(path, this);
-        streamDevice->open(iIODevice::ReadOnly);
-        iObject::connect(streamDevice, &TestStreamDevice::noMoreData, player, &iMediaPlayer::stop);
+        if (m_config.useCustomIO) {
+            streamDevice = new TestStreamDevice(m_config.url, this);
+            if (!streamDevice->open(iIODevice::ReadOnly)) {
+                 ilog_error("Failed to open stream device: ", m_config.url);
+                 return -1;
+            }
+            iObject::connect(streamDevice, &TestStreamDevice::noMoreData, player, &iMediaPlayer::stop);
+            player->setMedia(iUrl("appsrc://"), streamDevice);
+        } else {
+            player->setMedia(iUrl(m_config.url));
+        }
 
-        player->setMedia(iUrl(path));
-        // player->setMedia(iUrl("appsrc://"), streamDevice);
         player->play();
 
         if (iMediaPlayer::StoppedState != player->state())
@@ -234,29 +259,65 @@ public:
     }
 
     void rePlay() {
-        iString path = streamDevice->m_filePath;
-        if (m_loopTime & 1) {
-            streamDevice->close();
-            streamDevice->open(iIODevice::ReadOnly);
-            player->setMedia(iUrl("appsrc://"), streamDevice);
-        } else {
-            player->setMedia(iUrl(path));
+        if (streamDevice) {
+             streamDevice->close();
+             streamDevice->open(iIODevice::ReadOnly);
         }
         player->play();
     }
 
-    int m_loopTime;
+    PlayerConfig m_config;
+    int m_loopCount;
     int m_ioTimer;
-    int m_fileSize;
+    xint64 m_fileSize;
 
-    TestStreamDevice* varifyIO;
+    TestStreamDevice* verifyIO;
     TestStreamDevice* streamDevice;
     iMediaPlayer* player;
 };
 
-int test_player(const iString& path, void (*callback)())
+int test_player(void (*callback)())
 {
-    TestPlayer* player = new TestPlayer();
+    std::list<iShell::iString> argsList = iShell::iCoreApplication::arguments();
+    std::vector<iShell::iString> args(argsList.begin(), argsList.end());
+
+    bool enablePlay = false;
+    PlayerConfig config;
+    config.loopCount = 1; // Default 1 run
+
+    for (size_t i = 1; i < args.size(); ++i) {
+        if (args[i] == "--play") {
+            enablePlay = true;
+            if (i + 1 < args.size() && !args[i+1].startsWith("-")) {
+                config.url = args[++i];
+            }
+        }
+        else if (args[i] == "--loop" && i + 1 < args.size()) {
+            config.loopCount = args[++i].toInt();
+        }
+        else if (args[i] == "--verify") {
+            config.enableVerify = true;
+        }
+        else if (args[i] == "--custom-io") {
+            config.useCustomIO = true;
+        }
+        else if (args[i] == "--interval" && i + 1 < args.size()) {
+            config.ioInterval = args[++i].toInt();
+        }
+    }
+
+    if (!enablePlay) {
+        // Not running this test
+        return -1;
+    }
+
+    if (config.url.isEmpty()) {
+        ilog_info("Usage: imediaplayertest --play <url> [--loop <count>] [--verify] [--custom-io] [--interval <ms>]");
+        ilog_info("Example: imediaplayertest --play /tmp/test.mp4 --loop 5 --verify");
+        return -1;
+    }
+
+    TestPlayer* player = new TestPlayer(config);
     iObject::connect(player, &TestPlayer::destroyed, callback);
-    return player->play(path);
+    return player->play();
 }

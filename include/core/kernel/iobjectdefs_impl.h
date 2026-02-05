@@ -2150,7 +2150,7 @@ _iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2) {
 class IX_CORE_EXPORT iMetaObject
 {
 public:
-    iMetaObject(const char* className, const iMetaObject* supper);
+    iMetaObject(const char* className, const iMetaObject* super);
 
     const char* className() const { return m_className; }
     const iMetaObject *superClass() const { return m_superdata; }

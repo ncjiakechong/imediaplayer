@@ -7,11 +7,14 @@
 #include <gtest/gtest.h>
 #include <iostream>
 #include <cstring>
+#include <core/io/ilog.h>
 #include <core/kernel/icoreapplication.h>
 #include <core/thread/ieventdispatcher_generic.h>
 #ifdef IBUILD_HAVE_GLIB
 #include <core/thread/ieventdispatcher_glib.h>
 #endif
+
+#define ILOG_TAG "UT_Main"
 
 using namespace iShell;
 
@@ -41,18 +44,18 @@ void parseCustomArgs(int argc, char** argv) {
                 g_testKernel = g_testThread = g_testINC = g_testUtils = g_testIO = true;
             }
         } else if (strcmp(argv[i], "--help-modules") == 0) {
-            std::cout << "Available modules:\n"
-                      << "  --module=kernel   : Test EventLoop, EventDispatcher, EventSource\n"
-                      << "  --module=thread   : Test Mutex, Condition, Atomic\n"
-                      << "  --module=inc      : Test INC Protocol, TCP Device\n"
-                      << "  --module=utils    : Test String, ByteArray\n"
-                      << "  --module=io       : Test IODevice, Log\n"
-                      << "  --module=all      : Test all modules (default)\n"
-                      << "\n"
-                      << "You can also use standard gtest filters:\n"
-                      << "  --gtest_filter=TestSuite.TestCase\n"
-                      << "  --gtest_filter=EventLoop*\n"
-                      << "  --gtest_list_tests\n";
+            ilog_info("Available modules:\n"
+                      "  --module=kernel   : Test EventLoop, EventDispatcher, EventSource\n"
+                      "  --module=thread   : Test Mutex, Condition, Atomic\n"
+                      "  --module=inc      : Test INC Protocol, TCP Device\n"
+                      "  --module=utils    : Test String, ByteArray\n"
+                      "  --module=io       : Test IODevice, Log\n"
+                      "  --module=all      : Test all modules (default)\n"
+                      "\n"
+                      "You can also use standard gtest filters:\n"
+                      "  --gtest_filter=TestSuite.TestCase\n"
+                      "  --gtest_filter=EventLoop*\n"
+                      "  --gtest_list_tests\n");
             exit(0);
         }
     }
@@ -67,16 +70,16 @@ void parseCustomArgs(int argc, char** argv) {
 class ModuleEnvironment : public ::testing::Environment {
 public:
     void SetUp() override {
-        std::cout << "==================================================" << std::endl;
-        std::cout << "  imediaplayer Unit Test Suite" << std::endl;
-        std::cout << "==================================================" << std::endl;
-        std::cout << "Enabled Modules:" << std::endl;
-        if (g_testKernel) std::cout << "  - Kernel (EventLoop, EventDispatcher, EventSource)" << std::endl;
-        if (g_testThread) std::cout << "  - Thread (Mutex, Condition, Atomic)" << std::endl;
-        if (g_testINC) std::cout << "  - INC (Protocol, TCP Device)" << std::endl;
-        if (g_testUtils) std::cout << "  - Utils (String, ByteArray)" << std::endl;
-        if (g_testIO) std::cout << "  - IO (IODevice, Log)" << std::endl;
-        std::cout << "==================================================" << std::endl;
+        ilog_info("==================================================");
+        ilog_info("  imediaplayer Unit Test Suite");
+        ilog_info("==================================================");
+        ilog_info("Enabled Modules:");
+        if (g_testKernel) ilog_info("  - Kernel (EventLoop, EventDispatcher, EventSource)");
+        if (g_testThread) ilog_info("  - Thread (Mutex, Condition, Atomic)");
+        if (g_testINC) ilog_info("  - INC (Protocol, TCP Device)");
+        if (g_testUtils) ilog_info("  - Utils (String, ByteArray)");
+        if (g_testIO) ilog_info("  - IO (IODevice, Log)");
+        ilog_info("==================================================");
     }
 };
 
@@ -93,14 +96,14 @@ public:
     iEventDispatcher* doCreateEventDispatcher() const override {
         if (m_useGlib) {
             #ifdef IBUILD_HAVE_GLIB
-            std::cout << "Creating iEventDispatcher_Glib" << std::endl;
+            ilog_info("Creating iEventDispatcher_Glib");
             return new iEventDispatcher_Glib();
             #else
-            std::cout << "GLib not available, falling back to generic" << std::endl;
+            ilog_info("GLib not available, falling back to generic");
             return new iEventDispatcher_generic();
             #endif
         } else {
-            std::cout << "Creating iEventDispatcher_generic" << std::endl;
+            ilog_info("Creating iEventDispatcher_generic");
             return new iEventDispatcher_generic();
         }
     }
