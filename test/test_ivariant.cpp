@@ -195,24 +195,24 @@ int test_ivariant(void)
     IX_ASSERT_X(r == iString("eaeaae"), "iString replace2 error");
 
     str1 = iString("abcabcabc");
-    auto str1_ptr = str1.constData();
-    IX_ASSERT_X(iString(str1).replace(iString(u"ab"), iString(u"xy")) == iString("xycxycxyc"), "iString replace error");
+    const void* str1_ptr = str1.constData();
+    IX_ASSERT_X(iString(str1).replace(iString("ab"), iString("xy")) == iString("xycxycxyc"), "iString replace error");
     IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
     IX_ASSERT_X(iString(str1).replace(iLatin1StringView("ab"), iLatin1StringView("xy")) == iString("xycxycxyc"), "iString replace error");
     IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
-    IX_ASSERT_X(iString(str1).insert(2, iStringView(u"xy")) == iString("abxycabcabc"), "iString insert error");
+    IX_ASSERT_X(iString(str1).insert(2, iLatin1StringView("xy")) == iString("abxycabcabc"), "iString insert error");
     IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
     IX_ASSERT_X(iString(str1).insert(2, iLatin1StringView("xy")) == iString("abxycabcabc"), "iString insert error");
     IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
-    IX_ASSERT_X((str1.indexOf(iStringView(u"bc")) == 1 && str1.lastIndexOf(iStringView(u"ab")) == 6), "iString indexof error");
+    IX_ASSERT_X((str1.indexOf(iLatin1StringView("bc")) == 1 && str1.lastIndexOf(iLatin1StringView("ab")) == 6), "iString indexof error");
     IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
-    IX_ASSERT_X((str1.count(iStringView(u"bc")) == 3 && str1.isLower()), "iString utils function error");
+    IX_ASSERT_X((str1.count(iLatin1StringView("bc")) == 3 && str1.isLower()), "iString utils function error");
     IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
-    IX_ASSERT_X(str1.replace(iString(u"ab"), iString(u"xy")) == iString("xycxycxyc"), "iString replace error");
+    IX_ASSERT_X(str1.replace(iString("ab"), iString("xy")) == iString("xycxycxyc"), "iString replace error");
     IX_ASSERT(str1.constData() == str1_ptr); // make sure str1 is not changed
 
     iByteArray tmp1("abcabcabc");
-    auto tmp1_ptr = tmp1.constData();
+    const char* tmp1_ptr = tmp1.constData();
     IX_ASSERT_X(iByteArray(tmp1).replace(iByteArrayView("ab"), iByteArrayView("xy")) == iByteArray("xycxycxyc"), "iByteArray replace error");
     IX_ASSERT(tmp1.constData() == tmp1_ptr); // make sure str1 is not changed
     IX_ASSERT_X(iByteArray(tmp1).insert(2, iByteArrayView("xy")) == iByteArray("abxycabcabc"), "iByteArray insert error");
@@ -274,7 +274,7 @@ int test_ivariant(void)
     refVar2 += var1;
     IX_ASSERT_X(refVar1 != refVar2, "iString ref error 2");
 
-    iString chinese = iString::fromUtf8("中文输出验证");
+    iString chinese = iString::fromUtf8(iByteArray("中文输出验证"));
     iString chinese2 = iStringLiteral("中文输出验证");
     ilog_debug("Chinese output: ", chinese, " output2:", chinese2);
     IX_ASSERT_X(chinese == chinese2, "utf8 != utf16");

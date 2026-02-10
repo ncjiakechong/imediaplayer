@@ -328,7 +328,7 @@ bool iGstreamerPlayerSession::parsePipeline()
     GError *err = IX_NULLPTR;
     GstElement *pipeline = gst_parse_launch(desc.toLatin1().constData(), &err);
     if (err) {
-        auto errstr = iLatin1StringView(err->message);
+        iString errstr = iString::fromLatin1(iByteArray((const char*)err->message));
         ilog_warn("Error:", desc, ":", errstr);
         IEMIT error(iMediaPlayer::FormatError, errstr);
         g_clear_error(&err);
@@ -351,11 +351,11 @@ bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
     m_pipeline = pipeline;
 
     if (m_renderer) {
-        auto it = gst_bin_iterate_sinks(GST_BIN(pipeline));
+        GstIterator *it = gst_bin_iterate_sinks(GST_BIN(pipeline));
         #if GST_CHECK_VERSION(1,0,0)
         GValue data = { 0, 0 };
         while (gst_iterator_next (it, &data) == GST_ITERATOR_OK) {
-            auto child = static_cast<GstElement*>(g_value_get_object(&data));
+            GstElement* child = static_cast<GstElement*>(g_value_get_object(&data));
         #else
         GstElement *child = IX_NULLPTR;
         while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
@@ -372,11 +372,11 @@ bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
     }
 
     if (m_appSrc) {
-        auto it = gst_bin_iterate_sources(GST_BIN(pipeline));
+        GstIterator *it = gst_bin_iterate_sources(GST_BIN(pipeline));
         #if GST_CHECK_VERSION(1,0,0)
         GValue data = { 0, 0 };
         while (gst_iterator_next (it, &data) == GST_ITERATOR_OK) {
-            auto child = static_cast<GstElement*>(g_value_get_object(&data));
+            GstElement* child = static_cast<GstElement*>(g_value_get_object(&data));
         #else
         GstElement *child = IX_NULLPTR;
         while (gst_iterator_next(it, reinterpret_cast<gpointer *>(&child)) == GST_ITERATOR_OK) {
@@ -484,9 +484,9 @@ iMediaTimeRange iGstreamerPlayerSession::availablePlaybackRanges() const
 
 std::multimap<iString,iVariant> iGstreamerPlayerSession::streamProperties(int streamNumber) const
 {
-    std::list< std::multimap<iString,iVariant> >::const_iterator it = m_streamProperties.cbegin();
+    std::list< std::multimap<iString,iVariant> >::const_iterator it = m_streamProperties.begin();
     std::advance(it, streamNumber);
-    if (it == m_streamProperties.cend())
+    if (it == m_streamProperties.end())
         return std::multimap<iString,iVariant>();
 
     return *it;
@@ -494,9 +494,9 @@ std::multimap<iString,iVariant> iGstreamerPlayerSession::streamProperties(int st
 
 iMediaStreamsControl::StreamType iGstreamerPlayerSession::streamType(int streamNumber)
 {
-    std::list<iMediaStreamsControl::StreamType>::const_iterator it = m_streamTypes.cbegin();
+    std::list<iMediaStreamsControl::StreamType>::const_iterator it = m_streamTypes.begin();
     std::advance(it, streamNumber);
-    if (it == m_streamTypes.cend())
+    if (it == m_streamTypes.end())
         return iMediaStreamsControl::UnknownStream;
 
     return *it;
@@ -523,7 +523,7 @@ int iGstreamerPlayerSession::activeStream(iMediaStreamsControl::StreamType strea
 
     if (streamNumber >= 0) {
         std::multimap<iMediaStreamsControl::StreamType, int>::const_iterator it = m_playbin2StreamOffset.find(streamType);
-        streamNumber += (it != m_playbin2StreamOffset.cend()) ? it->second : 0;
+        streamNumber += (it != m_playbin2StreamOffset.end()) ? it->second : 0;
     }
 
     return streamNumber;
@@ -535,7 +535,7 @@ void iGstreamerPlayerSession::setActiveStream(iMediaStreamsControl::StreamType s
 
     if (streamNumber >= 0) {
         std::multimap<iMediaStreamsControl::StreamType, int>::const_iterator it = m_playbin2StreamOffset.find(streamType);
-        streamNumber -= (it != m_playbin2StreamOffset.cend()) ? it->second : 0;
+        streamNumber -= (it != m_playbin2StreamOffset.end()) ? it->second : 0;
     }
 
     if (m_playbin) {
@@ -1079,8 +1079,8 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
             gst_message_parse_tag(gm, &tag_list);
 
             std::multimap<iByteArray, iVariant> newTags = iGstUtils::gstTagListToMap(tag_list);
-            std::multimap<iByteArray, iVariant>::const_iterator it = newTags.cbegin();
-            for ( ; it != newTags.cend(); ++it)
+            std::multimap<iByteArray, iVariant>::const_iterator it = newTags.begin();
+            for ( ; it != newTags.end(); ++it)
                 m_tags.insert(std::pair<iByteArray, iVariant>(it->first, it->second)); // overwrite existing tags
 
             gst_tag_list_free(tag_list);
@@ -1198,8 +1198,8 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     if (err->domain == GST_STREAM_ERROR && err->code == GST_STREAM_ERROR_CODEC_NOT_FOUND)
                         processInvalidMedia(iMediaPlayer::FormatError, "Cannot play stream of type: <unknown>");
                     else
-                        processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(err->message));
-                    ilog_warn("Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
+                        processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(iByteArray((const char*)err->message)));
+                    ilog_warn("Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(iByteArray((const char*)err->message)));
                     g_error_free(err);
                     g_free(debug);
                 }
@@ -1209,7 +1209,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     GError *err;
                     gchar *debug;
                     gst_message_parse_warning (gm, &err, &debug);
-                    ilog_warn("Warning domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
+                    ilog_warn("Warning domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(iByteArray((const char*)err->message)));
                     g_error_free (err);
                     g_free (debug);
                 }
@@ -1219,7 +1219,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     GError *err;
                     gchar *debug;
                     gst_message_parse_info (gm, &err, &debug);
-                    ilog_info("Info domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
+                    ilog_info("Info domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(iByteArray((const char*)err->message)));
                     g_error_free (err);
                     g_free (debug);
                 }
@@ -1285,21 +1285,21 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                          err->code == GST_RESOURCE_ERROR_READ ||
                          err->code == GST_RESOURCE_ERROR_SEEK ||
                          err->code == GST_RESOURCE_ERROR_SYNC))) {
-                        processInvalidMedia(iMediaPlayer::NetworkError, iString::fromUtf8(err->message));
+                        processInvalidMedia(iMediaPlayer::NetworkError, iString::fromUtf8(iByteArray((const char*)err->message)));
                     } else {
-                        processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(err->message));
+                        processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(iByteArray((const char*)err->message)));
                     }
                 }
                 else
-                    processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(err->message));
+                    processInvalidMedia(iMediaPlayer::ResourceError, iString::fromUtf8(iByteArray((const char*)err->message)));
             } else if (err->domain == GST_STREAM_ERROR
                        && (err->code == GST_STREAM_ERROR_DECRYPT || err->code == GST_STREAM_ERROR_DECRYPT_NOKEY)) {
-                processInvalidMedia(iMediaPlayer::AccessDeniedError, iString::fromUtf8(err->message));
+                processInvalidMedia(iMediaPlayer::AccessDeniedError, iString::fromUtf8(iByteArray((const char*)err->message)));
             } else {
                 handlePlaybin2 = true;
             }
             if (!handlePlaybin2)
-                ilog_warn("Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
+                ilog_warn("Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(iByteArray((const char*)err->message)));
             g_error_free(err);
             g_free(debug);
         } else if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_ELEMENT
@@ -1323,7 +1323,7 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                     IEMIT error(int(iMediaPlayer::FormatError), "Cannot play stream of type: <unknown>");
                 // GStreamer shows warning for HTTP playlists
                 if (err && err->message)
-                    ilog_warn("Warning domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
+                    ilog_warn("Warning domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(iByteArray((const char*)err->message)));
                 g_error_free(err);
                 g_free(debug);
             } else if (GST_MESSAGE_TYPE(gm) == GST_MESSAGE_ERROR) {
@@ -1338,9 +1338,9 @@ bool iGstreamerPlayerSession::processBusMessage(const iGstreamerMessage &message
                                || err->code == GST_STREAM_ERROR_DECRYPT_NOKEY)) {
                     qerror = iMediaPlayer::AccessDeniedError;
                 }
-                processInvalidMedia(qerror, iString::fromUtf8(err->message));
+                processInvalidMedia(qerror, iString::fromUtf8(iByteArray((const char*)err->message)));
                 if (err && err->message)
-                    ilog_warn("Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(err->message));
+                    ilog_warn("Error domain:", err->domain, " code:", err->code, " msg: ", iString::fromUtf8(iByteArray((const char*)err->message)));
 
                 g_error_free(err);
                 g_free(debug);
@@ -1393,14 +1393,14 @@ void iGstreamerPlayerSession::getStreamsInfo()
 
     //for (int i=0; i<m_streamTypes.size(); i++) {
     int idx = 0;
-    std::list<iMediaStreamsControl::StreamType>::const_iterator it = m_streamTypes.cbegin();
-    for (idx = 0, it = m_streamTypes.cbegin(); it != m_streamTypes.cend(); ++it, ++idx) {
+    std::list<iMediaStreamsControl::StreamType>::const_iterator it = m_streamTypes.begin();
+    for (idx = 0, it = m_streamTypes.begin(); it != m_streamTypes.end(); ++it, ++idx) {
         iMediaStreamsControl::StreamType streamType = *it;
         std::multimap<iString, iVariant> streamProperties;
 
         int streamIndex = idx;
         std::multimap<iMediaStreamsControl::StreamType, int>::const_iterator offsetIt = m_playbin2StreamOffset.find(streamType);
-        if (offsetIt != m_playbin2StreamOffset.cend())
+        if (offsetIt != m_playbin2StreamOffset.end())
             streamIndex = idx - offsetIt->second;
 
         GstTagList *tags = IX_NULLPTR;
@@ -1424,7 +1424,7 @@ void iGstreamerPlayerSession::getStreamsInfo()
         #endif
             gchar *languageCode = IX_NULLPTR;
             if (gst_tag_list_get_string(tags, GST_TAG_LANGUAGE_CODE, &languageCode))
-                streamProperties.insert(std::pair<iString, iVariant>("Language", iString::fromUtf8(languageCode)));
+                streamProperties.insert(std::pair<iString, iVariant>("Language", iString::fromUtf8(iByteArray((const char*)languageCode))));
 
 
             //ilog_debug("language for setream", i << iString::fromUtf8(languageCode);
@@ -1486,12 +1486,12 @@ void iGstreamerPlayerSession::updateVideoResolutionTag()
 
     if (currentSize != size || currentAspectRatio != aspectRatio) {
         if (aspectRatio.isEmpty()) {
-           std::multimap<iByteArray, iVariant>::const_iterator it = m_tags.find("pixel-aspect-ratio");
+           std::multimap<iByteArray, iVariant>::iterator it = m_tags.find("pixel-aspect-ratio");
            m_tags.erase(it);
         }
 
         if (size.isEmpty()) {
-            std::multimap<iByteArray, iVariant>::const_iterator it = m_tags.find("resolution");
+            std::multimap<iByteArray, iVariant>::iterator it = m_tags.find("resolution");
             m_tags.erase(it);
         } else {
             m_tags.insert(std::pair<iByteArray, iVariant>("resolution", iVariant(size)));

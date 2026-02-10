@@ -313,8 +313,8 @@ TEST(IEndianTest, LEIntegerShift) {
 }
 
 TEST(IEndianTest, LEIntegerMaxMin) {
-    xuint16_le maxVal = xuint16_le::max();
-    xuint16_le minVal = xuint16_le::min();
+    xuint16_le maxVal(xuint16_le::max());
+    xuint16_le minVal(xuint16_le::min());
 
     EXPECT_EQ(static_cast<xuint16>(maxVal), std::numeric_limits<xuint16>::max());
     EXPECT_EQ(static_cast<xuint16>(minVal), std::numeric_limits<xuint16>::min());
@@ -343,8 +343,8 @@ TEST(IEndianTest, BEIntegerComparison) {
 }
 
 TEST(IEndianTest, BEIntegerMaxMin) {
-    xuint16_be maxVal = xuint16_be::max();
-    xuint16_be minVal = xuint16_be::min();
+    xuint16_be maxVal(xuint16_be::max());
+    xuint16_be minVal(xuint16_be::min());
 
     EXPECT_EQ(static_cast<xuint16>(maxVal), std::numeric_limits<xuint16>::max());
     EXPECT_EQ(static_cast<xuint16>(minVal), std::numeric_limits<xuint16>::min());

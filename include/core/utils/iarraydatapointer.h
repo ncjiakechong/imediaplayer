@@ -40,10 +40,10 @@ public:
     static iArrayDataPointer fromRawData(const T *rawData, xsizetype length, iFreeCb freeCb, void* freeCbData) {
         IX_ASSERT(rawData || !length);
         if (length <= 0)
-            return { IX_NULLPTR, const_cast<T *>(rawData), length };
+            return iArrayDataPointer(IX_NULLPTR, const_cast<T *>(rawData), length);
 
         Data* d = Data::fromRawData(const_cast<T *>(rawData), length, freeCb, freeCbData);
-        return { d, const_cast<T *>(rawData), length };
+        return iArrayDataPointer(d, const_cast<T *>(rawData), length);
     }
 
     iArrayDataPointer &operator=(const iArrayDataPointer &other) {
@@ -164,7 +164,7 @@ public:
     */
     void reallocateAndGrow(typename Data::ArrayOptions where, xsizetype n, iArrayDataPointer *old = IX_NULLPTR)
     {
-        if (iTypeInfo<T>::isRelocatable && alignof(T) <= alignof(std::max_align_t)) {
+        if (iTypeInfo<T>::isRelocatable /* && alignof(T) <= alignof(std::max_align_t) */) {
             if ((where & Data::GrowsForward) && !old && !needsDetach() && n > 0) {
                 this->reallocate(allocatedCapacity() - freeSpaceAtEnd() + n, Data::GrowsForward); // fast path
                 return;

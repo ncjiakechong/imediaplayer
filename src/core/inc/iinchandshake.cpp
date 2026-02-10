@@ -74,8 +74,8 @@ bool iINCHandshake::deserializeHandshakeData(const iByteArray& bytes, iINCHandsh
 iINCHandshake::iINCHandshake(Role role)
     : m_role(role)
     , m_state(STATE_IDLE)
-    , m_contextConfig(nullptr)
-    , m_serverConfig(nullptr)
+    , m_contextConfig(IX_NULLPTR)
+    , m_serverConfig(IX_NULLPTR)
 {
     // Generate unique node ID using PID + timestamp
     m_localData.nodeId = iString::asprintf("node_%lld_%lld",

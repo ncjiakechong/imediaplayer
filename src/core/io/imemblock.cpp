@@ -128,8 +128,11 @@ static xsizetype __calculateBlockSize(size_t elementCount, size_t elementSize, s
 {
     IX_ASSERT(elementSize);
     size_t bytes;
-    if (mul_overflow(elementSize, elementCount, &bytes) || add_overflow(bytes, headerSize, &bytes))
-        return -1;
+    
+    if (elementCount && elementSize > (size_t)-1 / elementCount) return -1;
+    bytes = elementCount * elementSize;
+    if (bytes > (size_t)-1 - headerSize) return -1;
+    bytes += headerSize;
 
     if (xsizetype(bytes) < 0)
         return -1;
@@ -183,9 +186,10 @@ static inline xsizetype reserveExtraBytes(xsizetype allocSize)
     if (allocSize < 0)
         return -1;
 
-    if (add_overflow(allocSize, extra, &allocSize))
+    if ((size_t)allocSize > (size_t)-1 - extra || xsizetype((size_t)allocSize + extra) < 0)
         return -1;
 
+    allocSize += extra;
     return allocSize;
 }
 
@@ -319,7 +323,7 @@ void* iMemBlock::dataStart(iMemBlock* block, size_t alignment)
     return reinterpret_cast<void*>((xuintptr(block->m_data.load()) + alignment - 1) & ~(alignment - 1));
 }
 
-class alignas(std::max_align_t) AlignedMemBlock : public iMemBlock
+class AlignedMemBlock : public iMemBlock
 {};
 
 iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t elementSize, size_t alignment, ArrayOptions options)
@@ -717,7 +721,7 @@ iMemPool::iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint
     , m_isRemoteWritable(false)
     , m_blockSize(block_size)
     , m_nBlocks(n_blocks)
-    , m_name{}
+    , m_name()
     , m_memory(memory)
     , m_imports(IX_NULLPTR)
     , m_exports(IX_NULLPTR)
@@ -1011,7 +1015,7 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, int memfd_fd,
     IX_ASSERT((type == MEMTYPE_SHARED_POSIX) || (type == MEMTYPE_SHARED_MEMFD));
 
     iScopedLock<iMutex> _lock(m_mutex);
-    std::unordered_map<uint, iMemBlock*>::iterator bit = m_blocks.find(blockId);
+    BlockMap::iterator bit = m_blocks.find(blockId);
     if (bit != m_blocks.end()) {
         bit->second->ref();
         return bit->second;
@@ -1021,7 +1025,7 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, int memfd_fd,
         return IX_NULLPTR;
 
     iMemImportSegment* seg = IX_NULLPTR;
-    std::unordered_map<uint, iMemImportSegment*>::iterator sit = m_segments.find(shmId);
+    SegmentMap::iterator sit = m_segments.find(shmId);
     if (sit == m_segments.end()) {
         if (type == MEMTYPE_SHARED_MEMFD && -1 == memfd_fd) {
             ilog_warn("Bailing out! No cached memimport segment for memfd ID ", shmId);
@@ -1062,7 +1066,7 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, int memfd_fd,
 int iMemImport::processRevoke(uint blockId)
 {
     iScopedLock<iMutex> _lock(m_mutex);
-    std::unordered_map<uint, iMemBlock*>::iterator bit = m_blocks.find(blockId);
+    BlockMap::iterator bit = m_blocks.find(blockId);
     if (bit == m_blocks.end())
         return -1;
 

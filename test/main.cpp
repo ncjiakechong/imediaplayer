@@ -83,8 +83,8 @@ public:
         #endif
         default:
             // test invokeMethod
-            invokeMethod(this, &TestCase::setParent, IX_NULLPTR);
-            invokeMethod(this, &iObject::setParent, IX_NULLPTR);
+            invokeMethod(this, &TestCase::setParent, static_cast<iObject*>(IX_NULLPTR));
+            invokeMethod(this, &iObject::setParent, static_cast<iObject*>(IX_NULLPTR));
 
             ilog_warn("all test completed!!!");
             iShell::iCoreApplication::quit();

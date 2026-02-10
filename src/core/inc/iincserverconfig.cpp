@@ -16,6 +16,27 @@
 namespace iShell {
 
 iINCServerConfig::iINCServerConfig()
+    : m_versionPolicy(Compatible)
+    , m_protocolVersionCurrent(1)
+    , m_protocolVersionMin(1)
+    , m_protocolVersionMax(1)
+    , m_maxConnections(100)
+    , m_maxConnectionsPerClient(10)
+    , m_disableSharedMemory(false)
+    #ifdef __ANDROID__
+    , m_sharedMemoryType(MEMTYPE_SHARED_MEMFD | MEMTYPE_PRIVATE)
+    #else
+    , m_sharedMemoryType(MEMTYPE_SHARED_POSIX | MEMTYPE_PRIVATE)
+    #endif
+    , m_sharedMemorySize(4 * 1024 * 1024)
+    , m_sharedMemoryName("ix-shm")
+    , m_encryptionRequirement(Optional)
+    , m_clientTimeoutMs(60000)
+    , m_exitIdleTimeMs(-1)
+    , m_protocolTimeoutMs(500)
+    , m_highPriority(false)
+    , m_niceLevel(-11)
+    , m_enableIOThread(true)
 {
 }
 

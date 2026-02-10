@@ -29,7 +29,7 @@
 
 namespace iShell {
 
-enum xchar8_t : uchar {};
+typedef uchar xchar8_t;
 
 struct iLatin1
 {
@@ -64,16 +64,10 @@ struct iUtf8BaseTraits
     static void appendByte(uchar *&ptr, uchar b)
     { *ptr++ = b; }
 
-    static void appendByte(xchar8_t *&ptr, xchar8_t b)
-    { *ptr++ = b; }
-
     static uchar peekByte(const char *ptr, xsizetype n = 0)
     { return ptr[n]; }
 
     static uchar peekByte(const uchar *ptr, xsizetype n = 0)
-    { return ptr[n]; }
-
-    static uchar peekByte(const xchar8_t *ptr, xsizetype n = 0)
     { return ptr[n]; }
 
     static xptrdiff availableBytes(const char *ptr, const char *end)
@@ -82,16 +76,10 @@ struct iUtf8BaseTraits
     static xptrdiff availableBytes(const uchar *ptr, const uchar *end)
     { return end - ptr; }
 
-    static xptrdiff availableBytes(const xchar8_t *ptr, const xchar8_t *end)
-    { return end - ptr; }
-
     static void advanceByte(const char *&ptr, xsizetype n = 1)
     { ptr += n; }
 
     static void advanceByte(const uchar *&ptr, xsizetype n = 1)
-    { ptr += n; }
-
-    static void advanceByte(const xchar8_t *&ptr, xsizetype n = 1)
     { ptr += n; }
 
     static void appendUtf16(xuint16 *&ptr, xuint16 uc)
@@ -333,9 +321,9 @@ struct iUtf8
 
 private:
     template <typename OnErrorLambda>
-    static char* convertFromUnicode(char *out, iStringView in, OnErrorLambda &&onError);
+    static char* convertFromUnicode(char *out, iStringView in, OnErrorLambda onError);
     template <typename OnErrorLambda>
-    static xuint16* convertToUnicode(xuint16 *dst, iByteArrayView in, OnErrorLambda &&onError);
+    static xuint16* convertToUnicode(xuint16 *dst, iByteArrayView in, OnErrorLambda onError);
 };
 
 struct iUtf16

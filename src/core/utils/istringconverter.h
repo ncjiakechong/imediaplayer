@@ -25,7 +25,7 @@ public:
     iStringEncoder()
         : iStringConverter()
     {}
-    explicit iStringEncoder(Encoding encoding, Flags flags = Flag::Default)
+    explicit iStringEncoder(Encoding encoding, Flags flags = Default)
         : iStringConverter(encoding, flags)
     {}
 
@@ -34,18 +34,19 @@ public:
     {
         iStringEncoder *encoder;
         T data;
+        DecodedData(iStringEncoder *e, T d) : encoder(e), data(d) {}
         operator iByteArray() const { return encoder->encodeAsByteArray(data); }
     };
 
     DecodedData<const iString &> operator()(const iString &str)
-    { return DecodedData<const iString &>{this, str}; }
+    { return DecodedData<const iString &>(this, str); }
     DecodedData<iStringView> operator()(iStringView in)
-    { return DecodedData<iStringView>{this, in}; }
+    { return DecodedData<iStringView>(this, in); }
 
     DecodedData<const iString &> encode(const iString &str)
-    { return DecodedData<const iString &>{this, str}; }
+    { return DecodedData<const iString &>(this, str); }
     DecodedData<iStringView> encode(iStringView in)
-    { return DecodedData<iStringView>{this, in}; }
+    { return DecodedData<iStringView>(this, in); }
 
     xsizetype requiredSpace(xsizetype inputLength) const
     { return iface ? iface->fromUtf16Len(inputLength) : 0; }
@@ -58,7 +59,7 @@ public:
         return iface->fromUtf16(out, in, &state);
     }
 
-    using FinalizeResult = FinalizeResultChar<char>;
+    typedef FinalizeResultChar<char> FinalizeResult;
 
     IX_CORE_EXPORT FinalizeResult finalize(char *out, xsizetype maxlen);
 
@@ -70,7 +71,7 @@ private:
         if (!iface) {
             // ensure that hasError returns true
             state.invalidChars = 1;
-            return {};
+            return iByteArray();
         }
         iByteArray result(iface->fromUtf16Len(in.size()), iShell::Uninitialized);
         char *out = result.data();
@@ -88,7 +89,7 @@ protected:
         : iStringConverter(i)
     {}
 public:
-    explicit iStringDecoder(Encoding encoding, Flags flags = Flag::Default)
+    explicit iStringDecoder(Encoding encoding, Flags flags = Default)
         : iStringConverter(encoding, flags)
     {}
     iStringDecoder()
@@ -100,18 +101,19 @@ public:
     {
         iStringDecoder *decoder;
         T data;
+        EncodedData(iStringDecoder *d, T da) : decoder(d), data(da) {}
         operator iString() const { return decoder->decodeAsString(data); }
     };
 
     EncodedData<const iByteArray &> operator()(const iByteArray &ba)
-    { return EncodedData<const iByteArray &>{this, ba}; }
+    { return EncodedData<const iByteArray &>(this, ba); }
     EncodedData<iByteArrayView> operator()(iByteArrayView ba)
-    { return EncodedData<iByteArrayView>{this, ba}; }
+    { return EncodedData<iByteArrayView>(this, ba); }
 
     EncodedData<const iByteArray &> decode(const iByteArray &ba)
-    { return EncodedData<const iByteArray &>{this, ba}; }
+    { return EncodedData<const iByteArray &>(this, ba); }
     EncodedData<iByteArrayView> decode(iByteArrayView ba)
-    { return EncodedData<iByteArrayView>{this, ba}; }
+    { return EncodedData<iByteArrayView>(this, ba); }
 
     xsizetype requiredSpace(xsizetype inputLength) const
     { return iface ? iface->toUtf16Len(inputLength) : 0; }
@@ -127,12 +129,12 @@ public:
     { return reinterpret_cast<xuint16 *>(appendToBuffer(reinterpret_cast<iChar *>(out), ba)); }
 
 
-    using FinalizeResult = FinalizeResultChar<xuint16>;
-    using FinalizeResultiChar = FinalizeResultChar<iChar>;
+    typedef FinalizeResultChar<xuint16> FinalizeResult;
+    typedef FinalizeResultChar<iChar> FinalizeResultiChar;
     FinalizeResultiChar finalize(iChar *out, xsizetype maxlen)
     {
-        auto r = finalize(reinterpret_cast<xuint16 *>(out), maxlen);
-        FinalizeResultiChar result = {};
+        FinalizeResult r = finalize(reinterpret_cast<xuint16 *>(out), maxlen);
+        FinalizeResultiChar result;
         result.next= reinterpret_cast<iChar *>(r.next);
         result.invalidChars = r.invalidChars;
         result.error = r.error;
@@ -154,7 +156,7 @@ private:
         if (!iface) {
             // ensure that hasError returns true
             state.invalidChars = 1;
-            return {};
+            return iString();
         }
         iString result(iface->toUtf16Len(in.size()), iShell::Uninitialized);
         const iChar *out = iface->toUtf16(result.data(), in, &state);

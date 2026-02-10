@@ -1316,15 +1316,15 @@ iChar::UnicodeVersion iChar::currentUnicodeVersion()
 template <typename T>
 static inline T convertCase_helper(T uc, iUnicodeTables::Case which)
 {
-    const auto fold = iUnicodeTables::properties(uc)->cases[which];
+    const iUnicodeTables::Properties* props = iUnicodeTables::properties(uc);
 
-    if (fold.special) {
-        const ushort *specialCase = iUnicodeTables::specialCaseMap + fold.diff;
+    if (props->cases[which].special) {
+        const ushort *specialCase = iUnicodeTables::specialCaseMap + props->cases[which].diff;
         // so far, there are no special cases beyond BMP (guaranteed by the unicodetables generator)
         return *specialCase == 1 ? specialCase[1] : uc;
     }
 
-    return uc + fold.diff;
+    return uc + props->cases[which].diff;
 }
 
 /*!
@@ -1688,8 +1688,11 @@ void composeHelper(iString *str, iChar::UnicodeVersion version, xsizetype from)
                 iChar *d = s.data();
                 // ligatureHelper() never changes planes
                 xsizetype j = 0;
-                for (iChar ch : iChar::fromUcs4(ligature))
-                    d[starter + j++] = ch;
+                iString ligStr = iChar::fromUcs4(ligature);
+                for (int m = 0; m < ligStr.length(); ++m) {
+                   iChar ch = ligStr.at(m);
+                   d[starter + j++] = ch;
+                }
                 s.remove(i, j);
                 continue;
             }
@@ -1759,10 +1762,14 @@ void canonicalOrderHelper(iString *str, iChar::UnicodeVersion version, xsizetype
             iChar *uc = s.data();
             xsizetype p = pos;
             // exchange characters
-            for (iChar ch : iChar::fromUcs4(u2))
-                uc[p++] = ch;
-            for (iChar ch : iChar::fromUcs4(u1))
-                uc[p++] = ch;
+            {
+               iString s2 = iChar::fromUcs4(u2);
+               for (int k = 0; k < s2.length(); ++k) uc[p++] = s2.at(k);
+            }
+            {
+               iString s1 = iChar::fromUcs4(u1);
+               for (int k = 0; k < s1.length(); ++k) uc[p++] = s1.at(k);
+            }
             if (pos > 0)
                 --pos;
             if (pos > 0 && s.at(pos).isLowSurrogate())
@@ -1796,7 +1803,7 @@ bool normalizationQuickCheckHelper(iString *str, iString::NormalizationForm mode
 
     enum { NFQC_YES = 0, NFQC_NO = 1, NFQC_MAYBE = 3 };
 
-    const auto *string = reinterpret_cast<const xuint16 *>(str->constData());
+    const xuint16 *string = reinterpret_cast<const xuint16 *>(str->constData());
     xsizetype length = str->size();
 
     // this avoids one out of bounds check in the loop

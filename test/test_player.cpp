@@ -18,6 +18,7 @@
 #include <core/io/iiodevice.h>
 #include <core/kernel/ievent.h>
 #include "core/io/ilog.h"
+#include <map>
 #include <vector>
 #include <list>
 
@@ -27,10 +28,12 @@ using namespace iShell;
 
 struct PlayerConfig {
     iString url;
-    int loopCount = 1;           // Default loop 1 time (play once)
-    bool enableVerify = false;   // Enable raw IO verification
-    bool useCustomIO = false;    // Use custom IO device (appsrc://) or default file playback
-    int ioInterval = 10;         // IO check interval in ms
+    int loopCount;           // Default loop 1 time (play once)
+    bool enableVerify;   // Enable raw IO verification
+    bool useCustomIO;    // Use custom IO device (appsrc://) or default file playback
+    int ioInterval;         // IO check interval in ms
+
+    PlayerConfig() : loopCount(1), enableVerify(false), useCustomIO(false), ioInterval(10) {}
 };
 
 class TestStreamDevice : public iIODevice
@@ -42,7 +45,7 @@ public:
     xint64 m_currPos;
     iString m_filePath;
     // to verify zero copy in iIODevice
-    std::unordered_map<const iMemBlock*, xint64> m_verifiedBuffer;
+    std::map<const iMemBlock*, xint64> m_verifiedBuffer;
 
     TestStreamDevice(const iString& path, iObject *parent = IX_NULLPTR)
         : iIODevice(parent), m_trackIOMem(false), m_fd(-1), m_currPos(0), m_filePath(path)
@@ -119,7 +122,7 @@ public:
         *readLen = ::read(m_fd, buffer.data(), buffer.capacity());
 
         if (m_trackIOMem)
-            m_verifiedBuffer.insert({buffer.data_ptr().d_ptr(), *readLen});
+            m_verifiedBuffer.insert(std::make_pair(buffer.data_ptr().d_ptr(), *readLen));
 
         if (*readLen > 0) {
             m_currPos += *readLen;
@@ -138,7 +141,7 @@ public:
     xint64 writeData(const iByteArray& data) IX_OVERRIDE
     {
         IX_ASSERT(m_verifiedBuffer.size() > 0);
-        std::unordered_map<const iMemBlock*, xint64>::iterator it = m_verifiedBuffer.find(data.data_ptr().d_ptr());
+        std::map<const iMemBlock*, xint64>::iterator it = m_verifiedBuffer.find(data.data_ptr().d_ptr());
         IX_ASSERT(it != m_verifiedBuffer.end());
         it->second -= data.length();
         if (it->second <= 0)

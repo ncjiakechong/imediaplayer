@@ -119,7 +119,7 @@ iEventDispatcher_generic::~iEventDispatcher_generic()
     m_postSource->deref();
     m_postSource = IX_NULLPTR;
 
-    std::map<int, std::list<iEventSource*>>::iterator mapIt;
+    std::map<int, std::list<iEventSource*> >::iterator mapIt;
     for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
         std::list<iEventSource*>& list = mapIt->second;
 
@@ -222,11 +222,11 @@ int iEventDispatcher_generic::addEventSource(iEventSource* source)
         return -1;
     }
 
-    std::map<int, std::list<iEventSource*>>::iterator it;
+    std::map<int, std::list<iEventSource*> >::iterator it;
     it = m_sources.find(source->priority());
     if (it == m_sources.end()) {
         std::list<iEventSource*> item;
-        m_sources.insert(std::pair<int, std::list<iEventSource*>>(source->priority(), item));
+        m_sources.insert(std::pair<int, std::list<iEventSource*> >(source->priority(), item));
         it = m_sources.find(source->priority());
     }
 
@@ -244,7 +244,7 @@ int iEventDispatcher_generic::removeEventSource(iEventSource* source)
         return -1;
     }
 
-    std::map<int, std::list<iEventSource*>>::iterator it;
+    std::map<int, std::list<iEventSource*> >::iterator it;
     it = m_sources.find(source->priority());
     if (it == m_sources.end()) {
         return -1;
@@ -304,14 +304,14 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
     int n_ready = 0;
     int current_priority = std::numeric_limits<int>::max();
 
-    std::map<int, std::list<iEventSource*>>::const_iterator mapIt;
-    for (mapIt = m_sources.cbegin(); mapIt != m_sources.cend(); ++mapIt) {
+    std::map<int, std::list<iEventSource*> >::const_iterator mapIt;
+    for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
         const std::list<iEventSource*>& list = mapIt->second;
         xint64 sourceTimeout = -1;
 
         bool iterBreak = false;
         std::list<iEventSource*>::const_iterator listIt;
-        for (listIt = list.cbegin(); listIt != list.cend(); ++listIt) {
+        for (listIt = list.begin(); listIt != list.end(); ++listIt) {
             iEventSource* source = *listIt;
             bool result = false;
             if ((n_ready > 0) && (source->priority() > current_priority)) {
@@ -371,12 +371,12 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, std::vector<iEventSo
     }
 
     int n_ready = 0;
-    std::map<int, std::list<iEventSource*>>::const_iterator mapIt;
-    for (mapIt = m_sources.cbegin(); mapIt != m_sources.cend(); ++mapIt) {
+    std::map<int, std::list<iEventSource*> >::const_iterator mapIt;
+    for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
         const std::list<iEventSource*>& list = mapIt->second;
         bool iterBreak = false;
         std::list<iEventSource*>::const_iterator listIt;
-        for (listIt = list.cbegin(); listIt != list.cend(); ++listIt) {
+        for (listIt = list.begin(); listIt != list.end(); ++listIt) {
             iEventSource* source = *listIt;
             bool result = false;
             if ((n_ready > 0) && (source->priority() > max_priority)) {
@@ -416,7 +416,7 @@ void iEventDispatcher_generic::eventDispatch(std::vector<iEventSource *>* pendin
     IX_ASSERT(pendingDispatches);
     std::vector<iEventSource*>::const_iterator it;
 
-    for (it = pendingDispatches->cbegin(); it != pendingDispatches->cend(); ++it) {
+    for (it = pendingDispatches->begin(); it != pendingDispatches->end(); ++it) {
         bool need_deattch = false;
         iEventSource* source = *it;
 

@@ -15,8 +15,11 @@
 #ifndef IINCPROTOCOL_H
 #define IINCPROTOCOL_H
 
+#include <map>
 #include <queue>
+#if __cplusplus >= 201103L
 #include <unordered_map>
+#endif
 
 #include <core/io/imemblock.h>
 #include <core/kernel/iobject.h>
@@ -96,6 +99,10 @@ private:
 
     /// Process received binary data message
     void processBinaryDataMessage(const iINCMessage& msg);
+    
+    bool processDirectBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, xint64& pos);
+    bool processSHMBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, xint64& pos);
+
     static void operationNotifier(iINCOperation* op, bool deleter, void* userData);
 
     iINCDevice*             m_device;
@@ -116,10 +123,15 @@ private:
     iMemImport*             m_memImport;
 
     // Operation tracking (centralized in protocol layer) with custom allocator
+    #if __cplusplus >= 201103L
     typedef std::unordered_map<xuint32, iINCOperation*, 
-                               std::hash<xuint32>, 
-                               std::equal_to<xuint32>,
-                               iCacheAllocator<std::pair<const xuint32, iINCOperation*>>> OperationsMap;
+                     std::hash<xuint32>,
+                     std::equal_to<xuint32>,
+                     iCacheAllocator<std::pair<const xuint32, iINCOperation*> > > OperationsMap;
+    #else
+    typedef std::map<xuint32, iINCOperation*, 
+                     std::less<xuint32> > OperationsMap;
+    #endif
     OperationsMap               m_operations;  ///< Maps seqNum -> operation (uses lock-free pool)
     iSharedDataPointer<iINCOperationPool> m_opPool;
 

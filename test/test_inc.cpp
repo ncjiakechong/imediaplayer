@@ -15,13 +15,13 @@
 #include <core/kernel/icoreapplication.h>
 #include <core/kernel/itimer.h>
 #include <core/kernel/ideadlinetimer.h>
+#include <core/thread/iatomiccounter.h>
 #include <core/io/ilog.h>
 #include <core/io/imemblock.h>
 #include <cstdlib>
 #include <vector>
 #include <list>
 #include <map>
-#include <atomic>
 #include <utility>
 
 #define ILOG_TAG "test"
@@ -29,11 +29,18 @@
 using namespace iShell;
 
 struct PerfOptions {
-    xint32 payloadBytes = 63 * 1024;
-    xint32 inflightPerClient = 3;
-    xint32 logIntervalMs = 10000;
-    xint32 opTimeoutMs = 50;
-    bool enableChecksum = true;
+    PerfOptions()
+        : payloadBytes(63 * 1024)
+        , inflightPerClient(3)
+        , logIntervalMs(10000)
+        , opTimeoutMs(50)
+        , enableChecksum(true)
+    {}
+    xint32 payloadBytes;
+    xint32 inflightPerClient;
+    xint32 logIntervalMs;
+    xint32 opTimeoutMs;
+    bool enableChecksum;
 };
 
 
@@ -71,6 +78,7 @@ class StreamServer : public iINCServer
     IX_OBJECT(StreamServer)
 public:
     struct ClientInfo {
+        ClientInfo(iINCConnection* c = IX_NULLPTR, xuint32 id = 0, xint32 p = 0) : conn(c), channelId(id), pendingOps(p) {}
         iINCConnection* conn;
         xuint32 channelId;
         xint32 pendingOps;  // Track pending operations
@@ -79,7 +87,7 @@ public:
     struct SharedPacket {
         iByteArray data;
         xint64 checksum;
-        std::atomic<int> pending;
+        iAtomicCounter<int> pending;
         SharedPacket(const iByteArray& d, xint64 c)
             : data(d)
             , checksum(c)
@@ -89,34 +97,37 @@ public:
         SharedPacket(const SharedPacket& other)
             : data(other.data)
             , checksum(other.checksum)
-            , pending(other.pending.load())
+            , pending(other.pending.value())
         {
         }
         SharedPacket& operator=(const SharedPacket& other) {
             if (this != &other) {
                 data = other.data;
                 checksum = other.checksum;
-                pending.store(other.pending.load());
+                pending = other.pending.value();
             }
             return *this;
         }
+#if __cplusplus >= 201103L
         SharedPacket(SharedPacket&& other) noexcept
             : data(std::move(other.data))
             , checksum(other.checksum)
-            , pending(other.pending.load())
+            , pending(other.pending.value())
         {
         }
         SharedPacket& operator=(SharedPacket&& other) noexcept {
             if (this != &other) {
                 data = std::move(other.data);
                 checksum = other.checksum;
-                pending.store(other.pending.load());
+                pending = other.pending.value();
             }
             return *this;
         }
+#endif
     };
 
     struct CallbackContext {
+        CallbackContext(StreamServer* s, iINCConnection* c, xuint32 id, SharedPacket* p) : server(s), conn(c), channelId(id), packet(p) {}
         StreamServer* server;
         iINCConnection* conn;
         xuint32 channelId;
@@ -156,8 +167,8 @@ public:
         int waitCount = 0;
         while (waitCount < 500) {
             xint32 totalPending = 0;
-            for (const auto& client : m_clients) {
-                totalPending += client.pendingOps;
+            for (std::list<ClientInfo>::const_iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
+                totalPending += it->pendingOps;
             }
             if (totalPending == 0) {
                 break;
@@ -201,7 +212,7 @@ protected:
     }
 
 private:
-    std::atomic<bool> m_closing;
+    volatile bool m_closing;
 
     void onClientConnected(iINCConnection* connection) {
         ilog_info("[Server] Client connected: ", connection->peerAddress().toUtf8().constData());
@@ -211,7 +222,7 @@ private:
         ilog_info("[Server] Client disconnected");
         
         // Remove all streams for this connection
-        for (auto it = m_clients.begin(); it != m_clients.end(); ) {
+        for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ) {
             if (it->conn == connection) {
                 it = m_clients.erase(it);
             } else {
@@ -223,7 +234,7 @@ private:
     void onStreamOpened(iINCConnection* conn, xuint32 channelId, xuint32 mode) {
         if (mode & iINCChannel::MODE_READ) { // Client wants to read
             ilog_info("[Server] Stream opened on channel ", channelId);
-            m_clients.push_back({conn, channelId, 0});
+            m_clients.push_back(ClientInfo(conn, channelId, 0));
             
             ilog_info("[Server] Client connected. Total clients: %d/%d", m_clients.size(), m_numClients);
 
@@ -236,7 +247,7 @@ private:
 
     void onStreamClosed(iINCConnection* conn, xuint32 channelId) {
         ilog_info("[Server] Stream closed on channel ", channelId);
-        for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
+        for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
             if (it->conn == conn && it->channelId == channelId) {
                 m_clients.erase(it);
                 break;
@@ -251,7 +262,7 @@ private:
 
     void tryFillWindow() {
         if (m_closing) return;
-        while (m_inflightPackets.load() < m_options.inflightPerClient) {
+        while (m_inflightPackets.value() < m_options.inflightPerClient) {
             if (!sendBroadcastPacket()) {
                 break;
             }
@@ -299,11 +310,12 @@ private:
         // Send to all clients with checksum in pos parameter
         SharedPacket* packet = new SharedPacket(data, checksum);
         int successfulSends = 0;
-        for (auto& client : m_clients) {
-            auto op = sendBinaryData(client.conn, client.channelId, checksum, data);
+        for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
+            ClientInfo& client = *it;
+            iSharedDataPointer<iINCOperation> op = sendBinaryData(client.conn, client.channelId, checksum, data);
             if (op) {
                 op->setTimeout(m_options.opTimeoutMs);
-                CallbackContext* ctx = new CallbackContext{this, client.conn, client.channelId, packet};
+                CallbackContext* ctx = new CallbackContext(this, client.conn, client.channelId, packet);
                 op->setFinishedCallback(&StreamServer::onPacketSent, ctx);
                 client.pendingOps++;
                 packet->pending++;
@@ -349,7 +361,7 @@ private:
         
         // Check for errors or timeout
         if (op) {
-            auto state = op->getState();
+            iINCOperation::State state = op->getState();
             if (state == iINCOperation::STATE_FAILED) {
                 ilog_warn("[Server] Send operation failed, error code: ", op->errorCode());
             } else if (state == iINCOperation::STATE_TIMEOUT) {
@@ -380,9 +392,9 @@ private:
 
     void handlePacketSent(xuint64 connId, xuint32 channelId) {
         // Find client
-        for (auto& client : m_clients) {
-            if (client.conn->connectionId() == connId && client.channelId == channelId) {
-                client.pendingOps--;
+        for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
+            if (it->conn->connectionId() == connId && it->channelId == channelId) {
+                it->pendingOps--;
                 return;
             }
         }
@@ -402,7 +414,7 @@ private:
     xint64 m_lastLogTime;
     std::list<ClientInfo> m_clients;
     xint64 m_bytesAtLastLog;
-    std::atomic<int> m_inflightPackets;
+    iAtomicCounter<int> m_inflightPackets;
 };
 
 // Client: Receives data from server
@@ -502,7 +514,7 @@ public:
     IncTestController(StreamServer* server, std::vector<StreamClient*> clients, void (*callback)(), iObject* parent = IX_NULLPTR)
         : iObject(parent)
         , m_server(server)
-        , m_clients(std::move(clients))
+        , m_clients(clients)
         , m_callback(callback)
         , m_finished(false)
     {
@@ -524,7 +536,8 @@ public:
             m_server = IX_NULLPTR;
         }
 
-        for (auto* client : m_clients) {
+        for (size_t i = 0; i < m_clients.size(); ++i) {
+            StreamClient* client = m_clients[i];
             if (!client) {
                 continue;
             }
@@ -551,23 +564,24 @@ private:
     bool m_finished;
 };
 
+static void printIncUsage() {
+    ilog_info("Usage: imediaplayertest --inc [options]\n"
+              "  -t <sec>        : timeout (seconds), 0 = no timeout\n"
+              "  -u <url>        : server url (default: unix:///tmp/imediaplayer_inc.sock)\n"
+              "  -n <num>        : number of clients\n"
+              "  -s <mb>         : shared memory size (MB)\n"
+              "  -p <kb>         : payload size per packet (KB, default 63)\n"
+              "  -i <num>        : inflight packets per client (default 3)\n"
+              "  -l <sec>        : log interval (seconds, default 10)\n"
+              "  -o <ms>         : send operation timeout (ms, default 50)\n"
+              "  --no-checksum   : disable checksum verification\n"
+              "  --server        : server-only\n"
+              "  --client        : client-only\n"
+              "  -h, --help      : show help");
+}
+
 int test_inc_pref(void (*callback)())
 {
-    auto printUsage = []() {
-        ilog_info("Usage: imediaplayertest --inc [options]\n"
-                  "  -t <sec>        : timeout (seconds), 0 = no timeout\n"
-                  "  -u <url>        : server url (default: unix:///tmp/imediaplayer_inc.sock)\n"
-                  "  -n <num>        : number of clients\n"
-                  "  -s <mb>         : shared memory size (MB)\n"
-                  "  -p <kb>         : payload size per packet (KB, default 63)\n"
-                  "  -i <num>        : inflight packets per client (default 3)\n"
-                  "  -l <sec>        : log interval (seconds, default 10)\n"
-                  "  -o <ms>         : send operation timeout (ms, default 50)\n"
-                  "  --no-checksum   : disable checksum verification\n"
-                  "  --server        : server-only\n"
-                  "  --client        : client-only\n"
-                  "  -h, --help      : show help");
-    };
 
     std::list<iShell::iString> argsList = iShell::iCoreApplication::arguments();
     std::vector<iShell::iString> args(argsList.begin(), argsList.end());
@@ -614,7 +628,7 @@ int test_inc_pref(void (*callback)())
         } else if (arg == "--client") {
             isClient = true;
         } else if (arg == "-h" || arg == "--help") {
-            printUsage();
+            printIncUsage();
             return -1;
         }
     }

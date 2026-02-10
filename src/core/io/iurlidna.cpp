@@ -31,7 +31,7 @@ static const xuint32 damp = 700;
 static const xuint32 initial_bias = 72;
 static const xuint32 initial_n = 128;
 
-static constexpr xsizetype MaxDomainLabelLength = 63;
+static const xsizetype MaxDomainLabelLength = 63;
 
 static inline uint encodeDigit(uint digit)
 {
@@ -88,7 +88,8 @@ void ix_punycodeEncoder(iStringView in, iString *output)
     iChar *d = output->data() + outLen;
     bool skipped = false;
     // copy all basic code points verbatim to output.
-    for (iChar c : in) {
+    for (int i = 0; i < in.size(); ++i) {
+        iChar c = in[i];
         if (c.unicode() < 0x80)
             *d++ = c;
         else
@@ -109,7 +110,7 @@ void ix_punycodeEncoder(iStringView in, iString *output)
 
     // if basic code points were copied, add the delimiter character.
     if (h > 0)
-        *output += u'-';
+        *output += iChar('-');
 
     // compute the input length in Unicode code points.
     uint inputLength = 0;
@@ -128,7 +129,7 @@ void ix_punycodeEncoder(iStringView in, iString *output)
         // find the character in the input string with the lowest unprocessed value.
         uint m = std::numeric_limits<uint>::max();
         for (iStringIterator iter(in); iter.hasNext();) {
-            auto c = iter.nextUnchecked();
+            char32_t c = iter.nextUnchecked();
             if (c >= n && c < m)
                 m = c;
         }
@@ -144,7 +145,7 @@ void ix_punycodeEncoder(iStringView in, iString *output)
         n = m;
 
         for (iStringIterator iter(in); iter.hasNext();) {
-            auto c = iter.nextUnchecked();
+            char32_t c = iter.nextUnchecked();
 
             // increase delta until we reach the character processed in this iteration;
             // fail if delta overflows.
@@ -193,8 +194,8 @@ iString ix_punycodeDecoder(const iString &pc)
 
     // find the last delimiter character '-' in the input array. copy
     // all data before this delimiter directly to the output array.
-    int delimiterPos = pc.lastIndexOf(u'-');
-    auto output = delimiterPos < 4 ? std::u32string()
+    int delimiterPos = pc.lastIndexOf(iChar('-'));
+    std::basic_string<char32_t> output = delimiterPos < 4 ? std::basic_string<char32_t>()
                                    : pc.mid(start, delimiterPos - start).toStdU32String();
 
     // if a delimiter was found, skip to the position after it;
@@ -320,7 +321,7 @@ static std::list<iString> *user_idn_whitelist = IX_NULLPTR;
 
 static bool lessThan(const iChar *a, int l, const char *c)
 {
-    const auto *uc = reinterpret_cast<const char16_t *>(a);
+    const char16_t *uc = reinterpret_cast<const char16_t *>(a);
     const char16_t *e = uc + l;
 
     if (!c || *c == 0)
@@ -349,12 +350,12 @@ static bool equal(const iChar *a, int l, const char *b)
 
 static bool ix_is_idn_enabled(iStringView aceDomain)
 {
-    auto idx = aceDomain.lastIndexOf(u'.');
+    int idx = aceDomain.lastIndexOf((char16_t)'.');
     if (idx == -1)
         return false;
 
-    auto tldString = aceDomain.mid(idx + 1);
-    const auto len = tldString.size();
+    iStringView tldString = aceDomain.mid(idx + 1);
+    const xsizetype len = tldString.size();
 
     const iChar *tld = tldString.constData();
 
@@ -380,13 +381,13 @@ static bool ix_is_idn_enabled(iStringView aceDomain)
 template<typename C>
 static inline bool isValidInNormalizedAsciiLabel(C c)
 {
-    return c == u'-' || c == u'_' || (c >= u'0' && c <= u'9') || (c >= u'a' && c <= u'z');
+    return c == (char16_t)'-' || c == (char16_t)'_' || (c >= (char16_t)'0' && c <= (char16_t)'9') || (c >= (char16_t)'a' && c <= (char16_t)'z');
 }
 
 template<typename C>
 static inline bool isValidInNormalizedAsciiName(C c)
 {
-    return isValidInNormalizedAsciiLabel(c) || c == u'.';
+    return isValidInNormalizedAsciiLabel(c) || c == (char16_t)'.';
 }
 
 /*
@@ -402,7 +403,8 @@ static iString mapDomainName(const iString &in, iUrl::AceProcessingOptions optio
 
     // Check if the input is already normalized ASCII first and can be returned as is.
     int i = 0;
-    for (auto c : in) {
+    for (int k = 0; k < in.length(); ++k) {
+        iChar c = in.at(k);
         if (c.unicode() >= 0x80 || !isValidInNormalizedAsciiName(c))
             break;
         i++;
@@ -421,7 +423,7 @@ static iString mapDomainName(const iString &in, iUrl::AceProcessingOptions optio
 
         // Fast path for ASCII-only inputs
         if (uc < 0x80) {
-            if (uc >= U'A' && uc <= U'Z')
+            if (uc >= 'A' && uc <= 'Z')
                 uc |= 0x20; // lower-case it
 
             if (isValidInNormalizedAsciiName(uc)) {
@@ -434,26 +436,27 @@ static iString mapDomainName(const iString &in, iUrl::AceProcessingOptions optio
 
         // Capital sharp S is a special case since UTR #46 revision 31 (Unicode 15.1)
         if (uc == 0x1E9E && (options & iUrl::AceTransitionalProcessing)) {
-            result.append(u"ss");
+            result.append("ss");
             continue;
         }
 
         iUnicodeTables::IdnaStatus status = iUnicodeTables::idnaStatus(uc);
 
-        if (status == iUnicodeTables::IdnaStatus::Deviation)
+        if (status == iUnicodeTables::IdnaStatus_Deviation)
             status = (options & iUrl::AceTransitionalProcessing)
-                    ? iUnicodeTables::IdnaStatus::Mapped
-                    : iUnicodeTables::IdnaStatus::Valid;
+                    ? iUnicodeTables::IdnaStatus_Mapped
+                    : iUnicodeTables::IdnaStatus_Valid;
 
         switch (status) {
-        case iUnicodeTables::IdnaStatus::Ignored:
+        case iUnicodeTables::IdnaStatus_Ignored:
             continue;
-        case iUnicodeTables::IdnaStatus::Valid:
-        case iUnicodeTables::IdnaStatus::Disallowed:
-            for (auto c : iChar::fromUcs4(uc))
-                result.append(c);
+        case iUnicodeTables::IdnaStatus_Valid:
+        case iUnicodeTables::IdnaStatus_Disallowed: {
+            iString s = iChar::fromUcs4(uc);
+            result.append(s);
             break;
-        case iUnicodeTables::IdnaStatus::Mapped:
+        }
+        case iUnicodeTables::IdnaStatus_Mapped:
             result.append(iUnicodeTables::idnaMapping(uc));
             break;
         default:
@@ -477,25 +480,29 @@ static bool validateAsciiLabel(iStringView label)
     if (label.size() > MaxDomainLabelLength)
         return false;
 
-    if (label.first() == u'-' || label.last() == u'-')
+    if (label.first() == (char16_t)'-' || label.last() == (char16_t)'-')
         return false;
 
-    return std::all_of(label.begin(), label.end(), isValidInNormalizedAsciiLabel<iChar>);
+    for (int i = 0; i < label.size(); ++i) {
+        if (!isValidInNormalizedAsciiLabel(label.at(i)))
+            return false;
+    }
+    return true;
 }
 
 namespace {
 
 class DomainValidityChecker
 {
-    bool domainNameIsBidi = false;
-    bool hadBidiErrors = false;
+    bool domainNameIsBidi;
+    bool hadBidiErrors;
     bool ignoreBidiErrors;
 
-    static constexpr char32_t ZWNJ = U'\u200C';
-    static constexpr char32_t ZWJ = U'\u200D';
+    static const xuint32 ZWNJ = 0x200C;
+    static const xuint32 ZWJ = 0x200D;
 
 public:
-    DomainValidityChecker(bool ignoreBidiErrors = false) : ignoreBidiErrors(ignoreBidiErrors) { }
+    DomainValidityChecker(bool ignoreBidiErrors = false) : domainNameIsBidi(false), hadBidiErrors(false), ignoreBidiErrors(ignoreBidiErrors) { }
     bool checkLabel(const iString &label, iUrl::AceProcessingOptions options);
 
 private:
@@ -527,44 +534,44 @@ private:
 */
 bool DomainValidityChecker::checkContextJRules(iStringView label)
 {
-    constexpr unsigned char CombiningClassVirama = 9;
+    const unsigned char CombiningClassVirama = 9;
 
-    enum class State {
+    enum State {
         Initial,
         LD_T, // L,D with possible following T*
-        ZWNJ_T, // ZWNJ with possible following T*
+        ZWNJ_T  // ZWNJ with possible following T*
     };
-    State regexpState = State::Initial;
+    State regexpState = Initial;
     bool previousIsVirama = false;
 
     for (iStringIterator iter(label); iter.hasNext();) {
-        auto ch = iter.next();
+        char32_t ch = iter.next();
 
         if (ch == ZWJ) {
             if (!previousIsVirama)
                 return false;
-            regexpState = State::Initial;
+            regexpState = Initial;
         } else if (ch == ZWNJ) {
-            if (!previousIsVirama && regexpState != State::LD_T)
+            if (!previousIsVirama && regexpState != LD_T)
                 return false;
-            regexpState = previousIsVirama ? State::Initial : State::ZWNJ_T;
+            regexpState = previousIsVirama ? Initial : ZWNJ_T;
         } else {
             switch (iChar::joiningType(ch)) {
             case iChar::Joining_Left:
-                if (regexpState == State::ZWNJ_T)
+                if (regexpState == ZWNJ_T)
                     return false;
-                regexpState = State::LD_T;
+                regexpState = LD_T;
                 break;
             case iChar::Joining_Right:
-                regexpState = State::Initial;
+                regexpState = Initial;
                 break;
             case iChar::Joining_Dual:
-                regexpState = State::LD_T;
+                regexpState = LD_T;
                 break;
             case iChar::Joining_Transparent:
                 break;
             default:
-                regexpState = State::Initial;
+                regexpState = Initial;
                 break;
             }
         }
@@ -572,7 +579,7 @@ bool DomainValidityChecker::checkContextJRules(iStringView label)
         previousIsVirama = iChar::combiningClass(ch) == CombiningClassVirama;
     }
 
-    return regexpState != State::ZWNJ_T;
+    return regexpState != ZWNJ_T;
 }
 
 /*
@@ -720,18 +727,18 @@ bool DomainValidityChecker::checkLabel(const iString &label, iUrl::AceProcessing
         // This assumes that the first two characters are in BMP, but that's ok
         // because non-BMP characters are unlikely to be used for specifying
         // future extensions.
-        if (label[2] == u'-' && label[3] == u'-')
-            return ignoreBidiErrors && label.startsWith(u"xn") && validateAsciiLabel(label);
+        if (label[2] == (char16_t)'-' && label[3] == (char16_t)'-')
+            return ignoreBidiErrors && label.startsWith(iLatin1StringView("xn")) && validateAsciiLabel(label);
     }
 
-    if (label.startsWith(u'-') || label.endsWith(u'-'))
+    if (label.startsWith((char16_t)'-') || label.endsWith((char16_t)'-'))
         return false;
 
-    if (label.contains(u'.'))
+    if (label.contains((char16_t)'.'))
         return false;
 
     iStringIterator iter(label);
-    auto c = iter.next();
+    char32_t c = iter.next();
 
     if (iChar::isMark(c))
         return false;
@@ -758,9 +765,9 @@ bool DomainValidityChecker::checkLabel(const iString &label, iUrl::AceProcessing
         }
 
         switch (iUnicodeTables::idnaStatus(c)) {
-        case iUnicodeTables::IdnaStatus::Valid:
+        case iUnicodeTables::IdnaStatus_Valid:
             break;
-        case iUnicodeTables::IdnaStatus::Deviation:
+        case iUnicodeTables::IdnaStatus_Deviation:
             if (options & iUrl::AceTransitionalProcessing)
                 return false;
             break;
@@ -791,17 +798,17 @@ static iString convertToAscii(iStringView normalizedDomain, AceLeadingDot dot)
     iString aceResult;
 
     while (true) {
-        xsizetype idx = normalizedDomain.indexOf(u'.', lastIdx);
+        xsizetype idx = normalizedDomain.indexOf('.', lastIdx);
         if (idx == -1)
             idx = normalizedDomain.size();
 
         const xsizetype labelLength = idx - lastIdx;
         if (labelLength) {
-            const auto label = normalizedDomain.sliced(lastIdx, labelLength);
+            const iStringView label = normalizedDomain.sliced(lastIdx, labelLength);
             aceForm.clear();
             ix_punycodeEncoder(label, &aceForm);
             if (aceForm.isEmpty())
-                return {};
+                return iString();
 
             aceResult.append(aceForm);
         }
@@ -810,10 +817,10 @@ static iString convertToAscii(iStringView normalizedDomain, AceLeadingDot dot)
             break;
 
         if (labelLength == 0 && (dot == ForbidLeadingDot || idx > 0))
-            return {}; // two delimiters in a row -- empty label not allowed
+            return iString(); // two delimiters in a row -- empty label not allowed
 
         lastIdx = idx + 1;
-        aceResult += u'.';
+        aceResult += '.';
     }
 
     return aceResult;
@@ -827,18 +834,18 @@ static bool checkAsciiDomainName(iStringView normalizedDomain, AceLeadingDot dot
     *usesPunycode = false;
 
     while (lastIdx < normalizedDomain.size()) {
-        auto idx = normalizedDomain.indexOf(u'.', lastIdx);
+        xsizetype idx = normalizedDomain.indexOf('.', lastIdx);
         if (idx == -1)
             idx = normalizedDomain.size();
 
-        const auto labelLength = idx - lastIdx;
+        const xsizetype labelLength = idx - lastIdx;
         if (labelLength == 0) {
             if (idx == normalizedDomain.size())
                 break;
             if (dot == ForbidLeadingDot || idx > 0)
                 return false; // two delimiters in a row -- empty label not allowed
         } else {
-            const auto label = normalizedDomain.sliced(lastIdx, labelLength);
+            const iStringView label = normalizedDomain.sliced(lastIdx, labelLength);
             if (!validateAsciiLabel(label))
                 return false;
 
@@ -861,17 +868,17 @@ static iString convertToUnicode(const iString &asciiDomain, iUrl::AceProcessingO
     DomainValidityChecker checker;
 
     while (true) {
-        auto idx = asciiDomain.indexOf(u'.', lastIdx);
+        xsizetype idx = asciiDomain.indexOf('.', lastIdx);
         if (idx == -1)
             idx = asciiDomain.size();
 
-        const auto labelLength = idx - lastIdx;
+        const xsizetype labelLength = idx - lastIdx;
         if (labelLength == 0) {
             if (idx == asciiDomain.size())
                 break;
         } else {
-            const auto label = asciiDomain.sliced(lastIdx, labelLength);
-            const auto unicodeLabel = ix_punycodeDecoder(label);
+            const iStringView label = asciiDomain.sliced(lastIdx, labelLength);
+            const iString unicodeLabel = ix_punycodeDecoder(iString(label));
 
             if (unicodeLabel.isEmpty())
                 return asciiDomain;
@@ -886,7 +893,7 @@ static iString convertToUnicode(const iString &asciiDomain, iUrl::AceProcessingO
             break;
 
         lastIdx = idx + 1;
-        result += u'.';
+        result += '.';
     }
     return result;
 }
@@ -898,15 +905,15 @@ static bool checkUnicodeName(const iString &domainName, iUrl::AceProcessingOptio
     DomainValidityChecker checker(true);
 
     while (true) {
-        xsizetype idx = domainName.indexOf(u'.', lastIdx);
+        xsizetype idx = domainName.indexOf('.', lastIdx);
         if (idx == -1)
             idx = domainName.size();
 
         const xsizetype labelLength = idx - lastIdx;
         if (labelLength) {
-            const auto label = domainName.sliced(lastIdx, labelLength);
+            const iStringView label = domainName.sliced(lastIdx, labelLength);
 
-            if (!checker.checkLabel(label, options))
+            if (!checker.checkLabel(iString(label), options))
                 return false;
         }
 
@@ -921,7 +928,7 @@ static bool checkUnicodeName(const iString &domainName, iUrl::AceProcessingOptio
 iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot, iUrl::AceProcessingOptions options)
 {
     if (domain.isEmpty())
-        return {};
+        return iString();
 
     bool mappedToAscii;
     const iString mapped = mapDomainName(domain, options, &mappedToAscii);
@@ -929,15 +936,15 @@ iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot, iUr
             mappedToAscii ? mapped : mapped.normalized(iString::NormalizationForm_C);
 
     if (normalized.isEmpty())
-        return {};
+        return iString();
 
     if (!mappedToAscii && !checkUnicodeName(normalized, options))
-        return {};
+        return iString();
 
     bool needsConversionToUnicode;
     const iString aceResult = mappedToAscii ? normalized : convertToAscii(normalized, dot);
     if (aceResult.isEmpty() || !checkAsciiDomainName(aceResult, dot, &needsConversionToUnicode))
-        return {};
+        return iString();
 
     if (op == ToAceOnly || !needsConversionToUnicode
         || (!(options & iUrl::IgnoreIDNWhitelist) && !ix_is_idn_enabled(aceResult))) {

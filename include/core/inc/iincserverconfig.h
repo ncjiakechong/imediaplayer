@@ -39,7 +39,7 @@ public:
     iINCServerConfig();
 
     /// Destructor
-    ~iINCServerConfig() = default;
+    ~iINCServerConfig() {}
 
     /// Load configuration from file
     /// @param configFile Path to configuration file (empty = use default path)
@@ -115,41 +115,37 @@ public:
 
 private:
     // Protocol version policy
-    VersionPolicy m_versionPolicy = Compatible;
-    xuint16 m_protocolVersionCurrent = 1;
-    xuint16 m_protocolVersionMin = 1;
-    xuint16 m_protocolVersionMax = 1;
+    VersionPolicy m_versionPolicy;
+    xuint16 m_protocolVersionCurrent;
+    xuint16 m_protocolVersionMin;
+    xuint16 m_protocolVersionMax;
 
     // Connection limits
-    int m_maxConnections = 100;
-    int m_maxConnectionsPerClient = 10;
+    int m_maxConnections;
+    int m_maxConnectionsPerClient;
 
     // Resource limits
-    bool m_disableSharedMemory = false;
-    #ifdef __ANDROID__
-    xuint16 m_sharedMemoryType = MEMTYPE_SHARED_MEMFD | MEMTYPE_PRIVATE;
-    #else
-    xuint16 m_sharedMemoryType = MEMTYPE_SHARED_POSIX | MEMTYPE_PRIVATE;  // Auto-select best type
-    #endif
-    xuint32 m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
-    iByteArray m_sharedMemoryName = "ix-shm";  // Default shared memory name
+    bool m_disableSharedMemory;
+    xuint16 m_sharedMemoryType;
+    xuint32 m_sharedMemorySize;  // 4 MB
+    iByteArray m_sharedMemoryName;  // Default shared memory name
 
     // Security
-    EncryptionRequirement m_encryptionRequirement = Optional;
+    EncryptionRequirement m_encryptionRequirement;
     iString m_certificatePath;
     iString m_privateKeyPath;
 
     // Timeouts
-    int m_clientTimeoutMs = 60000;  // 60 seconds
-    int m_exitIdleTimeMs = -1;      // Never exit
-    int m_protocolTimeoutMs = 500; // 500ms for protocol operations (handshake, ping-pong)
+    int m_clientTimeoutMs;  // 60 seconds
+    int m_exitIdleTimeMs;      // Never exit
+    int m_protocolTimeoutMs; // 500ms for protocol operations (handshake, ping-pong)
 
     // Performance
-    bool m_highPriority = false;
-    int m_niceLevel = -11;
+    bool m_highPriority;
+    int m_niceLevel;
 
     // Threading
-    bool m_enableIOThread = true;  // Default: enabled for thread safety
+    bool m_enableIOThread;  // Default: enabled for thread safety
 };
 
 } // namespace iShell

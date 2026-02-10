@@ -32,7 +32,7 @@ public:
     iINCContextConfig();
 
     /// Destructor
-    ~iINCContextConfig() = default;
+    ~iINCContextConfig() {}
 
     /// Load configuration from file
     /// @param configFile Path to configuration file (empty = use default path)
@@ -111,35 +111,31 @@ private:
     iString m_defaultServer;
 
     // Protocol version
-    xuint16 m_protocolVersionCurrent = 1;
-    xuint16 m_protocolVersionMin = 1;
-    xuint16 m_protocolVersionMax = 1;
+    xuint16 m_protocolVersionCurrent;
+    xuint16 m_protocolVersionMin;
+    xuint16 m_protocolVersionMax;
 
     // Transport options
-    bool m_disableSharedMemory = false;
-    #ifdef __ANDROID__
-    xuint16 m_sharedMemoryType = MEMTYPE_SHARED_MEMFD;
-    #else
-    xuint16 m_sharedMemoryType = MEMTYPE_SHARED_POSIX;
-    #endif
-    xuint32 m_sharedMemorySize = 4 * 1024 * 1024;  // 4 MB
-    iByteArray m_sharedMemoryName = "ix-shm";
+    bool m_disableSharedMemory;
+    xuint16 m_sharedMemoryType;
+    xuint32 m_sharedMemorySize;
+    iByteArray m_sharedMemoryName;
 
     // Encryption settings
-    EncryptionMethod m_encryptionMethod = NoEncryption;
+    EncryptionMethod m_encryptionMethod;
     iString m_certificatePath;
 
     // Auto-connect behavior
-    bool m_autoReconnect = true;
-    int m_reconnectIntervalMs = 500;
-    int m_maxReconnectAttempts = 5;
+    bool m_autoReconnect;
+    int m_reconnectIntervalMs;
+    int m_maxReconnectAttempts;
 
     // Timeouts
-    int m_connectTimeoutMs = 3000;
-    int m_protocolTimeoutMs = 500; // 500ms for protocol operations (handshake, ping-pong)
+    int m_connectTimeoutMs;
+    int m_protocolTimeoutMs;
 
     // Threading
-    bool m_enableIOThread = true;  // Enable IO thread by default
+    bool m_enableIOThread;
 };
 
 } // namespace iShell

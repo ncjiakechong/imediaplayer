@@ -21,7 +21,6 @@
 // We mean it.
 //
 
-#include <type_traits>
 
 #include <core/utils/ichar.h>
 #include <core/global/inamespace.h>
@@ -34,7 +33,7 @@ struct iStringAlgorithms
 {
     typedef typename StringType::value_type Char;
     typedef typename StringType::size_type size_type;
-    typedef typename std::remove_cv<StringType>::type NakedStringType;
+    typedef typename remove_cv<StringType>::type NakedStringType;
     static const bool isConst = is_const<StringType>::value;
 
 

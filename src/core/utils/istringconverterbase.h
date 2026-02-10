@@ -11,8 +11,6 @@
 #define ISTRINGCONVERTERBASE_H
 
 #include <cstring>
-#include <optional>
-
 #include <core/global/iglobal.h>
 
 namespace iShell {
@@ -48,43 +46,46 @@ public:
     };
 
     struct State {
-        State(Flags f = Flag::Default)
-            : flags(f), state_data{0, 0, 0, 0} {}
+        State(Flags f = Default)
+            : flags(f), internalState(0), remainingChars(0), invalidChars(0), clearFn(0) { std::memset(state_data, 0, sizeof(state_data)); }
         ~State() { clear(); }
 
-        State(State &&other)
+        State(State &other)
             : flags(other.flags),
+              internalState(other.internalState),
               remainingChars(other.remainingChars),
               invalidChars(other.invalidChars),
-              state_data{other.state_data[0], other.state_data[1],
-                         other.state_data[2], other.state_data[3]},
               clearFn(other.clearFn)
-        { other.clearFn = IX_NULLPTR; }
-        State &operator=(State &&other)
+        {
+             std::memcpy(state_data, other.state_data, sizeof(state_data));
+             other.clearFn = 0;
+        }
+        State &operator=(State &other)
         {
             clear();
             flags = other.flags;
+            internalState = other.internalState;
             remainingChars = other.remainingChars;
             invalidChars = other.invalidChars;
-            std::memmove(state_data, other.state_data, sizeof state_data); // self-assignment-safe
+            std::memmove(state_data, other.state_data, sizeof(state_data)); // self-assignment-safe
             clearFn = other.clearFn;
-            other.clearFn = IX_NULLPTR;
+            other.clearFn = 0;
             return *this;
         }
         IX_CORE_EXPORT void clear();
         IX_CORE_EXPORT void reset();
 
         Flags flags;
-        int internalState = 0;
-        xsizetype remainingChars = 0;
-        xsizetype invalidChars = 0;
+        int internalState;
+        xsizetype remainingChars;
+        xsizetype invalidChars;
 
         union {
             uint state_data[4];
             void *d[2];
         };
-        using ClearDataFn = void (*)(State *);
-        ClearDataFn clearFn = IX_NULLPTR;
+        typedef void (*ClearDataFn)(State *);
+        ClearDataFn clearFn;
     private:
         IX_DISABLE_COPY(State)
     };
@@ -114,12 +115,9 @@ protected:
         : iface(i)
     {}
 
-    ~iStringConverter() = default;
+    ~iStringConverter() {}
 
 public:
-    iStringConverter(iStringConverter &&) = default;
-    iStringConverter &operator=(iStringConverter &&) = default;
-
     bool isValid() const { return iface != IX_NULLPTR; }
 
     void resetState()
@@ -133,20 +131,22 @@ public:
 
     struct FinalizeResultBase
     {
-        enum Error : xuint8 {
+        enum Error {
             NoError,
             InvalidCharacters,
-            NotEnoughSpace,
+            NotEnoughSpace
         };
     };
     template <typename Char>
     struct FinalizeResultChar : FinalizeResultBase
     {
-        using Error = FinalizeResultBase::Error;
+        typedef FinalizeResultBase::Error Error;
 
         Char *next;
         xint16 invalidChars;
         Error error;
+
+        FinalizeResultChar() : next(0), invalidChars(0), error(FinalizeResultBase::NoError) {}
     };
 
 protected:
@@ -154,7 +154,7 @@ protected:
     State state;
 
 private:
-    IX_CORE_EXPORT static const Interface encodingInterfaces[Encoding::LastEncoding + 1];
+    IX_CORE_EXPORT static const Interface encodingInterfaces[LastEncoding + 1];
 };
 
 } // namespace iShell

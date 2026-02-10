@@ -149,7 +149,6 @@ class IX_CORE_EXPORT iDateTime
         Data();
         Data(iShell::TimeSpec);
         Data(const Data &other);
-        Data(Data &&other);
         Data &operator=(const Data &other);
         ~Data();
 

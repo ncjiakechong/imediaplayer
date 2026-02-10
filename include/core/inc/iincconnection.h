@@ -10,7 +10,11 @@
 #ifndef IINCCONNECTION_H
 #define IINCCONNECTION_H
 
+#include <map>
 #include <vector>
+#if __cplusplus >= 201103L
+#include <unordered_map>
+#endif
 
 #include <core/inc/iincmessage.h>
 #include <core/inc/iincoperation.h>
@@ -183,7 +187,12 @@ private:
     std::vector<iString>    m_subscriptions;
 
     // Channel management (server-side)
-    std::unordered_map<xuint32, iINCChannel*> m_channels;  ///< channelId -> mode
+    #if __cplusplus >= 201103L
+    typedef std::unordered_map<xuint32, iINCChannel*> ChannelMap;
+    #else
+    typedef std::map<xuint32, iINCChannel*> ChannelMap;
+    #endif
+    ChannelMap m_channels;  ///< channelId -> mode
 
     friend class iINCServer;
     friend class iINCContext;

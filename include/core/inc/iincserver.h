@@ -14,7 +14,10 @@
 #ifndef IINCSERVER_H
 #define IINCSERVER_H
 
+#include <map>
+#if __cplusplus >= 201103L
 #include <unordered_map>
+#endif
 
 #include <core/inc/iincserverconfig.h>
 #include <core/inc/iincconnection.h>
@@ -175,7 +178,12 @@ private:
     iAtomicCounter<xuint32> m_nextChannelId;    ///< Global channel ID generator (server-wide unique, thread-safe atomic)
 
     // Connection tracking
-    std::unordered_map<xuint32, iINCConnection*> m_connections; ///< work in ioThread
+    #if __cplusplus >= 201103L
+    typedef std::unordered_map<xuint32, iINCConnection*> ConnectionMap;
+    #else
+    typedef std::map<xuint32, iINCConnection*> ConnectionMap;
+    #endif
+    ConnectionMap m_connections;  ///< work in ioThread
 
     iSharedDataPointer<iMemPool> m_globalPool;
 

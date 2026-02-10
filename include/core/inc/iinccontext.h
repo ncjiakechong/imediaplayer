@@ -19,7 +19,6 @@
 #include <core/thread/ithread.h>
 #include <core/utils/ibytearray.h>
 #include <core/utils/istring.h>
-#include <unordered_map>
 
 namespace iShell {
 

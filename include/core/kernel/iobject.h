@@ -14,8 +14,13 @@
 #define IOBJECT_H
 
 #include <set>
+#include <map>
 #include <string>
 #include <cstdarg>
+#if __cplusplus >= 201103L
+#include <unordered_set>
+#include <unordered_map>
+#endif
 
 #include <core/thread/iatomicpointer.h>
 #include <core/kernel/iobjectdefs_impl.h>
@@ -43,7 +48,7 @@ struct ExternalRefCountData;
  */
 class IX_CORE_EXPORT iObject
 {
-    using IX_ThisType = iObject;
+    typedef iObject IX_ThisType;
     // IX_OBJECT(iObject)
     // IPROPERTY_BEGIN
     // IPROPERTY_ITEM("objectName", IREAD objectName, IWRITE setObjectName, INOTIFY objectNameChanged)
@@ -309,23 +314,20 @@ public:
     virtual const iMetaObject *metaObject() const;
 
 protected:
-    template <typename ReturnType, bool V>
-    using if_requires_ret = typename enable_if<_iFuncRequiresRet<ReturnType>::value == V, ReturnType>::type;
-
     void initProperty(iMetaObject* mobj) const;
     virtual bool event(iEvent *e);
 
     template <typename ReturnType>
-    if_requires_ret<ReturnType, true> emitHelper(const char* name, _iMemberFunction signal, void* args) {
+    typename enable_if<_iFuncRequiresRet<ReturnType>::value, ReturnType>::type emitHelper(const char* name, _iMemberFunction signal, void* args) {
         ReturnType ret = TYPEWRAPPER_DEFAULTVALUE(ReturnType);
         emitImpl(name, signal, args, &ret);
         return ret;
     }
 
     template <typename ReturnType>
-    if_requires_ret<ReturnType, false> emitHelper(const char* name, _iMemberFunction signal, void* args) {
+    typename enable_if<!_iFuncRequiresRet<ReturnType>::value, ReturnType>::type emitHelper(const char* name, _iMemberFunction signal, void* args) {
         IX_COMPILER_VERIFY((is_same<ReturnType, void>::value));
-        return emitImpl(name, signal, args, IX_NULLPTR);
+        emitImpl(name, signal, args, IX_NULLPTR);
     }
 
     iObject *sender() const;
@@ -349,7 +351,11 @@ private:
         _iConnection *last;
     };
 
+    #if __cplusplus >= 201103L
     typedef std::unordered_map<_iMemberFunction, _iConnectionList, iConKeyHashFunc> sender_map;
+    #else
+    typedef std::map<_iMemberFunction, _iConnectionList, iConKeyCompFunc> sender_map;
+    #endif
 
     struct _iObjectConnectionList
     {

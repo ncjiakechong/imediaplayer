@@ -125,7 +125,7 @@ iMediaObject::iMediaObject(iObject *parent)
 
 void iMediaObject::timeoutNotify()
 {
-    for (std::unordered_set<iString, iKeyHashFunc>::const_iterator it = m_notifyProperties.cbegin(); it != m_notifyProperties.cend(); ++it) {
+    for (PropertySet::const_iterator it = m_notifyProperties.begin(); it != m_notifyProperties.end(); ++it) {
         const iMetaObject* mo = metaObject();
 
         do {
@@ -173,8 +173,8 @@ void iMediaObject::addPropertyWatch(iByteArray const &name)
 
 void iMediaObject::removePropertyWatch(iByteArray const &name)
 {
-    std::unordered_set<iString, iKeyHashFunc>::const_iterator it = m_notifyProperties.find(name);
-    if (it != m_notifyProperties.cend())
+    PropertySet::const_iterator it = m_notifyProperties.find(name);
+    if (it != m_notifyProperties.end())
         m_notifyProperties.erase(it);
 
     if (m_notifyProperties.empty())

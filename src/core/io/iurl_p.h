@@ -32,7 +32,7 @@ xsizetype ix_encodeFromUser(iString &appendTo, const iString &input, const xuint
 // in iurlidna.cpp
 enum AceLeadingDot { AllowLeadingDot, ForbidLeadingDot };
 enum AceOperation { ToAceOnly, NormalizeAce };
-iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot, iUrl::AceProcessingOptions options = {});
+iString ix_ACE_do(const iString &domain, AceOperation op, AceLeadingDot dot, iUrl::AceProcessingOptions options = 0);
 void ix_punycodeEncoder(iStringView in, iString *output);
 iString ix_punycodeDecoder(const iString &pc);
 

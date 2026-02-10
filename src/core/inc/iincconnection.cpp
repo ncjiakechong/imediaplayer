@@ -117,7 +117,7 @@ iSharedDataPointer<iINCOperation> iINCConnection::pingpong()
 
     // Create PING message and send it - protocol creates and tracks operation
     iINCMessage msg(INC_MSG_PING, m_connId, m_protocol->nextSequence());
-    auto op = m_protocol->sendMessage(msg);
+    iSharedDataPointer<iINCOperation> op = m_protocol->sendMessage(msg);
     if (!op) return op;
 
     return op;
@@ -144,8 +144,8 @@ iSharedDataPointer<iINCOperation> iINCConnection::sendBinaryData(xuint32 channel
 bool iINCConnection::isSubscribed(const iStringView& eventName) const
 {
     iString eventStr = eventName.toString();
-    for (const iString& pattern : m_subscriptions) {
-        if (matchesPattern(eventStr, pattern)) {
+    for (std::vector<iString>::const_iterator it = m_subscriptions.begin(); it != m_subscriptions.end(); ++it) {
+        if (matchesPattern(eventStr, *it)) {
             return true;
         }
     }
@@ -155,8 +155,8 @@ bool iINCConnection::isSubscribed(const iStringView& eventName) const
 void iINCConnection::addSubscription(const iString& pattern)
 {
     // Check if already subscribed
-    for (const iString& existing : m_subscriptions) {
-        if (existing == pattern) {
+    for (std::vector<iString>::iterator it = m_subscriptions.begin(); it != m_subscriptions.end(); ++it) {
+        if (*it == pattern) {
             return;
         }
     }
@@ -167,7 +167,7 @@ void iINCConnection::addSubscription(const iString& pattern)
 
 void iINCConnection::removeSubscription(const iString& pattern)
 {
-    auto it = std::find(m_subscriptions.begin(), m_subscriptions.end(), pattern);
+    std::vector<iString>::iterator it = std::find(m_subscriptions.begin(), m_subscriptions.end(), pattern);
     if (it != m_subscriptions.end()) {
         m_subscriptions.erase(it);
         ilog_info("[", m_peerName, "] Unsubscribed from: ", pattern);
@@ -221,7 +221,7 @@ xuint32 iINCConnection::regeisterChannel(iINCChannel* channel)
 
 iINCChannel* iINCConnection::unregeisterChannel(xuint32 channelId)
 {
-    auto it = m_channels.find(channelId);
+    ChannelMap::iterator it = m_channels.find(channelId);
     if (it == m_channels.end()) {
         ilog_warn("[", m_peerName, "][", channelId, "] Channel not found for connection");
         return IX_NULLPTR;
@@ -235,7 +235,7 @@ iINCChannel* iINCConnection::unregeisterChannel(xuint32 channelId)
 
 iINCChannel* iINCConnection::find2Channel(xuint32 channelId)
 {
-    auto it = m_channels.find(channelId);
+    ChannelMap::iterator it = m_channels.find(channelId);
     if (it == m_channels.end()) {
         return IX_NULLPTR;
     }
@@ -246,7 +246,7 @@ iINCChannel* iINCConnection::find2Channel(xuint32 channelId)
 void iINCConnection::clearChannels()
 {
     while (!m_channels.empty()) {
-        auto it = m_channels.begin();
+        ChannelMap::iterator it = m_channels.begin();
         delete it->second;
         m_channels.erase(it);
     }
@@ -254,7 +254,7 @@ void iINCConnection::clearChannels()
 
 void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data)
 {
-    auto it = m_channels.find(channelId);
+    ChannelMap::iterator it = m_channels.find(channelId);
     if (it == m_channels.end()) {
         ilog_warn("[", m_peerName, "][", channelId, "] invalid channel for binary data received");
         return;

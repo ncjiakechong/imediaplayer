@@ -30,6 +30,50 @@
 
 namespace iShell {
 
+template <bool B, typename T, typename F> struct NumConditional { typedef T Type; };
+template <typename T, typename F> struct NumConditional<false, T, F> { typedef F Type; };
+
+template <bool B> struct BoolSelect { typedef iShell::true_type Type; };
+template <> struct BoolSelect<false> { typedef iShell::false_type Type; };
+
+template <typename T> struct MakeUnsigned;
+template <> struct MakeUnsigned<char> { typedef unsigned char Type; };
+template <> struct MakeUnsigned<signed char> { typedef unsigned char Type; };
+template <> struct MakeUnsigned<short> { typedef unsigned short Type; };
+template <> struct MakeUnsigned<int> { typedef unsigned int Type; };
+template <> struct MakeUnsigned<long> { typedef unsigned long Type; };
+template <> struct MakeUnsigned<long long> { typedef unsigned long long Type; };
+template <> struct MakeUnsigned<unsigned char> { typedef unsigned char Type; };
+template <> struct MakeUnsigned<unsigned short> { typedef unsigned short Type; };
+template <> struct MakeUnsigned<unsigned int> { typedef unsigned int Type; };
+template <> struct MakeUnsigned<unsigned long> { typedef unsigned long Type; };
+template <> struct MakeUnsigned<unsigned long long> { typedef unsigned long long Type; };
+
+template <typename T> struct _Is_Unsigned { enum { value = 0 }; };
+template <> struct _Is_Unsigned<bool> { enum { value = 1 }; };
+template <> struct _Is_Unsigned<unsigned char> { enum { value = 1 }; };
+template <> struct _Is_Unsigned<unsigned short> { enum { value = 1 }; };
+template <> struct _Is_Unsigned<unsigned int> { enum { value = 1 }; };
+template <> struct _Is_Unsigned<unsigned long> { enum { value = 1 }; };
+template <> struct _Is_Unsigned<unsigned long long> { enum { value = 1 }; };
+
+template <typename T> struct is_unsigned {
+    enum { value = _Is_Unsigned<typename iShell::remove_cv<T>::type>::value };
+};
+
+template <typename T> struct MakeSigned;
+template <> struct MakeSigned<char> { typedef signed char Type; };
+template <> struct MakeSigned<signed char> { typedef signed char Type; };
+template <> struct MakeSigned<short> { typedef short Type; };
+template <> struct MakeSigned<int> { typedef int Type; };
+template <> struct MakeSigned<long> { typedef long Type; };
+template <> struct MakeSigned<long long> { typedef long long Type; };
+template <> struct MakeSigned<unsigned char> { typedef signed char Type; };
+template <> struct MakeSigned<unsigned short> { typedef short Type; };
+template <> struct MakeSigned<unsigned int> { typedef int Type; };
+template <> struct MakeSigned<unsigned long> { typedef long Type; };
+template <> struct MakeSigned<unsigned long long> { typedef long long Type; };
+
 namespace inumeric_std_wrapper {
 
 inline bool isnan(double d) { return std::isnan(d); }
@@ -113,7 +157,7 @@ inline bool iConvertDoubleTo(double v, T *value)
         if (v < std::numeric_limits<T>::min())
             return false;
     } else {
-        using ST = typename std::make_signed<T>::type;
+        typedef typename MakeSigned<T>::Type ST;
         supremum = -2.0 * std::numeric_limits<ST>::min();   // -2 * (-2^63) = 2^64, exact (for T = xuint64)
         v = fabs(v);
     }
@@ -133,87 +177,69 @@ inline bool iConvertDoubleTo(double v, T *value)
 // size_t. Implementations for 8- and 16-bit types will work but may not be as
 // efficient. Implementations for 64-bit may be missing on 32-bit platforms.
 // Generic implementations
-template <typename T>
-inline typename enable_if<std::is_unsigned<T>::value, bool>::type
-add_overflow(T v1, T v2, T *r)
-{
-    // unsigned additions are well-defined
-    *r = v1 + v2;
-    return v1 > T(v1 + v2);
-}
 
-template <typename T>
-inline typename enable_if<std::is_signed<T>::value, bool>::type
-add_overflow(T v1, T v2, T *r)
-{
-    // Here's how we calculate the overflow:
-    // 1) unsigned addition is well-defined, so we can always execute it
-    // 2) conversion from unsigned back to signed is implementation-
-    //    defined and in the implementations we use, it's a no-op.
-    // 3) signed integer overflow happens if the sign of the two input operands
-    //    is the same but the sign of the result is different. In other words,
-    //    the sign of the result must be the same as the sign of either
-    //    operand.
-
-    using U = typename std::make_unsigned<T>::type;
-    *r = T(U(v1) + U(v2));
-
-    // If int is two's complement, assume all integer types are too.
-    if (is_same<xint32, int>::value) {
-        // Two's complement equivalent (generates slightly shorter code):
-        //  x ^ y             is negative if x and y have different signs
-        //  x & y             is negative if x and y are negative
-        // (x ^ z) & (y ^ z)  is negative if x and z have different signs
-        //                    AND y and z have different signs
-        return ((v1 ^ *r) & (v2 ^ *r)) < 0;
+namespace iPrivate {
+    template <typename T>
+    inline bool add_overflow_helper(T v1, T v2, T *r, true_type) // Signed
+    {
+        typedef typename MakeUnsigned<T>::Type U;
+        *r = T(U(v1) + U(v2));
+        if (is_same<xint32, int>::value) {
+            return ((v1 ^ *r) & (v2 ^ *r)) < 0;
+        }
+        bool s1 = (v1 < 0);
+        bool s2 = (v2 < 0);
+        bool sr = (*r < 0);
+        return s1 != sr && s2 != sr;
     }
 
-    bool s1 = (v1 < 0);
-    bool s2 = (v2 < 0);
-    bool sr = (*r < 0);
-    return s1 != sr && s2 != sr;
-    // also: return s1 == s2 && s1 != sr;
+    template <typename T>
+    inline bool add_overflow_helper(T v1, T v2, T *r, false_type) // Unsigned
+    {
+        *r = v1 + v2;
+        return v1 > T(v1 + v2);
+    }
+
+    template <typename T>
+    inline bool sub_overflow_helper(T v1, T v2, T *r, true_type) // Signed
+    {
+        typedef typename MakeUnsigned<T>::Type U;
+        *r = T(U(v1) - U(v2));
+        if (is_same<xint32, int>::value)
+            return ((v1 ^ *r) & (~v2 ^ *r)) < 0;
+        bool s1 = (v1 < 0);
+        bool s2 = !(v2 < 0);
+        bool sr = (*r < 0);
+        return s1 != sr && s2 != sr;
+    }
+
+    template <typename T>
+    inline bool sub_overflow_helper(T v1, T v2, T *r, false_type) // Unsigned
+    {
+        *r = v1 - v2;
+        return v1 < v2;
+    }
 }
 
 template <typename T>
-inline typename enable_if<std::is_unsigned<T>::value, bool>::type
-sub_overflow(T v1, T v2, T *r)
+inline bool add_overflow(T v1, T v2, T *r)
 {
-    // unsigned subtractions are well-defined
-    *r = v1 - v2;
-    return v1 < v2;
+    return iPrivate::add_overflow_helper(v1, v2, r, typename BoolSelect<std::numeric_limits<T>::is_signed>::Type());
 }
 
 template <typename T>
-inline typename enable_if<std::is_signed<T>::value, bool>::type
-sub_overflow(T v1, T v2, T *r)
+inline bool sub_overflow(T v1, T v2, T *r)
 {
-    // See above for explanation. This is the same with some signs reversed.
-    // We can't use add_overflow(v1, -v2, r) because it would be UB if
-    // v2 == std::numeric_limits<T>::min().
-
-    using U = typename std::make_unsigned<T>::type;
-    *r = T(U(v1) - U(v2));
-
-    if (is_same<xint32, int>::value)
-        return ((v1 ^ *r) & (~v2 ^ *r)) < 0;
-
-    bool s1 = (v1 < 0);
-    bool s2 = !(v2 < 0);
-    bool sr = (*r < 0);
-    return s1 != sr && s2 != sr;
-    // also: return s1 == s2 && s1 != sr;
+    return iPrivate::sub_overflow_helper(v1, v2, r, typename BoolSelect<std::numeric_limits<T>::is_signed>::Type());
 }
 
 template <typename T>
-inline typename enable_if<std::is_unsigned<T>::value || std::is_signed<T>::value, bool>::type
-mul_overflow(T v1, T v2, T *r)
+inline bool mul_overflow(T v1, T v2, T *r)
 {
     // use the next biggest type
-    // Note: for 64-bit systems where __int128 isn't supported, this will cause an error.
-    using LargerInt = iIntegerForSize<sizeof(T) * 2>;
-    using Larger = typename std::conditional<std::is_signed<T>::value,
-            typename LargerInt::Signed, typename LargerInt::Unsigned>::type;
+    typedef iIntegerForSize<sizeof(T) * 2> LargerInt;
+    typedef typename NumConditional<std::numeric_limits<T>::is_signed,
+            typename LargerInt::Signed, typename LargerInt::Unsigned>::Type Larger;
     Larger lr = Larger(v1) * Larger(v2);
     *r = T(lr);
     return lr > std::numeric_limits<T>::max() || lr < std::numeric_limits<T>::min();

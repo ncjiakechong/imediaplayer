@@ -11,13 +11,20 @@
 #ifndef ICACHE_H
 #define ICACHE_H
 
+#include <map>
 #include <list>
+#if __cplusplus >= 201103L
 #include <unordered_map>
+#endif
 #include <core/global/imacro.h>
 
 namespace iShell {
 
+#if __cplusplus >= 201103L
 template <class Key, class T, class Hash = std::hash<Key>>
+#else
+template <class Key, class T, class Hash = std::less<Key> >
+#endif
 class iCache
 {
     struct Node {
@@ -28,7 +35,11 @@ class iCache
     };
     Node *f, *l;
 
+    #if __cplusplus >= 201103L
     typedef std::unordered_map<Key, Node, Hash> HashType;
+    #else
+    typedef std::map<Key, Node, Hash> HashType;
+    #endif
     HashType hash;
     int mx, total;
 

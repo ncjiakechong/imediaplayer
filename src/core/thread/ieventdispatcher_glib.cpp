@@ -210,7 +210,7 @@ static gboolean eventSourceWraperCheck(GSource *s)
     iEventSourceWraper *source = reinterpret_cast<iEventSourceWraper *>(s);
 
     std::map<GPollFD*, iPollFD*>::const_iterator mapIt;
-    for (mapIt = source->gfd2fdMap.cbegin(); mapIt != source->gfd2fdMap.cend(); ++mapIt) {
+    for (mapIt = source->gfd2fdMap.begin(); mapIt != source->gfd2fdMap.end(); ++mapIt) {
         GPollFD* gfd = mapIt->first;
         iPollFD* ifd = mapIt->second;
 
@@ -434,7 +434,7 @@ int iEventDispatcher_Glib::addEventSource(iEventSource* source)
 {
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
-    if (it != m_wraperMap.cend()) {
+    if (it != m_wraperMap.end()) {
         ilog_warn("source has added->", source->name());
         return -1;
     }
@@ -454,9 +454,9 @@ int iEventDispatcher_Glib::addEventSource(iEventSource* source)
 
 int iEventDispatcher_Glib::removeEventSource(iEventSource* source)
 {
-    std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
+    std::map<iEventSource*, iEventSourceWraper*>::iterator it;
     it = m_wraperMap.find(source);
-    if (it == m_wraperMap.cend()) {
+    if (it == m_wraperMap.end()) {
         ilog_warn("source has removed->", source->name());
         return -1;
     }
@@ -475,7 +475,7 @@ int iEventDispatcher_Glib::addPoll(iPollFD* fd, iEventSource* source)
 {
     std::map<iPollFD*, GPollFD*>::const_iterator itMap;
     itMap = m_fd2gfdMap.find(fd);
-    if (itMap != m_fd2gfdMap.cend()) {
+    if (itMap != m_fd2gfdMap.end()) {
         ilog_warn("fd has added->", fd);
         return -1;
     }
@@ -483,7 +483,7 @@ int iEventDispatcher_Glib::addPoll(iPollFD* fd, iEventSource* source)
     iEventSourceWraper* sourceWraper = IX_NULLPTR;
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
-    if (it != m_wraperMap.cend()) {
+    if (it != m_wraperMap.end()) {
         sourceWraper = it->second;
     }
 
@@ -519,7 +519,7 @@ int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource* source)
 {
     std::map<iPollFD*, GPollFD*>::const_iterator itMap;
     itMap = m_fd2gfdMap.find(fd);
-    if (itMap == m_fd2gfdMap.cend()) {
+    if (itMap == m_fd2gfdMap.end()) {
         ilog_warn("fd has removed->", fd);
         return -1;
     }
@@ -527,7 +527,7 @@ int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource* source)
     iEventSourceWraper* sourceWraper = IX_NULLPTR;
     std::map<iEventSource*, iEventSourceWraper*>::const_iterator it;
     it = m_wraperMap.find(source);
-    if (it != m_wraperMap.cend()) {
+    if (it != m_wraperMap.end()) {
         sourceWraper = it->second;
     }
 
@@ -547,7 +547,7 @@ int iEventDispatcher_Glib::updatePoll(iPollFD* fd, iEventSource* source)
 {
     std::map<iPollFD*, GPollFD*>::const_iterator itMap;
     itMap = m_fd2gfdMap.find(fd);
-    if (itMap == m_fd2gfdMap.cend()) {
+    if (itMap == m_fd2gfdMap.end()) {
         ilog_warn("fd not found for update->", fd);
         return -1;
     }

@@ -56,13 +56,13 @@ struct Properties {
 IX_CORE_EXPORT const Properties* properties(xuint32 ucs4);
 IX_CORE_EXPORT const Properties* properties(xuint16 ucs2);
 
-enum class EastAsianWidth : unsigned int {
-    A,
-    F,
-    H,
-    N,
-    Na,
-    W,
+enum EastAsianWidth {
+    EAW_A,
+    EAW_F,
+    EAW_H,
+    EAW_N,
+    EAW_Na,
+    EAW_W,
 };
 
 enum GraphemeBreakClass {
@@ -155,21 +155,21 @@ enum LineBreakClass {
     NumLineBreakClasses
 };
 
-enum class IdnaStatus : unsigned int {
-    Disallowed,
-    Valid,
-    Ignored,
-    Mapped,
-    Deviation
+enum IdnaStatus {
+    IdnaStatus_Disallowed,
+    IdnaStatus_Valid,
+    IdnaStatus_Ignored,
+    IdnaStatus_Mapped,
+    IdnaStatus_Deviation
 };
 
-enum class EmojiFlags : uchar {
-    NoEmoji = 0,
-    Emoji = 1,
-    Emoji_Presentation = 2,
-    Emoji_Modifier = 4,
-    Emoji_Modifier_Base = 8,
-    Emoji_Component = 16
+enum EmojiFlags {
+    EF_NoEmoji = 0,
+    EF_Emoji = 1,
+    EF_Emoji_Presentation = 2,
+    EF_Emoji_Modifier = 4,
+    EF_Emoji_Modifier_Base = 8,
+    EF_Emoji_Component = 16
 };
 
 GraphemeBreakClass graphemeBreakClass(xuint32 ucs4);

@@ -219,7 +219,7 @@ bool iTimerInfoList::timerWait(xint64 &tm)
 
     // Find first waiting timer not already active
     const TimerInfo *t = IX_NULLPTR;
-    for (std::list<TimerInfo>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
+    for (std::list<TimerInfo>::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
         if (!it->activateRef) {
             t = &(*it);
             break;
@@ -248,7 +248,7 @@ bool iTimerInfoList::timerWait(xint64 &tm)
 xint64 iTimerInfoList::timerRemainingTime(int timerId)
 {
     xint64 currentTime = updateCurrentTime();
-    for (std::list<TimerInfo>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
+    for (std::list<TimerInfo>::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
         if (it->id != timerId) continue;
 
         // time to wait
@@ -362,7 +362,7 @@ bool iTimerInfoList::unregisterTimers(iObject *object, bool releaseId)
 std::list<iEventDispatcher::TimerInfo> iTimerInfoList::registeredTimers(iObject *object) const
 {
     std::list<iEventDispatcher::TimerInfo> list;
-    for (std::list<TimerInfo>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
+    for (std::list<TimerInfo>::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
         if (it->obj == object) {
             iEventDispatcher::TimerInfo insert(it->id, it->interval, it->timerType, it->userdata);
             list.push_back(insert);
@@ -386,7 +386,7 @@ int iTimerInfoList::activateTimers()
     xint64 currentTime = updateCurrentTime();
 
     // Find out how many timer have expired
-    for (std::list<TimerInfo>::const_iterator it = m_timers.cbegin(); it != m_timers.cend(); ++it) {
+    for (std::list<TimerInfo>::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
         if (currentTime < it->timeout)
             break;
         maxCount++;
@@ -417,7 +417,7 @@ int iTimerInfoList::activateTimers()
         calculateNextTimeout(currentTimerInfo, currentTime);
 
         // reinsert timer
-        auto cur_it = timerInsert(currentTimerInfo);
+        std::list<TimerInfo>::iterator cur_it = timerInsert(currentTimerInfo);
         IX_ASSERT(cur_it != m_timers.end());
         if (cur_it->interval > 0)
             n_act++;

@@ -17229,12 +17229,18 @@ static IdnaMapEntry idnaMap[] = {
     { 0x2fa1d, 2, { 0xd869, 0xde00 } },
 };
 
+static bool idnaMapLessThan(const IdnaMapEntry &p, xuint32 c) {
+    return p.codePoint < c;
+}
+
 IX_CORE_EXPORT iStringView idnaMapping(xuint32 ucs4)
 {
-    auto i = std::lower_bound(std::begin(idnaMap), std::end(idnaMap), ucs4,
-                              [](const IdnaMapEntry &p, xuint32 c) { return p.codePoint < c; });
-    if (i == std::end(idnaMap) || i->codePoint != ucs4)
-        return {};
+    const IdnaMapEntry *begin = idnaMap;
+    const IdnaMapEntry *end = idnaMap + sizeof(idnaMap) / sizeof(idnaMap[0]);
+    const IdnaMapEntry *i = std::lower_bound(begin, end, ucs4, idnaMapLessThan);
+
+    if (i == end || i->codePoint != ucs4)
+        return iStringView();
 
     return iStringView(i->size > 2 ? idnaMappingData + i->ucs[0] : i->ucs, i->size);
 }

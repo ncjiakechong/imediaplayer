@@ -22,8 +22,10 @@
 //
 
 #include <map>
+#include <set>
+#if __cplusplus >= 201103L
 #include <unordered_set>
-#include <unordered_map>
+#endif
 
 #include <gst/gst.h>
 #include <gst/video/video.h>
@@ -58,6 +60,11 @@ class iByteArray;
 class iVideoSurfaceFormat;
 
 namespace iGstUtils {
+    #if __cplusplus >= 201103L
+    typedef std::unordered_set<iString, iKeyHashFunc> MineTypeSet;
+    #else
+    typedef std::set<iString> MineTypeSet;
+    #endif
 
     std::multimap<iByteArray, iVariant> gstTagListToMap(const GstTagList *list);
 
@@ -75,10 +82,10 @@ namespace iGstUtils {
     void deinitGst();
     iMultimedia::SupportEstimate hasSupport(const iString &mimeType,
                                              const std::list<iString> &codecs,
-                                             const std::unordered_set<iString, iKeyHashFunc> &supportedMimeTypeSet);
+                                             const MineTypeSet &supportedMimeTypeSet);
 
 
-    std::unordered_set<iString, iKeyHashFunc> supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory));
+    MineTypeSet supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory));
 
     #if GST_CHECK_VERSION(1,0,0)
     iVideoSurfaceFormat formatForCaps(

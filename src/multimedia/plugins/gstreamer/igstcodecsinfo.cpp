@@ -72,14 +72,14 @@ void iGstCodecsInfo::updateCodecs(ElementType elementType)
 
     GList *elements = elementFactories(elementType);
 
-    std::unordered_set<iByteArray, iKeyHashFunc> fakeEncoderMimeTypes;
+    std::set<iByteArray> fakeEncoderMimeTypes;
     fakeEncoderMimeTypes.insert("unknown/unknown");
     fakeEncoderMimeTypes.insert("audio/x-raw-int");
     fakeEncoderMimeTypes.insert("audio/x-raw-float");
     fakeEncoderMimeTypes.insert("video/x-raw-yuv");
     fakeEncoderMimeTypes.insert("video/x-raw-rgb");
 
-    std::unordered_set<iByteArray, iKeyHashFunc> fieldsToAdd;
+    std::set<iByteArray> fieldsToAdd;
     fieldsToAdd.insert("mpegversion");
     fieldsToAdd.insert("layer");
     fieldsToAdd.insert("layout");
@@ -138,15 +138,15 @@ void iGstCodecsInfo::updateCodecs(ElementType elementType)
 
                     // If two elements provide the same codec, use the highest ranked one
                     std::multimap<iString, CodecInfo>::const_iterator it = m_codecInfo.find(codec);
-                    if (it == m_codecInfo.cend() || it->second.rank < rank) {
-                        if (it == m_codecInfo.cend())
+                    if (it == m_codecInfo.end() || it->second.rank < rank) {
+                        if (it == m_codecInfo.end())
                             m_codecs.push_back(codec);
 
                         CodecInfo info;
                         info.elementName = gst_plugin_feature_get_name(GST_PLUGIN_FEATURE(factory));
 
                         gchar *description = gst_pb_utils_get_codec_description(newCaps);
-                        info.description = iString::fromUtf8(description);
+                        info.description = iString::fromUtf8(iByteArray((const char*)description));
                         if (description)
                             g_free(description);
 
@@ -221,7 +221,7 @@ GList *iGstCodecsInfo::elementFactories(ElementType elementType) const
     if (elementType == AudioEncoder) {
         // Manually add "audioconvert" to the list
         // to allow linking with various containers.
-        auto factory = gst_element_factory_find("audioconvert");
+        GstElementFactory *factory = gst_element_factory_find("audioconvert");
         if (factory)
             list = g_list_prepend(list, factory);
     }

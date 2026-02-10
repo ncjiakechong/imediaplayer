@@ -14,6 +14,11 @@
 
 namespace iShell {
 
+template <typename T, T v> 
+struct integral_constant { static const T value = v; typedef T value_type; typedef integral_constant<T,v> type; };
+typedef integral_constant<bool, true> true_type;
+typedef integral_constant<bool, false> false_type;
+
 template <typename T>
 struct is_reference
     /// Use this struct to determine if a template type is a reference.
@@ -46,18 +51,23 @@ struct is_const<const T[i]>
     /// Specialization for const char arrays
 { enum { value = 1 }; };
 
-template <typename T1, typename T2>
-struct is_same
-    /// Use this struct to determine if template type is same.
-{ enum { value = 0 }; };
+template<class T, class U> struct is_same { static const bool value = false; };
+template<class T> struct is_same<T, T> { static const bool value = true; };
 
-template <typename T>
-struct is_same<T, T>
-    /// Use this struct to determine if template type is same.
-{ enum { value = 1 }; };
+template <class T> struct remove_const { typedef T type; };
+template <class T> struct remove_const<const T> { typedef T type; };
+template <class T> struct remove_volatile { typedef T type; };
+template <class T> struct remove_volatile<volatile T> { typedef T type; };
+template <class T> struct remove_cv { typedef typename remove_const<typename remove_volatile<T>::type>::type type; };
 
-template<typename>
-struct remove_cv;
+template <class T> struct remove_reference { typedef T type; };
+template <class T> struct remove_reference<T&> { typedef T type; };
+
+template <class T> struct remove_pointer { typedef T type; };
+template <class T> struct remove_pointer<T*> { typedef T type; };
+template <class T> struct remove_pointer<T* const> { typedef T type; };
+template <class T> struct remove_pointer<T* volatile> { typedef T type; };
+template <class T> struct remove_pointer<T* const volatile> { typedef T type; };
 
 template <typename T>
 struct is_enum
@@ -85,14 +95,6 @@ struct _Is_integral<unsigned char>
 
 template <>
 struct _Is_integral<wchar_t>
-{ enum { value = 1 }; };
-
-template <>
-struct _Is_integral<char16_t>
-{ enum { value = 1 }; };
-
-template <>
-struct _Is_integral<char32_t>
 { enum { value = 1 }; };
 
 template <>
@@ -130,24 +132,6 @@ struct _Is_integral<unsigned long long>
 template <typename T>
 struct is_integral
 { enum { value = _Is_integral<typename remove_cv<T>::type>::value }; };
-
-// STRUCT TEMPLATE remove_cv
-template <typename T>
-struct remove_cv
-    /// remove top-level const and volatile qualifiers
-{ typedef T type; };
-
-template <typename T>
-struct remove_cv<const T>
-{ typedef T type; };
-
-template <typename T>
-struct remove_cv<volatile T>
-{ typedef T type; };
-
-template <typename T>
-struct remove_cv<const volatile T>
-{ typedef T type; };
 
 template <typename T>
 struct type_wrapper
@@ -227,11 +211,8 @@ template<typename T> struct is_convertible<void, T> { enum { value = false }; };
 template<typename T> struct is_convertible<T, void> { enum { value = true }; };
 template<> struct is_convertible<void, void> { enum { value = true }; };
 
-template<bool B, class T = void>
-struct enable_if {};
-
-template<class T>
-struct enable_if<true, T> { typedef T type; };
+template <bool B, class T = void> struct enable_if {};
+template <class T> struct enable_if<true, T> { typedef T type; };
 
 #if defined(_MSC_VER)
 #define TYPEWRAPPER_DEFAULTVALUE(T) type_wrapper<T>::TYPE()

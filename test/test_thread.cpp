@@ -106,7 +106,7 @@ int test_thread(void)
 
     thread1 = new TestThread;
     thread1->moveToThread(thread);
-    signal1->disconnect(signal1, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
+    signal1->disconnect(signal1, IX_NULLPTR, (iObject*)IX_NULLPTR, IX_NULLPTR);
 
     iObject::connect(signal1, &TestThread::tst_sig_int1, signal1, &TestThread::tst_slot_int1, QueuedConnection);
     IX_ASSERT(iObject::connect(signal1, &TestThread::tst_sig_int1, thread1, &TestThread::tst_slot_int1, ConnectionType(DirectConnection | UniqueConnection)));
@@ -124,7 +124,9 @@ int test_thread(void)
     IX_ASSERT(IX_NULLPTR == thread1->sender_obj && IX_NULLPTR == thread1->senderObj());
 
     delete thread1;
+    thread1 = IX_NULLPTR;
 
+    #if __cplusplus >= 201103L
     int lambda_slot_count = 0;
     thread1 = new TestThread;
     thread1->moveToThread(thread);
@@ -142,6 +144,7 @@ int test_thread(void)
     iObject::invokeMethod(thread1, &TestThread::tst_sig_int1, 4);
     IX_ASSERT(0 == lambda_slot_count);
     ilog_debug("lambda slot at mainthread ", lambda_slot_count);
+    #endif
 
     iCoreApplication::postEvent(thread, new iEvent(iEvent::Quit));
     // mutity test

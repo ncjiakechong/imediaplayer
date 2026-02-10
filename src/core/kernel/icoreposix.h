@@ -10,7 +10,7 @@
 #ifndef ICOREPOSIX_H
 #define ICOREPOSIX_H
 
-#include <cstdint>
+#include <stdint.h>
 #include <sys/time.h> // struct timeval
 
 #include <core/global/iglobal.h>

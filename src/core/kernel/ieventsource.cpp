@@ -77,7 +77,7 @@ int iEventSource::attach(iEventDispatcher* dispatcher)
     }
 
     m_dispatcher = dispatcher;
-    for (std::list<iPollFD*>::const_iterator it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+    for (std::list<iPollFD*>::const_iterator it = m_pollFds.begin(); it != m_pollFds.end(); ++it) {
         dispatcher->addPoll(*it, this);
     }
 
@@ -90,7 +90,7 @@ int iEventSource::detach()
         return -1;
     }
 
-    for (std::list<iPollFD*>::const_iterator it = m_pollFds.cbegin(); it != m_pollFds.cend(); ++it) {
+    for (std::list<iPollFD*>::const_iterator it = m_pollFds.begin(); it != m_pollFds.end(); ++it) {
         m_dispatcher->removePoll(*it, this);
     }
 

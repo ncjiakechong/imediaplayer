@@ -103,7 +103,7 @@ std::list<iString> iCoreApplication::arguments()
     char ** const av = s_self->m_argv;
 
     for (int a = 0; a < ac; ++a) {
-        list.push_back(iString::fromLocal8Bit(av[a]));
+        list.push_back(iString::fromLocal8Bit(iByteArray(av[a])));
     }
 
     return list;
@@ -356,7 +356,7 @@ void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
 
     locker.unlock();
 
-    for (std::list<iPostEvent>::const_iterator it = events.cbegin(); it != events.cend(); ++it) {
+    for (std::list<iPostEvent>::const_iterator it = events.begin(); it != events.end(); ++it) {
         delete it->event;
     }
 }
@@ -532,8 +532,8 @@ bool iCoreApplication::compressEvent(iEvent * event, iObject *receiver, iPostEve
     }
 
     if (event->type() == iEvent::Quit && receiver->m_postedEvents > 0) {
-        for (std::list<iPostEvent>::const_iterator it = postedEvents->cbegin();
-             it != postedEvents->cend(); ++it) {
+        for (std::list<iPostEvent>::const_iterator it = postedEvents->begin();
+             it != postedEvents->end(); ++it) {
              const iPostEvent &cur = *it;
              if (cur.receiver != receiver
                      || cur.event == IX_NULLPTR

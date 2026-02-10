@@ -446,7 +446,7 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags);
 class iUrlPrivate
 {
 public:
-    enum Section : uchar {
+    enum Section {
         Scheme = 0x01,
         UserName = 0x02,
         Password = 0x04,
@@ -461,7 +461,7 @@ public:
         FullUrl = 0xff
     };
 
-    enum Flags : uchar {
+    enum Flags {
         IsLocalFile = 0x01
     };
 
@@ -849,7 +849,7 @@ static void recodeFromUser(iString &output, const iString &input, const ushort *
     if (mode == iUrl::DecodedMode)
         appended = ix_encodeFromUser(output, input, actions);
     else
-        appended = ix_urlRecode(output, input, {}, actions);
+        appended = ix_urlRecode(output, input, 0, actions);
     if (!appended)
         output = input;
 }
@@ -859,7 +859,7 @@ static void recodeFromUser(iString &output, const iStringView &input, const usho
     IX_ASSERT_X(mode != iUrl::DecodedMode, "This function should only be called when parsing encoded components");
     IX_UNUSED(mode);
     output.resize(0);
-    if (ix_urlRecode(output, input, {}, actions))
+    if (ix_urlRecode(output, input, 0, actions))
         return;
     output.append(input);
 }
@@ -965,32 +965,32 @@ static xsizetype rootLength(iStringView name, PathNormalizations flags)
 #endif
             ;
     const xsizetype len = name.size();
-    xuint16 firstChar = len > 0 ? name.at(0).unicode() : u'\0';
-    xuint16 secondChar = len > 1 ? name.at(1).unicode() : u'\0';
+    xuint16 firstChar = len > 0 ? name.at(0).unicode() : '\0';
+    xuint16 secondChar = len > 1 ? name.at(1).unicode() : '\0';
     if (UseWindowsRules) {
         // Handle possible UNC paths which start with double slash
         bool urlMode = flags & UrlNormalizationMode;
-        if (firstChar == u'/' && secondChar == u'/' && !urlMode) {
+        if (firstChar == '/' && secondChar == '/' && !urlMode) {
             // Server name '//server/path' is part of the prefix.
-            const xsizetype nextSlash = name.indexOf(u'/', 2);
+            const xsizetype nextSlash = name.indexOf('/', 2);
             return nextSlash >= 0 ? nextSlash + 1 : len;
         }
 
         // Handle a possible drive letter
         xsizetype driveLength = 2;
-        if (firstChar == u'/' && urlMode && len > 2 && name.at(2) == u':') {
+        if (firstChar == '/' && urlMode && len > 2 && name.at(2) == ':') {
             // Drive-in-URL-Path mode, e.g. "/c:" or "/c:/autoexec.bat"
             ++driveLength;
-            secondChar = u':';
+            secondChar = ':';
         }
-        if (secondChar == u':') {
-            if (len > driveLength && name.at(driveLength) == u'/')
+        if (secondChar == ':') {
+            if (len > driveLength && name.at(driveLength) == '/')
                 return driveLength + 1;     // absolute drive path, e.g. "c:/config.sys"
             return driveLength;             // relative drive path, e.g. "c:" or "d:swapfile.sys"
         }
     }
 
-    return firstChar == u'/' ? 1 : 0;
+    return firstChar == '/' ? 1 : 0;
 }
 
 /*!
@@ -1031,20 +1031,20 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
     xsizetype i = prefixLength;
     xsizetype n = path->size();
     for (bool lastWasSlash = true; i < n; ++i) {
-        if (lastWasSlash && in[i] == u'.') {
-            if (i + 1 == n || in[i + 1] == u'/')
+        if (lastWasSlash && in[i] == '.') {
+            if (i + 1 == n || in[i + 1] == '/')
                 break;
-            if (in[i + 1] == u'.' && (i + 2 == n || in[i + 2] == u'/'))
+            if (in[i + 1] == '.' && (i + 2 == n || in[i + 2] == '/'))
                 break;
         }
-        if (!isRemote && lastWasSlash && in[i] == u'/' && i > 0) {
+        if (!isRemote && lastWasSlash && in[i] == '/' && i > 0) {
             // Found consecutive slashes in local path (e.g., "path//to/file")
             // Move back one position so the normalization loop below will remove
             // all consecutive slashes in one pass
             --i;
             break;
         }
-        lastWasSlash = in[i] == u'/';
+        lastWasSlash = in[i] == '/';
     }
     if (i == n)
         return true;
@@ -1061,9 +1061,9 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
         // First, copy the preceding slashes, so we can look at the segment's
         // content. If the path is part of a URL, we copy all slashes, otherwise
         // just one.
-        if (in[0] == u'/') {
+        if (in[0] == '/') {
             *out++ = *in++;
-            while (in < end && in[0] == u'/') {
+            while (in < end && in[0] == '/') {
                 if (isRemote)
                     *out++ = *in++;
                 else
@@ -1071,22 +1071,22 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
 
                 // Note: we may exit this loop with in == end, in which case we
                 // *shouldn't* dereference *in. But since we are pointing to a
-                // detached, non-empty string, we know there's a u'\0' at the
+                // detached, non-empty string, we know there's a '\0' at the
                 // end, so dereferencing is safe.
             }
         }
 
         // Is this path segment either "." or ".."?
         enum { Nothing, Dot, DotDot } type = Nothing;
-        if (in[0] == u'.') {
-            if (in + 1 == end || in[1] == u'/')
+        if (in[0] == '.') {
+            if (in + 1 == end || in[1] == '/')
                 type = Dot;
-            else if (in[1] == u'.' && (in + 2 == end || in[2] == u'/'))
+            else if (in[1] == '.' && (in + 2 == end || in[2] == '/'))
                 type = DotDot;
         }
         if (type == Nothing) {
             // If it is neither, then we copy this segment.
-            while (in < end && in[0] != u'/')
+            while (in < end && in[0] != '/')
                 *out++ = *in++;
             continue;
         }
@@ -1101,11 +1101,11 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
                 // without cleaning this segment
                 ok = false;
                 if (!isRemote) {
-                    *out++ = u'.';
-                    *out++ = u'.';
+                    *out++ = '.';
+                    *out++ = '.';
                     if (in + 2 != end) {
-                        IX_ASSERT(in[2] == u'/');
-                        *out++ = u'/';
+                        IX_ASSERT(in[2] == '/');
+                        *out++ = '/';
                         ++in;
                     }
                     start = out;
@@ -1117,7 +1117,7 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
             if (out > start)
                 --out; // backtrack the first dot
             // backtrack the previous path segment
-            while (out > start && out[-1] != u'/')
+            while (out > start && out[-1] != '/')
                 --out;
             in += 2;    // the two dots
         } else {
@@ -1128,16 +1128,16 @@ bool ix_normalizePathSegments(iString *path, PathNormalizations flags)
         // E.g.: /a/b/../c    >>> /a/b/../c
         //          ^out            ^out
         // the next iteration will copy '/c' to the output buffer >>> /a/c
-        if (in != end && out > start && out[-1] == u'/')
+        if (in != end && out > start && out[-1] == '/')
             --out;
         if (out == start) {
             // We've reached the root. Make sure we don't turn a relative path
             // to absolute or, in the case of local paths that are already
             // absolute, into UNC.
             // Note: this will turn ".//a" into "a" even for URLs!
-            if (in != end && in[0] == u'/')
+            if (in != end && in[0] == '/')
                 ++in;
-            while (prefixLength == 0 && in != end && in[0] == u'/')
+            while (prefixLength == 0 && in != end && in[0] == '/')
                 ++in;
         }
     } while (in < end);
@@ -1474,11 +1474,12 @@ static const iChar *parseIp6(iString &host, const iChar *begin, const iChar *end
     if (mode == iUrl::TolerantMode) {
         // this struct is kept in automatic storage because it's only 4 bytes
         const xuint16 decodeColon[] = { decode(':'), 0 };
-        if (ix_urlRecode(decodedBuffer, decoded, iUrl::ComponentFormattingOption::PrettyDecoded, decodeColon))
+        if (ix_urlRecode(decodedBuffer, decoded, iUrl::PrettyDecoded, decodeColon))
             decoded = decodedBuffer;
     }
 
-    const iStringView zoneIdIdentifier(u"%25");
+    static const iChar percent25[] = { '%', '2', '5', '\0' };
+    const iStringView zoneIdIdentifier(percent25);
     iIPAddressUtils::IPv6Address address;
     iStringView zoneId;
 
@@ -1578,7 +1579,7 @@ inline bool iUrlPrivate::setHost(const iString &value, xsizetype from, xsizetype
 
     // check for percent-encoding first
     iString s;
-    if (mode == iUrl::TolerantMode && ix_urlRecode(s, iStringView{begin, end}, { }, IX_NULLPTR)) {
+    if (mode == iUrl::TolerantMode && ix_urlRecode(s, iStringView(begin, end), 0, IX_NULLPTR)) {
         // Host was percent-decoded successfully
         // Verify no illegal percent sequences remain (should all be decoded by now)
         xsizetype pos = s.indexOf(iChar(0x25)); // '%'
@@ -1591,7 +1592,7 @@ inline bool iUrlPrivate::setHost(const iString &value, xsizetype from, xsizetype
         return setHost(s, 0, s.length(), iUrl::StrictMode);
     }
 
-    s = ix_ACE_do(value.mid(from, iend - from), NormalizeAce, ForbidLeadingDot, {});
+    s = ix_ACE_do(value.mid(from, iend - from), NormalizeAce, ForbidLeadingDot, 0);
     if (s.isEmpty()) {
         setError(InvalidRegNameError, value);
         return false;
@@ -1774,13 +1775,13 @@ inline iString iUrlPrivate::mergePaths(const iString &relativePath) const
 // way of iUrl::resolved().
 static void fixupNonAuthorityPath(iString *path)
 {
-    if (path->isEmpty() || path->at(0) != u'/')
+    if (path->isEmpty() || path->at(0) != '/')
         return;
 
     // Find the first non-slash character, because its position is equal to the
     // number of slashes. We'll remove all but one of them.
     xsizetype i = 0;
-    while (i + 1 < path->size() && path->at(i + 1) == u'/')
+    while (i + 1 < path->size() && path->at(i + 1) == '/')
         ++i;
     if (i)
         path->remove(0, i);
@@ -2464,7 +2465,7 @@ void iUrl::setHost(const iString &host, ParsingMode mode)
 
     iString data = host;
     if (mode == DecodedMode) {
-        data.replace(u'%', "%25");
+        data.replace('%', "%25");
         mode = TolerantMode;
     }
 
@@ -3243,7 +3244,7 @@ iUrl iUrl::resolved(const iUrl &relative) const
 
     t.d->normalizePathSegments(&t.d->path);
     if (!t.d->hasAuthority()) {
-        if (t.d->isLocalFile() && t.d->path.startsWith(u'/'))
+        if (t.d->isLocalFile() && t.d->path.startsWith('/'))
             t.d->sectionIsPresent |= iUrlPrivate::Host;
         else
             fixupNonAuthorityPath(&t.d->path);
@@ -3411,7 +3412,7 @@ iUrl iUrl::adjusted(iUrl::FormattingOptions options) const
         that.d->path.resize(0);
         d->appendPath(that.d->path, options | FullyEncoded, iUrlPrivate::Path);
     }
-    if (that.d->isLocalFile() && that.d->path.startsWith(u'/')) {
+    if (that.d->isLocalFile() && that.d->path.startsWith('/')) {
         // ensure absolute file URLs have an empty authority to comply with the
         // XDG file spec (note this may undo a RemoveAuthority)
         that.d->sectionIsPresent |= iUrlPrivate::Host;
@@ -3968,8 +3969,8 @@ iString iUrl::errorString() const
 std::list<iString> iUrl::toStringList(const std::list<iUrl> &urls, FormattingOptions options)
 {
     std::list<iString> lst;
-    for (const iUrl &url : urls)
-        lst.push_back(url.toString(options));
+    for (std::list<iUrl>::const_iterator it = urls.begin(); it != urls.end(); ++it)
+        lst.push_back(it->toString(options));
     return lst;
 
 }
@@ -3981,8 +3982,8 @@ std::list<iString> iUrl::toStringList(const std::list<iUrl> &urls, FormattingOpt
 std::list<iUrl> iUrl::fromStringList(const std::list<iString> &urls, ParsingMode mode)
 {
     std::list<iUrl> lst;
-    for (const iString &str : urls)
-        lst.push_back(iUrl(str, mode));
+    for (std::list<iString>::const_iterator it = urls.begin(); it != urls.end(); ++it)
+        lst.push_back(iUrl(*it, mode));
     return lst;
 }
 

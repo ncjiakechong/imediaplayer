@@ -39,10 +39,12 @@ public:
 
     void start() {
         iTimer::singleShot(10, 10, this, &TestTimer::testSingleShot);
+        #if __cplusplus >= 201103L
         iTimer::singleShot(20, 20, this, [](xintptr userdata) {
             IX_ASSERT(20 == userdata);
             ilog_debug("singleShot lambda timeout ", userdata);
         });
+        #endif
 
         m_startTime = iDeadlineTimer::current().deadline();
         double disCur = m_startTime / 1000.0;

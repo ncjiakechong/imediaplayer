@@ -22,7 +22,7 @@ namespace iShell {
 
 inline bool iIsLittleEndian()
 {
-    union {uint16_t u16; uint8_t c;} __byte_order{1};
+    union {uint16_t u16; uint8_t c;} __byte_order = {1};
     return (__byte_order.c > 0);
 }
 
@@ -104,7 +104,7 @@ template<typename Float>
 Float ibswapFloatHelper(Float source)
 {
     // memcpy call in iFromUnaligned is recognized by optimizer as a correct way of type prunning
-    auto temp = iFromUnaligned<typename iIntegerForSizeof<Float>::Unsigned>(&source);
+    typename iIntegerForSizeof<Float>::Unsigned temp = iFromUnaligned<typename iIntegerForSizeof<Float>::Unsigned>(&source);
     temp = ibswap(temp);
     return iFromUnaligned<Float>(&temp);
 }
@@ -260,7 +260,7 @@ class iSpecialInteger
     typedef typename S::StorageType T;
     T val;
 public:
-    iSpecialInteger() = default;
+    iSpecialInteger() {}
     explicit iSpecialInteger(T i) : val(S::toSpecial(i)) {}
 
     iSpecialInteger &operator =(T i) { val = S::toSpecial(i); return *this; }
@@ -329,10 +329,26 @@ public:
 };
 
 template<typename T>
-using iLEInteger = iSpecialInteger<iLittleEndianStorageType<T>>;
+class iLEInteger : public iSpecialInteger<iLittleEndianStorageType<T> > {
+public:
+    iLEInteger() {}
+    explicit iLEInteger(T v) : iSpecialInteger<iLittleEndianStorageType<T> >(v) {}
+    iLEInteger &operator=(T v) {
+        iSpecialInteger<iLittleEndianStorageType<T> >::operator=(v);
+        return *this;
+    }
+};
 
 template<typename T>
-using iBEInteger = iSpecialInteger<iBigEndianStorageType<T>>;
+class iBEInteger : public iSpecialInteger<iBigEndianStorageType<T> > {
+public:
+    iBEInteger() {}
+    explicit iBEInteger(T v) : iSpecialInteger<iBigEndianStorageType<T> >(v) {}
+    iBEInteger &operator=(T v) {
+        iSpecialInteger<iBigEndianStorageType<T> >::operator=(v);
+        return *this;
+    }
+};
 
 template <typename T>
 class iTypeInfo<iLEInteger<T> >

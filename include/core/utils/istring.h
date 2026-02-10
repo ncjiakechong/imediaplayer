@@ -14,9 +14,11 @@
 #include <iterator>
 #include <cstdarg>
 #include <vector>
+#include <limits>
 
-#include <core/global/imacro.h>
 #include <core/utils/ichar.h>
+#include <core/global/imacro.h>
+#include <core/global/iglobal.h>
 #include <core/utils/ibytearray.h>
 #include <core/utils/irefcount.h>
 #include <core/utils/istringview.h>
@@ -24,6 +26,9 @@
 #include <core/utils/istringalgorithms.h>
 
 namespace iShell {
+
+template <bool B, class T, class F> struct Conditional { typedef T type; };
+template <class T, class F> struct Conditional<false, T, F> { typedef F type; };
 
 class iRegularExpression;
 class iRegularExpressionMatch;
@@ -39,7 +44,10 @@ public:
     iString(iChar c);
     iString(xsizetype size, iChar c);
     inline iString(iLatin1StringView latin1);
-    explicit iString(iStringView sv) : iString(sv.data(), sv.size()) {}
+    explicit iString(iStringView sv) {
+        if (sv.size())
+            *this = iString(sv.data(), sv.size());
+    }
 
     inline iString(const iString &);
     inline ~iString();
@@ -93,29 +101,29 @@ public:
     inline iChar &back();
 
     iString arg(xlonglong a, int fieldwidth=0, int base=10,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     iString arg(xulonglong a, int fieldwidth=0, int base=10,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     inline iString arg(int a, int fieldWidth = 0, int base = 10,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     inline iString arg(uint a, int fieldWidth = 0, int base = 10,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     inline iString arg(short a, int fieldWidth = 0, int base = 10,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     inline iString arg(ushort a, int fieldWidth = 0, int base = 10,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     iString arg(double a, int fieldWidth = 0, char format = 'g', int precision = -1,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     iString arg(char a, int fieldWidth = 0,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     iString arg(iChar a, int fieldWidth = 0,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     iString arg(const iString &a, int fieldWidth = 0,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     iString arg(iStringView a, int fieldWidth = 0,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
     iString arg(iLatin1StringView a, int fieldWidth = 0,
-                iChar fillChar = u' ') const;
+                iChar fillChar = iChar(' ')) const;
 
     iString arg(const iString &a1, const iString &a2) const;
     iString arg(const iString &a1, const iString &a2, const iString &a3) const;
@@ -226,8 +234,8 @@ public:
     bool isUpper() const;
     bool isLower() const;
 
-    iString leftJustified(xsizetype width, iChar fill = u' ', bool trunc = false) const;
-    iString rightJustified(xsizetype width, iChar fill = u' ', bool trunc = false) const;
+    iString leftJustified(xsizetype width, iChar fill = iChar(' '), bool trunc = false) const;
+    iString rightJustified(xsizetype width, iChar fill = iChar(' '), bool trunc = false) const;
 
     iString toLower() const
     { return toLower_helper(*this); }
@@ -331,17 +339,17 @@ public:
 
     // note - this are all inline so we can benefit from strlen() compile time optimizations
     static iString fromLatin1(iByteArrayView ba);
-    template <typename = void>
+
     static inline iString fromLatin1(const iByteArray &ba) { return fromLatin1(iByteArrayView(ba)); }
     static inline iString fromLatin1(const char *str, xsizetype size)
     { return fromLatin1(iByteArrayView(str, !str || size < 0 ? istrlen(str) : size)); }
     static iString fromUtf8(iByteArrayView utf8);
-    template <typename = void>
+
     static inline iString fromUtf8(const iByteArray &ba) { return fromUtf8(iByteArrayView(ba)); }
     static inline iString fromUtf8(const char *utf8, xsizetype size)
     { return fromUtf8(iByteArrayView(utf8, !utf8 || size < 0 ? istrlen(utf8) : size)); }
     static iString fromLocal8Bit(iByteArrayView utf8);
-    template <typename = void>
+
     static inline iString fromLocal8Bit(const iByteArray &ba) { return fromLocal8Bit(iByteArrayView(ba)); }
     static inline iString fromLocal8Bit(const char *str, xsizetype size)
     { return fromLocal8Bit(iByteArrayView(str, !str || size < 0 ? istrlen(str) : size)); }
@@ -369,7 +377,7 @@ public:
     int compare(iLatin1StringView other, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     inline int compare(iStringView s, iShell::CaseSensitivity cs = iShell::CaseSensitive) const;
     int compare(iChar ch, iShell::CaseSensitivity cs = iShell::CaseSensitive) const
-    { return compare(iStringView{&ch, 1}, cs); }
+    { return compare(iStringView(&ch, 1), cs); }
 
     static inline int compare(const iString &s1, const iString &s2,
                               iShell::CaseSensitivity cs = iShell::CaseSensitive)
@@ -427,12 +435,12 @@ public:
     static iString number(double, char format='g', int precision=6);
 
 
-    inline iString(const char *ch)
-        : iString(fromUtf8(ch, -1))
-    {}
-    inline iString(const iByteArray &a)
-        : iString(fromUtf8(a))
-    {}
+    inline iString(const char *ch) {
+        if (ch) *this = fromUtf8(ch, -1);
+    }
+    inline iString(const iByteArray &a) {
+        if (!a.isNull()) *this = fromUtf8(a);
+    }
     inline iString &operator=(const char *ch)
     {
         if (!ch) {
@@ -509,6 +517,13 @@ public:
     const_reverse_iterator crbegin() const { return const_reverse_iterator(end()); }
     const_reverse_iterator crend() const { return const_reverse_iterator(begin()); }
 
+    inline bool operator==(const iString &other) const { return compare(other) == 0; }
+    inline bool operator!=(const iString &other) const { return compare(other) != 0; }
+    inline bool operator<(const iString &other) const { return compare(other) < 0; }
+    inline bool operator>(const iString &other) const { return compare(other) > 0; }
+    inline bool operator<=(const iString &other) const { return compare(other) <= 0; }
+    inline bool operator>=(const iString &other) const { return compare(other) >= 0; }
+
     // STL compatibility
     typedef xsizetype size_type;
     typedef xptrdiff difference_type;
@@ -530,10 +545,10 @@ public:
     static inline iString fromStdWString(const std::wstring &s);
     inline std::wstring toStdWString() const;
 
-    static inline iString fromStdU16String(const std::u16string &s);
-    inline std::u16string toStdU16String() const;
-    static inline iString fromStdU32String(const std::u32string &s);
-    inline std::u32string toStdU32String() const;
+    static inline iString fromStdU16String(const std::basic_string<char16_t> &s);
+    inline std::basic_string<char16_t> toStdU16String() const;
+    static inline iString fromStdU32String(const std::basic_string<char32_t> &s);
+    inline std::basic_string<char32_t> toStdU32String() const;
 
     bool isNull() const { return d.isNull(); }
 
@@ -542,7 +557,7 @@ public:
     { return iStringView(*this).isValidUtf16(); }
 
     iString(xsizetype size, iShell::Initialization);
-    explicit inline iString(DataPointer &&dd) : d(dd) {}
+    explicit inline iString(const DataPointer &dd) : d(dd) {}
 
 private:
     DataPointer d;
@@ -595,8 +610,8 @@ private:
     template <typename T> static
     T toIntegral_helper(iStringView string, bool *ok, int base)
     {
-        using Int64 = typename std::conditional<std::is_unsigned<T>::value, xulonglong, xlonglong>::type;
-        using Int32 = typename std::conditional<std::is_unsigned<T>::value, uint, int>::type;
+        typedef typename Conditional<(!std::numeric_limits<T>::is_signed), xulonglong, xlonglong>::type Int64;
+        typedef typename Conditional<(!std::numeric_limits<T>::is_signed), uint, int>::type Int32;
 
         // we select the right overload by casting base to int or uint
         Int64 val = toIntegral_helper(string, ok, Int32(base));
@@ -645,7 +660,9 @@ inline ushort iStringView::toUShort(bool *ok, int base) const
 // iString inline members
 //
 inline iString::iString(iLatin1StringView latin1)
-    : iString{iString::fromLatin1(latin1.data(), latin1.size())} {}
+{
+    *this = iString::fromLatin1(latin1.data(), latin1.size());
+}
 inline const iChar iString::at(xsizetype i) const
 { verify(i, 1); return iChar(d.data()[i]); }
 inline const iChar iString::operator[](xsizetype i) const
@@ -732,7 +749,8 @@ inline xsizetype iString::toWCharArray(wchar_t *array) const
 inline xsizetype iStringView::toWCharArray(wchar_t *array) const
 {
     if (sizeof(wchar_t) == sizeof(iChar)) {
-        if (auto src = data())
+        const iChar* src = data();
+        if (src)
             memcpy(array, src, sizeof(iChar) * size());
         return size();
     } else {
@@ -869,25 +887,25 @@ inline std::wstring iString::toStdWString() const
 {
     std::wstring str;
     str.resize(size());
-    str.resize(toWCharArray(&str.front()));
+    str.resize(toWCharArray(&str[0]));
     return str;
 }
 
 inline iString iString::fromStdWString(const std::wstring &s)
 { return fromWCharArray(s.data(), xsizetype(s.size())); }
 
-inline iString iString::fromStdU16String(const std::u16string &s)
-{ return fromUtf16(s.data(), xsizetype(s.size())); }
+inline iString iString::fromStdU16String(const std::basic_string<char16_t> &s)
+{ return fromUtf16(reinterpret_cast<const xuint16*>(s.data()), xsizetype(s.size())); }
 
-inline std::u16string iString::toStdU16String() const
-{ return std::u16string(reinterpret_cast<const char16_t*>(utf16()), size()); }
+inline std::basic_string<char16_t> iString::toStdU16String() const
+{ return std::basic_string<char16_t>(reinterpret_cast<const char16_t*>(utf16()), size()); }
 
-inline iString iString::fromStdU32String(const std::u32string &s)
-{ return fromUcs4(s.data(), xsizetype(s.size())); }
+inline iString iString::fromStdU32String(const std::basic_string<char32_t> &s)
+{ return fromUcs4(reinterpret_cast<const xuint32*>(s.data()), xsizetype(s.size())); }
 
-inline std::u32string iString::toStdU32String() const
+inline std::basic_string<char32_t> iString::toStdU32String() const
 {
-    std::u32string u32str(size(), char32_t(0));
+    std::basic_string<char32_t> u32str(size(), char32_t(0));
     const xsizetype len = toUcs4_helper(reinterpret_cast<const xuint16 *>(constData()),
                                         size(), reinterpret_cast<xuint32*>(&u32str[0]));
     u32str.resize(len);
@@ -986,11 +1004,15 @@ inline int iStringView::localeAwareCompare(iStringView other) const
 // But iStringLiteral only needs the
 // core language feature, so just use u"" here unconditionally:
 
+#ifdef IX_HAVE_CXX11
 #define IX_UNICODE_LITERAL(str) u"" str
 #define iStringLiteral(str) \
     (iShell::iString(iShell::iString::DataPointer(IX_NULLPTR,  \
                             const_cast<xuint16*>(reinterpret_cast<const xuint16*>(IX_UNICODE_LITERAL(str))), \
                             sizeof(IX_UNICODE_LITERAL(str))/2 - 1))) \
     /**/
+#else
+#define iStringLiteral(str) iShell::iString(str)
+#endif
 
 #endif // ISTRING_H

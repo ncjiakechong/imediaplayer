@@ -13,7 +13,11 @@
 #ifndef IMEMBLOCK_H
 #define IMEMBLOCK_H
 
+#include <map>
+#if __cplusplus >= 201103L
 #include <unordered_map>
+#endif
+
 #include <core/thread/imutex.h>
 #include <core/thread/isemaphore.h>
 #include <core/utils/ifreelist.h>
@@ -285,8 +289,16 @@ private:
     iMutex m_mutex;
 
     iSharedDataPointer<iMemPool> m_pool;
-    std::unordered_map<uint, iMemImportSegment*> m_segments;
-    std::unordered_map<uint, iMemBlock*> m_blocks;
+    #if __cplusplus >= 201103L
+    typedef std::unordered_map<uint, iMemImportSegment*> SegmentMap;
+    typedef std::unordered_map<uint, iMemBlock*> BlockMap;
+    #else
+    typedef std::map<uint, iMemImportSegment*> SegmentMap;
+    typedef std::map<uint, iMemBlock*> BlockMap;
+    #endif
+
+    SegmentMap m_segments;
+    BlockMap m_blocks;
 
     /* Called whenever an imported memory block is no longer
      * needed. */

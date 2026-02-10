@@ -13,6 +13,7 @@
 #include <climits>
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
 #include <ctime>
 
 #include "utils/ilocale_tools_p.h"

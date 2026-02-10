@@ -600,7 +600,7 @@ xsizetype ix_encodeFromUser(iString &appendTo, const iString &in, const xuint16 
     }
 
     return recode(appendTo, reinterpret_cast<const xuint16 *>(in.begin()),reinterpret_cast<const xuint16 *>(in.end()),
-                  {}, actionTable, true);
+                  iUrl::ComponentFormattingOptions(0), actionTable, true);
 }
 
 } // namespace iShell

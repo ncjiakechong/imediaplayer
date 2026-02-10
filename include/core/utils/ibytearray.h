@@ -44,18 +44,20 @@ public:
     };
     typedef uint Base64Options;
 
-    enum class Base64DecodingStatus {
-        Ok,
-        IllegalInputLength,
-        IllegalCharacter,
-        IllegalPadding,
+    enum Base64DecodingStatus {
+        Base64DecodingStatus_Ok,
+        Base64DecodingStatus_IllegalInputLength,
+        Base64DecodingStatus_IllegalCharacter,
+        Base64DecodingStatus_IllegalPadding
     };
 
     inline iByteArray();
     iByteArray(const char *, xsizetype size = -1);
     iByteArray(xsizetype size, char c);
     iByteArray(xsizetype size, iShell::Initialization);
-    explicit iByteArray(iByteArrayView v) : iByteArray(v.data(), v.size()) {}
+    explicit iByteArray(iByteArrayView v) {
+        *this = iByteArray(v.data(), v.size());
+    }
     inline iByteArray(const iByteArray &);
     inline ~iByteArray();
 
@@ -449,8 +451,9 @@ inline iByteArray iByteArray::fromStdString(const std::string &s)
 // iByteArrayView members that require iByteArray:
 //
 inline iByteArrayView::iByteArrayView(const iByteArray &ba)
-    : iByteArrayView(ba.begin(), ba.size())
-{}
+{
+    *this = iByteArrayView(ba.begin(), ba.size());
+}
 
 inline iByteArray iByteArrayView::toByteArray() const
 {

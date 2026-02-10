@@ -480,7 +480,7 @@ TEST_F(StringConverterTest, Utf8Decoding) {
     iByteArray data2(utf8Data);
     iString decoded2 = decoder(data2);
     // Use iString construction for comparison to ensure correct encoding
-    iString expected = iString::fromUtf8(utf8Data);
+    iString expected = iString::fromUtf8(iByteArray(utf8Data));
     EXPECT_EQ(decoded2, expected);
 }
 
@@ -490,7 +490,7 @@ TEST_F(StringConverterTest, Latin1Encoding) {
     iByteArray encoded = encoder(str);
     EXPECT_EQ(encoded, iByteArray("Hello World"));
 
-    iString str2 = iString::fromLatin1("Caf\xE9"); // Café
+    iString str2 = iString::fromLatin1(iByteArray("Caf\xE9")); // Café
     iByteArray encoded2 = encoder(str2);
     const char expected[] = "Caf\xE9";
     EXPECT_EQ(encoded2, iByteArray(expected));
@@ -505,7 +505,7 @@ TEST_F(StringConverterTest, Latin1Decoding) {
     const char latin1Data[] = "Caf\xE9";
     iByteArray data2(latin1Data);
     iString decoded2 = decoder(data2);
-    iString expected = iString::fromLatin1(latin1Data);
+    iString expected = iString::fromLatin1(iByteArray(latin1Data));
     EXPECT_EQ(decoded2, expected);
 }
 

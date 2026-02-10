@@ -463,13 +463,13 @@ private:
 #endif
 
 #if defined(IX_OS_LINUX)
-using iPollerImpl = iPollerEpoll;
+typedef iPollerEpoll iPollerImpl;
 #elif defined(IX_OS_MACOS) || defined(IX_OS_FREEBSD) || defined(IX_OS_DARWIN) || defined(IX_OS_BSD4)
-using iPollerImpl = iPollerKqueue;
+typedef iPollerKqueue iPollerImpl;
 #elif defined(IX_OS_WIN)
-using iPollerImpl = iPollerWin32;
+typedef iPollerWin32 iPollerImpl;
 #else
-using iPollerImpl = iPollerPoll;
+typedef iPollerPoll iPollerImpl;
 #endif
 
 iPoller::iPoller() : m_impl(new iPollerImpl()) {}

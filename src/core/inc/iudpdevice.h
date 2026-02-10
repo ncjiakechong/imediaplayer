@@ -10,6 +10,11 @@
 #ifndef IUDPDEVICE_H
 #define IUDPDEVICE_H
 
+#include <map>
+#if __cplusplus >= 201103L
+#include <unordered_map>
+#endif
+
 #include <core/utils/istring.h>
 #include "inc/iincdevice.h"
 
@@ -92,7 +97,7 @@ public:
     bool setBroadcast(bool broadcast);
 
     /// Get maximum datagram size (typically 65507 for IPv4)
-    static constexpr xint64 maxDatagramSize() { return 65507; }
+    static xint64 maxDatagramSize() { return 65507; }
 
     // --- Multi-Client Support (Server Mode) ---
     
@@ -145,7 +150,12 @@ private:
 
     // Multi-client support (server mode only)
     iUDPClientDevice*   m_pendingClient;               ///< First client device waiting for address info
-    std::unordered_map<xuint64, iUDPClientDevice*> m_addrToChannel;  ///< Client address -> channel ID mapping
+    #if __cplusplus >= 201103L
+    typedef std::unordered_map<xuint64, iUDPClientDevice*> ClientMap;
+    #else
+    typedef std::map<xuint64, iUDPClientDevice*> ClientMap;
+    #endif
+    ClientMap m_addrToChannel;  ///< Client address -> channel ID mapping
 
     IX_DISABLE_COPY(iUDPDevice)
 };

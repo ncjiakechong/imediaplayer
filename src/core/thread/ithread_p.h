@@ -11,7 +11,9 @@
 #define ITHREAD_P_H
 
 #include <list>
+#if __cplusplus >= 201103L
 #include <unordered_map>
+#endif
 
 #include <core/thread/iatomicpointer.h>
 #include <core/thread/imutex.h>
@@ -47,7 +49,7 @@ inline bool operator<(const iPostEvent &first, const iPostEvent &second)
 
 // This class holds the list of posted events.
 //  The list has to be kept sorted by priority
-class iPostEventList : public std::list<iPostEvent, iCacheAllocator<iPostEvent>>
+class iPostEventList : public std::list<iPostEvent, iCacheAllocator< iPostEvent> >
 {
 public:
     // recursion == recursion count for sendPostedEvents()
@@ -60,7 +62,7 @@ public:
 
     iMutex mutex;
 
-    inline iPostEventList() : std::list<iPostEvent, iCacheAllocator<iPostEvent>>(), recursion(0), startOffset(0), insertionOffset(0) { }
+    inline iPostEventList() : std::list<iPostEvent, iCacheAllocator< iPostEvent > >(), recursion(0), startOffset(0), insertionOffset(0) { }
 
     void addEvent(const iPostEvent &ev) {
         int priority = ev.priority;
@@ -81,9 +83,9 @@ public:
 
 private:
     //hides because they do not keep that list sorted. addEvent must be used
-    using std::list<iPostEvent, iCacheAllocator<iPostEvent>>::push_front;
-    using std::list<iPostEvent, iCacheAllocator<iPostEvent>>::push_back;
-    using std::list<iPostEvent, iCacheAllocator<iPostEvent>>::insert;
+    using std::list<iPostEvent, iCacheAllocator< iPostEvent> >::push_front;
+    using std::list<iPostEvent, iCacheAllocator< iPostEvent> >::push_back;
+    using std::list<iPostEvent, iCacheAllocator< iPostEvent> >::insert;
 };
 
 class iThreadData
@@ -118,7 +120,12 @@ public:
     iAtomicPointer<iThread>         thread;
     iAtomicPointer<iEventDispatcher> dispatcher;
 
-    std::unordered_map<xuintptr, void*>  tls;
+    #if __cplusplus >= 201103L
+    typedef std::unordered_map<xuintptr, void*> TLSMap;
+    #else
+    typedef std::map<xuintptr, void*> TLSMap;
+    #endif
+    TLSMap tls;
 private:
     iRefCount                       m_ref;
 };

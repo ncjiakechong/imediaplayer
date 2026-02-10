@@ -273,9 +273,9 @@ static xsizetype iFindByteArray(const char *haystack0, xsizetype haystackLen, xs
 
 xsizetype iPrivate::findByteArray(iByteArrayView haystack, xsizetype from, iByteArrayView needle)
 {
-    const auto haystack0 = haystack.data();
-    const auto l = haystack.size();
-    const auto sl = needle.size();
+    const char* haystack0 = haystack.data();
+    xsizetype l = haystack.size();
+    xsizetype sl = needle.size();
 
     if (from < 0)
         from += l;

@@ -8,6 +8,8 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include <cstring>
+
 #include "core/kernel/ievent.h"
 #include "core/kernel/iobject.h"
 #include "core/thread/ithread.h"
@@ -106,7 +108,7 @@ const iObject* iMetaObject::cast(const iObject *obj) const
     return (obj && obj->metaObject()->inherits(this)) ? obj : IX_NULLPTR;
 }
 
-void iMetaObject::setProperty(const std::unordered_map<iLatin1StringView, iSharedPtr<_iProperty>, iKeyHashFunc>& ppt)
+void iMetaObject::setProperty(const PropertyMap& ppt)
 {
     if (m_propertyCandidate && m_propertyInited)
         return;
@@ -121,9 +123,9 @@ const _iProperty* iMetaObject::property(const iLatin1StringView& name) const
     if (!isPropertyReady())
         return IX_NULLPTR;
 
-    std::unordered_map<iLatin1StringView, iSharedPtr<_iProperty>, iKeyHashFunc>::const_iterator it;
+    PropertyMap::const_iterator it;
     it = m_property.find(name);
-    if (it == m_property.cend() || it->second.isNull())
+    if (it == m_property.end() || it->second.isNull())
         return IX_NULLPTR;
 
     return it->second.data();
@@ -481,7 +483,7 @@ void iObject::killTimer(int id)
     }
 
     std::set<int>::const_iterator at = m_runningTimers.find(id);
-    if (at == m_runningTimers.cend()) {
+    if (at == m_runningTimers.end()) {
         ilog_warn("Error: timer id ", id,
                   " is not valid for object ", this,
                   " (", objectName(), "), timer has not been killed");
@@ -881,7 +883,7 @@ const iMetaObject* iObject::metaObject() const
 {
     static iMetaObject staticMetaObject = iMetaObject("iObject", IX_NULLPTR);
     if (!staticMetaObject.isPropertyReady()) {
-        std::unordered_map<iLatin1StringView, iSharedPtr<_iProperty>, iKeyHashFunc> ppt;
+        PropertyMap ppt;
         staticMetaObject.setProperty(ppt);
         iObject::initProperty(&staticMetaObject);
         // protected for non-initProperty object
@@ -961,9 +963,8 @@ void iObject::initProperty(iMetaObject* mobj) const
     if (_mobj != mobj)
         return;
 
-    std::unordered_map<iLatin1StringView, iSharedPtr<_iProperty>, iKeyHashFunc> pptImp;
-
-    pptImp.insert(std::pair<iLatin1StringView, iSharedPtr<_iProperty>>(
+    PropertyMap pptImp;
+    pptImp.insert(PropertyMap::value_type(
                         iLatin1StringView("objectName"),
                         iSharedPtr<_iProperty>(newProperty(_iProperty::E_READ, &iObject::objectName,
                                                            _iProperty::E_WRITE, &iObject::setObjectName,
@@ -1023,8 +1024,8 @@ void iObject::reregisterTimers(void* args)
     std::list<iEventDispatcher::TimerInfo>* timerList = static_cast<std::list<iEventDispatcher::TimerInfo>*>(args);
     iEventDispatcher *eventDispatcher = m_threadData->dispatcher.load();
 
-    for (std::list<iEventDispatcher::TimerInfo>::const_iterator it = timerList->cbegin();
-         it != timerList->cend();
+    for (std::list<iEventDispatcher::TimerInfo>::const_iterator it = timerList->begin();
+         it != timerList->end();
          ++it) {
         const iEventDispatcher::TimerInfo& ti = *it;
         eventDispatcher->reregisterTimer(ti.timerId, ti.interval, ti.timerType, this, ti.userdata);
@@ -1140,6 +1141,11 @@ size_t iConKeyHashFunc::operator()(const _iMemberFunction& key) const
 
     __adapoter.func = key;
     return __adapoter.key;
+}
+
+bool iConKeyCompFunc::operator()(const _iMemberFunction& a, const _iMemberFunction& b) const
+{
+    return std::memcmp(&a, &b, sizeof(_iMemberFunction)) < 0;
 }
 
 iObject::_iSender::_iSender(iObject *receiver, iObject *sender, bool record)

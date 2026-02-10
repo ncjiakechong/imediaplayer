@@ -71,12 +71,12 @@ public:
             && mirrored == other.mirrored
             && propertyNames.size() == other.propertyNames.size()) {
 
-            std::list<iByteArray>::const_iterator cur_it = propertyNames.cbegin();
-            for (cur_it = propertyNames.cbegin(); cur_it != propertyNames.cend(); ++cur_it) {
-                std::list<iByteArray>::const_iterator other_it = other.propertyNames.cbegin();
-                other_it = std::find(other.propertyNames.cbegin(), other.propertyNames.cend(), *cur_it);
+            std::list<iByteArray>::const_iterator cur_it = propertyNames.begin();
+            for (cur_it = propertyNames.begin(); cur_it != propertyNames.end(); ++cur_it) {
+                std::list<iByteArray>::const_iterator other_it = other.propertyNames.begin();
+                other_it = std::find(other.propertyNames.begin(), other.propertyNames.end(), *cur_it);
 
-                if ((other_it == other.propertyNames.cend())
+                if ((other_it == other.propertyNames.end())
                     || (*other_it != *cur_it))
                     return false;
             }
@@ -466,7 +466,7 @@ std::list<iByteArray> iVideoSurfaceFormat::propertyNames() const
     names.push_back("mirrored");
 
     std::list<iByteArray>::const_iterator it;
-    for (it = d->propertyNames.cbegin(); it != d->propertyNames.cend(); ++it) {
+    for (it = d->propertyNames.begin(); it != d->propertyNames.end(); ++it) {
         names.push_back(*it);
     }
 
@@ -504,14 +504,14 @@ iVariant iVideoSurfaceFormat::property(const char *name) const
         return d->mirrored;
     } else {
         int id = 0;
-        std::list<iByteArray>::const_iterator it = d->propertyNames.cbegin();
-        for (it = d->propertyNames.cbegin(); it != d->propertyNames.cend(); ++it, ++id) {
+        std::list<iByteArray>::const_iterator it = d->propertyNames.begin();
+        for (it = d->propertyNames.begin(); it != d->propertyNames.end(); ++it, ++id) {
             if (*it != name)
                 continue;
 
-            std::list<iVariant>::const_iterator value_it = d->propertyValues.cbegin();
+            std::list<iVariant>::const_iterator value_it = d->propertyValues.begin();
             std::advance(value_it, id);
-            if (value_it != d->propertyValues.cend())
+            if (value_it != d->propertyValues.end())
                 return *value_it;
 
             break;

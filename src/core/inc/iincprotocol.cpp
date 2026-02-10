@@ -69,9 +69,9 @@ iINCProtocol::~iINCProtocol()
 
     // Cancel all pending operations
     while (!m_operations.empty()) {
-        auto pair = m_operations.begin();
-        iINCOperation* op = pair->second;
-        m_operations.erase(pair);
+        OperationsMap::iterator it = m_operations.begin();
+        iINCOperation* op = it->second;
+        m_operations.erase(it);
 
         if (op && op->getState() == iINCOperation::STATE_RUNNING) {
             op->cancel();
@@ -178,8 +178,8 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         // Access underlying iMemBlock through iArrayDataPointer chain:
         // data.data_ptr() returns iArrayDataPointer<char>&
         // .d_ptr() returns iTypedArrayData<char>* which inherits from iMemBlock
-        auto* typedData = data.data_ptr().d_ptr();
-        iMemBlock* block = typedData ? const_cast<iMemBlock*>(static_cast<const iMemBlock*>(typedData)) : nullptr;
+        const iTypedArrayData<char>* typedData = data.data_ptr().d_ptr();
+        iMemBlock* block = typedData ? const_cast<iMemBlock*>(static_cast<const iMemBlock*>(typedData)) : IX_NULLPTR;
 
         if (!m_memExport || !block || !block->isOurs()) {
             ilog_info("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Current data can not send via SHM");
@@ -215,7 +215,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         msg.payload().putUint64(static_cast<xuint64>(data.size()));
 
         msg.setFlags(INC_MSG_FLAG_SHM_DATA);
-        auto op = sendMessage(msg);
+        iSharedDataPointer<iINCOperation> op = sendMessage(msg);
         op->m_blockID = blockId;
         IX_ASSERT(op);
         return op;
@@ -236,7 +236,7 @@ void iINCProtocol::releaseOperation(iINCOperation* op)
     if (!op) return;
 
     // Find and remove from map
-    auto it = m_operations.find(op->sequenceNumber());
+    OperationsMap::iterator it = m_operations.find(op->sequenceNumber());
     if (it != m_operations.end() && it->second == op) {
         m_operations.erase(it);
 
@@ -306,7 +306,7 @@ void iINCProtocol::onMessageReceived(iINCMessage msg)
     xuint32 seqNum = msg.sequenceNumber();
     if ((msg.type() & 0x1) && seqNum > 0) {
         // Find and complete the corresponding operation
-        auto it = m_operations.find(seqNum);
+        OperationsMap::iterator it = m_operations.find(seqNum);
         if (it != m_operations.end()) {
             iINCOperation* op = it->second;
             m_operations.erase(it);
@@ -336,75 +336,10 @@ void iINCProtocol::processBinaryDataMessage(const iINCMessage& msg)
     xuint32 seqNum = msg.sequenceNumber();
     xint64 pos = 0;
 
-    do {
-        if (msg.flags() & INC_MSG_FLAG_SHM_DATA) break;
-
-        // Direct data - read as bytes
-        iByteArray data;
-        if (!msg.payload().getInt64(pos)
-            || !msg.payload().getBytes(data)
-            || !msg.payload().eof()) {
-            ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
-                        "] Failed to read binary data from payload");
-
-            iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
-            reply.payload().putInt32(-1);
-            sendMessage(reply);
-            return;
-        }
-
-        ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum,
-                    "] Received binary data via copy: size=", data.size());
-        IEMIT binaryDataReceived(channel, seqNum, pos, data);
+    if (processDirectBinaryData(msg, channel, seqNum, pos))
         return;
-    } while (false);
 
-
-    if (!m_memImport) {
-        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
-                    "] Received SHM reference but memory import not configured");
-        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
-        reply.payload().putInt32(-1);
-        sendMessage(reply);
-        return;
-    }
-
-    // Parse SHM reference from payload using type-safe API
-    xuint32 memTypeU32, blockId, shmId;
-    xuint64 offset64, size64;
-    if (!msg.payload().getInt64(pos)
-        || !msg.payload().getUint32(memTypeU32)
-        || !msg.payload().getUint32(blockId)
-        || !msg.payload().getUint32(shmId)
-        || !msg.payload().getUint64(offset64)
-        || !msg.payload().getUint64(size64)
-        || !msg.payload().eof()) {
-        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
-                    "] Invalid SHM reference payload");
-        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
-        reply.payload().putInt32(-1);
-        sendMessage(reply);
-        return;
-    }
-
-    // Import the memory block
-    iMemBlock* importedBlock = m_memImport->get(static_cast<MemType>(memTypeU32), blockId, shmId, m_cachedPeerMemFd,
-                                                static_cast<size_t>(offset64), static_cast<size_t>(size64), false);
-    if (!importedBlock) {
-        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
-                    "] Failed to import memory block: blockId=", blockId, ", shmId=", shmId);
-        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
-        reply.payload().putInt32(-1);
-        sendMessage(reply);
-        return;
-    }
-
-    ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum,
-                "] Received binary data via SHM: blockId=", blockId, ", size=", size64);
-    iByteArray::DataPointer dp(static_cast<iTypedArrayData<char>*>(importedBlock),
-                                static_cast<char*>(importedBlock->data().value()),
-                                static_cast<xsizetype>(size64));
-    IEMIT binaryDataReceived(channel, seqNum, pos, iByteArray(dp));
+    processSHMBinaryData(msg, channel, seqNum, pos);
 }
 
 void iINCProtocol::onDeviceConnected()
@@ -456,6 +391,81 @@ void iINCProtocol::onReadyWrite()
         m_sendQueue.pop();
         m_partialSendOffset = 0;
     }
+}
+
+bool iINCProtocol::processDirectBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, xint64& pos)
+{
+    if (msg.flags() & INC_MSG_FLAG_SHM_DATA)
+        return false;
+
+    // Direct data - read as bytes
+    iByteArray data;
+    if (!msg.payload().getInt64(pos)
+        || !msg.payload().getBytes(data)
+        || !msg.payload().eof()) {
+        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
+                    "] Failed to read binary data from payload");
+
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
+        reply.payload().putInt32(-1);
+        sendMessage(reply);
+        return true;
+    }
+
+    ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum,
+                "] Received binary data via copy: size=", data.size());
+    IEMIT binaryDataReceived(channel, seqNum, pos, data);
+    return true;
+}
+
+bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, xint64& pos)
+{
+    if (!m_memImport) {
+        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
+                    "] Received SHM reference but memory import not configured");
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
+        reply.payload().putInt32(-1);
+        sendMessage(reply);
+        return true;
+    }
+
+    // Parse SHM reference from payload using type-safe API
+    xuint32 memTypeU32, blockId, shmId;
+    xuint64 offset64, size64;
+    if (!msg.payload().getInt64(pos)
+        || !msg.payload().getUint32(memTypeU32)
+        || !msg.payload().getUint32(blockId)
+        || !msg.payload().getUint32(shmId)
+        || !msg.payload().getUint64(offset64)
+        || !msg.payload().getUint64(size64)
+        || !msg.payload().eof()) {
+        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
+                    "] Invalid SHM reference payload");
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
+        reply.payload().putInt32(-1);
+        sendMessage(reply);
+        return true;
+    }
+
+    // Import the memory block
+    iMemBlock* importedBlock = m_memImport->get(static_cast<MemType>(memTypeU32), blockId, shmId, m_cachedPeerMemFd,
+                                                static_cast<size_t>(offset64), static_cast<size_t>(size64), false);
+    if (!importedBlock) {
+        ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
+                    "] Failed to import memory block: blockId=", blockId, ", shmId=", shmId);
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
+        reply.payload().putInt32(-1);
+        sendMessage(reply);
+        return true;
+    }
+
+    ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum,
+                "] Received binary data via SHM: blockId=", blockId, ", size=", size64);
+    iByteArray::DataPointer dp(static_cast<iTypedArrayData<char>*>(importedBlock),
+                                static_cast<char*>(importedBlock->data().value()),
+                                static_cast<xsizetype>(size64));
+    IEMIT binaryDataReceived(channel, seqNum, pos, iByteArray(dp));
+    return true;
 }
 
 } // namespace iShell

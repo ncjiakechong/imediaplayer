@@ -250,7 +250,7 @@ iShareMem* iShareMem::create(const char* prefix, MemType type, size_t size, mode
 }
 
 iShareMem::iShareMem(const char* prefix)
-    : m_prefix{}
+    : m_prefix()
     , m_type(MEMTYPE_PRIVATE)
     , m_id(0)
     , m_ptr(IX_NULLPTR)

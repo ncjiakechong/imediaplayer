@@ -40,7 +40,7 @@ static void addTagToMap(const GstTagList *list,
         case G_TYPE_STRING:
         {
             const gchar *str_value = g_value_get_string(&val);
-            map->insert(std::pair<iByteArray, iVariant>(iByteArray(tag), iString::fromUtf8(str_value)));
+            map->insert(std::pair<iByteArray, iVariant>(iByteArray(tag), iString::fromUtf8(iByteArray((const char*)str_value))));
             break;
         }
         case G_TYPE_INT:
@@ -586,35 +586,36 @@ namespace {
 
 iMultimedia::SupportEstimate iGstUtils::hasSupport(const iString &mimeType,
                                                     const std::list<iString> &codecs,
-                                                    const std::unordered_set<iString, iKeyHashFunc> &supportedMimeTypeSet)
+                                                    const MineTypeSet &supportedMimeTypeSet)
 {
     if (supportedMimeTypeSet.empty())
         return iMultimedia::NotSupported;
 
     iString mimeTypeLowcase = mimeType.toLower();
-    bool containsMimeType = (supportedMimeTypeSet.find(mimeTypeLowcase) != supportedMimeTypeSet.cend());
+    bool containsMimeType = (supportedMimeTypeSet.find(mimeTypeLowcase) != supportedMimeTypeSet.end());
     if (!containsMimeType) {
         const char* mimeTypeAlias = getMimeTypeAlias(mimeTypeLowcase);
-        containsMimeType = (supportedMimeTypeSet.find(iLatin1StringView(mimeTypeAlias)) != supportedMimeTypeSet.cend());
+        containsMimeType = (supportedMimeTypeSet.find(iLatin1StringView(mimeTypeAlias)) != supportedMimeTypeSet.end());
         if (!containsMimeType) {
-            containsMimeType = (supportedMimeTypeSet.find(iLatin1StringView("video/") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
-                               || (supportedMimeTypeSet.find(iLatin1StringView("video/x-") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
-                               || (supportedMimeTypeSet.find(iLatin1StringView("audio/") + mimeTypeLowcase) != supportedMimeTypeSet.cend())
-                               || (supportedMimeTypeSet.find(iLatin1StringView("audio/x-") + mimeTypeLowcase) != supportedMimeTypeSet.cend());
+            containsMimeType = (supportedMimeTypeSet.find(iLatin1StringView("video/") + mimeTypeLowcase) != supportedMimeTypeSet.end())
+                               || (supportedMimeTypeSet.find(iLatin1StringView("video/x-") + mimeTypeLowcase) != supportedMimeTypeSet.end())
+                               || (supportedMimeTypeSet.find(iLatin1StringView("audio/") + mimeTypeLowcase) != supportedMimeTypeSet.end())
+                               || (supportedMimeTypeSet.find(iLatin1StringView("audio/x-") + mimeTypeLowcase) != supportedMimeTypeSet.end());
         }
     }
 
     int supportedCodecCount = 0;
-    for (const iString &codec : codecs) {
+    for (std::list<iString>::const_iterator it = codecs.begin(); it != codecs.end(); ++it) {
+        const iString &codec = *it;
         iString codecLowcase = codec.toLower();
         const char* codecAlias = getCodecAlias(codecLowcase);
         if (codecAlias) {
-            if (supportedMimeTypeSet.find(iLatin1StringView(codecAlias)) != supportedMimeTypeSet.cend())
+            if (supportedMimeTypeSet.find(iLatin1StringView(codecAlias)) != supportedMimeTypeSet.end())
                 supportedCodecCount++;
-        } else if ((supportedMimeTypeSet.find(iLatin1StringView("video/") + codecLowcase) != supportedMimeTypeSet.cend())
-                   || (supportedMimeTypeSet.find(iLatin1StringView("video/x-") + codecLowcase) != supportedMimeTypeSet.cend())
-                   || (supportedMimeTypeSet.find(iLatin1StringView("audio/") + codecLowcase) != supportedMimeTypeSet.cend())
-                   || (supportedMimeTypeSet.find(iLatin1StringView("audio/x-") + codecLowcase) != supportedMimeTypeSet.cend())) {
+        } else if ((supportedMimeTypeSet.find(iLatin1StringView("video/") + codecLowcase) != supportedMimeTypeSet.end())
+                   || (supportedMimeTypeSet.find(iLatin1StringView("video/x-") + codecLowcase) != supportedMimeTypeSet.end())
+                   || (supportedMimeTypeSet.find(iLatin1StringView("audio/") + codecLowcase) != supportedMimeTypeSet.end())
+                   || (supportedMimeTypeSet.find(iLatin1StringView("audio/x-") + codecLowcase) != supportedMimeTypeSet.end())) {
             supportedCodecCount++;
         }
     }
@@ -628,9 +629,9 @@ iMultimedia::SupportEstimate iGstUtils::hasSupport(const iString &mimeType,
 }
 
 
-std::unordered_set<iString, iKeyHashFunc> iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory))
+iGstUtils::MineTypeSet iGstUtils::supportedMimeTypes(bool (*isValidFactory)(GstElementFactory *factory))
 {
-    std::unordered_set<iString, iKeyHashFunc> supportedMimeTypes;
+    MineTypeSet supportedMimeTypes;
 
     //enumerate supported mime types
     gst_init(IX_NULLPTR, IX_NULLPTR);
@@ -681,7 +682,7 @@ std::unordered_set<iString, iKeyHashFunc> iGstUtils::supportedMimeTypes(bool (*i
                     if (gst_caps_is_any(caps) || gst_caps_is_empty(caps)) {
                     } else for (guint i = 0; i < gst_caps_get_size(caps); i++) {
                         GstStructure *structure = gst_caps_get_structure(caps, i);
-                        iString nameLowcase = iString::fromLatin1(gst_structure_get_name(structure)).toLower();
+                        iString nameLowcase = iString::fromLatin1(iByteArray((const char*)gst_structure_get_name(structure))).toLower();
 
                         supportedMimeTypes.insert(nameLowcase);
                         if (nameLowcase.contains(iLatin1StringView("mpeg"))) {
@@ -693,8 +694,10 @@ std::unordered_set<iString, iKeyHashFunc> iGstUtils::supportedMimeTypes(bool (*i
                                 gchar *str = gst_value_serialize(value);
                                 iString versions = iLatin1StringView(str);
                                 const std::list<iString> elements = versions.split(iRegularExpression(iLatin1StringView("\\D+")), iShell::SkipEmptyParts);
-                                for (const iString &e : elements)
+                                for (std::list<iString>::const_iterator it = elements.begin(); it != elements.end(); ++it) {
+                                    const iString &e = *it;
                                     supportedMimeTypes.insert(nameLowcase + e);
+                                }
                                 g_free(str);
                             }
                         }
@@ -916,7 +919,8 @@ GstCaps *iGstUtils::capsForFormats(const std::list<iVideoFrame::PixelFormat> &fo
     GstCaps *caps = gst_caps_new_empty();
 
 #if GST_CHECK_VERSION(1,0,0)
-    for (iVideoFrame::PixelFormat format : formats) {
+    for (std::list<iVideoFrame::PixelFormat>::const_iterator it = formats.begin(); it != formats.end(); ++it) {
+        iVideoFrame::PixelFormat format = *it;
         int index = indexOfVideoFormat(format);
 
         if (index != -1) {
@@ -927,7 +931,8 @@ GstCaps *iGstUtils::capsForFormats(const std::list<iVideoFrame::PixelFormat> &fo
         }
     }
 #else
-    for (iVideoFrame::PixelFormat format : formats) {
+    for (std::list<iVideoFrame::PixelFormat>::const_iterator it = formats.begin(); it != formats.end(); ++it) {
+        iVideoFrame::PixelFormat format = *it;
         int index = indexOfYuvColor(format);
 
         if (index != -1) {
@@ -992,8 +997,8 @@ void iGstUtils::setMetaData(GstElement *element, const std::multimap<iByteArray,
 
     gst_tag_setter_reset_tags(GST_TAG_SETTER(element));
 
-    std::multimap<iByteArray, iVariant>::const_iterator it = data.cbegin();
-    for (it = data.cbegin(); it != data.cend(); ++it) {
+    std::multimap<iByteArray, iVariant>::const_iterator it = data.begin();
+    for (it = data.begin(); it != data.end(); ++it) {
         const iString tagName = iString::fromLatin1(it->first);
         const iVariant tagValue = it->second;
 
@@ -1200,7 +1205,7 @@ iString iGstUtils::fileExtensionForMimeType(const iString &mimeType)
     iString format = mimeType.left(mimeType.indexOf(iLatin1Char(',')));
     std::multimap<iString, iString>::const_iterator it = fileExtensionMap->find(format);
     iString extension;
-    if (it != fileExtensionMap->cend())
+    if (it != fileExtensionMap->end())
         extension = it->second;
 
     if (!extension.isEmpty() || format.isEmpty())

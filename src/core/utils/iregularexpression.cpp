@@ -1010,8 +1010,8 @@ void iRegularExpressionPrivate::doMatch(iRegularExpressionMatchPrivate *priv,
 
     bool previousMatchWasEmpty = false;
     if (previous && previous->hasMatch) {
-        std::list<xsizetype>::const_iterator it0 = previous->capturedOffsets.cbegin();
-        std::list<xsizetype>::const_iterator it1 = previous->capturedOffsets.cbegin();
+        std::list<xsizetype>::const_iterator it0 = previous->capturedOffsets.begin();
+        std::list<xsizetype>::const_iterator it1 = previous->capturedOffsets.begin();
         std::advance(it1, 1);
         if (*it0 == *it1) {
             previousMatchWasEmpty = true;
@@ -1147,7 +1147,7 @@ iRegularExpressionMatch iRegularExpressionMatchPrivate::nextMatch() const
     // if we're advancing a match on the same subject,
     // then that subject was already checked at least once (when this object
     // was created, or when the object that created this one was created, etc.)
-    std::list<xsizetype>::const_iterator it = capturedOffsets.cbegin();
+    std::list<xsizetype>::const_iterator it = capturedOffsets.begin();
     std::advance(it, 1);
     regularExpression.d->doMatch(nextPrivate,
                                  *it,
@@ -1963,7 +1963,7 @@ xsizetype iRegularExpressionMatch::capturedStart(int nth) const
     if (nth < 0 || nth > lastCapturedIndex())
         return -1;
 
-    std::list<xsizetype>::const_iterator it = d->capturedOffsets.cbegin();
+    std::list<xsizetype>::const_iterator it = d->capturedOffsets.begin();
     std::advance(it, nth * 2);
     return *it;
 }
@@ -1994,7 +1994,7 @@ xsizetype iRegularExpressionMatch::capturedEnd(int nth) const
     if (nth < 0 || nth > lastCapturedIndex())
         return -1;
 
-    std::list<xsizetype>::const_iterator it = d->capturedOffsets.cbegin();
+    std::list<xsizetype>::const_iterator it = d->capturedOffsets.begin();
     std::advance(it, nth * 2 + 1);
     return *it;
 }

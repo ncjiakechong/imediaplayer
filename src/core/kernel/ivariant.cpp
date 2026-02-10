@@ -8,7 +8,9 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #include <map>
+#if __cplusplus >= 201103L
 #include <unordered_map>
+#endif
 
 #include "core/io/ilog.h"
 #include "core/kernel/ivariant.h"
@@ -21,9 +23,15 @@
 namespace iShell {
 
 typedef iBasicAtomicBitField<4096> iTypeIdContainer;
+#if __cplusplus >= 201103L
 typedef std::unordered_map< int, iVariant::iTypeHandler> iMetaTypeHandler;
 typedef std::unordered_map< iLatin1StringView, int, iKeyHashFunc > iTypeIdRegister;
 typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc > iMetaTypeConverter;
+#else
+typedef std::map< int, iVariant::iTypeHandler> iMetaTypeHandler;
+typedef std::map< iLatin1StringView, int > iTypeIdRegister;
+typedef std::map< std::pair<int, int>, const iAbstractConverterFunction* > iMetaTypeConverter;
+#endif
 
 struct _iMetaType {
     iMutex           _lock;
@@ -306,7 +314,7 @@ bool iVariant::convert(int t, void *result) const
         if (charXTypeId == m_typeId) {
             iVariantImpl<char*>* imp = static_cast< iVariantImpl<char*>* >(m_dataImpl.data());
             if (str)
-                *str = iString::fromUtf8(imp->_value);
+                *str = iString::fromUtf8(iByteArrayView(imp->_value));
 
             return true;
         }
@@ -314,7 +322,7 @@ bool iVariant::convert(int t, void *result) const
         if (ccharXTypeId == m_typeId) {
             iVariantImpl<const char*>* imp = static_cast< iVariantImpl<const char*>* >(m_dataImpl.data());
             if (str)
-                *str = iString::fromUtf8(imp->_value);
+                *str = iString::fromUtf8(iByteArrayView(imp->_value));
 
             return true;
         }

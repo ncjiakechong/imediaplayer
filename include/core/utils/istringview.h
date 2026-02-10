@@ -24,43 +24,45 @@ class iString;
 namespace iPrivate {
 template <typename Char>
 struct IsCompatibleCharTypeHelper
-    : std::integral_constant<bool,
+    : integral_constant<bool,
                              is_same<Char, iChar>::value ||
                              is_same<Char, xuint16>::value ||
+                             #ifdef IX_HAVE_CXX11
                              is_same<Char, char16_t>::value ||
+                             #endif
                              (is_same<Char, wchar_t>::value && sizeof(wchar_t) == sizeof(iChar))> {};
 template <typename Char>
 struct IsCompatibleCharType
-    : IsCompatibleCharTypeHelper<typename std::remove_cv<typename std::remove_reference<Char>::type>::type> {};
+    : IsCompatibleCharTypeHelper<typename remove_cv<typename remove_reference<Char>::type>::type> {};
 
 template <typename Array>
-struct IsCompatibleArrayHelper : std::false_type {};
+struct IsCompatibleArrayHelper : false_type {};
 template <typename Char, size_t N>
 struct IsCompatibleArrayHelper<Char[N]>
     : IsCompatibleCharType<Char> {};
 template <typename Array>
 struct IsCompatibleArray
-    : IsCompatibleArrayHelper<typename std::remove_cv<typename std::remove_reference<Array>::type>::type> {};
+    : IsCompatibleArrayHelper<typename remove_cv<typename remove_reference<Array>::type>::type> {};
 
 template <typename Pointer>
-struct IsCompatiblePointerHelper : std::false_type {};
+struct IsCompatiblePointerHelper : false_type {};
 template <typename Char>
 struct IsCompatiblePointerHelper<Char*>
     : IsCompatibleCharType<Char> {};
 template <typename Pointer>
 struct IsCompatiblePointer
-    : IsCompatiblePointerHelper<typename std::remove_cv<typename std::remove_reference<Pointer>::type>::type> {};
+    : IsCompatiblePointerHelper<typename remove_cv<typename remove_reference<Pointer>::type>::type> {};
 
 template <typename T>
-struct IsCompatibleStdBasicStringHelper : std::false_type {};
-template <typename Char, typename...Args>
-struct IsCompatibleStdBasicStringHelper<std::basic_string<Char, Args...> >
+struct IsCompatibleStdBasicStringHelper : false_type {};
+template <typename Char, typename Traits, typename Alloc>
+struct IsCompatibleStdBasicStringHelper<std::basic_string<Char, Traits, Alloc> >
     : IsCompatibleCharType<Char> {};
 
 template <typename T>
 struct IsCompatibleStdBasicString
     : IsCompatibleStdBasicStringHelper<
-        typename std::remove_cv<typename std::remove_reference<T>::type>::type
+        typename remove_cv<typename remove_reference<T>::type>::type
       > {};
 
 } // namespace iPrivate
@@ -83,21 +85,6 @@ public:
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
 private:
-    template <typename Char>
-    using if_compatible_char = typename enable_if<iPrivate::IsCompatibleCharType<Char>::value, bool>::type;
-
-    template <typename Array>
-    using if_compatible_array = typename enable_if<iPrivate::IsCompatibleArray<Array>::value, bool>::type;
-
-    template <typename Pointer>
-    using if_compatible_pointer = typename enable_if<iPrivate::IsCompatiblePointer<Pointer>::value, bool>::type;
-
-    template <typename T>
-    using if_compatible_string = typename enable_if<iPrivate::IsCompatibleStdBasicString<T>::value, bool>::type;
-
-    template <typename T>
-    using if_compatible_istring_like = typename enable_if<is_same<T, iString>::value, bool>::type;
-
     template <typename Char, size_t N>
     static xsizetype lengthHelperArray(const Char (&)[N])
     { return xsizetype(N - 1); }
@@ -118,28 +105,28 @@ public:
     iStringView()
         : m_size(0), m_data(IX_NULLPTR) {}
 
-    template <typename Char, if_compatible_char<Char> = true>
-    iStringView(const Char *str, xsizetype len)
+    template <typename Char>
+    iStringView(const Char *str, xsizetype len, typename enable_if<iPrivate::IsCompatibleCharType<Char>::value, bool>::type* = 0)
         : m_size(len), m_data(castHelper(str)) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
-    template <typename Char, if_compatible_char<Char> = true>
-    iStringView(const Char *f, const Char *l)
+    template <typename Char>
+    iStringView(const Char *f, const Char *l, typename enable_if<iPrivate::IsCompatibleCharType<Char>::value, bool>::type* = 0)
         : m_size(l - f), m_data(castHelper(f)) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
-    template <typename Array, if_compatible_array<Array> = true>
-    iStringView(const Array &str)
+    template <typename Array>
+    iStringView(const Array &str, typename enable_if<iPrivate::IsCompatibleArray<Array>::value, bool>::type* = 0)
         : m_size(lengthHelperArray(str)), m_data(castHelper(str)) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
-    template <typename Pointer, if_compatible_pointer<Pointer> = true>
-    iStringView(const Pointer &str)
+    template <typename Pointer>
+    iStringView(const Pointer &str, typename enable_if<iPrivate::IsCompatiblePointer<Pointer>::value, bool>::type* = 0)
         : m_size(str ? lengthHelperPointer(str) : 0), m_data(castHelper(str)) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
-    template <typename String, if_compatible_istring_like<String> = true>
-    iStringView(const String &str)
+    template <typename String>
+    iStringView(const String &str, typename enable_if<is_same<typename remove_cv<String>::type, iString>::value, bool>::type* = 0)
         : m_size(xsizetype(str.size())), m_data(str.isNull() ? IX_NULLPTR : castHelper(str.data())) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
-    template <typename StdBasicString, if_compatible_string<StdBasicString> = true>
-    iStringView(const StdBasicString &str)
+    template <typename StdBasicString>
+    iStringView(const StdBasicString &str, typename enable_if<iPrivate::IsCompatibleStdBasicString<StdBasicString>::value, bool>::type* = 0)
         : m_size(xsizetype(str.size())), m_data(castHelper(str.data())) {IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size);}
 
     inline iString toString() const;
@@ -280,8 +267,8 @@ private:
 };
 IX_DECLARE_TYPEINFO(iStringView, IX_PRIMITIVE_TYPE);
 
-template <typename iStringLike, typename enable_if<is_same<iStringLike, iString>::value, bool>::type = true>
-inline iStringView iToStringViewIgnoringNull(const iStringLike &s)
+template <typename iStringLike>
+inline typename enable_if<is_same<iStringLike, iString>::value, iStringView>::type iToStringViewIgnoringNull(const iStringLike &s)
 { return iStringView(s.data(), s.size()); }
 
 } // namespace iShell

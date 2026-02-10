@@ -295,7 +295,7 @@
 #ifdef IX_HAVE_CXX11
 #define IX_TYPEOF(expr) decltype(expr)
 #else
-#define IX_TYPEOF(expr) typeof(expr)
+#define IX_TYPEOF(expr) __typeof__(expr)
 #endif
 
 #ifdef IX_HAVE_CXX11
@@ -335,8 +335,8 @@
  * operator to disable copying (the compiler gives an error message).
  */
 #define IX_DISABLE_COPY(Class) \
-    Class(const Class &) = delete;\
-    Class &operator=(const Class &) = delete;
+    Class(const Class &); \
+    Class &operator=(const Class &);
 
 
 #if defined(__GNUC__) || defined(__clang__)

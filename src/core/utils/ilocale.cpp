@@ -764,8 +764,8 @@ iString iLocale::createSeparatedList(const std::list<iString> &list) const
     } else if (size == 2) {
         iString format = getLocaleData(list_pattern_part_data + d->m_data->m_list_pattern_part_two_idx, d->m_data->m_list_pattern_part_two_size);
 
-        std::list<iString>::const_iterator it_arg1 = list.cbegin();
-        std::list<iString>::const_iterator it_arg2 = list.cbegin();
+        std::list<iString>::const_iterator it_arg1 = list.begin();
+        std::list<iString>::const_iterator it_arg2 = list.begin();
         std::advance(it_arg1, 0);
         std::advance(it_arg2, 1);
         return format.arg(*it_arg1, *it_arg2);
@@ -774,18 +774,18 @@ iString iLocale::createSeparatedList(const std::list<iString> &list) const
         iString formatMid = getLocaleData(list_pattern_part_data + d->m_data->m_list_pattern_part_mid_idx, d->m_data->m_list_pattern_part_mid_size);
         iString formatEnd = getLocaleData(list_pattern_part_data + d->m_data->m_list_pattern_part_end_idx, d->m_data->m_list_pattern_part_end_size);
 
-        std::list<iString>::const_iterator it_arg1 = list.cbegin();
-        std::list<iString>::const_iterator it_arg2 = list.cbegin();
+        std::list<iString>::const_iterator it_arg1 = list.begin();
+        std::list<iString>::const_iterator it_arg2 = list.begin();
         std::advance(it_arg1, 0);
         std::advance(it_arg2, 1);
         iString result = formatStart.arg(*it_arg1, *it_arg2);
         for (int i = 2; i < size - 1; ++i) {
-            it_arg1 = list.cbegin();
+            it_arg1 = list.begin();
             std::advance(it_arg1, i);
             result = formatMid.arg(result, *it_arg1);
         }
 
-        it_arg1 = list.cbegin();
+        it_arg1 = list.begin();
         std::advance(it_arg1, size - 1);
         result = formatEnd.arg(result, *it_arg1);
         return result;
@@ -879,7 +879,7 @@ static xulonglong toIntegral_helper(const iLocaleData *d, iStringView str, bool 
 template <typename T> static inline
 T toIntegral_helper(const iLocalePrivate *d, iStringView str, bool *ok)
 {
-    using Int64 = typename std::conditional<std::is_unsigned<T>::value, xulonglong, xlonglong>::type;
+    typedef typename NumConditional<is_unsigned<T>::value, xulonglong, xlonglong>::Type Int64;
 
     // we select the right overload by the last, unused parameter
     Int64 val = toIntegral_helper(d->m_data, str, ok, d->m_numberOptions, Int64());
@@ -2019,7 +2019,7 @@ bool iLocaleData::numberToCLocale(iStringView s, iLocale::NumberOptions number_o
 {
     const iChar *uc = s.data();
     xsizetype l = s.size();
-    decltype(l) idx = 0;
+    xsizetype idx = 0;
 
     // Skip whitespace
     while (idx < l && uc[idx].isSpace())

@@ -109,7 +109,7 @@ bool iINCStream::attach(Mode mode)
     setState(STATE_ATTACHING);
 
     // Request channel from server (async, non-blocking)
-    auto op = m_context->requestChannel(mode);
+    iSharedDataPointer<iINCOperation> op = m_context->requestChannel(mode);
     if (!op) {
         ilog_error("[", objectName(), "][", m_channelId, "] Failed to send channel request");
         setState(STATE_DETACHED);
@@ -160,7 +160,7 @@ void iINCStream::detach()
         return;
     }
 
-    auto op = m_context->releaseChannel(m_channelId);
+    iSharedDataPointer<iINCOperation> op = m_context->releaseChannel(m_channelId);
     if (!op) {
         // Failed to send release request, force detach
         ilog_error("[", objectName(), "][", m_channelId, "] Failed to send release request, force detach");
@@ -209,7 +209,7 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
     iINCStream* stream = static_cast<iINCStream*>(userData);
 
     // Remove from pending operations list and release reference
-    auto it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
+    std::list<iINCOperation*>::iterator it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
     if (it != stream->m_pendingOps.end()) {
         stream->m_pendingOps.erase(it);
         op->deref();  // Release our reference
@@ -279,7 +279,7 @@ void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
     iINCStream* stream = static_cast<iINCStream*>(userData);
 
     // Remove from pending operations list and release reference
-    auto it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
+    std::list<iINCOperation*>::iterator it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
     if (it != stream->m_pendingOps.end()) {
         stream->m_pendingOps.erase(it);
         op->deref();  // Release our reference

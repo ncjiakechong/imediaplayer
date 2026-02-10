@@ -154,11 +154,13 @@ inline iSharedDataPointer<T>::iSharedDataPointer(T *adata)
     : d(adata)
 { if (d) d->ref(true); }
 
+#if __cplusplus >= 201103L
 template <class T> inline bool operator==(std::nullptr_t, const iSharedDataPointer<T> &p2)
 { return !p2; }
 
 template <class T> inline bool operator==(const iSharedDataPointer<T> &p1, std::nullptr_t)
 { return !p1; }
+#endif
 
 template<typename T> IX_DECLARE_TYPEINFO_BODY(iSharedDataPointer<T>, IX_MOVABLE_TYPE);
 

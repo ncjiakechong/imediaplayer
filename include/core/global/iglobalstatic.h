@@ -78,8 +78,7 @@ struct iGlobalStatic
 #define IX_GLOBAL_STATIC_WITH_ARGS(TYPE, NAME, ARGS)                              \
     namespace { namespace IX_GS_ ## NAME {                                        \
         typedef TYPE Type;                                                        \
-        iShell::iAtomicCounter<int> guard =                                       \
-            {iShell::iAtomicCounter<int>(iShell::IxGlobalStatic::Uninitialized)}; \
+        iShell::iAtomicCounter<int> guard(iShell::IxGlobalStatic::Uninitialized); \
         IX_GLOBAL_STATIC_INTERNAL(ARGS)                                           \
     } }                                                                           \
     static iShell::iGlobalStatic<TYPE,                                            \

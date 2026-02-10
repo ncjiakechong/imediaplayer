@@ -11,7 +11,7 @@
 #define IGLOBAL_H
 
 #include <cmath>
-#include <cstdint>
+#include <stdint.h>
 #include <algorithm>
 
 #include <core/global/imacro.h>

@@ -70,7 +70,7 @@ private:
     iPoller m_poller;
 
     std::vector<iEventSource *> m_pendingDispatches;
-    std::map<int, std::list<iEventSource*>> m_sources;
+    std::map<int, std::list<iEventSource*> > m_sources;
 };
 
 } // namespace iShell

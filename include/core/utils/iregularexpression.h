@@ -51,8 +51,6 @@ public:
     iRegularExpression(const iRegularExpression &re);
     ~iRegularExpression();
     iRegularExpression &operator=(const iRegularExpression &re);
-    iRegularExpression &operator=(iRegularExpression &&re)
-    { d.swap(re.d); return *this; }
 
     void swap(iRegularExpression &other) { d.swap(other.d); }
 
@@ -139,8 +137,6 @@ public:
     ~iRegularExpressionMatch();
     iRegularExpressionMatch(const iRegularExpressionMatch &match);
     iRegularExpressionMatch &operator=(const iRegularExpressionMatch &match);
-    iRegularExpressionMatch &operator=(iRegularExpressionMatch &&match)
-    { d.swap(match.d); return *this; }
     void swap(iRegularExpressionMatch &other) { d.swap(other.d); }
 
     iRegularExpression regularExpression() const;
@@ -190,8 +186,6 @@ public:
     ~iRegularExpressionMatchIterator();
     iRegularExpressionMatchIterator(const iRegularExpressionMatchIterator &iterator);
     iRegularExpressionMatchIterator &operator=(const iRegularExpressionMatchIterator &iterator);
-    iRegularExpressionMatchIterator &operator=(iRegularExpressionMatchIterator &&iterator)
-    { d.swap(iterator.d); return *this; }
     void swap(iRegularExpressionMatchIterator &other) { d.swap(other.d); }
 
     bool isValid() const;

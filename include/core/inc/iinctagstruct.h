@@ -171,7 +171,7 @@ public:
 
 private:
     /// Internal type tags (not exposed to public API)
-    enum Tag : xuint8 {
+    enum Tag {
         TAG_INVALID = 0,
         TAG_UINT8   = 1,
         TAG_UINT16  = 2,

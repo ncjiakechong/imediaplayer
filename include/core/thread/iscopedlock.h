@@ -10,7 +10,7 @@
 #ifndef ISCOPEDLOCK_H
 #define ISCOPEDLOCK_H
 
-#include <cstdint>
+#include <stdint.h>
 #include <core/global/imacro.h>
 #include <core/global/iglobal.h>
 

@@ -24,8 +24,11 @@ public:
                    iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iStringMatcher(const iChar *uc, xsizetype len,
                    iShell::CaseSensitivity cs = iShell::CaseSensitive)
-                   : iStringMatcher(iStringView(uc, len), cs)
-    {}
+                   : d_ptr(IX_NULLPTR), ix_cs(cs), ix_sv(uc, len)
+    {
+        for (int i=0; i<256; ++i) ix_skiptable[i] = 0;
+        updateSkipTable();
+    }
     iStringMatcher(iStringView str,
                    iShell::CaseSensitivity cs = iShell::CaseSensitive);
     iStringMatcher(const iStringMatcher &other);

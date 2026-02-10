@@ -451,8 +451,9 @@ void iMediaTimeRange::addInterval(const iMediaTimeInterval &interval)
 */
 void iMediaTimeRange::addTimeRange(const iMediaTimeRange &range)
 {
-    const auto intervals = range.intervals();
-    for (const iMediaTimeInterval &i : intervals) {
+    const std::list<iMediaTimeInterval> intervals = range.intervals();
+    for (std::list<iMediaTimeInterval>::const_iterator it = intervals.begin(); it != intervals.end(); ++it) {
+        const iMediaTimeInterval &i = *it;
         d->addInterval(i);
     }
 }
@@ -499,8 +500,9 @@ void iMediaTimeRange::removeInterval(const iMediaTimeInterval &interval)
 */
 void iMediaTimeRange::removeTimeRange(const iMediaTimeRange &range)
 {
-    const auto intervals = range.intervals();
-    for (const iMediaTimeInterval &i : intervals) {
+    const std::list<iMediaTimeInterval> intervals = range.intervals();
+    for (std::list<iMediaTimeInterval>::const_iterator it = intervals.begin(); it != intervals.end(); ++it) {
+        const iMediaTimeInterval &i = *it;
         d->removeInterval(i);
     }
 }
@@ -593,7 +595,7 @@ bool iMediaTimeRange::isContinuous() const
 */
 bool iMediaTimeRange::contains(xint64 time) const
 {
-    for (std::list<iMediaTimeInterval>::const_iterator it = d->intervals.cbegin(); it != d->intervals.cend(); ++it) {
+    for (std::list<iMediaTimeInterval>::const_iterator it = d->intervals.begin(); it != d->intervals.end(); ++it) {
         if (it->contains(time))
             return true;
 

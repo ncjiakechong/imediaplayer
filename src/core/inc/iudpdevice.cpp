@@ -373,7 +373,7 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
         }
 
         if (readErr) *readErr = 0;
-        auto it = m_addrToChannel.find(addrSrcKey);
+        ClientMap::iterator it = m_addrToChannel.find(addrSrcKey);
         if (it != m_addrToChannel.end()) {
             // Data from a different client - route to its buffer
             it->second->receivedData(result);
@@ -560,8 +560,9 @@ void iUDPDevice::eventAbilityUpdate()
     if (!m_eventSource) return;
 
     int newEvents = m_monitorEvents;
-    for (auto& pair : m_addrToChannel) {
-        iUDPClientDevice* clientDevice = pair.second;
+    ClientMap::iterator it;
+    for (it = m_addrToChannel.begin(); it != m_addrToChannel.end(); ++it) {
+        iUDPClientDevice* clientDevice = it->second;
         newEvents |= clientDevice->eventAbility();
         if ((IX_IO_IN | IX_IO_OUT) == newEvents) {
             break;
@@ -684,7 +685,7 @@ xuint64 iUDPDevice::packAddrKey(const struct sockaddr_in& addr)
 
 void iUDPDevice::removeClient(iUDPClientDevice* client)
 {
-    auto it = m_addrToChannel.find(client->addrKey());
+    ClientMap::iterator it = m_addrToChannel.find(client->addrKey());
     if (it != m_addrToChannel.end()) {
         m_addrToChannel.erase(it);
     }

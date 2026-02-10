@@ -842,7 +842,7 @@ std::multimap<iString, iVariant> iVideoFrame::availableMetaData() const
 iVariant iVideoFrame::metaData(const iString &key) const
 {
     std::multimap<iString, iVariant>::const_iterator it = d->metadata.find(key);
-    if (it == d->metadata.cend())
+    if (it == d->metadata.end())
         return iVariant();
     return it->second;
 }
@@ -863,8 +863,9 @@ void iVideoFrame::setMetaData(const iString &key, const iVariant &value)
         return;
     }
 
-    std::multimap<iString, iVariant>::const_iterator it = d->metadata.find(key);
-    d->metadata.erase(it);
+    std::multimap<iString, iVariant>::iterator it = d->metadata.find(key);
+    if (it != d->metadata.end())
+        d->metadata.erase(it);
 }
 
 } // namespace iShell

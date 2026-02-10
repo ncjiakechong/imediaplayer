@@ -96,6 +96,9 @@ template <>
 struct iTypeListType<>
 { typedef iNullTypeList HeadType; };
 
+template <typename T> struct _GetterRetType { typedef const T& Type; };
+template <typename T> struct _GetterRetType<T&> { typedef T& Type; };
+
 template <int n>
 struct iGetter
 {
@@ -104,7 +107,7 @@ struct iGetter
     { return iGetter<n-1>::template get<Ret, typename Tail::HeadType, typename Tail::TailType>(val.tail); }
 
     template <class Ret, class Head, class Tail>
-    static inline const Ret& get(const iTypeList<Head, Tail>& val)
+    static inline typename _GetterRetType<Ret>::Type get(const iTypeList<Head, Tail>& val)
     { return iGetter<n-1>::template get<Ret, typename Tail::HeadType, typename Tail::TailType>(val.tail); }
 };
 
@@ -116,7 +119,7 @@ struct iGetter<0>
     { return val.head; }
 
     template <class Ret, class Head, class Tail>
-    static inline const Ret& get(const iTypeList<Head, Tail>& val)
+    static inline typename _GetterRetType<Ret>::Type get(const iTypeList<Head, Tail>& val)
     { return val.head; }
 };
 

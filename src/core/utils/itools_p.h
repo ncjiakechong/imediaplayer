@@ -87,16 +87,20 @@ enum {
 
 enum {
     // Define as enum to force inlining. Don't expose MaxAllocSize in a public header.
-    MaxByteArraySize = MaxAllocSize - sizeof(std::remove_pointer<iByteArray::DataPointer>::type)
+    MaxByteArraySize = MaxAllocSize - sizeof(remove_pointer<iByteArray::DataPointer>::type)
 };
 
 /*!
   Returns whether \a p is within a range [b, e). In simplest form equivalent to:
   b <= p < e.
 */
-template <typename T, typename Cmp = std::less<const T *>>
-static bool ix_points_into_range(const T *p, const T *b, const T *e, Cmp less = {})
+template <typename T, typename Cmp>
+static bool ix_points_into_range(const T *p, const T *b, const T *e, Cmp less)
 { return !less(p, b) && less(p, e); }
+
+template <typename T>
+static bool ix_points_into_range(const T *p, const T *b, const T *e)
+{ return ix_points_into_range(p, b, e, std::less<const T *>()); }
 
 xuint32 foldCase(const xuint16 *ch, const xuint16 *start);
 xuint32 foldCase(xuint32 ch, xuint32 &last);

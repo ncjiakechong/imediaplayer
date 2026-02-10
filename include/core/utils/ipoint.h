@@ -102,10 +102,10 @@ inline iPoint &iPoint::operator-=(const iPoint &p)
 { xp-=p.xp; yp-=p.yp; return *this; }
 
 inline iPoint &iPoint::operator*=(float factor)
-{ xp = int(std::round(xp*factor)); yp = int(std::round(yp*factor)); return *this; }
+{ xp = int(round(xp*factor)); yp = int(round(yp*factor)); return *this; }
 
 inline iPoint &iPoint::operator*=(double factor)
-{ xp = int(std::round(xp*factor)); yp = int(std::round(yp*factor)); return *this; }
+{ xp = int(round(xp*factor)); yp = int(round(yp*factor)); return *this; }
 
 inline iPoint &iPoint::operator*=(int factor)
 { xp = xp*factor; yp = yp*factor; return *this; }
@@ -123,19 +123,19 @@ inline const iPoint operator-(const iPoint &p1, const iPoint &p2)
 { return iPoint(p1.xp-p2.xp, p1.yp-p2.yp); }
 
 inline const iPoint operator*(const iPoint &p, float factor)
-{ return iPoint(int(std::round(p.xp*factor)), int(std::round(p.yp*factor))); }
+{ return iPoint(int(round(p.xp*factor)), int(round(p.yp*factor))); }
 
 inline const iPoint operator*(const iPoint &p, double factor)
-{ return iPoint(int(std::round(p.xp*factor)), int(std::round(p.yp*factor))); }
+{ return iPoint(int(round(p.xp*factor)), int(round(p.yp*factor))); }
 
 inline const iPoint operator*(const iPoint &p, int factor)
 { return iPoint(p.xp*factor, p.yp*factor); }
 
 inline const iPoint operator*(float factor, const iPoint &p)
-{ return iPoint(int(std::round(p.xp*factor)), int(std::round(p.yp*factor))); }
+{ return iPoint(int(round(p.xp*factor)), int(round(p.yp*factor))); }
 
 inline const iPoint operator*(double factor, const iPoint &p)
-{ return iPoint(int(std::round(p.xp*factor)), int(std::round(p.yp*factor))); }
+{ return iPoint(int(round(p.xp*factor)), int(round(p.yp*factor))); }
 
 inline const iPoint operator*(int factor, const iPoint &p)
 { return iPoint(p.xp*factor, p.yp*factor); }
@@ -148,14 +148,14 @@ inline const iPoint operator-(const iPoint &p)
 
 inline iPoint &iPoint::operator/=(double c)
 {
-    xp = int(std::round(xp/c));
-    yp = int(std::round(yp/c));
+    xp = int(round(xp/c));
+    yp = int(round(yp/c));
     return *this;
 }
 
 inline const iPoint operator/(const iPoint &p, double c)
 {
-    return iPoint(int(std::round(p.xp/c)), int(std::round(p.yp/c)));
+    return iPoint(int(round(p.xp/c)), int(round(p.yp/c)));
 }
 
 class IX_CORE_EXPORT iPointF
@@ -284,7 +284,7 @@ inline const iPointF operator/(const iPointF &p, double divisor)
 { return iPointF(p.xp/divisor, p.yp/divisor); }
 
 inline iPoint iPointF::toPoint() const
-{ return iPoint(int(std::round(xp)), int(std::round(yp))); }
+{ return iPoint(int(round(xp)), int(round(yp))); }
 
 } // namespace iShell
 

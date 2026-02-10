@@ -125,7 +125,7 @@ int iINCContext::connectTo(const iStringView& url)
 
         m_ioThread->start();
         m_connection->moveToThread(m_ioThread);
-        invokeMethod(device, &iINCDevice::startEventMonitoring, IX_NULLPTR);
+        invokeMethod(device, &iINCDevice::startEventMonitoring, (iEventDispatcher*)IX_NULLPTR);
     } else {
         // Run in main thread (single-threaded mode)
         device->startEventMonitoring(iEventDispatcher::instance());
@@ -146,7 +146,7 @@ int iINCContext::connectTo(const iStringView& url)
     // Send handshake message - handshake uses custom binary protocol
     iINCMessage handshakeMsg(INC_MSG_HANDSHAKE, m_connection->connectionId(), m_connection->nextSequence());
     handshakeMsg.payload().setData(handshakeData);
-    auto op = m_connection->sendMessage(handshakeMsg);
+    iSharedDataPointer<iINCOperation> op = m_connection->sendMessage(handshakeMsg);
     IX_ASSERT(op);
     op->ref();
     m_pendingOps.push_back(op.data());
@@ -223,7 +223,7 @@ iSharedDataPointer<iINCOperation> iINCContext::callMethod(iStringView method, xu
     }
 
     // Protocol creates and tracks the operation
-    auto op = m_connection->sendMessage(msg);
+    iSharedDataPointer<iINCOperation> op = m_connection->sendMessage(msg);
     if (!op) return op;
 
     op->setTimeout(timeout);
@@ -264,7 +264,7 @@ iSharedDataPointer<iINCOperation> iINCContext::pingpong()
     }
 
     // Create PING message and send it - protocol handles operation tracking
-    auto op = m_connection->pingpong();
+    iSharedDataPointer<iINCOperation> op = m_connection->pingpong();
     if (!op) return op;
 
     op->setTimeout(m_config.protocolTimeoutMs());
@@ -317,7 +317,7 @@ void iINCContext::onHandshakeTimeout(iINCOperation* operation, void* userData)
 {
     iINCContext* self = static_cast<iINCContext*>(userData);
     // Remove from pending operations list and release reference
-    auto it = std::find(self->m_pendingOps.begin(), self->m_pendingOps.end(), operation);
+    std::list<iINCOperation*>::iterator it = std::find(self->m_pendingOps.begin(), self->m_pendingOps.end(), operation);
     if (it != self->m_pendingOps.end()) {
         self->m_pendingOps.erase(it);
         operation->deref();
@@ -343,7 +343,7 @@ void iINCContext::onHandshakeTimeout(iINCOperation* operation, void* userData)
     // Send handshake message - handshake uses custom binary protocol
     iINCMessage handshakeMsg(INC_MSG_HANDSHAKE, self->m_connection->connectionId(), self->m_connection->nextSequence());
     handshakeMsg.payload().setData(handshakeData);
-    auto retryOp = self->m_connection->sendMessage(handshakeMsg);
+    iSharedDataPointer<iINCOperation> retryOp = self->m_connection->sendMessage(handshakeMsg);
     IX_ASSERT(retryOp);
     retryOp->ref();
     self->m_pendingOps.push_back(retryOp.data());
@@ -479,7 +479,7 @@ iSharedDataPointer<iINCOperation> iINCContext::requestChannel(xuint32 mode)
     } else {}
 
     // Send request - protocol creates and tracks operation
-    auto op = m_connection->sendMessage(msg);
+    iSharedDataPointer<iINCOperation> op = m_connection->sendMessage(msg);
     if (!op) return op;
 
     ilog_info("[", objectName(), "][0][", op->sequenceNumber(),
@@ -498,7 +498,7 @@ iSharedDataPointer<iINCOperation> iINCContext::releaseChannel(xuint32 channelId)
 
     // Send release request to server with type-safe API
     iINCMessage msg(INC_MSG_STREAM_CLOSE, channelId, m_connection->nextSequence());
-    auto op = m_connection->sendMessage(msg);
+    iSharedDataPointer<iINCOperation> op = m_connection->sendMessage(msg);
     if (!op) return op;
 
     ilog_info("[", objectName(), "][", channelId, "][", op->sequenceNumber(),

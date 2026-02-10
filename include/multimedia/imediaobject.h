@@ -10,7 +10,11 @@
 #ifndef IMEDIAOBJECT_H
 #define IMEDIAOBJECT_H
 
+#include <set>
+#if __cplusplus >= 201103L
 #include <unordered_set>
+#endif
+
 #include <core/kernel/iobject.h>
 #include <core/kernel/itimer.h>
 
@@ -58,7 +62,13 @@ private:
     void timeoutNotify();
 
     iTimer m_notifyTimer;
-    std::unordered_set<iString, iKeyHashFunc> m_notifyProperties;
+
+    #if __cplusplus >= 201103L
+    typedef std::unordered_set<iString, iKeyHashFunc> PropertySet;
+    #else
+    typedef std::set<iString> PropertySet;
+    #endif
+    PropertySet m_notifyProperties;
 };
 
 } // namespace iShell

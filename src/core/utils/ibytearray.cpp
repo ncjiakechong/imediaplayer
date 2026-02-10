@@ -73,7 +73,7 @@ static inline uchar asciiLower(uchar c)
 */
 const void *imemrchr(const void *s, int needle, size_t size)
 {
-    auto b = static_cast<const uchar *>(s);
+    const uchar *b = static_cast<const uchar *>(s);
     const uchar *n = b + size;
     while (n-- != b) {
         if (*n == uchar(needle))
@@ -276,22 +276,16 @@ int istricmp(const char *str1, const char *str2)
     if (!s2)
         return 1;
 
-    enum { Incomplete = 256 };
     xptrdiff offset = 0;
-    auto innerCompare = [=, &offset](xptrdiff max, bool unlimited) {
-        max += offset;
-        do {
-            uchar c = s1[offset];
-            if (int res = asciiLower(c) - asciiLower(s2[offset]))
-                return res;
-            if (!c)
-                return 0;
-            ++offset;
-        } while (unlimited || offset < max);
-        return int(Incomplete);
-    };
-
-    return innerCompare(-1, true);
+    for (;;) {
+        uchar c = s1[offset];
+        int res = asciiLower(c) - asciiLower(s2[offset]);
+        if (res)
+            return res;
+        if (!c)
+            return 0;
+        ++offset;
+    }
 }
 
 /*! \relates iByteArray
@@ -1586,7 +1580,7 @@ iByteArray &iByteArray::insert(xsizetype i, iByteArrayView data)
         // Safety: If 'str' points to data within this array, we must detach before
         // freeing old memory to avoid use-after-free. The detached pointer preserves
         // the old data until after the copy operation completes.
-        DataPointer detached{};  // Lightweight construction, no allocation yet
+        DataPointer detached;  // Lightweight construction, no allocation yet
         d.detachAndGrow(Data::GrowsForward, (i - d.size) + size, &str, &detached);
         IX_CHECK_PTR(d.data());
         d.copyAppend(i - d.size, ' ');
@@ -1602,9 +1596,9 @@ iByteArray &iByteArray::insert(xsizetype i, iByteArrayView data)
     }
 
     const bool growsAtBegin = d.size != 0 && i == 0;
-    const auto pos = growsAtBegin ? Data::GrowsBackwards : Data::GrowsForward;
+    const Data::ArrayOptions pos = growsAtBegin ? Data::GrowsBackwards : Data::GrowsForward;
 
-    DataPointer detached{};
+    DataPointer detached;
     d.detachAndGrow(pos, size, &str, &detached);
     IX_ASSERT((pos == Data::GrowsBackwards && d.freeSpaceAtBegin() >= size) ||
                  (pos == Data::GrowsForward && d.freeSpaceAtEnd() >= size));
@@ -1640,7 +1634,7 @@ iByteArray &iByteArray::insert(xsizetype i, xsizetype count, char ch)
     }
 
     const bool growsAtBegin = d.size != 0 && i == 0;
-    const auto pos = growsAtBegin ? Data::GrowsBackwards : Data::GrowsForward;
+    const Data::ArrayOptions pos = growsAtBegin ? Data::GrowsBackwards : Data::GrowsForward;
 
     d.detachAndGrow(pos, count, IX_NULLPTR, IX_NULLPTR);
     IX_ASSERT((pos == Data::GrowsBackwards && d.freeSpaceAtBegin() >= count) ||
@@ -2001,7 +1995,7 @@ xsizetype iPrivate::findByteArray(iByteArrayView haystack, xsizetype from, char 
         from = std::max(from + haystack.size(), xsizetype(0));
     if (from < haystack.size()) {
         const char *const b = haystack.data();
-        if (const auto n = static_cast<const char *>(
+        if (const char *n = static_cast<const char *>(
                     memchr(b + from, needle, static_cast<size_t>(haystack.size() - from)))) {
             return n - b;
         }
@@ -2028,7 +2022,7 @@ xsizetype iPrivate::lastIndexOf(iByteArrayView haystack, xsizetype from, iByteAr
             return 0;
         return -1;
     }
-    const auto ol = needle.size();
+    const xsizetype ol = needle.size();
     if (ol == 1)
         return iPrivate::lastIndexOf(haystack, from, needle.front());
 
@@ -2073,8 +2067,8 @@ xsizetype iByteArray::lastIndexOf(char ch, xsizetype from) const
 static inline xsizetype countCharHelper(iByteArrayView haystack, char needle)
 {
     xsizetype num = 0;
-    for (char ch : haystack) {
-        if (ch == needle)
+    for (xsizetype i = 0; i < haystack.size(); ++i) {
+        if (haystack[i] == needle)
             ++num;
     }
     return num;
@@ -2842,7 +2836,7 @@ static xuint64 toIntegral_helper(const char *data, bool *ok, int base, xuint64)
 template <typename T> static inline
 T toIntegral_helper(const char *data, bool *ok, int base)
 {
-    using Int64 = typename std::conditional<std::is_unsigned<T>::value, xuint64, xint64>::type;
+    typedef typename NumConditional<std::numeric_limits<T>::is_signed, xint64, xuint64>::Type Int64;
 
     if (base != 0 && (base < 2 || base > 36)) {
         // avoid recursion
@@ -3433,7 +3427,9 @@ static fromBase64_helper_result fromBase64_helper(const char *input, xsizetype i
                                            char *output /* may alias input */,
                                            iByteArray::Base64Options options)
 {
-    fromBase64_helper_result result{ 0, iByteArray::Base64DecodingStatus::Ok };
+    fromBase64_helper_result result;
+    result.decodedLength = 0;
+    result.status = iByteArray::Base64DecodingStatus_Ok;
 
     unsigned int buf = 0;
     int nbits = 0;
@@ -3463,17 +3459,17 @@ static fromBase64_helper_result fromBase64_helper(const char *input, xsizetype i
                     // can have 1 or 2 '=' signs, in both cases padding base64Size to
                     // a multiple of 4. Any other case is illegal.
                     if ((inputSize % 4) != 0) {
-                        result.status = iByteArray::Base64DecodingStatus::IllegalInputLength;
+                        result.status = iByteArray::Base64DecodingStatus_IllegalInputLength;
                         return result;
                     } else if ((i == inputSize - 1) ||
                         (i == inputSize - 2 && input[++i] == '=')) {
                         d = -1; // ... and exit the loop, normally
                     } else {
-                        result.status = iByteArray::Base64DecodingStatus::IllegalPadding;
+                        result.status = iByteArray::Base64DecodingStatus_IllegalPadding;
                         return result;
                     }
                 } else {
-                    result.status = iByteArray::Base64DecodingStatus::IllegalCharacter;
+                    result.status = iByteArray::Base64DecodingStatus_IllegalCharacter;
                     return result;
                 }
             } else {
@@ -3510,7 +3506,7 @@ public:
         std::swap(decodingStatus, other.decodingStatus);
     }
 
-    operator bool() const { return decodingStatus == iByteArray::Base64DecodingStatus::Ok; }
+    operator bool() const { return decodingStatus == iByteArray::Base64DecodingStatus_Ok; }
 
     iByteArray &operator*() { return decoded; }
     const iByteArray &operator*() const { return decoded; }

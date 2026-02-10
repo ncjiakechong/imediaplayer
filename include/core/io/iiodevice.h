@@ -16,7 +16,11 @@
 #ifndef IIODEVICE_H
 #define IIODEVICE_H
 
+#include <map>
 #include <memory>
+#if __cplusplus >= 201103L
+#include <unordered_map>
+#endif
 
 #include <core/kernel/iobject.h>
 #include <core/utils/ibytearray.h>
@@ -182,8 +186,14 @@ private:
     iIODevice::OpenMode m_openMode;
     iString m_errorString;
 
-    std::unordered_map<int, iMemBlockQueue*> m_readBuffers;
-    std::unordered_map<int, iMemBlockQueue*> m_writeBuffers;
+    #if __cplusplus >= 201103L
+    typedef std::unordered_map<int, iMemBlockQueue*> BufferMap;
+    #else
+    typedef std::map<int, iMemBlockQueue*> BufferMap;
+    #endif
+
+    BufferMap m_readBuffers;
+    BufferMap m_writeBuffers;
 
     xint64 m_pos;
     xint64 m_devicePos;

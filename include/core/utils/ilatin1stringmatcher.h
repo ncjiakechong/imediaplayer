@@ -29,17 +29,16 @@ void fill(ForwardIterator first, ForwardIterator last, const Value &value)
     }
 }
 
-template<class RandomIt1, class Hash = std::hash<typename std::iterator_traits<RandomIt1>::value_type>>
+template<class RandomIt1, class Hash>
 class iboyer_moore_searcher_hashed_needle
 {
 public:
     iboyer_moore_searcher_hashed_needle(RandomIt1 pat_first, RandomIt1 pat_last)
-        : m_skiptable{}
     {
         const size_t n = std::distance(pat_first, pat_last);
         const uchar uchar_max = (std::numeric_limits<uchar>::max)();
         uchar max = n > uchar_max ? uchar_max : uchar(n);
-        fill(std::begin(m_skiptable), std::end(m_skiptable), max);
+        fill(m_skiptable, m_skiptable + sizeof(m_skiptable), max);
 
         RandomIt1 pattern = pat_first;
         pattern += n - max;
@@ -56,7 +55,7 @@ public:
             RandomIt2 begin, end;
         };
         Hash hf;
-        auto pat_length = std::distance(pat_first, pat_last);
+        xsizetype pat_length = xsizetype(std::distance(pat_first, pat_last));
         if (pat_length == 0)
             return first;
 
@@ -73,7 +72,7 @@ public:
                     skip++;
                 }
                 if (skip > pl_minus_one) { // we have a match
-                    auto match = current - skip + 1;
+                    RandomIt2 match = current - skip + 1;
                     return match;
                 }
 
@@ -91,12 +90,12 @@ public:
     }
 
 private:
-    alignas(16) uchar m_skiptable[256];
+    uchar m_skiptable[256];
 };
 
 struct iCaseSensitiveLatin1Hash
 {
-    iCaseSensitiveLatin1Hash() = default;
+    iCaseSensitiveLatin1Hash() {}
 
     std::size_t operator()(char c) const { return std::size_t(uchar(c)); }
     std::size_t operator()(const iChar& c) const { return std::size_t(uchar(c.toLatin1())); }
@@ -104,7 +103,7 @@ struct iCaseSensitiveLatin1Hash
 
 struct iCaseInsensitiveLatin1Hash
 {
-    iCaseInsensitiveLatin1Hash() = default;
+    iCaseInsensitiveLatin1Hash() {}
 
     std::size_t operator()(char c) const
     { return std::size_t(latin1Lower[uchar(c)]); }
@@ -144,10 +143,8 @@ private:
     iShell::CaseSensitivity m_cs;
     typedef iPrivate::iboyer_moore_searcher_hashed_needle<const char *, iPrivate::iCaseSensitiveLatin1Hash> CaseSensitiveSearcher;
     typedef iPrivate::iboyer_moore_searcher_hashed_needle<const char *, iPrivate::iCaseInsensitiveLatin1Hash> CaseInsensitiveSearcher;
-    union {
-        CaseSensitiveSearcher m_caseSensitiveSearcher;
-        CaseInsensitiveSearcher m_caseInsensitiveSearcher;
-    };
+    CaseSensitiveSearcher* m_caseSensitiveSearcher;
+    CaseInsensitiveSearcher* m_caseInsensitiveSearcher;
 
     template <typename String>
     xsizetype indexIn_helper(String haystack, xsizetype from) const;

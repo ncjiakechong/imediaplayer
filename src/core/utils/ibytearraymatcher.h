@@ -20,8 +20,9 @@ class iByteArrayMatcher
 public:
     iByteArrayMatcher();
     explicit iByteArrayMatcher(const iByteArray &pattern);
-    explicit iByteArrayMatcher(iByteArrayView pattern)
-        : iByteArrayMatcher(pattern.data(), pattern.size()) {}
+    explicit iByteArrayMatcher(iByteArrayView pattern) {
+        setPattern(pattern.toByteArray());
+    }
     explicit iByteArrayMatcher(const char *pattern, xsizetype length);
     iByteArrayMatcher(const iByteArrayMatcher &other);
     ~iByteArrayMatcher();

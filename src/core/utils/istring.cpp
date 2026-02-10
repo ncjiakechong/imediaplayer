@@ -15,6 +15,7 @@
 #include <cstdarg>
 #include <cwchar>
 
+#include "core/io/imemblock.h"
 #include "core/utils/istring.h"
 #include "core/utils/iregularexpression.h"
 #include "core/global/inumeric.h"
@@ -48,7 +49,7 @@ enum StringComparisonMode {
 };
 
 template <typename Pointer>
-xuint32 foldCaseHelper(Pointer ch, Pointer start) = delete;
+xuint32 foldCaseHelper(Pointer ch, Pointer start) ;
 
 template <>
 xuint32 foldCaseHelper<const iChar*>(const iChar* ch, const iChar* start)
@@ -64,7 +65,7 @@ xuint32 foldCaseHelper<const char*>(const char* ch, const char*)
 }
 
 template <typename T>
-xuint16 valueTypeToUtf16(T t) = delete;
+xuint16 valueTypeToUtf16(T t) ;
 
 template <>
 xuint16 valueTypeToUtf16<iChar>(iChar t)
@@ -75,7 +76,7 @@ xuint16 valueTypeToUtf16<iChar>(iChar t)
 template <>
 xuint16 valueTypeToUtf16<char>(char t)
 {
-    return xuint16{uchar(t)};
+    return xuint16(uchar(t));
 }
 
 template <typename T>
@@ -86,7 +87,7 @@ static inline bool foldAndCompare(const T a, const T b)
 
 #define REHASH(a) \
     if (sl_minus_1 < sizeof(sl_minus_1) * CHAR_BIT)  \
-        hashHaystack -= decltype(hashHaystack)(a) << sl_minus_1; \
+        hashHaystack -= std::size_t(a) << sl_minus_1; \
     hashHaystack <<= 1
 
 /*!
@@ -108,8 +109,8 @@ static inline xsizetype iLastIndexOf(Haystack haystack, iChar needle, xsizetype 
         from = haystack.size() - 1;
     if (from >= 0) {
         xuint16 c = needle.unicode();
-        const auto b = haystack.data();
-        auto n = b + from;
+        const typename Haystack::value_type *b = haystack.data();
+        const typename Haystack::value_type *n = b + from;
         if (cs == iShell::CaseSensitive) {
             for (; n >= b; --n)
                 if (valueTypeToUtf16(*n) == c)
@@ -124,7 +125,7 @@ static inline xsizetype iLastIndexOf(Haystack haystack, iChar needle, xsizetype 
     return -1;
 }
 template <> xsizetype
-iLastIndexOf(iString, iChar, xsizetype, iShell::CaseSensitivity) = delete; // unwanted, would detach
+iLastIndexOf(iString, iChar, xsizetype, iShell::CaseSensitivity) ; // unwanted, would detach
 
 template<typename Haystack, typename Needle>
 static xsizetype iLastIndexOf(Haystack haystack0, xsizetype from,
@@ -145,15 +146,13 @@ static xsizetype iLastIndexOf(Haystack haystack0, xsizetype from,
     if (from > delta)
         from = delta;
 
-    auto sv = [sl](const typename Haystack::value_type *v) { return Haystack(v, sl); };
-
-    auto haystack = haystack0.data();
-    const auto needle = needle0.data();
-    const auto *end = haystack;
+    const typename Haystack::value_type *haystack = haystack0.data();
+    const typename Needle::value_type *needle = needle0.data();
+    const typename Haystack::value_type *end = haystack;
     haystack += from;
     const std::size_t sl_minus_1 = sl ? sl - 1 : 0;
-    const auto *n = needle + sl_minus_1;
-    const auto *h = haystack + sl_minus_1;
+    const typename Needle::value_type *n = needle + sl_minus_1;
+    const typename Haystack::value_type *h = haystack + sl_minus_1;
     std::size_t hashNeedle = 0, hashHaystack = 0;
 
     if (cs == iShell::CaseSensitive) {
@@ -166,7 +165,7 @@ static xsizetype iLastIndexOf(Haystack haystack0, xsizetype from,
         while (haystack >= end) {
             hashHaystack += valueTypeToUtf16(*haystack);
             if (hashHaystack == hashNeedle
-                 && iPrivate::compareStrings(needle0, sv(haystack), iShell::CaseSensitive) == 0)
+                 && iPrivate::compareStrings(needle0, Haystack(haystack, sl), iShell::CaseSensitive) == 0)
                 return haystack - end;
             --haystack;
             REHASH(valueTypeToUtf16(haystack[sl]));
@@ -181,7 +180,7 @@ static xsizetype iLastIndexOf(Haystack haystack0, xsizetype from,
         while (haystack >= end) {
             hashHaystack += foldCaseHelper(haystack, end);
             if (hashHaystack == hashNeedle
-                 && iPrivate::compareStrings(sv(haystack), needle0, iShell::CaseInsensitive) == 0)
+                 && iPrivate::compareStrings(Haystack(haystack, sl), needle0, iShell::CaseInsensitive) == 0)
                 return haystack - end;
             --haystack;
             REHASH(foldCaseHelper(haystack + sl, end));
@@ -195,8 +194,8 @@ bool ix_starts_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivi
 {
     if (haystack.isNull())
         return needle.isNull();
-    const auto haystackLen = haystack.size();
-    const auto needleLen = needle.size();
+    const xsizetype haystackLen = haystack.size();
+    const xsizetype needleLen = needle.size();
     if (haystackLen == 0)
         return needleLen == 0;
     if (needleLen > haystackLen)
@@ -210,8 +209,8 @@ bool ix_ends_with_impl(Haystack haystack, Needle needle, iShell::CaseSensitivity
 {
     if (haystack.isNull())
         return needle.isNull();
-    const auto haystackLen = haystack.size();
-    const auto needleLen = needle.size();
+    const xsizetype haystackLen = haystack.size();
+    const xsizetype needleLen = needle.size();
     if (haystackLen == 0)
         return needleLen == 0;
     if (haystackLen < needleLen)
@@ -233,7 +232,7 @@ static void append_helper(iString &self, T view)
         IX_CHECK_PTR(d.data());
         IX_ASSERT(strSize <= d.freeSpaceAtEnd());
 
-        iString::DataPointer::iterator dst = std::next(d.data(), d.size);
+        iString::DataPointer::iterator dst = d.data() + d.size;
        if (is_same<T, iLatin1StringView>::value) {
             iLatin1::convertToUnicode(dst, view);
             dst += strSize;
@@ -268,6 +267,18 @@ struct UnrollTailLoop
 
         return UnrollTailLoop<MaxCount - 1>::exec(count - 1, returnIfExited, loopCheck, returnIfFailed, i + 1);
     }
+    
+    template <typename Functor, typename Number>
+    struct LoopWrapper {
+        Functor code;
+        LoopWrapper(Functor c) : code(c) {}
+        bool operator()(Number i) { code(i); return false; }
+    };
+
+    template <typename Number>
+    struct FailWrapper {
+        int operator()(Number) { return 0; }
+    };
 
     template <typename Functor, typename Number>
     static inline void exec(Number count, Functor code)
@@ -276,7 +287,7 @@ struct UnrollTailLoop
          *   for (Number i = 0; i < count; ++i)
          *       code(i);
          */
-        exec(count, 0, [=](Number i) -> bool { code(i); return false; }, [](Number) { return 0; });
+        exec(count, 0, LoopWrapper<Functor, Number>(code), FailWrapper<Number>());
     }
 };
 template <> template <typename RetType, typename Functor1, typename Functor2, typename Number>
@@ -454,7 +465,7 @@ static int ucstricmp(xsizetype alen, const xuint16 *a, xsizetype blen, const cha
     xsizetype l = std::min(alen, blen);
     xsizetype i;
     for (i = 0; i < l; ++i) {
-        int diff = foldCase(a[i]) - foldCase(xuint16{uchar(b[i])});
+        int diff = foldCase(a[i]) - foldCase(xuint16(uchar(b[i])));
         if ((diff))
             return diff;
     }
@@ -469,8 +480,8 @@ static int ucstricmp(xsizetype alen, const xuint16 *a, xsizetype blen, const cha
 // Case-insensitive comparison between a Unicode string and a UTF-8 string
 static int ucstricmp8(const char *utf8, const char *utf8end, const iChar *utf16, const iChar *utf16end)
 {
-    auto src1 = reinterpret_cast<const uchar *>(utf8);
-    auto end1 = reinterpret_cast<const uchar *>(utf8end);
+    const uchar *src1 = reinterpret_cast<const uchar *>(utf8);
+    const uchar *end1 = reinterpret_cast<const uchar *>(utf8end);
     iStringIterator src2(utf16, utf16end);
 
     while (src1 < end1 && src2.hasNext()) {
@@ -546,7 +557,7 @@ static int ucstrcmp(const xuint16 *a, size_t alen, const Char2 *b, size_t blen)
     return cmp ? cmp : ix_lencmp(alen, blen);
 }
 
-using CaseInsensitiveL1 = iPrivate::iCaseInsensitiveLatin1Hash;
+typedef iPrivate::iCaseInsensitiveLatin1Hash CaseInsensitiveL1;
 
 static int latin1nicmp(const char *lhsChar, xsizetype lSize, const char *rhsChar, xsizetype rSize)
 {
@@ -627,15 +638,15 @@ int iPrivate::compareStrings(iLatin1StringView lhs, iLatin1StringView rhs, iShel
         return ix_lencmp(lhs.size(), xsizetype(0));
     if (cs == iShell::CaseInsensitive)
         return latin1nicmp(lhs.data(), lhs.size(), rhs.data(), rhs.size());
-    const auto l = std::min(lhs.size(), rhs.size());
+    const xsizetype l = std::min(lhs.size(), rhs.size());
     int r = memcmp(lhs.data(), rhs.data(), l);
     return r ? r : ix_lencmp(lhs.size(), rhs.size());
 }
 
 static int iArgDigitValue(iChar ch)
 {
-    if (ch >= u'0' && ch <= u'9')
-        return int(ch.unicode() - u'0');
+    if (ch >= ((xuint16)'0') && ch <= ((xuint16)'9'))
+        return int(ch.unicode() - ((xuint16)'0'));
     return -1;
 }
 
@@ -1157,7 +1168,7 @@ void iString::resize(xsizetype size)
         reallocData(size, Data::GrowsForward);
     d.size = size;
     if (d.allocatedCapacity())
-        d.data()[size] = u'\0';
+        d.data()[size] = '\0';
 }
 
 void iString::resize(xsizetype newSize, iChar fillChar)
@@ -1381,26 +1392,26 @@ iString &iString::operator=(iChar ch)
 template <typename T>
 static void insert_helper(iString &str, xsizetype i, const T &toInsert)
 {
-    auto &str_d = str.data_ptr();
+    iString::DataPointer &str_d = str.data_ptr();
     xsizetype difference = 0;
     if (i > str_d.size)
         difference = i - str_d.size;
     const xsizetype oldSize = str_d.size;
     const xsizetype insert_size = toInsert.size();
     const xsizetype newSize = str_d.size + difference + insert_size;
-    const auto side = i == 0 ? iMemBlock::GrowsForward : iMemBlock::GrowsForward;
+    const iMemBlock::ArrayOptions side = i == 0 ? iMemBlock::GrowsForward : iMemBlock::GrowsForward;
 
     if (str_d.needsDetach() || needsReallocate(str, newSize)) {
-        const auto cbegin = str.cbegin();
-        const auto cend = str.cend();
-        const auto insert_start = difference == 0 ? std::next(cbegin, i) : cend;
+        const iChar *cbegin = str.constBegin();
+        const iChar *cend = cbegin + str.length();
+        const iChar *insert_start = difference == 0 ? (cbegin + i) : cend;
         iString other;
 
         other.data_ptr().detachAndGrow(side, newSize, IX_NULLPTR, IX_NULLPTR);
-        other.append(iStringView(cbegin, insert_start));
-        other.resize(i, u' ');
+        other.append(iStringView(cbegin, insert_start - cbegin));
+        other.resize(i, ((xuint16)' '));
         other.append(toInsert);
-        other.append(iStringView(insert_start, cend));
+        other.append(iStringView(insert_start, cend - insert_start));
         str.swap(other);
         return;
     }
@@ -1409,20 +1420,14 @@ static void insert_helper(iString &str, xsizetype i, const T &toInsert)
     IX_CHECK_PTR(str_d.data());
     str.resize(newSize);
 
-    auto begin = str_d.begin();
-    auto old_end = std::next(begin, oldSize);
-    std::fill_n(old_end, difference, u' ');
-    auto insert_start = std::next(begin, i);
+    iChar *begin = reinterpret_cast<iChar *>(str_d.begin());
+    iChar *old_end = begin + oldSize;
+    std::fill(old_end, old_end + difference, ((xuint16)' '));
+    iChar *insert_start = begin + i;
     if (difference == 0)
-        std::move_backward(insert_start, old_end, str_d.end());
+        std::copy_backward(insert_start, old_end, reinterpret_cast<iChar *>(str_d.end()));
 
-    using Char = typename remove_cv<typename T::value_type>::type;
-    if (is_same<Char, iChar>::value)
-        std::copy_n(reinterpret_cast<const xuint16 *>(toInsert.data()), insert_size, insert_start);
-    else if (is_same<Char, xuint16>::value)
-        std::copy_n(reinterpret_cast<const xuint16 *>(toInsert.data()), insert_size, insert_start);
-    else if (is_same<Char, char>::value)
-        ix_from_latin1(insert_start, reinterpret_cast<const char *>(toInsert.data()), insert_size);
+    std::copy(toInsert.begin(), toInsert.end(), insert_start);
 }
 
 /*!
@@ -1526,7 +1531,7 @@ iString &iString::append(const iChar *str, xsizetype len)
         // the following should be safe as iChar uses xuint16 as underlying data
         const xuint16 *char16String = reinterpret_cast<const xuint16 *>(str);
         d.growAppend(char16String, char16String + len);
-        d.data()[d.size] = u'\0';
+        d.data()[d.size] = '\0';
     }
     return *this;
 }
@@ -1574,7 +1579,7 @@ iString &iString::append(iChar ch)
 iString &iString::assign(iStringView s)
 {
     if (s.size() <= capacity() && isDetached()) {
-        const auto offset = d.freeSpaceAtBegin();
+        const xsizetype offset = d.freeSpaceAtBegin();
         if (offset)
             d.setBegin(d.begin() - offset);
         resize(0);
@@ -1593,17 +1598,17 @@ iString &iString::assign(iByteArrayView s)
 iString &iString::assign_helper(const xuint32 *data, xsizetype len)
 {
     // worst case: each xuint32 requires a surrogate pair, so
-    const auto requiredCapacity = len * 2;
+    const xsizetype requiredCapacity = len * 2;
     if (requiredCapacity <= capacity() && isDetached()) {
-        const auto offset = d.freeSpaceAtBegin();
+        const xsizetype offset = d.freeSpaceAtBegin();
         if (offset)
             d.setBegin(d.begin() - offset);
-        auto begin = reinterpret_cast<iChar *>(d.begin());
-        auto ba = iByteArrayView(reinterpret_cast<const char*>(data), len * sizeof(xuint32));
+        iChar *begin = reinterpret_cast<iChar *>(d.begin());
+        iByteArrayView ba(reinterpret_cast<const char*>(data), len * sizeof(xuint32));
         iStringConverter::State state;
-        const auto end = iUtf32::convertToUnicode(begin, ba, &state, DetectEndianness);
+        const iChar *end = iUtf32::convertToUnicode(begin, ba, &state, DetectEndianness);
         d.size = end - begin;
-        d.data()[d.size] = u'\0';
+        d.data()[d.size] = '\0';
     } else {
         *this = iString::fromUcs4(data, len);
     }
@@ -1642,7 +1647,7 @@ iString &iString::remove(xsizetype pos, xsizetype len)
     } else if (len > 0) {
         detach();
         d.erase(d.begin() + pos, d.begin() + pos + len);
-        d.data()[d.size] = u'\0';
+        d.data()[d.size] = '\0';
     }
     return *this;
 }
@@ -1659,17 +1664,17 @@ static void removeStringImpl(iString &s, const T &needle, iShell::CaseSensitivit
     if (idx < 0)
         return;
 
-    const auto beg = s.begin(); // Triggers copy-on-write detachment for in-place modification
-    auto dst = beg + idx;
-    auto src = beg + idx + needleSize;
-    const auto end = s.end();
+    iChar *beg = s.begin(); // Triggers copy-on-write detachment for in-place modification
+    iChar *dst = beg + idx;
+    iChar *src = beg + idx + needleSize;
+    iChar *end = s.end();
     // Maintain invariant during removal loop:
     //   [beg, dst[ - processed result with all needles removed
     //   [src, end[ - remaining string still to be searched
     while (src < end) {
-        const auto i = s.indexOf(needle, src - beg, cs);
-        const auto hit = i == -1 ? end : beg + i;
-        const auto skipped = hit - src;
+        const xsizetype i = s.indexOf(needle, src - beg, cs);
+        iChar *hit = (i == -1) ? end : beg + i;
+        const xsizetype skipped = hit - src;
         memmove(dst, src, skipped * sizeof(iChar));
         dst += skipped;
         src = hit + needleSize;
@@ -1685,7 +1690,7 @@ static void removeStringImpl(iString &s, const T &needle, iShell::CaseSensitivit
 */
 iString &iString::remove(const iString &str, iShell::CaseSensitivity cs)
 {
-    const auto s = str.d.data();
+    const xuint16 *s = str.d.data();
     if (ix_points_into_range(s, d.data(), d.data() + d.size)) {
         iVarLengthArray<xuint16> arry(str.size());
         memcpy(arry.data(), s, str.size()* sizeof(xuint16));
@@ -1739,6 +1744,12 @@ iString &iString::remove(iLatin1StringView str, iShell::CaseSensitivity cs)
   \sa remove()
 */
 
+struct CaseInsens {
+    iChar c;
+    CaseInsens(iChar c_) : c(c_) {}
+    bool operator()(iChar x) const { return c == x.toCaseFolded(); }
+};
+
 /*!
   Removes every occurrence of the character \a ch in this string, and
   returns a reference to this string.
@@ -1749,16 +1760,12 @@ iString &iString::remove(iChar ch, iShell::CaseSensitivity cs)
 {
     const xsizetype idx = indexOf(ch, 0, cs);
     if (idx != -1) {
-        const auto first = begin(); // implicit detach()
-        auto last = end();
+        iChar *first = begin(); // implicit detach()
+        iChar *last = end();
         if (cs == iShell::CaseSensitive) {
             last = std::remove(first + idx, last, ch);
         } else {
-            const iChar c = ch.toCaseFolded();
-            auto caseInsensEqual = [c](iChar x) {
-                return c == x.toCaseFolded();
-            };
-            last = std::remove_if(first + idx, last, caseInsensEqual);
+            last = std::remove_if(first + idx, last, CaseInsens(ch.toCaseFolded()));
         }
         resize(last - first);
     }
@@ -2296,7 +2303,8 @@ iString &iString::replace(const iRegularExpression &re, const iString &after)
 
         lastEnd = 0;
         // add the after string, with replacements for the backreferences
-        for (const iStringCapture &backReference : backReferences) {
+        for (std::list<iStringCapture>::const_iterator it = backReferences.begin(); it != backReferences.end(); ++it) {
+            const iStringCapture &backReference = *it;
             // part of "after" before the backreference
             len = backReference.pos - lastEnd;
             if (len > 0) {
@@ -2334,7 +2342,7 @@ iString &iString::replace(const iRegularExpression &re, const iString &after)
     resize(newLength);
     xsizetype i = 0;
     iChar *uc = data();
-    for (std::list<iStringView>::const_iterator it = chunks.cbegin(); it != chunks.cend(); ++it) {
+    for (std::list<iStringView>::const_iterator it = chunks.begin(); it != chunks.end(); ++it) {
         const iStringView &chunk = *it;
         xsizetype len = chunk.length();
         memcpy(uc + i, chunk.data(), len * sizeof(iChar));
@@ -2627,7 +2635,7 @@ iString iString::section(const iString &sep, xsizetype start, xsizetype end, Sec
             end += sectionsSize;
     } else {
         xsizetype skip = 0;
-        for (std::list<iStringView>::const_iterator it = sections.cbegin(); it != sections.cend(); ++it) {
+        for (std::list<iStringView>::const_iterator it = sections.begin(); it != sections.end(); ++it) {
             if (it->isEmpty())
                 skip++;
         }
@@ -2641,8 +2649,8 @@ iString iString::section(const iString &sep, xsizetype start, xsizetype end, Sec
 
     iString ret;
     xsizetype first_i = start, last_i = end;
-    std::list<iStringView>::const_iterator it = sections.cbegin();
-    for (xsizetype x = 0, i = 0; x <= end && i < sectionsSize && it != sections.cend(); ++it, ++i) {
+    std::list<iStringView>::const_iterator it = sections.begin();
+    for (xsizetype x = 0, i = 0; x <= end && i < sectionsSize && it != sections.end(); ++it, ++i) {
         const iStringView &section = *it;
         const bool empty = section.isEmpty();
         if (x >= start) {
@@ -2685,7 +2693,7 @@ static iString extractSections(const std::list<ix_section_chunk> &sections, xsiz
             end += sectionsSize;
     } else {
         xsizetype skip = 0;
-        for (std::list<ix_section_chunk>::const_iterator it = sections.cbegin(); it != sections.cend(); ++it) {
+        for (std::list<ix_section_chunk>::const_iterator it = sections.begin(); it != sections.end(); ++it) {
             const ix_section_chunk &section = *it;
             if (section.length == section.string.length())
                 skip++;
@@ -2701,8 +2709,8 @@ static iString extractSections(const std::list<ix_section_chunk> &sections, xsiz
     iString ret;
     xsizetype x = 0;
     xsizetype first_i = start, last_i = end;
-    std::list<ix_section_chunk>::const_iterator it = sections.cbegin();
-    for (xsizetype i = 0; x <= end && i < sectionsSize && it != sections.cend(); ++i, ++it) {
+    std::list<ix_section_chunk>::const_iterator it = sections.begin();
+    for (xsizetype i = 0; x <= end && i < sectionsSize && it != sections.end(); ++i, ++it) {
         const ix_section_chunk &section = *it;
         const bool empty = (section.length == section.string.length());
         if (x >= start) {
@@ -2720,7 +2728,7 @@ static iString extractSections(const std::list<ix_section_chunk> &sections, xsiz
     }
 
     if ((flags & iString::SectionIncludeLeadingSep) && first_i >= 0) {
-        it = sections.cbegin();
+        it = sections.begin();
         std::advance(it, first_i);
         const ix_section_chunk &section = *it;
         ret.prepend(section.string.left(section.length));
@@ -2728,7 +2736,7 @@ static iString extractSections(const std::list<ix_section_chunk> &sections, xsiz
 
     if ((flags & iString::SectionIncludeTrailingSep)
         && last_i < sectionsSize - 1) {
-        it = sections.cbegin();
+        it = sections.begin();
         std::advance(it, last_i+1);
         const ix_section_chunk &section = *it;
         ret += section.string.left(section.length);
@@ -3131,7 +3139,7 @@ xuint16 *iLatin1::convertToUnicode(xuint16 *out, iLatin1StringView in)
 {
     const xsizetype len = in.size();
     ix_from_latin1(out, in.data(), len);
-    return std::next(out, len);
+    return out + len;
 }
 
 char *iLatin1::convertFromUnicode(char *out, iStringView in)
@@ -3177,7 +3185,7 @@ static iByteArray ix_convert_to_local_8bit(iStringView string)
 {
     if (string.isNull())
         return iByteArray();
-    iStringEncoder fromUtf16(iStringEncoder::System, iStringEncoder::Flag::Stateless);
+    iStringEncoder fromUtf16(iStringEncoder::System, iStringEncoder::Stateless);
     return fromUtf16(string);
 }
 
@@ -3309,7 +3317,7 @@ iString iString::fromLatin1(iByteArrayView ba)
 
         ix_from_latin1(dst, ba.data(), size_t(ba.size()));
     }
-    return iString(std::move(d));
+    return iString(d);
 }
 
 /*!
@@ -3328,7 +3336,7 @@ iString iString::fromLocal8Bit(iByteArrayView ba)
         return iString();
     if (ba.isEmpty())
         return iString(DataPointer::fromRawData(&_empty, 0, IX_NULLPTR, IX_NULLPTR));
-    iStringDecoder toUtf16(iStringDecoder::System, iStringDecoder::Flag::Stateless);
+    iStringDecoder toUtf16(iStringDecoder::System, iStringDecoder::Stateless);
     return toUtf16(ba);
 }
 
@@ -3407,7 +3415,7 @@ iString iString::fromUtf16(const xuint16 *unicode, xsizetype size)
         return iString();
     if (size < 0)
         size = iPrivate::xustrlen(unicode);
-    iStringDecoder toUtf16(iStringDecoder::Utf16, iStringDecoder::Flag::Stateless);
+    iStringDecoder toUtf16(iStringDecoder::Utf16, iStringDecoder::Stateless);
     return toUtf16(iByteArrayView(reinterpret_cast<const char *>(unicode), size * 2));
 }
 
@@ -3441,7 +3449,7 @@ iString iString::fromUcs4(const xuint32 *unicode, xsizetype size)
         else
             size = std::char_traits<char32_t>::length((const char32_t*)unicode);
     }
-    iStringDecoder toUtf16(iStringDecoder::Utf32, iStringDecoder::Flag::Stateless);
+    iStringDecoder toUtf16(iStringDecoder::Utf32, iStringDecoder::Stateless);
     return toUtf16(iByteArrayView(reinterpret_cast<const char *>(unicode), size * 4));
 }
 
@@ -3515,10 +3523,10 @@ namespace {
     template <typename StringView>
     StringView ix_trimmed(StringView s)
     {
-        auto begin = s.begin();
-        auto end = s.end();
+        typename StringView::const_iterator begin = s.begin();
+        typename StringView::const_iterator end = s.end();
         iStringAlgorithms<const StringView>::trimmed_helper_positions(begin, end);
-        return StringView{begin, end};
+        return StringView(begin, end);
     }
 }
 
@@ -3874,7 +3882,7 @@ iString iChar::fromUcs4(xuint32 c)
     }
 
     _ret.chars[0] = xuint16(c);
-    _ret.chars[1] = u'\0';
+    _ret.chars[1] = '\0';
     return iString(iStringView(&_ret.chars[0], 1));
 }
 
@@ -4021,7 +4029,7 @@ iString iString::nullTerminated() const
 {
     // ensure '\0'-termination for ::fromRawData strings
     if (!d.isMutable())
-        return iString{constData(), size()};
+        return iString(constData(), size());
     return *this;
 }
 
@@ -4149,14 +4157,14 @@ static R fullConvertCase(xuint32 uc, iUnicodeTables::Case which)
     R result;
     IX_ASSERT(uc <= iChar::LastValidCodePoint);
 
-    auto pp = result.chars;
+    xuint16 *pp = result.chars;
 
-    const auto fold = iUnicodeTables::properties(uc)->cases[which];
-    const auto caseDiff = fold.diff;
+    const iUnicodeTables::Properties *p = iUnicodeTables::properties(uc);
+    const int caseDiff = p->cases[which].diff;
 
-    if (fold.special) {
-        const auto *specialCase = iUnicodeTables::specialCaseMap + caseDiff;
-        auto length = *specialCase++;
+    if (p->cases[which].special) {
+        const xuint16 *specialCase = iUnicodeTables::specialCaseMap + caseDiff;
+        xuint16 length = *specialCase++;
         while (length--)
             *pp++ = *specialCase++;
     } else {
@@ -4174,11 +4182,11 @@ template <typename T>
 static iString detachAndConvertCase(T &str, iStringIterator it, iUnicodeTables::Case which)
 {
     IX_ASSERT(!str.isEmpty());
-    iString s = std::move(str);         // will copy if T is const iString
+    iString s = str;         // will copy if T is const iString
     iChar *pp = s.begin() + it.index(); // will detach if necessary
 
     do {
-        const auto folded = fullConvertCase(it.next(), which);
+        const R folded = fullConvertCase(it.next(), which);
         if (folded.size() > 1) {
             if (folded.chars[0] == *pp && folded.size() == 2) {
                 // Optimization: For surrogate pairs where only the second char changes,
@@ -4195,7 +4203,7 @@ static iString detachAndConvertCase(T &str, iStringIterator it, iUnicodeTables::
                 pp = const_cast<iChar *>(s.constBegin()) + outpos + folded.size();
 
                 // Adjust the input iterator if we are performing an in-place conversion
-                if (!std::is_const<T>::value)
+                if (!is_const<T>::value)
                     it = iStringIterator(s.constBegin(), inpos + folded.size(), s.constEnd());
             }
         } else {
@@ -4224,7 +4232,7 @@ static iString convertCase(T &str, iUnicodeTables::Case which)
             return detachAndConvertCase(str, it, which);
         }
     }
-    return std::move(str);
+    return str;
 }
 } // namespace iUnicodeTables
 
@@ -4394,7 +4402,7 @@ static LengthMod parse_length_modifier(const char * &c)
 iString iString::vasprintf(const char *cformat, va_list ap)
 {
     if (!cformat || !*cformat) {
-        return fromLatin1("");
+        return fromLatin1(iByteArrayView(""));
     }
 
     // Parse cformat
@@ -4417,11 +4425,11 @@ iString iString::vasprintf(const char *cformat, va_list ap)
         ++c;
 
         if (*c == '\0') {
-            result.append(u'%'); // a % at the end of the string - treat as non-escape text
+            result.append('%'); // a % at the end of the string - treat as non-escape text
             break;
         }
         if (*c == '%') {
-            result.append(u'%'); // %%
+            result.append('%'); // %%
             ++c;
             continue;
         }
@@ -4572,14 +4580,14 @@ iString iString::vasprintf(const char *cformat, va_list ap)
             case 's': {
                 if (length_mod == lm_l) {
                     const xuint16 *buff = va_arg(ap, const xuint16*);
-                    const auto *ch = buff;
+                    const xuint16 *ch = buff;
                     while (precision != 0 && *ch != 0) {
                         ++ch;
                         --precision;
                     }
                     subst.setUtf16(buff, ch - buff);
                 } else if (precision == -1) {
-                    subst = iString::fromUtf8(va_arg(ap, const char*));
+                    subst = iString::fromUtf8(iByteArrayView(va_arg(ap, const char*)));
                 } else {
                     const char *buff = va_arg(ap, const char*);
                     subst = iString::fromUtf8(buff, istrnlen(buff, precision));
@@ -5076,13 +5084,13 @@ static ResultList splitString(const StringSource &source, iStringView sep,
 
 */
 std::list<iString> iString::split(const iString &sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
-{ return splitString<std::list<iString>>(*this, sep, behavior, cs); }
+{ return splitString<std::list<iString> >(*this, sep, behavior, cs); }
 
 /*!
     \overload
 */
 std::list<iString> iString::split(iChar sep, iShell::SplitBehavior behavior, iShell::CaseSensitivity cs) const
-{ return splitString<std::list<iString>>(*this, iStringView(&sep, 1), behavior, cs); }
+{ return splitString<std::list<iString> >(*this, iStringView(&sep, 1), behavior, cs); }
 
 /*!
     Splits the view into substring views wherever \a sep occurs, and
@@ -5204,7 +5212,7 @@ void ix_string_normalize(iString *data, iString::NormalizationForm mode, iChar::
         // Fast path: Check if string is pure ASCII (no normalization needed for ASCII)
         // Unicode normalization only affects non-ASCII characters, so we can skip
         // expensive normalization algorithm if all characters are in ASCII range (0-127)
-        auto start = reinterpret_cast<const xuint16 *>(data->constData());
+        const xuint16 *start = reinterpret_cast<const xuint16 *>(data->constData());
         const xuint16 *p = start + from;
         if (isAscii_helper(p, p + data->size() - from))
             return;
@@ -5926,14 +5934,14 @@ iString iString::arg(double a, int fieldWidth, char fmt, int prec, iChar fillCha
 
 
 static inline xuint16 to_unicode(const iChar c) { return c.unicode(); }
-static inline xuint16 to_unicode(const char c) { return iLatin1Char{c}.unicode(); }
+static inline xuint16 to_unicode(const char c) { return iLatin1Char(c).unicode(); }
 
 template <typename Char>
 static int getEscape(const Char *uc, xsizetype *pos, xsizetype len)
 {
     xsizetype i = *pos;
     ++i;
-    if (i < len && uc[i] == u'L')
+    if (i < len && uc[i] == 'L')
         ++i;
     if (i < len) {
         int escape = to_unicode(uc[i]) - '0';
@@ -6014,7 +6022,7 @@ static ParseResult parseMultiArgFormatString(StringView s)
 {
     ParseResult result;
 
-    const auto uc = s.data();
+    const typename StringView::value_type *uc = s.data();
     const xsizetype len = s.size();
     const xsizetype end = len - 1;
     xsizetype i = 0;
@@ -6036,7 +6044,7 @@ static ParseResult parseMultiArgFormatString(StringView s)
     }
 
     if (last < len)
-        result.push_back(Part{s.mid(last, len - last)}); // trailing literal text
+        result.push_back(Part(s.mid(last, len - last))); // trailing literal text
 
     return result;
 }
@@ -6045,7 +6053,7 @@ static ArgIndexToPlaceholderMap makeArgIndexToPlaceholderMap(const ParseResult &
 {
     ArgIndexToPlaceholderMap result;
 
-    for (Part part : parts) {
+    for (xsizetype k = 0; k < parts.size(); ++k) { Part part = parts[k];
         if (part.number >= 0)
             result.push_back(part.number);
     }
@@ -6060,11 +6068,11 @@ static ArgIndexToPlaceholderMap makeArgIndexToPlaceholderMap(const ParseResult &
 static xsizetype resolveStringRefsAndReturnTotalSize(ParseResult &parts, const ArgIndexToPlaceholderMap &argIndexToPlaceholderMap, const iString *args[])
 {
     xsizetype totalSize = 0;
-    for (Part &part : parts) {
+    for (xsizetype k = 0; k < parts.size(); ++k) { Part &part = parts[k];
         if (part.number != -1) {
-            const auto it = std::find(argIndexToPlaceholderMap.begin(), argIndexToPlaceholderMap.end(), part.number);
+            const ArgIndexToPlaceholderMap::const_iterator it = std::find(argIndexToPlaceholderMap.begin(), argIndexToPlaceholderMap.end(), part.number);
             if (it != argIndexToPlaceholderMap.end()) {
-                const auto &arg = *args[it - argIndexToPlaceholderMap.begin()];
+                const iString &arg = *args[it - argIndexToPlaceholderMap.begin()];
                 part.reset(arg);
             }
         }
@@ -6214,8 +6222,8 @@ bool iString::isRightToLeft() const
 */
 iString::iterator iString::erase(iString::const_iterator first, iString::const_iterator last)
 {
-    const auto start = std::distance(cbegin(), first);
-    const auto len = std::distance(first, last);
+    const xsizetype start = std::distance(constBegin(), first);
+    const xsizetype len = std::distance(first, last);
     remove(start, len);
     return begin() + start;
 }
@@ -6231,7 +6239,7 @@ iString::iterator iString::erase(iString::const_iterator first, iString::const_i
 
     \code
     iString c = "abcdefg";
-    auto it = c.erase(c.cbegin()); // c is now "bcdefg"; "it" points to "b"
+    auto it = c.erase(c.begin()); // c is now "bcdefg"; "it" points to "b"
     \endcode
 */
 
@@ -6417,13 +6425,13 @@ xsizetype iPrivate::count(iStringView haystack, iChar ch, iShell::CaseSensitivit
 {
     xsizetype num = 0;
     if (cs == iShell::CaseSensitive) {
-        for (iChar c : haystack) {
+        for (xsizetype k = 0; k < haystack.size(); ++k) { iChar c = haystack[k];
             if (c == ch)
                 ++num;
         }
     } else {
         ch = foldCase(ch);
-        for (iChar c : haystack) {
+        for (xsizetype k = 0; k < haystack.size(); ++k) { iChar c = haystack[k];
             if (foldCase(c) == ch)
                 ++num;
         }
@@ -6481,10 +6489,10 @@ xsizetype iPrivate::count(iLatin1StringView haystack, iChar needle, iShell::Case
         return 0;
 
     if (cs == iShell::CaseSensitive) {
-        return std::count(haystack.cbegin(), haystack.cend(), needle.toLatin1());
+        return std::count(haystack.begin(), haystack.end(), needle.toLatin1());
     } else {
         xsizetype num = 0;
-        for (char c : haystack) {
+        for (xsizetype k = 0; k < haystack.size(); ++k) { char c = haystack[k].toLatin1();
             CaseInsensitiveL1 ciMatch;
             if (ciMatch(c) == ciMatch(needle.toLatin1()))
                 ++num;
@@ -6602,7 +6610,6 @@ xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringVie
     if (l > 500 && sl > 5)
         return iFindStringBoyerMoore(haystack0, from, needle0, cs);
 
-    auto sv = [sl](const xuint16 *v) { return iStringView(v, sl); };
     /*
         We use some hashing for efficiency's sake. Instead of
         comparing strings, we compare the hash value of str with that
@@ -6625,7 +6632,7 @@ xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringVie
         while (haystack <= end) {
             hashHaystack += haystack[sl_minus_1];
             if (hashHaystack == hashNeedle
-                 && iPrivate::compareStrings(needle0, sv(haystack), iShell::CaseSensitive) == 0)
+                 && iPrivate::compareStrings(needle0, iStringView(haystack, sl), iShell::CaseSensitive) == 0)
                 return haystack - haystack0.utf16();
 
             REHASH(*haystack);
@@ -6642,7 +6649,7 @@ xsizetype iPrivate::findString(iStringView haystack0, xsizetype from, iStringVie
         while (haystack <= end) {
             hashHaystack += foldCase(haystack + sl_minus_1, haystack_start);
             if (hashHaystack == hashNeedle
-                 && iPrivate::compareStrings(needle0, sv(haystack), iShell::CaseInsensitive) == 0)
+                 && iPrivate::compareStrings(needle0, iStringView(haystack, sl), iShell::CaseInsensitive) == 0)
                 return haystack - haystack0.utf16();
 
             REHASH(foldCase(haystack, haystack_start));
@@ -6695,12 +6702,13 @@ xsizetype iPrivate::findString(iLatin1StringView haystack, xsizetype from, iLati
 
         if (needle.size() == 1) {
             IX_ASSERT(haystack.data() != IX_NULLPTR); // see size check above
-            if (auto it = memchr(haystack.data() + from, needle.front().toLatin1(), adjustedSize))
+            const void *it = memchr(haystack.data() + from, needle.front().toLatin1(), adjustedSize);
+            if (it)
                 return static_cast<const char *>(it) - haystack.data();
             return -1;
         }
 
-        const iLatin1StringMatcher matcher(needle, iShell::CaseSensitivity::CaseSensitive);
+        const iLatin1StringMatcher matcher(needle, iShell::CaseSensitive);
         return matcher.indexIn(haystack, from);
     }
 
@@ -6714,10 +6722,10 @@ xsizetype iPrivate::findString(iLatin1StringView haystack, xsizetype from, iLati
     // istringtokenizer benchmark with the Latin1 string tokenization test.
     const xsizetype threshold = 13;
     if (needle.size() <= threshold) {
-        const auto begin = haystack.begin();
-        const auto end = haystack.end() - needle.size() + 1;
+        const char *begin = haystack.begin();
+        const char *end = haystack.end() - needle.size() + 1;
         const xsizetype nlen1 = needle.size() - 1;
-        for (auto it = begin + from; it != end; ++it) {
+        for (const char *it = begin + from; it != end; ++it) {
             CaseInsensitiveL1 ciMatch;
             if (ciMatch(*it) != ciMatch(needle[0].toLatin1()))
                 continue;
@@ -6729,7 +6737,7 @@ xsizetype iPrivate::findString(iLatin1StringView haystack, xsizetype from, iLati
         return -1;
     }
 
-    iLatin1StringMatcher matcher(needle, iShell::CaseSensitivity::CaseInsensitive);
+    iLatin1StringMatcher matcher(needle, iShell::CaseInsensitive);
     return matcher.indexIn(haystack, from);
 }
 

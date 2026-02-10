@@ -538,14 +538,14 @@ iIODevice::iIODevice(iObject *parent)
 iIODevice::~iIODevice()
 {
     // Clean up all read channels
-    for (auto& pair : m_readBuffers) {
-        delete pair.second;
+    for (BufferMap::iterator it = m_readBuffers.begin(); it != m_readBuffers.end(); ++it) {
+        delete it->second;
     }
     m_readBuffers.clear();
 
     // Clean up all write channels
-    for (auto& pair : m_writeBuffers) {
-        delete pair.second;
+    for (BufferMap::iterator it = m_writeBuffers.begin(); it != m_writeBuffers.end(); ++it) {
+        delete it->second;
     }
     m_writeBuffers.clear();
 }
@@ -627,7 +627,7 @@ void iIODevice::setCurrentReadChannel(int channel)
         return;
     }
 
-    std::unordered_map<int, iMemBlockQueue*>::iterator it = m_readBuffers.find(channel);
+    BufferMap::iterator it = m_readBuffers.find(channel);
     m_buffer.m_buf = (it != m_readBuffers.end()) ? it->second : IX_NULLPTR;
     m_currentReadChannel = (it != m_readBuffers.end()) ? channel : 0;
 }
@@ -650,7 +650,7 @@ int iIODevice::requestReadChannel(int channel)
 
 bool iIODevice::releaseReadChannel(int channel)
 {
-    std::unordered_map<int, iMemBlockQueue*>::iterator it = m_readBuffers.find(channel);
+    BufferMap::iterator it = m_readBuffers.find(channel);
     if (it == m_readBuffers.end()) {
         return true;
     }
@@ -688,7 +688,7 @@ void iIODevice::clearReadChannels()
 */
 void iIODevice::setCurrentWriteChannel(int channel)
 {
-    std::unordered_map<int, iMemBlockQueue*>::iterator it = m_writeBuffers.find(channel);
+    BufferMap::iterator it = m_writeBuffers.find(channel);
     m_writeBuffer.m_buf = (m_writeBuffers.end() != it)? it->second : IX_NULLPTR;
     m_currentWriteChannel = (m_writeBuffers.end() != it)? channel : 0;
 }
@@ -711,7 +711,7 @@ int iIODevice::requestWriteChannel(int channel)
 
 bool iIODevice::releaseWriteChannel(int channel)
 {
-    std::unordered_map<int, iMemBlockQueue*>::iterator it = m_writeBuffers.find(channel);
+    BufferMap::iterator it = m_writeBuffers.find(channel);
     if (it == m_writeBuffers.end()) {
         return true;
     }
@@ -748,7 +748,7 @@ bool iIODevice::isBufferEmpty() const
 
 bool iIODevice::allWriteBuffersEmpty() const
 {
-    for (std::unordered_map<int, iMemBlockQueue*>::const_iterator it = m_writeBuffers.cbegin(); it != m_writeBuffers.cend(); ++it) {
+    for (BufferMap::const_iterator it = m_writeBuffers.begin(); it != m_writeBuffers.end(); ++it) {
         if (it->second->length() > 0)
             return false;
     }

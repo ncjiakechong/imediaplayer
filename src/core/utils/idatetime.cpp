@@ -97,7 +97,7 @@ public:
 
     // expose publicly in iDateTime
     // The first and last years of which iDateTime can represent some part:
-    enum class YearRange : xint32 { First = -292275056,  Last = +292278994 };
+    struct YearRange { enum { First = -292275056,  Last = +292278994 }; };
 };
 
 enum {
@@ -181,7 +181,12 @@ static ParsedDate getDateFromJulianDay(xint64 julianDay)
     if (year <= 0)
         --year;
 
-    return { year, month, day };
+    ParsedDate pd;
+    pd.year = year;
+    pd.month = month;
+    pd.day = day;
+
+    return pd;
 }
 
 /*****************************************************************************
@@ -1194,7 +1199,7 @@ static iString ix_tzname(iDateTimePrivate::DaylightStatus daylightStatus)
         return iString();
     return iString::fromLocal8Bit(name);
 #else
-    return iString::fromLocal8Bit(tzname[isDst]);
+    return iString::fromLocal8Bit(iByteArray((const char *)tzname[isDst]));
 #endif
 
 }
@@ -1779,14 +1784,7 @@ inline iDateTime::Data::Data(const Data &other)
     }
 }
 
-inline iDateTime::Data::Data(Data &&other)
-    : d(other.d)
-{
-    // reset the other to a short state
-    Data dummy;
-    IX_ASSERT(dummy.isShort());
-    other.d = dummy.d;
-}
+
 
 inline iDateTime::Data &iDateTime::Data::operator=(const Data &other)
 {

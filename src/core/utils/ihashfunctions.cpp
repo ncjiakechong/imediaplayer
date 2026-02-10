@@ -9,8 +9,6 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <unordered_set>
-
 #include <core/utils/ichar.h>
 #include <core/utils/istring.h>
 #include <core/utils/istringview.h>
@@ -41,7 +39,7 @@ static inline size_t hash_internal(const iChar *p, size_t len, uint seed)
 }
 
 size_t iKeyHashFunc::operator()(const iChar& key) const
-{ return std::hash<xuint16>()(key.unicode()); }
+{ return static_cast<size_t>(key.unicode()); }
 
 size_t iKeyHashFunc::operator()(const iByteArray& key) const
 { return hash_internal(key.constData(), size_t(key.size()), 0); }
@@ -57,7 +55,7 @@ size_t iKeyHashFunc::operator()(const iLatin1StringView& key) const
 
 template <typename T>
 static size_t hash_combine(size_t seed, const T &t)
-{ return seed ^ (std::hash<T>()(t) + 0x9e3779b9 + (seed << 6) + (seed >> 2)); }
+{ return seed ^ (static_cast<size_t>(t) + 0x9e3779b9 + (seed << 6) + (seed >> 2)); }
 
 size_t iKeyHashFunc::operator()(const std::pair<int, int>& key) const
 {

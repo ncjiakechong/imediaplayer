@@ -37,8 +37,55 @@ static void simdCompareAscii(const xchar8_t *&, const xchar8_t *, const xuint16 
 
 enum { HeaderDone = 1 };
 
+static uchar *appendReplacementChar(uchar *cursor, iStringConverter::State *state) {
+    if (state->flags & iStringConverter::ConvertInvalidToNull) {
+        *cursor++ = 0;
+    } else {
+        // iChar::replacement encoded in utf8
+        *cursor++ = 0xef;
+        *cursor++ = 0xbf;
+        *cursor++ = 0xbd;
+    }
+    return cursor;
+}
+
+struct Utf8EncodingErrorFunctor {
+    void operator()(uchar *dst, ...) const {
+        *dst++ = '?'; // encoding error
+    }
+};
+
+struct Utf8EncoderErrorFunctor {
+    iStringConverter::State *state;
+    
+    Utf8EncoderErrorFunctor(iStringConverter::State *s) : state(s) {}
+
+    void operator()(uchar *&cursor, xuint16 uc, int res) const {
+        if (res == iUtf8BaseTraits::Error) {
+            // encoding error
+            ++state->invalidChars;
+            cursor = appendReplacementChar(cursor, state);
+        } else if (res == iUtf8BaseTraits::EndOfString) {
+            if (state->flags & iStringConverter::Stateless) {
+                ++state->invalidChars;
+                cursor = appendReplacementChar(cursor, state);
+            } else {
+                state->remainingChars = 1;
+                state->state_data[0] = uc;
+            }
+        }
+    }
+};
+
+struct Utf8SkipErrorFunctor {
+    bool operator()(xuint16 *&dst, const uchar *, int) const {
+        *dst++ = iChar::ReplacementCharacter;
+        return true;        // continue decoding
+    }
+};
+
 template <typename OnErrorLambda>
-char *iUtf8::convertFromUnicode(char *out, iStringView in, OnErrorLambda &&onError)
+char *iUtf8::convertFromUnicode(char *out, iStringView in, OnErrorLambda onError)
 {
     xsizetype len = in.size();
 
@@ -64,10 +111,7 @@ char *iUtf8::convertFromUnicode(char *out, iStringView in, OnErrorLambda &&onErr
 
 char *iUtf8::convertFromUnicode(char *dst, iStringView in)
 {
-    return convertFromUnicode(dst, in, [](uchar *dst, ...) {
-        // encoding error - append '?'
-        *dst++ = '?';
-    });
+    return convertFromUnicode(dst, in, Utf8EncodingErrorFunctor());
 }
 
 iByteArray iUtf8::convertFromUnicode(iStringView in)
@@ -97,30 +141,18 @@ char *iUtf8::convertFromUnicode(char *out, iStringView in, iStringConverter::Sta
     if (!len)
         return out;
 
-    auto appendReplacementChar = [state](uchar *cursor) -> uchar * {
-        if (state->flags & iStringConverter::Flag::ConvertInvalidToNull) {
-            *cursor++ = 0;
-        } else {
-            // iChar::replacement encoded in utf8
-            *cursor++ = 0xef;
-            *cursor++ = 0xbf;
-            *cursor++ = 0xbd;
-        }
-        return cursor;
-    };
-
     uchar *cursor = reinterpret_cast<uchar *>(out);
     const xuint16 *src = in.utf16();
     const xuint16 *const end = src + len;
 
-    if (!(state->flags & iStringDecoder::Flag::Stateless)) {
+    if (!(state->flags & iStringConverter::Stateless)) {
         if (state->remainingChars) {
             int res = iUtf8Functions::toUtf8<iUtf8BaseTraits>(state->state_data[0], cursor, src, end);
             if (res < 0)
-                cursor = appendReplacementChar(cursor);
+                cursor = appendReplacementChar(cursor, state);
             state->state_data[0] = 0;
             state->remainingChars = 0;
-        } else if (!(state->internalState & HeaderDone) && state->flags & iStringConverter::Flag::WriteBom) {
+        } else if (!(state->internalState & HeaderDone) && state->flags & iStringConverter::WriteBom) {
             // append UTF-8 BOM
             *cursor++ = utf8bom[0];
             *cursor++ = utf8bom[1];
@@ -130,27 +162,16 @@ char *iUtf8::convertFromUnicode(char *out, iStringView in, iStringConverter::Sta
     }
 
     out = reinterpret_cast<char *>(cursor);
-    return convertFromUnicode(out, { src, end }, [&](uchar *&cursor, xuint16 uc, int res) {
-        if (res == iUtf8BaseTraits::Error) {
-            // encoding error
-            ++state->invalidChars;
-            cursor = appendReplacementChar(cursor);
-        } else if (res == iUtf8BaseTraits::EndOfString) {
-            if (state->flags & iStringConverter::Flag::Stateless) {
-                ++state->invalidChars;
-                cursor = appendReplacementChar(cursor);
-            } else {
-                state->remainingChars = 1;
-                state->state_data[0] = uc;
-            }
-        }
-    });
+    return convertFromUnicode(out, iStringView(src, (int)(end - src)), Utf8EncoderErrorFunctor(state));
 }
 
 char *iUtf8::convertFromLatin1(char *out, iLatin1StringView in)
 {
     // ### SIMD-optimize:
-    for (uchar ch : in) {
+    const char *it = in.begin();
+    const char *end = in.end();
+    while (it != end) {
+        uchar ch = (uchar)*it++;
         if (ch < 128) {
             *out++ = ch;
         } else {
@@ -201,22 +222,26 @@ iString iUtf8::convertToUnicode(iByteArrayView in)
     For iChar buffers, instead of casting manually, you can use the static
     iUtf8::convertToUnicode(iChar *, iByteArrayView) directly.
 */
-xuint16 *iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in)
-{
-    // check if have to skip a BOM
-    auto bom = iByteArrayView::fromArray(utf8bom);
-    if (in.size() >= bom.size() && in.first(bom.size()) == bom)
-        in.slice(sizeof(utf8bom));
-
-    return convertToUnicode(dst, in, [](xuint16 *&dst, ...) {
+struct Utf8ErrorFunctorShort {
+    bool operator()(xuint16 *&dst, const uchar *, int) const {
         // decoding error
         *dst++ = iChar::ReplacementCharacter;
         return true;        // continue decoding
-    });
+    }
+};
+
+xuint16 *iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in)
+{
+    // check if have to skip a BOM
+    iByteArrayView bom = iByteArrayView::fromArray(utf8bom);
+    if (in.size() >= bom.size() && in.first(bom.size()) == bom)
+        in.slice(sizeof(utf8bom));
+
+    return convertToUnicode(dst, in, Utf8ErrorFunctorShort());
 }
 
 template <typename OnErrorLambda>
-xuint16* iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in, OnErrorLambda &&onError)
+xuint16* iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in, OnErrorLambda onError)
 {
     const uchar *const start = reinterpret_cast<const uchar *>(in.data());
     const uchar *src = start;
@@ -261,6 +286,27 @@ iString iUtf8::convertToUnicode(iByteArrayView in, iStringConverter::State *stat
     return result;
 }
 
+struct Utf8ErrorFunctor {
+    xsizetype &res;
+    const uchar *&src;
+    iStringConverter::State *state;
+    xuint16 replacement;
+
+    Utf8ErrorFunctor(xsizetype &res_, const uchar *&src_, iStringConverter::State *state_, xuint16 replacement_)
+        : res(res_), src(src_), state(state_), replacement(replacement_) {}
+
+    bool operator()(xuint16 *&dst, const uchar *src_, int res_) const {
+        res = res_;
+        src = src_;
+        if (res == iUtf8BaseTraits::Error) {
+            res = 0;
+            ++state->invalidChars;
+            *dst++ = replacement;
+        }
+        return res == 0;
+    }
+};
+
 xuint16 *iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in, iStringConverter::State *state)
 {
     xsizetype len = in.size();
@@ -270,7 +316,7 @@ xuint16 *iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in, iStringConvert
         return dst;
 
     xuint16 replacement = iChar::ReplacementCharacter;
-    if (state->flags & iStringConverter::Flag::ConvertInvalidToNull)
+    if (state->flags & iStringConverter::ConvertInvalidToNull)
         replacement = iChar::Null;
 
     xsizetype res;
@@ -278,8 +324,8 @@ xuint16 *iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in, iStringConvert
     const uchar *src = reinterpret_cast<const uchar *>(in.data());
     const uchar *end = src + len;
 
-    if (!(state->flags & iStringConverter::Flag::Stateless)) {
-        bool headerdone = state->internalState & HeaderDone || state->flags & iStringConverter::Flag::ConvertInitialBom;
+    if (!(state->flags & iStringConverter::Stateless)) {
+        bool headerdone = state->internalState & HeaderDone || state->flags & iStringConverter::ConvertInitialBom;
         if (state->remainingChars || !headerdone) {
             // handle incoming state first
             uchar remainingCharsData[4]; // longest UTF-8 sequence possible
@@ -316,7 +362,7 @@ xuint16 *iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in, iStringConvert
                 src += res - remainingCharsCount;
             }
         }
-    } else if (!(state->flags & iStringConverter::Flag::ConvertInitialBom)) {
+    } else if (!(state->flags & iStringConverter::ConvertInitialBom)) {
         // stateless, remove initial BOM
         if (len > 2 && src[0] == utf8bom[0] && src[1] == utf8bom[1] && src[2] == utf8bom[2])
             // skip BOM
@@ -325,20 +371,11 @@ xuint16 *iUtf8::convertToUnicode(xuint16 *dst, iByteArrayView in, iStringConvert
 
     // main body, stateless decoding
     res = 0;
-    dst = convertToUnicode(dst, { src, end }, [&](xuint16 *&dst, const uchar *src_, int res_) {
-        res = res_;
-        src = src_;
-        if (res == iUtf8BaseTraits::Error) {
-            res = 0;
-            ++state->invalidChars;
-            *dst++ = replacement;
-        }
-        return res == 0;    // continue if plain decoding error
-    });
+    dst = convertToUnicode(dst, iByteArrayView(src, (int)(end - src)), Utf8ErrorFunctor(res, src, state, replacement));
 
     if (res == iUtf8BaseTraits::EndOfString) {
         // unterminated UTF sequence
-        if (state->flags & iStringConverter::Flag::Stateless) {
+        if (state->flags & iStringConverter::Stateless) {
             *dst++ = iChar::ReplacementCharacter;
             ++state->invalidChars;
             while (src++ < end) {
@@ -388,20 +425,22 @@ iUtf8::ValidUtf8Result iUtf8::isValidUtf8(iByteArrayView in)
             const xsizetype res = iUtf8Functions::fromUtf8<iUtf8NoOutputTraits>(b, output, src, end);
             if (res < 0) {
                 // decoding error
-                return { false, false };
+                ValidUtf8Result result = { false, false };
+                return result;
             }
         } while (src < nextAscii);
     }
 
-    return { true, isValidAscii };
+    ValidUtf8Result result = { true, isValidAscii };
+    return result;
 }
 
 int iUtf8::compareUtf8(iByteArrayView utf8, iStringView utf16, iShell::CaseSensitivity cs)
 {
-    auto src1 = reinterpret_cast<const xchar8_t *>(utf8.data());
-    auto end1 = src1 + utf8.size();
-    auto src2 = reinterpret_cast<const xuint16 *>(utf16.data());
-    auto end2 = src2 + utf16.size();
+    const xchar8_t *src1 = reinterpret_cast<const xchar8_t *>(utf8.data());
+    const xchar8_t *end1 = src1 + utf8.size();
+    const xuint16 *src2 = reinterpret_cast<const xuint16 *>(utf16.data());
+    const xuint16 *end2 = src2 + utf16.size();
 
     do {
         simdCompareAscii(src1, end1, src2, end2);
@@ -439,10 +478,10 @@ int iUtf8::compareUtf8(iByteArrayView utf8, iStringView utf16, iShell::CaseSensi
 int iUtf8::compareUtf8(iByteArrayView utf8, iLatin1StringView s, iShell::CaseSensitivity cs)
 {
     xuint32 uc1 = iChar::Null;
-    auto src1 = reinterpret_cast<const uchar *>(utf8.data());
-    auto end1 = src1 + utf8.size();
-    auto src2 = reinterpret_cast<const uchar *>(s.latin1());
-    auto end2 = src2 + s.size();
+    const uchar *src1 = reinterpret_cast<const uchar *>(utf8.data());
+    const uchar *end1 = src1 + utf8.size();
+    const uchar *src2 = reinterpret_cast<const uchar *>(s.latin1());
+    const uchar *end2 = src2 + s.size();
 
     while (src1 < end1 && src2 < end2) {
         uchar b = *src1++;
@@ -472,17 +511,17 @@ int iUtf8::compareUtf8(iByteArrayView lhs, iByteArrayView rhs, iShell::CaseSensi
         return ix_lencmp(0, rhs.size());
 
     if (cs == iShell::CaseSensitive) {
-        const auto l = std::min(lhs.size(), rhs.size());
+        const xsizetype l = std::min(lhs.size(), rhs.size());
         int r = memcmp(lhs.data(), rhs.data(), l);
         return r ? r : ix_lencmp(lhs.size(), rhs.size());
     }
 
     xuint32 uc1 = iChar::Null;
-    auto src1 = reinterpret_cast<const uchar *>(lhs.data());
-    auto end1 = src1 + lhs.size();
+    const uchar *src1 = reinterpret_cast<const uchar *>(lhs.data());
+    const uchar *end1 = src1 + lhs.size();
     xuint32 uc2 = iChar::Null;
-    auto src2 = reinterpret_cast<const uchar *>(rhs.data());
-    auto end2 = src2 + rhs.size();
+    const uchar *src2 = reinterpret_cast<const uchar *>(rhs.data());
+    const uchar *end2 = src2 + rhs.size();
 
     while (src1 < end1 && src2 < end2) {
         uchar b = *src1++;
@@ -513,7 +552,7 @@ int iUtf8::compareUtf8(iByteArrayView lhs, iByteArrayView rhs, iShell::CaseSensi
 
 iByteArray iUtf16::convertFromUnicode(iStringView in, iStringConverter::State *state, DataEndianness endian)
 {
-    bool writeBom = !(state->internalState & HeaderDone) && state->flags & iStringConverter::Flag::WriteBom;
+    bool writeBom = !(state->internalState & HeaderDone) && state->flags & iStringConverter::WriteBom;
     xsizetype length = 2 * in.size();
     if (writeBom)
         length += 2;
@@ -528,7 +567,7 @@ iByteArray iUtf16::convertFromUnicode(iStringView in, iStringConverter::State *s
 char *iUtf16::convertFromUnicode(char *out, iStringView in, iStringConverter::State *state, DataEndianness endian)
 {
     IX_ASSERT(state);
-    bool writeBom = !(state->internalState & HeaderDone) && state->flags & iStringConverter::Flag::WriteBom;
+    bool writeBom = !(state->internalState & HeaderDone) && state->flags & iStringConverter::WriteBom;
 
     if (endian == DetectEndianness)
         endian = iIsLittleEndian() ? LittleEndianness: BigEndianness;
@@ -583,7 +622,7 @@ iChar *iUtf16::convertToUnicode(iChar *out, iByteArrayView in, iStringConverter:
     }
 
     bool headerdone = state && state->internalState & HeaderDone;
-    if (state->flags & iStringConverter::Flag::ConvertInitialBom)
+    if (state->flags & iStringConverter::ConvertInitialBom)
         headerdone = true;
 
     if (!headerdone || state->remainingChars) {
@@ -624,8 +663,8 @@ iChar *iUtf16::convertToUnicode(iChar *out, iByteArrayView in, iStringConverter:
     state->state_data[Endian] = endian;
     state->remainingChars = 0;
     if ((end - chars) & 1) {
-        if (state->flags & iStringConverter::Flag::Stateless) {
-            *out++ = state->flags & iStringConverter::Flag::ConvertInvalidToNull ? iChar::Null : iChar::ReplacementCharacter;
+        if (state->flags & iStringConverter::Stateless) {
+            *out++ = state->flags & iStringConverter::ConvertInvalidToNull ? iChar::Null : iChar::ReplacementCharacter;
         } else {
             state->remainingChars = 1;
             state->state_data[Data] = *(end - 1);
@@ -639,7 +678,7 @@ iChar *iUtf16::convertToUnicode(iChar *out, iByteArrayView in, iStringConverter:
 
 iByteArray iUtf32::convertFromUnicode(iStringView in, iStringConverter::State *state, DataEndianness endian)
 {
-    bool writeBom = !(state->internalState & HeaderDone) && state->flags & iStringConverter::Flag::WriteBom;
+    bool writeBom = !(state->internalState & HeaderDone) && state->flags & iStringConverter::WriteBom;
     xsizetype length =  4*in.size();
     if (writeBom)
         length += 4;
@@ -653,7 +692,7 @@ char *iUtf32::convertFromUnicode(char *out, iStringView in, iStringConverter::St
 {
     IX_ASSERT(state);
 
-    bool writeBom = !(state->internalState & HeaderDone) && state->flags & iStringConverter::Flag::WriteBom;
+    bool writeBom = !(state->internalState & HeaderDone) && state->flags & iStringConverter::WriteBom;
     if (endian == DetectEndianness)
         endian = iIsLittleEndian() ? LittleEndianness : BigEndianness;
 
@@ -679,7 +718,7 @@ char *iUtf32::convertFromUnicode(char *out, iStringView in, iStringConverter::St
     iChar ch;
     xuint32 ucs4;
     if (state->remainingChars == 1) {
-        auto character = state->state_data[Data];
+        uint character = state->state_data[Data];
         IX_ASSERT(character <= 0xFFFF);
         ch = iChar(character);
         // this is ugly, but shortcuts a whole lot of logic that would otherwise be required
@@ -694,8 +733,8 @@ char *iUtf32::convertFromUnicode(char *out, iStringView in, iStringConverter::St
         } else if (ch.isHighSurrogate()) {
 decode_surrogate:
             if (uc == end) {
-                if (state->flags & iStringConverter::Flag::Stateless) {
-                    ucs4 = state->flags & iStringConverter::Flag::ConvertInvalidToNull ? 0 : iChar::ReplacementCharacter;
+                if (state->flags & iStringConverter::Stateless) {
+                    ucs4 = state->flags & iStringConverter::ConvertInvalidToNull ? 0 : iChar::ReplacementCharacter;
                 } else {
                     state->remainingChars = 1;
                     state->state_data[Data] = ch.unicode();
@@ -704,10 +743,10 @@ decode_surrogate:
             } else if (uc->isLowSurrogate()) {
                 ucs4 = iChar::surrogateToUcs4(ch, *uc++);
             } else {
-                ucs4 = state->flags & iStringConverter::Flag::ConvertInvalidToNull ? 0 : iChar::ReplacementCharacter;
+                ucs4 = state->flags & iStringConverter::ConvertInvalidToNull ? 0 : iChar::ReplacementCharacter;
             }
         } else {
-            ucs4 = state->flags & iStringConverter::Flag::ConvertInvalidToNull ? 0 : iChar::ReplacementCharacter;
+            ucs4 = state->flags & iStringConverter::ConvertInvalidToNull ? 0 : iChar::ReplacementCharacter;
         }
         if (endian == BigEndianness)
             iToBigEndian(ucs4, out);
@@ -757,7 +796,7 @@ iChar *iUtf32::convertToUnicode(iChar *out, iByteArrayView in, iStringConverter:
     }
 
     bool headerdone = state->internalState & HeaderDone;
-    if (state->flags & iStringConverter::Flag::ConvertInitialBom)
+    if (state->flags & iStringConverter::ConvertInitialBom)
         headerdone = true;
 
     xsizetype num = state->remainingChars;
@@ -807,7 +846,7 @@ iChar *iUtf32::convertToUnicode(iChar *out, iByteArrayView in, iStringConverter:
     }
 
     if (num) {
-        if (state->flags & iStringDecoder::Flag::Stateless) {
+        if (state->flags & iStringConverter::Stateless) {
             *out++ = iChar::ReplacementCharacter;
         } else {
             state->state_data[Endian] = endian;
@@ -833,7 +872,7 @@ void iStringConverter::State::clear()
 
 void iStringConverter::State::reset()
 {
-    if (!(flags & Flag::UsesIcu)) {
+    if (!(flags & iStringConverter::UsesIcu)) {
         clear();
     }
 }
@@ -901,10 +940,10 @@ static char *toUtf32LE(char *out, iStringView in, iStringConverter::State *state
 char *iLatin1::convertFromUnicode(char *out, iStringView in, iStringConverter::State *state)
 {
     IX_ASSERT(state);
-    if (state->flags & iStringConverter::Flag::Stateless) // temporary
+    if (state->flags & iStringConverter::Stateless) // temporary
         state = IX_NULLPTR;
 
-    const char replacement = (state && state->flags & iStringConverter::Flag::ConvertInvalidToNull) ? 0 : '?';
+    const char replacement = (state && state->flags & iStringConverter::ConvertInvalidToNull) ? 0 : '?';
     xsizetype invalid = 0;
     for (xsizetype i = 0; i < in.size(); ++i) {
         if (in[i] > iChar(0xff)) {
@@ -1082,7 +1121,7 @@ static bool nameMatch_impl_impl(const char *a, const Char *b, const Char *b_end)
     do {
         while (*a == '-' || *a == '_')
             ++a;
-        while (b != b_end && (*b == Char{'-'} || *b == Char{'_'}))
+        while (b != b_end && (*b == Char('-') || *b == Char('_')))
             ++b;
         if (!*a && b == b_end) // end of both strings
             return true;
@@ -1109,7 +1148,7 @@ const char *iStringConverter::name() const
 {
     if (!iface)
         return IX_NULLPTR;
-    if (state.flags & iStringConverter::Flag::UsesIcu) {
+    if (state.flags & iStringConverter::UsesIcu) {
         return IX_NULLPTR;
     } else {
         return iface->name;

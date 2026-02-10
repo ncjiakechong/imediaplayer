@@ -200,8 +200,8 @@ public:
     };
     typedef uint AceProcessingOptions;
 
-    static iString fromAce(const iByteArray &domain, AceProcessingOptions options = {});
-    static iByteArray toAce(const iString &domain, AceProcessingOptions options = {});
+    static iString fromAce(const iByteArray &domain, AceProcessingOptions options = 0);
+    static iByteArray toAce(const iString &domain, AceProcessingOptions options = 0);
     static std::list<iString> idnWhitelist();
     static std::list<iString> toStringList(const std::list<iUrl> &uris, FormattingOptions options = FormattingOptions(PrettyDecoded));
     static std::list<iUrl> fromStringList(const std::list<iString> &uris, ParsingMode mode = TolerantMode);

@@ -104,7 +104,7 @@ int iINCServer::listenOn(const iStringView& url)
 
         m_ioThread->start();
         m_listenDevice->moveToThread(m_ioThread);
-        invokeMethod(m_listenDevice, &iINCDevice::startEventMonitoring, IX_NULLPTR);
+        invokeMethod(m_listenDevice, &iINCDevice::startEventMonitoring, (iEventDispatcher*)IX_NULLPTR);
     } else {
         // Run in main thread (single-threaded mode)
         m_listenDevice->startEventMonitoring(iEventDispatcher::instance());
@@ -130,7 +130,7 @@ void iINCServer::close()
 
     // Now delete all connections - IO thread has stopped
     while (!m_connections.empty()) {
-        auto it = m_connections.begin();
+        ConnectionMap::iterator it = m_connections.begin();
         iINCConnection* conn = it->second;
         m_connections.erase(it);
 
@@ -179,8 +179,8 @@ void iINCServer::handleCustomer(xintptr action)
 {
     __Action* evt = reinterpret_cast<__Action*>(action);
 
-    for (auto& pair : m_connections) {
-        iINCConnection* conn = pair.second;
+    for (ConnectionMap::iterator it = m_connections.begin(); it != m_connections.end(); ++it) {
+        iINCConnection* conn = it->second;
         if (conn->isSubscribed(evt->eventName)) {
             conn->sendEvent(evt->eventName, evt->version, evt->data);
         }
@@ -273,7 +273,7 @@ if (!m_listening) return;
 
 void iINCServer::onClientDisconnected(iINCConnection* conn)
 {
-    auto it = m_connections.find(conn->connectionId());
+    ConnectionMap::iterator it = m_connections.find(conn->connectionId());
     if (it != m_connections.end()) {
         m_connections.erase(it);
         iObject::invokeMethod(this, &iINCServer::clientDisconnected, conn);

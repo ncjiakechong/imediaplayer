@@ -8,8 +8,11 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <unordered_map>
+#include <map>
 #include <string.h>
+#if __cplusplus >= 201103L
+#include <unordered_map>
+#endif
 
 #include "core/io/ilog.h"
 #include "core/thread/imutex.h"
@@ -24,7 +27,11 @@
 namespace iShell {
 
 static iMutex destructorsMutex;
+#if __cplusplus >= 201103L
 typedef std::unordered_map<xuintptr, void (*)(void *)> DestructorMap;
+#else
+typedef std::map<xuintptr, void (*)(void *)> DestructorMap;
+#endif
 IX_GLOBAL_STATIC(DestructorMap, destructors)
 
 iThreadStorageData::iThreadStorageData(void (*func)(void *))
@@ -46,7 +53,7 @@ iThreadStorageData::iThreadStorageData(void (*func)(void *))
         return;
     }
 
-    destructors->insert({reinterpret_cast<xuintptr>(this), func});
+    destructors->insert(std::pair<xuintptr, void (*)(void *)>(reinterpret_cast<xuintptr>(this), func));
     ilog_verbose("Allocated id ", this, ", destructor ", func);
 }
 
@@ -71,8 +78,8 @@ void **iThreadStorageData::get() const
         ilog_warn("iThreadStorage can only be used with threads started with iThread");
         return IX_NULLPTR;
     }
-    std::unordered_map<xuintptr, void*>  &tls = data->tls;
-    std::unordered_map<xuintptr, void*>::iterator it = tls.find(reinterpret_cast<xuintptr>(this));
+    iThreadData::TLSMap  &tls = data->tls;
+    iThreadData::TLSMap::iterator it = tls.find(reinterpret_cast<xuintptr>(this));
 
     if (tls.end() == it) {
         return IX_NULLPTR;
@@ -91,8 +98,8 @@ void **iThreadStorageData::set(void *p)
     }
 
     xuintptr id = reinterpret_cast<xuintptr>(this);
-    std::unordered_map<xuintptr, void*>  &tls = data->tls;
-    std::unordered_map<xuintptr, void*>::iterator it = tls.find(id);
+    iThreadData::TLSMap  &tls = data->tls;
+    iThreadData::TLSMap::iterator it = tls.find(id);
 
     // delete any previous data
     if ((tls.end() != it) && (IX_NULLPTR != it->second)) {
@@ -120,20 +127,20 @@ void **iThreadStorageData::set(void *p)
         return &it->second;
     }
 
-    tls.insert({id, p});
+    tls.insert(std::pair<xuintptr, void*>(id, p));
     return &tls[id];
 }
 
 void iThreadStorageData::finish(void **p)
 {
-    std::unordered_map<xuintptr, void*>*tls = reinterpret_cast<std::unordered_map<xuintptr, void*> *>(p);
+    iThreadData::TLSMap*tls = reinterpret_cast<iThreadData::TLSMap *>(p);
     if (!tls || tls->empty() || !destructors())
         return; // nothing to do
 
     ilog_verbose("Destroying storage for thread ", iThread::currentThreadId());
     int size = tls->size();
     while (!tls->empty() && (--size >= 0)) {
-        std::unordered_map<xuintptr, void*>::iterator it = tls->begin();
+        iThreadData::TLSMap::iterator it = tls->begin();
         xuintptr id = it->first;
         void *&value = it->second;
         void *q = value;

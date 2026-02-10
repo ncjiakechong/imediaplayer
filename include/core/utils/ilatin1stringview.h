@@ -32,7 +32,7 @@ public:
     inline iLatin1StringView() : m_size(0), m_data(IX_NULLPTR) {}
     inline explicit iLatin1StringView(const char *s) : m_size(s ? xsizetype(strlen(s)) : 0), m_data(s) {}
     explicit iLatin1StringView(const char *f, const char *l)
-        : iLatin1StringView(f, xsizetype(l - f)) {}
+        : m_size(xsizetype(l - f)), m_data(f) {}
     inline explicit iLatin1StringView(const char *s, xsizetype sz) : m_size(sz), m_data(s) {}
     inline explicit iLatin1StringView(const iByteArray &s) : m_size(xsizetype(istrnlen(s.constData(), s.size()))), m_data(s.constData()) {}
 
@@ -68,21 +68,21 @@ public:
     inline bool endsWith(iChar c, iShell::CaseSensitivity cs) const
     { return iPrivate::endsWith(*this, iStringView(&c, 1), cs); }
 
-    using value_type = const char;
-    using reference = value_type&;
-    using const_reference = reference;
-    using iterator = value_type*;
-    using const_iterator = iterator;
-    using difference_type = xsizetype; // violates Container concept requirements
-    using size_type = xsizetype;       // violates Container concept requirements
+    typedef const char value_type;
+    typedef value_type& reference;
+    typedef reference const_reference;
+    typedef value_type* iterator;
+    typedef iterator const_iterator;
+    typedef xsizetype difference_type;
+    typedef xsizetype size_type;
 
     const_iterator begin() const { return data(); }
     const_iterator cbegin() const { return data(); }
     const_iterator end() const { return data() + size(); }
     const_iterator cend() const { return data() + size(); }
 
-    using reverse_iterator = std::reverse_iterator<iterator>;
-    using const_reverse_iterator = reverse_iterator;
+    typedef std::reverse_iterator<iterator> reverse_iterator;
+    typedef reverse_iterator const_reverse_iterator;
 
     const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
     const_reverse_iterator crbegin() const { return const_reverse_iterator(end()); }

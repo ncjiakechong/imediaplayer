@@ -84,19 +84,19 @@ public:
 
     /// @brief Default constructor: creates new pool with shared_ptr
     /// @note Pool size is determined by template parameter MAXSIZE
-    iCacheAllocator() noexcept 
+    iCacheAllocator()
         : m_pool(new iFreeList<T*>(MAXSIZE, cleanup_pool)) {}
 
     /// @brief Copy constructor: shares the same pool via shared_ptr
     /// @param other The allocator to copy from
-    iCacheAllocator(const iCacheAllocator& other) noexcept 
+    iCacheAllocator(const iCacheAllocator& other)
         : m_pool(other.m_pool) {}
 
     /// @brief Rebind constructor: creates new pool for different type
     /// @tparam U The source allocator's element type
     /// @param other The allocator to rebind from (ignored, creates new pool)
     template<typename U>
-    iCacheAllocator(const iCacheAllocator<U, MAXSIZE>& other) noexcept 
+    iCacheAllocator(const iCacheAllocator<U, MAXSIZE>& other)
         : m_pool(new iFreeList<T*>(MAXSIZE, cleanup_pool)) {
         IX_UNUSED(other);
     }
@@ -105,7 +105,7 @@ public:
     /// @param n Number of elements to allocate
     /// @return Pointer to allocated memory
     /// @note For n=1, tries to reuse from pool; for n>1, uses system allocator
-    T* allocate(std::size_t n) {
+    T* allocate(std::size_t n, const void* = IX_NULLPTR) {
         do {
             if (n > 1) break;
 
@@ -117,43 +117,50 @@ public:
         // Fallback to system allocation for arrays or when pool is empty
         return static_cast<T*>(::operator new(n * sizeof(T)));
     }
-
-    /// @brief Deallocate memory for n elements
-    /// @param p Pointer to memory to deallocate
-    /// @param n Number of elements (must match allocate() call)
-    /// @note For n=1, tries to cache in pool; for n>1, frees immediately
-    void deallocate(T* p, std::size_t n) noexcept {
+    
+    void deallocate(pointer p, size_type n) {
         do {
             if (n > 1) break;
-
-            // Try to push back to freelist (lock-free operation)
             if (m_pool->push(p)) return;
         } while (false);
-
-        // If pool is full or array deletion, simply delete
         ::operator delete(p);
     }
 
+    void construct(pointer p, const T& val) { new((void*)p) T(val); }
+    
+    // Support for C++11/Modern libc++ strict const-correctness
+    template<typename U>
+    void construct(U* p, const U& val) { new((void*)p) U(val); }
+
+    void destroy(pointer p) { p->~T(); }
+
+    template<typename U>
+    void destroy(U* p) { p->~U(); }
+    
+    pointer address(reference x) const { return &x; }
+    const_pointer address(const_reference x) const { return &x; }
+    size_type max_size() const throw() { return size_t(-1) / sizeof(T); }
+
     /// @brief Same type allocators are equal if they share the same pool
-    bool operator==(const iCacheAllocator& other) const noexcept {
+    bool operator==(const iCacheAllocator& other) const {
         return m_pool == other.m_pool;  // Compare shared_ptr equality
     }
 
     /// @brief Same type allocators are not equal if they have different pools
-    bool operator!=(const iCacheAllocator& other) const noexcept {
+    bool operator!=(const iCacheAllocator& other) const {
         return m_pool != other.m_pool;
     }
 
     /// @brief Different type/size allocators are never equal
     template<typename U, int S>
-    bool operator==(const iCacheAllocator<U, S>& other) const noexcept { 
+    bool operator==(const iCacheAllocator<U, S>& other) const { 
         IX_UNUSED(other);
         return false; 
     }
     
     /// @brief Different type/size allocators are always not equal
     template<typename U, int S>
-    bool operator!=(const iCacheAllocator<U, S>& other) const noexcept { 
+    bool operator!=(const iCacheAllocator<U, S>& other) const { 
         IX_UNUSED(other);
         return true; 
     }
@@ -161,7 +168,7 @@ public:
 private:
     /// Shared pointer to the lock-free memory pool
     /// Multiple allocator instances can share the same pool
-    iSharedPtr<iFreeList<T*>> m_pool;
+    iSharedPtr< iFreeList<T*> > m_pool;
 };
 
 } // namespace iShell

@@ -10,7 +10,7 @@
 #ifndef IPOLL_H
 #define IPOLL_H
 
-#include <cstdint>
+#include <stdint.h>
 #include <poll.h>
 #include <core/global/iglobal.h>
 

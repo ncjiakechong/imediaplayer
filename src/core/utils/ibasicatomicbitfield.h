@@ -17,7 +17,7 @@ namespace iShell {
 
 template <size_t N>
 struct iBasicAtomicBitField {
-    enum {
+    enum _Config {
         BitsPerInt = std::numeric_limits<uint>::digits,
         NumInts = (N + BitsPerInt - 1) / BitsPerInt,
         NumBits = N

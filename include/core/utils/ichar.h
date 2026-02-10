@@ -56,12 +56,13 @@ public:
     explicit iChar(uchar c, uchar r) : ucs(xuint16((r << 8) | c)) {}
     iChar(xuint16 rc) : ucs(rc) {}
     explicit iChar(uint rc) : ucs((IX_ASSERT(rc <= 0xffff), xuint16(rc))) {}
-    explicit iChar(int rc) : iChar(uint(rc)) {}
+    explicit iChar(int rc) : ucs((IX_ASSERT(uint(rc) <= 0xffff), xuint16(rc))) {}
     iChar(SpecialCharacter s) : ucs(xuint16(s)) {}
     iChar(iLatin1Char ch) : ucs(ch.unicode()) {}
+    iChar(char ch) : ucs(xuint16(ch)) {}
     iChar(char16_t ch) : ucs(xuint16(ch)) {}
 
-    static iChar fromUcs2(xuint16 c) { return iChar{c}; }
+    static iChar fromUcs2(xuint16 c) { return iChar(c); }
     static iString fromUcs4(xuint32 ucs4);
 
     // Unicode information
@@ -556,6 +557,7 @@ inline bool operator>=(iChar c1, iChar c2) { return !operator< (c1, c2); }
 inline bool operator> (iChar c1, iChar c2) { return  operator< (c2, c1); }
 inline bool operator<=(iChar c1, iChar c2) { return !operator< (c2, c1); }
 
+#if __cplusplus >= 201103L
 inline bool operator==(iChar lhs, std::nullptr_t) { return lhs.isNull(); }
 inline bool operator< (iChar,     std::nullptr_t) { return false; }
 inline bool operator==(std::nullptr_t, iChar rhs) { return rhs.isNull(); }
@@ -570,6 +572,7 @@ inline bool operator!=(std::nullptr_t, iChar rhs) { return !operator==(IX_NULLPT
 inline bool operator>=(std::nullptr_t, iChar rhs) { return !operator< (IX_NULLPTR, rhs); }
 inline bool operator> (std::nullptr_t, iChar rhs) { return  operator< (rhs, IX_NULLPTR); }
 inline bool operator<=(std::nullptr_t, iChar rhs) { return !operator< (rhs, IX_NULLPTR); }
+#endif
 
 } // namespace iShell
 

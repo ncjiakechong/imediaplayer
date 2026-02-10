@@ -18,23 +18,23 @@ namespace iShell {
 namespace iPrivate {
 
 template <typename Byte>
-struct IsCompatibleByteTypeHelper : std::false_type {};
-template <> struct IsCompatibleByteTypeHelper<char> : std::true_type {};
-template <> struct IsCompatibleByteTypeHelper<signed char> : std::true_type {};
-template <> struct IsCompatibleByteTypeHelper<unsigned char> : std::true_type {};
+struct IsCompatibleByteTypeHelper : false_type {};
+template <> struct IsCompatibleByteTypeHelper<char> : true_type {};
+template <> struct IsCompatibleByteTypeHelper<signed char> : true_type {};
+template <> struct IsCompatibleByteTypeHelper<unsigned char> : true_type {};
 
 template <typename Byte>
 struct IsCompatibleByteType
-    : IsCompatibleByteTypeHelper<typename std::remove_cv<typename std::remove_reference<Byte>::type>::type> {};
+    : IsCompatibleByteTypeHelper<typename remove_cv<typename remove_reference<Byte>::type>::type> {};
 
 template <typename Pointer>
-struct IsCompatibleByteArrayPointerHelper : std::false_type {};
+struct IsCompatibleByteArrayPointerHelper : false_type {};
 template <typename Byte>
 struct IsCompatibleByteArrayPointerHelper<Byte *>
     : IsCompatibleByteType<Byte> {};
 template<typename Pointer>
 struct IsCompatibleByteArrayPointer
-    : IsCompatibleByteArrayPointerHelper<typename std::remove_cv<typename std::remove_reference<Pointer>::type>::type> {};
+    : IsCompatibleByteArrayPointerHelper<typename remove_cv<typename remove_reference<Pointer>::type>::type> {};
 
 // Used by iLatin1StringView too
 template <typename Char>
@@ -73,18 +73,11 @@ public:
     typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
 private:
-    template <typename Byte>
-    using if_compatible_byte = typename enable_if<iPrivate::IsCompatibleByteType<Byte>::value, bool>::type;
-
-    template <typename Pointer>
-    using if_compatible_pointer =
-            typename enable_if<iPrivate::IsCompatibleByteArrayPointer<Pointer>::value, bool>::type;
-
     static xsizetype lengthHelperCharArray(const char *data, size_t size)
     {
         const storage_type* it = std::char_traits<storage_type>::find(data, size, '\0');
-        const storage_type* end = it ? it : std::next(data, size);
-        return xsizetype(std::distance(data, end));
+        const storage_type* end = it ? it : (data + size);
+        return xsizetype(end - data);
     }
 
     template <typename Byte>
@@ -97,34 +90,34 @@ public:
     iByteArrayView()
         : m_size(0), m_data(IX_NULLPTR) {}
 
-    template <typename Byte, if_compatible_byte<Byte> = true>
-    iByteArrayView(const Byte *data, xsizetype len)
+    template <typename Byte>
+    iByteArrayView(const Byte *data, xsizetype len, typename enable_if<iPrivate::IsCompatibleByteType<Byte>::value, bool>::type* = 0)
         : m_size((IX_ASSERT(len >= 0), IX_ASSERT(data || !len), len)),
           m_data(castHelper(data)) {}
 
-    template <typename Byte, if_compatible_byte<Byte> = true>
-    iByteArrayView(const Byte *first, const Byte *last)
-        : iByteArrayView(first, last - first) {}
+    template <typename Byte>
+    iByteArrayView(const Byte *first, const Byte *last, typename enable_if<iPrivate::IsCompatibleByteType<Byte>::value, bool>::type* = 0)
+        : m_size(xsizetype(last - first)), m_data(castHelper(first)) { IX_ASSERT(m_size >= 0); IX_ASSERT(m_data || !m_size); }
 
-    template <typename Pointer, if_compatible_pointer<Pointer> = true>
-    iByteArrayView(const Pointer &data)
-        : iByteArrayView(data, data ? iPrivate::lengthHelperPointer(data) : 0) {}
+    template <typename Pointer>
+    iByteArrayView(const Pointer &data, typename enable_if<iPrivate::IsCompatibleByteArrayPointer<Pointer>::value, bool>::type* = 0)
+        : m_size(data ? iPrivate::lengthHelperPointer(data) : 0), m_data(castHelper(data)) { IX_ASSERT(m_size >= 0); }
 
     template <size_t Size>
     iByteArrayView(const char (&data)[Size])
-        : iByteArrayView(data, lengthHelperCharArray(data, Size)) {}
+        : m_size(lengthHelperCharArray(data, Size)), m_data(castHelper(data)) {}
 
-    template <typename Byte, if_compatible_byte<Byte> = true>
-    iByteArrayView(const Byte (&data)[])
-        : iByteArrayView(&*data) {} // decay to pointer
+    template <typename Byte>
+    iByteArrayView(const Byte (&data)[], typename enable_if<iPrivate::IsCompatibleByteType<Byte>::value, bool>::type* = 0)
+        : m_size(iPrivate::lengthHelperPointer(data)), m_data(castHelper(data)) {}
 
     iByteArrayView(const iByteArrayView &c)
-        : iByteArrayView(c.data(), c.size()) {}
+        : m_size(c.size()), m_data(c.data()) {}
 
     inline iByteArrayView(const iByteArray &ba);
 
-    template <typename Byte, size_t Size, if_compatible_byte<Byte> = true>
-    static iByteArrayView fromArray(const Byte (&data)[Size])
+    template <typename Byte, size_t Size>
+    static iByteArrayView fromArray(const Byte (&data)[Size], typename enable_if<iPrivate::IsCompatibleByteType<Byte>::value, bool>::type* = 0)
     { return iByteArrayView(data, Size); }
     inline iByteArray toByteArray() const;
 

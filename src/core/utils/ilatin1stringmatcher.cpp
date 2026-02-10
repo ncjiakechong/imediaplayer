@@ -67,8 +67,10 @@ const uchar iPrivate::iCaseInsensitiveLatin1Hash::latin1Lower[256] = {
 iLatin1StringMatcher::iLatin1StringMatcher()
     : m_pattern(),
       m_cs(iShell::CaseSensitive),
-      m_caseSensitiveSearcher(m_pattern.data(), m_pattern.data())
+      m_caseSensitiveSearcher(IX_NULLPTR),
+      m_caseInsensitiveSearcher(IX_NULLPTR)
 {
+    setSearcher();
 }
 
 /*!
@@ -78,7 +80,9 @@ iLatin1StringMatcher::iLatin1StringMatcher()
     to find the \a pattern in the given iLatin1StringView.
 */
 iLatin1StringMatcher::iLatin1StringMatcher(iLatin1StringView pattern, iShell::CaseSensitivity cs)
-    : m_pattern(pattern), m_cs(cs)
+    : m_pattern(pattern), m_cs(cs),
+      m_caseSensitiveSearcher(IX_NULLPTR),
+      m_caseInsensitiveSearcher(IX_NULLPTR)
 {
     setSearcher();
 }
@@ -97,15 +101,14 @@ iLatin1StringMatcher::~iLatin1StringMatcher()
 void iLatin1StringMatcher::setSearcher()
 {
     if (m_cs == iShell::CaseSensitive) {
-        new (&m_caseSensitiveSearcher) CaseSensitiveSearcher(m_pattern.data(), m_pattern.end());
+        m_caseSensitiveSearcher = new CaseSensitiveSearcher(m_pattern.data(), m_pattern.end());
     } else {
         iPrivate::iCaseInsensitiveLatin1Hash foldCase;
         xsizetype bufferSize = std::min(m_pattern.size(), xsizetype(sizeof m_foldBuffer));
         for (xsizetype i = 0; i < bufferSize; ++i)
             m_foldBuffer[i] = static_cast<char>(foldCase(m_pattern[i].toLatin1()));
 
-        new (&m_caseInsensitiveSearcher)
-                CaseInsensitiveSearcher(m_foldBuffer, &m_foldBuffer[bufferSize]);
+        m_caseInsensitiveSearcher = new CaseInsensitiveSearcher(m_foldBuffer, &m_foldBuffer[bufferSize]);
     }
 }
 
@@ -114,10 +117,10 @@ void iLatin1StringMatcher::setSearcher()
 */
 void iLatin1StringMatcher::freeSearcher()
 {
-    if (m_cs == iShell::CaseSensitive)
-        m_caseSensitiveSearcher.~CaseSensitiveSearcher();
-    else
-        m_caseInsensitiveSearcher.~CaseInsensitiveSearcher();
+    delete m_caseSensitiveSearcher;
+    m_caseSensitiveSearcher = IX_NULLPTR;
+    delete m_caseInsensitiveSearcher;
+    m_caseInsensitiveSearcher = IX_NULLPTR;
 }
 
 /*!
@@ -210,12 +213,12 @@ xsizetype iLatin1StringMatcher::indexIn_helper(String haystack, xsizetype from) 
     if (from >= haystack.size())
         return -1;
 
-    const auto start = haystack.begin();
-    auto begin = start + from;
-    auto end = start + haystack.size();
-    auto found = begin;
+    typename String::const_iterator start = haystack.begin();
+    typename String::const_iterator begin = start + from;
+    typename String::const_iterator end = start + haystack.size();
+    typename String::const_iterator found = begin;
     if (m_cs == iShell::CaseSensitive) {
-        found = m_caseSensitiveSearcher(begin, end, m_pattern.begin(), m_pattern.end());
+        found = (*m_caseSensitiveSearcher)(begin, end, m_pattern.begin(), m_pattern.end());
         if (found == end)
             return -1;
     } else {
@@ -224,7 +227,7 @@ xsizetype iLatin1StringMatcher::indexIn_helper(String haystack, xsizetype from) 
         const bool needleLongerThanBuffer = restNeedle.size() > 0;
         String restHaystack = haystack;
         do {
-            found = m_caseInsensitiveSearcher(found, end, m_foldBuffer, &m_foldBuffer[bufferSize]);
+            found = (*m_caseInsensitiveSearcher)(found, end, m_foldBuffer, &m_foldBuffer[bufferSize]);
             if (found == end) {
                 return -1;
             } else if (!needleLongerThanBuffer) {

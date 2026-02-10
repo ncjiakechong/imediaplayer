@@ -155,7 +155,7 @@ public:
     const_reverse_iterator crbegin() const { return const_reverse_iterator(end()); }
     const_reverse_iterator crend() const { return const_reverse_iterator(begin()); }
     iterator insert(const_iterator before, int n, const T &x);
-    iterator insert(const_iterator before, T &&x);
+
     inline iterator insert(const_iterator before, const T &x) { return insert(before, 1, x); }
     iterator erase(const_iterator begin, const_iterator end);
     inline iterator erase(const_iterator pos) { return erase(pos, pos+1); }
@@ -183,7 +183,7 @@ private:
     };
 
     bool isValidIterator(const const_iterator &i) const {
-        const std::less<const T*> less = {};
+        const std::less<const T*> less;
         return !less(cend(), i) && !less(i, cbegin());
     }
 };

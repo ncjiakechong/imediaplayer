@@ -565,7 +565,7 @@ int test_object(void)
     IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int_ret, &tst_funcSlot, &TestFunctionSlot::tst_slot_int0);
-    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int2, IX_NULLPTR, &TestFunctionSlot::tst_slot_int2);
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int2, (TestFunctionSlot*)IX_NULLPTR, &TestFunctionSlot::tst_slot_int2);
     iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int2, &tst_funcSlot, IX_NULLPTR);
 
     ilog_debug("+++++++++connect 2");
@@ -604,7 +604,7 @@ int test_object(void)
     iObject::connect(&tst_obj, &TestObject::emit_sender_check, &tst_obj, &TestObject::tst_sender_check);
     tst_sig.emit_sender_check(&tst_obj, true);
 
-    tst_sig.disconnect(&tst_sig, IX_NULLPTR, &tst_obj, IX_NULLPTR);
+    tst_sig.disconnect(&tst_sig, (void(TestSignals::*)())IX_NULLPTR, &tst_obj, IX_NULLPTR);
     iObject::disconnect(&tst_obj, &TestObject::emit_sender_check, &tst_obj, &TestObject::tst_sender_check);
 
     ilog_debug("-------------inkokemethod");
@@ -692,8 +692,8 @@ int test_object(void)
     // iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, "build error"); // build error
     IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
     IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref));
-    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, IX_NULLPTR, IX_NULLPTR));
-    IX_ASSERT(!iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, (TestObject*)IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, IX_NULLPTR, (TestObject*)IX_NULLPTR, IX_NULLPTR));
 
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
@@ -702,10 +702,10 @@ int test_object(void)
     tst_obj.signal_struct(21, E(), 23);
     IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
-    IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(iObject::disconnect(&tst_obj, &TestObject::signal_struct, (TestObject*)IX_NULLPTR, IX_NULLPTR));
     IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
     IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref));
-    IX_ASSERT(!iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, IX_NULLPTR, (TestObject*)IX_NULLPTR, IX_NULLPTR));
 
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static);
     iObject::connect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref);
@@ -714,10 +714,10 @@ int test_object(void)
     tst_obj.signal_struct(31, E(), 33);
     IX_ASSERT(tst_obj.sender_obj == &tst_obj && IX_NULLPTR == tst_obj.senderObj());
 
-    IX_ASSERT(iObject::disconnect(&tst_obj, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(iObject::disconnect(&tst_obj, IX_NULLPTR, (TestObject*)IX_NULLPTR, IX_NULLPTR));
     IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_static));
     IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, &tst_obj, &TestObject::tst_slot_constref));
-    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, IX_NULLPTR, IX_NULLPTR));
+    IX_ASSERT(!iObject::disconnect(&tst_obj, &TestObject::signal_struct, (TestObject*)IX_NULLPTR, IX_NULLPTR));
 
     ilog_debug("-------------emit_signals2");
     iObject::connect(&tst_sig, &TestSignals::tst_sig_struct, &tst_obj, &TestObject::tst_slot_struct);
@@ -796,7 +796,7 @@ int test_object(void)
     IX_ASSERT(share_weakprt_5.isNull());
 
     // lambda
-    #ifdef IX_HAVE_CXX11
+    #if __cplusplus >= 201103L
     int lambda_slot_count = 0;
     auto lambdaFunc = [&lambda_slot_count](int arg){
         ilog_debug("call lambda slot int ", arg);
@@ -839,7 +839,7 @@ int test_object(void)
     IX_ASSERT(&tst_sig == tst_sharedObj_6_1->sender_obj && IX_NULLPTR == tst_sharedObj_6_1->senderObj());
     tst_sharedObj_6_1->slot_disconnect = 0;
     tst_sharedObj_6_1->sender_obj = IX_NULLPTR;
-    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, IX_NULLPTR, &TestObject::tst_slot_disconnect);
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, (TestObject*)IX_NULLPTR, &TestObject::tst_slot_disconnect);
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 == tst_sharedObj_6_1->slot_disconnect);
     IX_ASSERT(IX_NULLPTR == tst_sharedObj_6_1->sender_obj && IX_NULLPTR == tst_sharedObj_6_1->senderObj());
@@ -860,7 +860,7 @@ int test_object(void)
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 < tst_funcSlot.slot_disconnect);
     tst_funcSlot.slot_disconnect = 0;
-    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, IX_NULLPTR, &TestFunctionSlot::tst_slot_disconnect);
+    iObject::disconnect(&tst_sig, &TestSignals::tst_sig_int0, (TestFunctionSlot*)IX_NULLPTR, &TestFunctionSlot::tst_slot_disconnect);
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(0 == tst_funcSlot.slot_disconnect);
 
@@ -926,6 +926,7 @@ int test_object(void)
     iObject::disconnect(&signalObj2, &TestObjectDelete::tst_sig, &tst_slotObj, &TestObjectDeleteSlot::slotNothing);
 
     // Test multiple connections using a lambda slot.
+    #if __cplusplus >= 201103L
     int lambdaCallCount = 0;
     auto lambdaSlot = [&lambdaCallCount]() {
         ilog_debug("Additional lambda slot called");
@@ -948,6 +949,7 @@ int test_object(void)
     lambdaCallCount = 0;
     IEMIT tst_sig.tst_sig_int0();
     IX_ASSERT(lambdaCallCount == 0);
+    #endif
 
     // Test connecting the same slot object more than once.
     // The same slot connected multiple times should be invoked each time.

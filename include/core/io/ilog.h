@@ -11,7 +11,7 @@
 #define ILOG_H
 
 #include <cstdarg>
-#include <cstdint>
+#include <stdint.h>
 
 #include <core/global/iglobal.h>
 #include <core/global/imacro.h>
