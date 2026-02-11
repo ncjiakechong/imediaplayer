@@ -72,7 +72,7 @@ void operator,(T value, const ApplyReturnValue<U>& container) {
 template<typename T>
 void operator,(T, const ApplyReturnValue<void>&) {}
 
-template<typename Func, bool IsFunctor = false > struct FunctionPointer { enum {ArgumentCount = -1, IsPointerToMemberFunction = false}; };
+template<typename Func, bool IsFunctor = false> struct FunctionPointer { enum {ArgumentCount = -1, IsPointerToMemberFunction = false}; };
 template<class Obj, typename Ret> struct FunctionPointer<Ret (Obj::*) (), false>
 {
     typedef Obj Object;
@@ -1866,7 +1866,7 @@ struct SlotResolver<T, true> {
     typedef FunctionPointer<IX_TYPEOF(&T::operator()), true> Type;
 };
 
-template<typename SignalFunc, typename SlotFunc, bool IsFunctor = false >
+template<typename SignalFunc, typename SlotFunc, bool IsFunctor = false>
 class _iConnectionHelper : public _iConnection
 {
     typedef FunctionPointer<SignalFunc> SignalFuncType;
@@ -1979,6 +1979,14 @@ public:
         configSlot(slotObj, tSlot);
     }
 
+    // C++98 awlays use this constructor when slotObj is nullptr, so we can avoid the compile error of nullptr in C++98
+    _iConnectionHelper(const iObject* sender, SignalFunc signal, bool signalValid, int slotObj, SlotFunc slot, bool slotValid, ConnectionType type)
+    {
+        IX_ASSERT(0 == slotObj);
+        IX_COMPILER_VERIFY(0 == slotObj);
+        *this = _iConnectionHelper(sender, signal, signalValid, (const SlotObject*)IX_NULLPTR, slot, slotValid, type);
+    }
+
     template<typename Context>
     _iConnectionHelper(const iObject* sender, SignalFunc signal, bool signalValid, const Context* slotObj, SlotFunc slot, bool slotValid, ConnectionType type)
         : _iConnection(&impl, type, (signalValid ? sizeof(SignalFunc) : 0), (slotValid ? sizeof(SlotFunc) : 0))
@@ -2071,7 +2079,7 @@ public:
             return false;
 
         IX_CHECK_PTR(_classThis);
-        (_classThis->*(_typedThis->_setFunc))(value.value< typename iTypeGetter<0, typename SetFuncType::Arguments::Type>::HeadType >());
+        (_classThis->*(_typedThis->_setFunc))(value.value< typename iTypeGetter<0, typename SetFuncType::Arguments::Type>::HeadType>());
         return true;
     }
 
@@ -2087,7 +2095,7 @@ public:
             return false;
 
         IX_CHECK_PTR(_classThis);
-        (_classThis->*(_typedThis->_signalFunc))(value.value< typename iTypeGetter<0, typename SignalFuncType::Arguments::Type>::HeadType >());
+        (_classThis->*(_typedThis->_signalFunc))(value.value< typename iTypeGetter<0, typename SignalFuncType::Arguments::Type>::HeadType>());
         return true;
     }
 

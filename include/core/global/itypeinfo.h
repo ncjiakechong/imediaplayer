@@ -146,7 +146,7 @@ enum { /* TYPEINFO flags */
 };
 
 #define IX_DECLARE_TYPEINFO_BODY(TYPE, FLAGS) \
-class iTypeInfo<TYPE > \
+class iTypeInfo<TYPE> \
 { \
 public: \
     enum { \

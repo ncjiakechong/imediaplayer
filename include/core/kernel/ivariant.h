@@ -12,6 +12,7 @@
 #ifndef IVARIANT_H
 #define IVARIANT_H
 
+#include <typeinfo>
 #include <core/global/imetaprogramming.h>
 #include <core/thread/iatomiccounter.h>
 #include <core/utils/ihashfunctions.h>
@@ -110,16 +111,9 @@ public:
             { return (*static_cast<T*>(t1) == *static_cast<T*>(t2)); }
         };
 
-        static int typeId = 0;
-        if (0 != typeId)
-            return typeId;
-
-        const char* func_name = IX_FUNC_INFO;
-        const size_t header = sizeof("int iShell::iVariant::iMetaTypeId");
-
         iTypeHandler handler;
         handler.equal = &_HandleHelper::equal;
-        typeId = iRegisterMetaType(func_name + header, handler, hint);
+        static int typeId = iRegisterMetaType(typeid(T).name(), handler, hint);
         return typeId;
     }
 
