@@ -113,7 +113,7 @@ public:
 
         iTypeHandler handler;
         handler.equal = &_HandleHelper::equal;
-        static int typeId = iRegisterMetaType(typeid(T).name(), handler, hint);
+        static const int typeId = iRegisterMetaType(typeid(T).name(), handler, hint);
         return typeId;
     }
 

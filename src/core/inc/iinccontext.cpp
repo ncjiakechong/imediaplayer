@@ -125,7 +125,7 @@ int iINCContext::connectTo(const iStringView& url)
 
         m_ioThread->start();
         m_connection->moveToThread(m_ioThread);
-        invokeMethod(device, &iINCDevice::startEventMonitoring, (iEventDispatcher*)IX_NULLPTR);
+        invokeMethod(device, &iINCDevice::startEventMonitoring, IX_NULLPTR);
     } else {
         // Run in main thread (single-threaded mode)
         device->startEventMonitoring(iEventDispatcher::instance());

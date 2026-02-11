@@ -104,7 +104,7 @@ int iINCServer::listenOn(const iStringView& url)
 
         m_ioThread->start();
         m_listenDevice->moveToThread(m_ioThread);
-        invokeMethod(m_listenDevice, &iINCDevice::startEventMonitoring, (iEventDispatcher*)IX_NULLPTR);
+        invokeMethod(m_listenDevice, &iINCDevice::startEventMonitoring, IX_NULLPTR);
     } else {
         // Run in main thread (single-threaded mode)
         m_listenDevice->startEventMonitoring(iEventDispatcher::instance());

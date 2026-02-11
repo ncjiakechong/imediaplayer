@@ -196,7 +196,7 @@ iMediaPlayer::~iMediaPlayer()
 
     // Disconnect everything to prevent notifying
     // when a receiver is already destroyed.
-    disconnect(this, IX_NULLPTR, (iObject*)IX_NULLPTR, IX_NULLPTR);
+    disconnect(this, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
 }
 
 iUrl iMediaPlayer::media() const
