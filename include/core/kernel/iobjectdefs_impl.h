@@ -1981,10 +1981,24 @@ public:
 
     // C++98 awlays use this constructor when slotObj is nullptr, so we can avoid the compile error of nullptr in C++98
     _iConnectionHelper(const iObject* sender, SignalFunc signal, bool signalValid, int slotObj, SlotFunc slot, bool slotValid, ConnectionType type)
-    {
+        : _iConnection(&impl, type, (signalValid ? sizeof(SignalFunc) : 0), (slotValid ? sizeof(SlotFunc) : 0))
+        , _funcObj(IX_NULLPTR)
+        , _func(slot) {
+        typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
+
         IX_ASSERT(0 == slotObj);
         IX_COMPILER_VERIFY(0 == slotObj);
-        *this = _iConnectionHelper(sender, signal, signalValid, (const SlotObject*)IX_NULLPTR, slot, slotValid, type);
+        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
+        _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
+        setSignal(sender, tSignal);
+        _argWraper = &SignalFuncType::cloneArgs;
+        _argDeleter = &SignalFuncType::freeArgs;
+
+        void* const* tSlot = IX_NULLPTR;
+        if (slotValid)
+            tSlot = reinterpret_cast<void* const*>(&_func);
+
+        configSlot((const SlotObject*)IX_NULLPTR, tSlot);
     }
 
     template<typename Context>

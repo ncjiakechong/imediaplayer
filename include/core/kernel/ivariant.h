@@ -111,9 +111,13 @@ public:
             { return (*static_cast<T*>(t1) == *static_cast<T*>(t2)); }
         };
 
+        static int typeId = 0;
+        if (0 != typeId)
+            return typeId;
+
         iTypeHandler handler;
         handler.equal = &_HandleHelper::equal;
-        static const int typeId = iRegisterMetaType(typeid(T).name(), handler, hint);
+        typeId = iRegisterMetaType(typeid(T).name(), handler, hint);
         return typeId;
     }
 
