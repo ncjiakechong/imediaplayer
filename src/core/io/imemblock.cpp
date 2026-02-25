@@ -81,22 +81,22 @@ struct iMemImportSegment {
     bool isPermanent() const { return memory.type() == MEMTYPE_SHARED_MEMFD || memory.type() == MEMTYPE_SHARED_POSIX; }
 };
 
-iMemDataWraper::iMemDataWraper(const iMemBlock* block, size_t offset)
+iMemDataWrapper::iMemDataWrapper(const iMemBlock* block, size_t offset)
     : _block(block), _data(const_cast<iMemBlock*>(block)->acquire(offset))
 {}
 
-iMemDataWraper::iMemDataWraper(const iMemDataWraper& other)
+iMemDataWrapper::iMemDataWrapper(const iMemDataWrapper& other)
     : _block(other._block), _data(other._data)
 {
     const_cast<iMemBlock*>(_block)->acquire(0);
 }
 
-iMemDataWraper::~iMemDataWraper()
+iMemDataWrapper::~iMemDataWrapper()
 {
     const_cast<iMemBlock*>(_block)->release();
 }
 
-iMemDataWraper& iMemDataWraper::operator=(const iMemDataWraper& other)
+iMemDataWrapper& iMemDataWrapper::operator=(const iMemDataWrapper& other)
 {
     if (&other == this)
         return *this;
@@ -1212,7 +1212,7 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
     ilog_verbose("Got block id ", *blockId);
 
     iShareMem* memory = IX_NULLPTR;
-    iMemDataWraper data = block->data();
+    iMemDataWrapper data = block->data();
     if (iMemBlock::MEMBLOCK_IMPORTED == block->m_type) {
         IX_ASSERT(block->m_imported.segment);
         memory = &block->m_imported.segment->memory;

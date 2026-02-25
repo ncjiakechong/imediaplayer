@@ -19,7 +19,7 @@ struct GPostEventSource;
 struct GSocketNotifierSource;
 struct GTimerSource;
 struct GIdleTimerSource;
-struct iEventSourceWraper;
+struct iEventSourceWrapper;
 
 class iEventDispatcher_Glib : public iEventDispatcher
 {
@@ -60,7 +60,7 @@ protected:
     GTimerSource* m_timerSource;
     GIdleTimerSource* m_idleTimerSource;
 
-    std::map<iEventSource*, iEventSourceWraper*> m_wraperMap;
+    std::map<iEventSource*, iEventSourceWrapper*> m_wrapperMap;
     std::map<iPollFD*, GPollFD*> m_fd2gfdMap;
 };
 

@@ -20,12 +20,6 @@ namespace iShell {
 
 namespace isharedpointer {
 
-ExternalRefCountData::~ExternalRefCountData()
-{
-    IX_ASSERT(!_weakRef.value());
-    IX_ASSERT(_strongRef.value() <= 0);
-}
-
 bool ExternalRefCountData::strongDeref()
 {
     if (_strongRef.value() <= 0)

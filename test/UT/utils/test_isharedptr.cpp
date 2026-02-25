@@ -8,6 +8,7 @@
 /// @author  Unit Test Generator
 /////////////////////////////////////////////////////////////////
 
+#include <memory>
 #include <gtest/gtest.h>
 #include <core/utils/isharedptr.h>
 
@@ -444,3 +445,195 @@ TEST_F(ISharedPtrTest, ResetWithSamePointer) {
     ptr.clear();
     EXPECT_TRUE(deleted2);   // Second object now deleted
 }
+
+// =========================================================================
+// Allocator-aware control-block tests
+// =========================================================================
+
+/// Shared counters, declared outside the allocator template so every
+/// specialisation (original + all rebound copies) shares the same type.
+struct AllocCounters {
+    int allocs = 0;
+    int deallocs = 0;
+};
+
+/// Minimal STL-conformant tracking allocator that counts control-block
+/// allocations.  Instances share their counters via std::shared_ptr so that
+/// copies produced by rebind still record to the same counters.
+template <typename T>
+class TrackingAllocator {
+public:
+    typedef T value_type;
+
+    std::shared_ptr<AllocCounters> counters;
+
+    TrackingAllocator() : counters(std::make_shared<AllocCounters>()) {}
+
+    // Rebind copy: share the counters of the original allocator.
+    template <typename U>
+    TrackingAllocator(const TrackingAllocator<U>& other)
+        : counters(other.counters) {}
+
+    template <typename U>
+    struct rebind { typedef TrackingAllocator<U> other; };
+
+    T* allocate(std::size_t n) {
+        ++counters->allocs;
+        return static_cast<T*>(::operator new(n * sizeof(T)));
+    }
+
+    void deallocate(T* p, std::size_t /*n*/) {
+        ++counters->deallocs;
+        ::operator delete(p);
+    }
+
+    bool operator==(const TrackingAllocator& o) const { return counters == o.counters; }
+    bool operator!=(const TrackingAllocator& o) const { return !(*this == o); }
+};
+
+TEST_F(ISharedPtrTest, AllocatorConstructor_ControlBlockAllocated) {
+    bool deleted = false;
+    TrackingAllocator<char> alloc;
+    std::shared_ptr<AllocCounters> counters = alloc.counters;
+
+    {
+        iSharedPtr<TestObject> ptr(new TestObject(1, &deleted),
+                                   isharedpointer::NormalDeleter(), alloc);
+        EXPECT_FALSE(ptr.isNull());
+        EXPECT_EQ(1, counters->allocs);      // control block was allocated
+        EXPECT_EQ(0, counters->deallocs);
+        EXPECT_FALSE(deleted);
+    }
+    // ptr goes out of scope → object + control block freed
+    EXPECT_TRUE(deleted);
+    EXPECT_EQ(1, counters->allocs);
+    EXPECT_EQ(1, counters->deallocs);        // control block was deallocated via alloc
+}
+
+TEST_F(ISharedPtrTest, AllocatorConstructor_CustomDeleter) {
+    bool deleterCalled = false;
+    TrackingAllocator<char> alloc;
+    std::shared_ptr<AllocCounters> counters = alloc.counters;
+
+    auto deleter = [&deleterCalled](TestObject *p) {
+        deleterCalled = true;
+        delete p;
+    };
+
+    {
+        iSharedPtr<TestObject> ptr(new TestObject(2), deleter, alloc);
+        EXPECT_FALSE(ptr.isNull());
+        EXPECT_EQ(1, counters->allocs);
+    }
+    EXPECT_TRUE(deleterCalled);
+    EXPECT_EQ(1, counters->deallocs);
+}
+
+TEST_F(ISharedPtrTest, IMakeSharedPtr_UsesAllocator) {
+    bool deleted = false;
+    TrackingAllocator<char> alloc;
+    std::shared_ptr<AllocCounters> counters = alloc.counters;
+
+    {
+        iSharedPtr<TestObject> ptr = iMakeSharedPtr(new TestObject(3, &deleted), alloc);
+        EXPECT_FALSE(ptr.isNull());
+        EXPECT_EQ(1, counters->allocs);
+        EXPECT_FALSE(deleted);
+    }
+    EXPECT_TRUE(deleted);
+    EXPECT_EQ(1, counters->deallocs);
+}
+
+TEST_F(ISharedPtrTest, IAllocateShared_UsesAllocator) {
+    bool deleted = false;
+    bool deleterCalled = false;
+    TrackingAllocator<char> alloc;
+    std::shared_ptr<AllocCounters> counters = alloc.counters;
+
+    auto deleter = [&deleterCalled, &deleted](TestObject *p) {
+        deleterCalled = true;
+        delete p;
+    };
+
+    {
+        iSharedPtr<TestObject> ptr = iAllocateShared(
+            new TestObject(4, &deleted), deleter, alloc);
+        EXPECT_FALSE(ptr.isNull());
+        EXPECT_EQ(1, counters->allocs);
+        EXPECT_FALSE(deleted);
+    }
+    EXPECT_TRUE(deleterCalled);
+    EXPECT_EQ(1, counters->deallocs);
+}
+
+TEST_F(ISharedPtrTest, AllocatorConstructor_ResetOverload) {
+    bool d1 = false, d2 = false;
+    TrackingAllocator<char> alloc;
+    std::shared_ptr<AllocCounters> counters = alloc.counters;
+
+    iSharedPtr<TestObject> ptr(new TestObject(5, &d1),
+                               isharedpointer::NormalDeleter(), alloc);
+    EXPECT_EQ(1, counters->allocs);
+
+    // reset with new object + same allocator
+    ptr.reset(new TestObject(6, &d2), isharedpointer::NormalDeleter(), alloc);
+    EXPECT_TRUE(d1);                        // old object freed
+    EXPECT_EQ(2, counters->allocs);         // second control block allocated
+    EXPECT_EQ(1, counters->deallocs);       // first control block deallocated
+
+    ptr.clear();
+    EXPECT_TRUE(d2);
+    EXPECT_EQ(2, counters->deallocs);
+}
+
+TEST_F(ISharedPtrTest, AllocatorConstructor_NullPointer) {
+    TrackingAllocator<char> alloc;
+    std::shared_ptr<AllocCounters> counters = alloc.counters;
+
+    iSharedPtr<TestObject> ptr(static_cast<TestObject*>(IX_NULLPTR),
+                               isharedpointer::NormalDeleter(), alloc);
+    EXPECT_TRUE(ptr.isNull());
+    // No control block should be allocated for null pointer
+    EXPECT_EQ(0, counters->allocs);
+}
+
+TEST_F(ISharedPtrTest, AllocatorConstructor_SharedOwnership) {
+    bool deleted = false;
+    TrackingAllocator<char> alloc;
+    std::shared_ptr<AllocCounters> counters = alloc.counters;
+
+    iSharedPtr<TestObject> ptr1(new TestObject(7, &deleted),
+                                isharedpointer::NormalDeleter(), alloc);
+    EXPECT_EQ(1, counters->allocs);
+
+    {
+        iSharedPtr<TestObject> ptr2(ptr1);  // copy-construct, same control block
+        EXPECT_FALSE(deleted);
+        EXPECT_EQ(1, counters->allocs);     // still only one control block
+    }
+    // ptr2 gone but ptr1 alive
+    EXPECT_FALSE(deleted);
+    EXPECT_EQ(0, counters->deallocs);
+
+    ptr1.clear();
+    EXPECT_TRUE(deleted);
+    EXPECT_EQ(1, counters->deallocs);
+}
+
+TEST_F(ISharedPtrTest, AllocatorConstructor_WeakRef) {
+    bool deleted = false;
+    TrackingAllocator<char> alloc;
+    std::shared_ptr<AllocCounters> counters = alloc.counters;
+
+    iSharedPtr<TestObject> ptr(new TestObject(8, &deleted),
+                               isharedpointer::NormalDeleter(), alloc);
+    iWeakPtr<TestObject> weak = ptr.toWeakRef();
+
+    ptr.clear();                        // strong-count → 0: object deleted
+    EXPECT_TRUE(deleted);
+    EXPECT_EQ(0, counters->deallocs);   // control block still alive (weak ref holds it)
+
+    weak.clear();                       // weak-count → 0: control block deleted
+    EXPECT_EQ(1, counters->deallocs);
+}
+

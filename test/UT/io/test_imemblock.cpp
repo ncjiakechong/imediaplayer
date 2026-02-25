@@ -142,13 +142,13 @@ TEST_F(IMemBlockTest, ReadOnlyWithMultipleRefs) {
     EXPECT_FALSE(rawBlock->isReadOnly());
 }
 
-// Test data access through iMemDataWraper
+// Test data access through iMemDataWrapper
 TEST_F(IMemBlockTest, DataAccess) {
     iSharedDataPointer<iMemBlock> block(iMemBlock::newOne(pool, 100, sizeof(char)));
     ASSERT_NE(block.data(), nullptr);
 
-    iMemDataWraper dataWraper = block->data();
-    void* ptr = dataWraper.value();
+    iMemDataWrapper dataWrapper = block->data();
+    void* ptr = dataWrapper.value();
     EXPECT_NE(ptr, nullptr);
 
     // Write some data
@@ -157,22 +157,22 @@ TEST_F(IMemBlockTest, DataAccess) {
     EXPECT_STREQ(data, "test");
 }
 
-// Test iMemDataWraper copy constructor
-TEST_F(IMemBlockTest, DataWraperCopy) {
+// Test iMemDataWrapper copy constructor
+TEST_F(IMemBlockTest, DataWrapperCopy) {
     iMemBlock* rawBlock = iMemBlock::newOne(pool, 100, sizeof(char));
     ASSERT_NE(rawBlock, nullptr);
 
     iSharedDataPointer<iMemBlock> block(rawBlock);
 
-    // Note: iMemDataWraper uses acquire()/release() on m_nAcquired,
+    // Note: iMemDataWrapper uses acquire()/release() on m_nAcquired,
     // NOT the iSharedData ref count. Test basic copy behavior instead.
     {
-        iMemDataWraper wraper1 = block->data();
-        void* ptr1 = wraper1.value();
+        iMemDataWrapper wrapper1 = block->data();
+        void* ptr1 = wrapper1.value();
         EXPECT_NE(ptr1, nullptr);
 
-        iMemDataWraper wraper2 = wraper1;
-        void* ptr2 = wraper2.value();
+        iMemDataWrapper wrapper2 = wrapper1;
+        void* ptr2 = wrapper2.value();
 
         // Both wrappers should point to same data
         EXPECT_EQ(ptr1, ptr2);
@@ -182,22 +182,22 @@ TEST_F(IMemBlockTest, DataWraperCopy) {
     EXPECT_EQ(rawBlock->count(), 1);
 }
 
-// Test iMemDataWraper assignment operator
-TEST_F(IMemBlockTest, DataWraperAssignment) {
+// Test iMemDataWrapper assignment operator
+TEST_F(IMemBlockTest, DataWrapperAssignment) {
     iSharedDataPointer<iMemBlock> block1(iMemBlock::newOne(pool, 100, sizeof(char)));
     iSharedDataPointer<iMemBlock> block2(iMemBlock::newOne(pool, 200, sizeof(char)));
     ASSERT_FALSE(block1.data() == nullptr);
     ASSERT_FALSE(block2.data() == nullptr);
 
-    iMemDataWraper wraper1 = block1->data();
-    iMemDataWraper wraper2 = block2->data();
+    iMemDataWrapper wrapper1 = block1->data();
+    iMemDataWrapper wrapper2 = block2->data();
 
-    void* ptr1 = wraper1.value();
-    void* ptr2 = wraper2.value();
+    void* ptr1 = wrapper1.value();
+    void* ptr2 = wrapper2.value();
     EXPECT_NE(ptr1, ptr2);
 
-    wraper1 = wraper2;
-    EXPECT_EQ(wraper1.value(), ptr2);
+    wrapper1 = wrapper2;
+    EXPECT_EQ(wrapper1.value(), ptr2);
 }
 
 // Test silence flag

@@ -168,14 +168,14 @@ class iFreeList : public iFreeListBase<T, ConstantsType>
     typedef void (*DestroyNotify)(iFreeList* list);
 
     // destroy notify
-    DestroyNotify _destoryNotify;
+    DestroyNotify _destroyNotify;
 public:
     inline iFreeList(int size = 0, DestroyNotify notify = IX_NULLPTR)
-        : ParentType(size), _destoryNotify(notify) {}
+        : ParentType(size), _destroyNotify(notify) {}
 
     inline ~iFreeList() {
-        if (IX_NULLPTR != _destoryNotify)
-            _destoryNotify(this);
+        if (IX_NULLPTR != _destroyNotify)
+            _destroyNotify(this);
     }
 
     // returns the payload for the given index \a x

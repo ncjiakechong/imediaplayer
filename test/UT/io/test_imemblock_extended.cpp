@@ -143,24 +143,24 @@ TEST_F(IMemBlockExtendedTest, IsOurs) {
 }
 
 
-TEST_F(IMemBlockExtendedTest, MemDataWraper) {
+TEST_F(IMemBlockExtendedTest, MemDataWrapper) {
     iSharedDataPointer<iMemBlock> b(iMemBlock::newOne(pool, 100, 1));
-    iMemDataWraper w(b.data(), 0);
+    iMemDataWrapper w(b.data(), 0);
     EXPECT_NE(w.value(), nullptr);
 }
 
-TEST_F(IMemBlockExtendedTest, WraperCopy) {
+TEST_F(IMemBlockExtendedTest, WrapperCopy) {
     iSharedDataPointer<iMemBlock> b(iMemBlock::newOne(pool, 100, 1));
-    iMemDataWraper w1(b.data(), 0);
-    iMemDataWraper w2 = w1;
+    iMemDataWrapper w1(b.data(), 0);
+    iMemDataWrapper w2 = w1;
     EXPECT_EQ(w1.value(), w2.value());
 }
 
-TEST_F(IMemBlockExtendedTest, WraperAssign) {
+TEST_F(IMemBlockExtendedTest, WrapperAssign) {
     iSharedDataPointer<iMemBlock> b1(iMemBlock::newOne(pool, 100, 1));
     iSharedDataPointer<iMemBlock> b2(iMemBlock::newOne(pool, 50, 1));
-    iMemDataWraper w1(b1.data(), 0);
-    iMemDataWraper w2(b2.data(), 0);
+    iMemDataWrapper w1(b1.data(), 0);
+    iMemDataWrapper w2(b2.data(), 0);
     w1 = w2;
     EXPECT_EQ(w1.value(), w2.value());
 }

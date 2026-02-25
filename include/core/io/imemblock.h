@@ -36,16 +36,16 @@ class iMemImportSegment;
 /** A generic free() like callback prototype */
 typedef void (*iFreeCb)(void* pointer, void* userData);
 
-class IX_CORE_EXPORT iMemDataWraper
+class IX_CORE_EXPORT iMemDataWrapper
 {
     void*            _data;
     const iMemBlock* _block;
 public:
-    iMemDataWraper(const iMemBlock* block, size_t offset);
-    iMemDataWraper(const iMemDataWraper& other);
-    ~iMemDataWraper();
+    iMemDataWrapper(const iMemBlock* block, size_t offset);
+    iMemDataWrapper(const iMemDataWrapper& other);
+    ~iMemDataWrapper();
 
-    iMemDataWraper& operator=(const iMemDataWraper& other);
+    iMemDataWrapper& operator=(const iMemDataWrapper& other);
     inline void* value() const { return _data; }
 };
 
@@ -96,7 +96,7 @@ public:
 
     inline iSharedDataPointer<iMemPool> pool() const { return m_pool; }
 
-    inline iMemDataWraper data() const { return iMemDataWraper(this, 0); }
+    inline iMemDataWrapper data() const { return iMemDataWrapper(this, 0); }
 
     // Returns true if a detach is necessary before modifying the data
     // This method is intentionally not const: if you want to know whether
@@ -179,7 +179,7 @@ private:
     friend class iMemPool;
     friend class iMemImport;
     friend class iMemExport;
-    friend class iMemDataWraper;
+    friend class iMemDataWrapper;
     IX_DISABLE_COPY(iMemBlock)
 };
 

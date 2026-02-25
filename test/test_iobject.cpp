@@ -76,7 +76,7 @@ public:
     void signal_void() ISIGNAL(signal_void);
     void signal_struct(int arg1, const struct E& arg2, int arg3) ISIGNAL(signal_struct, arg1, arg2, arg3);
 
-    void destory() {
+    void destroy() {
         delete this;
     }
 
@@ -264,7 +264,7 @@ public:
     iObject* sender_obj;
 };
 
-void destoryObj(TestObject* ptr) {
+void destroyObj(TestObject* ptr) {
     delete ptr;
 }
 
@@ -745,7 +745,7 @@ int test_object(void)
     IX_ASSERT(6 == value);
     IX_ASSERT(tst_obj.sender_obj == &tst_sig && IX_NULLPTR == tst_obj.senderObj());
 
-    iSharedPtr<TestObject> shareprt_1(new TestObject(&tst_obj), &TestObject::destory);
+    iSharedPtr<TestObject> shareprt_1(new TestObject(&tst_obj), &TestObject::destroy);
     shareprt_1.clear();
     IX_ASSERT(IX_NULLPTR == shareprt_1.data());
 
@@ -759,7 +759,7 @@ int test_object(void)
 
     iWeakPtr<TestObject> weak_2;
     {
-        iSharedPtr<TestObject> shareprt_2(new TestObject(&tst_obj), &destoryObj);
+        iSharedPtr<TestObject> shareprt_2(new TestObject(&tst_obj), &destroyObj);
         IX_ASSERT(IX_NULLPTR != shareprt_2.data());
 
         weak_2 = shareprt_2;

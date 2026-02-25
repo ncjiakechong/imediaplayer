@@ -8,6 +8,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #include <map>
+#include <cstring>
 #if __cplusplus >= 201103L
 #include <unordered_map>
 #endif
@@ -40,20 +41,29 @@ struct _iMetaType {
     iMetaTypeHandler  _metaTypeHandler;
     iMetaTypeConverter _metaTypeConverter;
 
+    // Reserve slot 0 so that allocateNext() always returns rawId >= 1.
+    // This lets iVariant encode SOO as m_typeId = -rawId (never 0, which means null).
+    _iMetaType() { _typeIdContainer.allocateSpecific(0); }
+
     static void initSystemConvert();
 };
 
 IX_GLOBAL_STATIC(_iMetaType, _iMetaTypeDef)
 
-iAbstractConverterFunction::~iAbstractConverterFunction()
+// Look up the registered handler for a raw type id. The type must already be registered.
+static iVariant::iTypeHandler sooHandler(int rawId)
 {
-    iVariant::unregisterConverterFunction(fromTypeId, toTypeId);
+    iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
+    iMetaTypeHandler::const_iterator it = _iMetaTypeDef->_metaTypeHandler.find(rawId);
+    IX_ASSERT(it != _iMetaTypeDef->_metaTypeHandler.end());
+    return it->second;
 }
 
+iAbstractConverterFunction::~iAbstractConverterFunction()
+{ iVariant::unregisterConverterFunction(fromTypeId, toTypeId); }
+
 bool iAbstractConverterFunction::registerTo() const
-{
-    return iVariant::registerConverterFunction(this, fromTypeId, toTypeId);
-}
+{ return iVariant::registerConverterFunction(this, fromTypeId, toTypeId); }
 
 int iVariant::iRegisterMetaType(const char *type, const iTypeHandler& handler, int hint)
 {
@@ -93,8 +103,7 @@ bool iVariant::registerConverterFunction(const iAbstractConverterFunction *f, in
     iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
     std::pair<iMetaTypeConverter::iterator,bool> ret;
     ret = _iMetaTypeDef->_metaTypeConverter.insert(
-                std::pair<std::pair<int, int>, const iAbstractConverterFunction*>
-                          (std::pair<int, int>(from, to), f));
+                std::pair<std::pair<int, int>, const iAbstractConverterFunction*>(std::pair<int, int>(from, to), f));
 
     if (!ret.second)
         ilog_warn(from, " -> ", to," vonverter has regiseted!!!");
@@ -122,39 +131,77 @@ void iVariant::iAbstractVariantImpl::free()
 { _impl(Destroy, this, IX_NULLPTR); }
 
 iVariant::iVariant()
-    : m_typeId(-1)
-{}
+    : m_typeId(0)
+{ new (m_rawStore._buf) iSharedPtr<iAbstractVariantImpl>(); }
+
+void iVariant::destroySooAt()
+{
+    IX_ASSERT(m_typeId < 0);
+    sooHandler(-m_typeId).destroy(m_rawStore._buf);
+}
 
 iVariant::~iVariant()
-{}
+{
+    if (m_typeId < 0) {
+        sooHandler(-m_typeId).destroy(m_rawStore._buf);
+    } else {
+        heapShared().~iSharedPtr<iAbstractVariantImpl>();
+    }
+}
 
 iVariant::iVariant(const iVariant &other)
     : m_typeId(other.m_typeId)
-    , m_dataImpl(other.m_dataImpl)
-{}
+{
+    if (other.m_typeId < 0) {
+        sooHandler(-other.m_typeId).copyConstruct(m_rawStore._buf, other.m_rawStore._buf);
+    } else {
+        new (m_rawStore._buf) iSharedPtr<iAbstractVariantImpl>(other.heapShared());
+    }
+}
 
 iVariant& iVariant::operator=(const iVariant &other)
 {
     if (&other == this)
         return *this;
 
+    // Destroy current contents.
+    if (m_typeId < 0) {
+        sooHandler(-m_typeId).destroy(m_rawStore._buf);
+    } else {
+        heapShared().~iSharedPtr<iAbstractVariantImpl>();
+    }
+
     m_typeId = other.m_typeId;
-    m_dataImpl = other.m_dataImpl;
+
+    // Copy-construct from other.
+    if (other.m_typeId < 0) {
+        sooHandler(-other.m_typeId).copyConstruct(m_rawStore._buf, other.m_rawStore._buf);
+    } else {
+        new (m_rawStore._buf) iSharedPtr<iAbstractVariantImpl>(other.heapShared());
+    }
+
     return *this;
 }
 
 bool iVariant::isNull() const
 {
-    if ((0 <= m_typeId) && !m_dataImpl.isNull())
-        return false;
-
-    return true;
+    if (m_typeId == 0)
+        return true;
+    if (m_typeId < 0)
+        return false;   // SOO: storage is always valid
+    return heapShared().isNull();
 }
 
 void iVariant::clear()
 {
-    m_typeId = -1;
-    m_dataImpl.clear();
+    if (m_typeId < 0) {
+        sooHandler(-m_typeId).destroy(m_rawStore._buf);
+        new (m_rawStore._buf) iSharedPtr<iAbstractVariantImpl>();
+        m_typeId = 0;
+    } else {
+        m_typeId = 0;
+        heapShared().clear();
+    }
 }
 
 bool iVariant::equal(const iVariant &other) const
@@ -162,29 +209,60 @@ bool iVariant::equal(const iVariant &other) const
     if (isNull() || other.isNull())
         return (isNull() && other.isNull());
 
+    const int myType = type();  // real typeId: ≥1 for both SOO and heap when not null
+
     iVariant::iTypeHandler handler;
     {
         iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
-        iMetaTypeHandler::iterator it = _iMetaTypeDef->_metaTypeHandler.find(m_typeId);
+        iMetaTypeHandler::iterator it = _iMetaTypeDef->_metaTypeHandler.find(myType);
         if (_iMetaTypeDef->_metaTypeHandler.end() == it)
             return false;
 
         handler = it->second;
     }
 
-    if (other.m_typeId == m_typeId)
-        return handler.equal(m_dataImpl->_data, other.m_dataImpl->_data);
+    void* selfData = dataPtr();
 
-    iSharedPtr< iAbstractVariantImpl > tDataImpl((*m_dataImpl->_impl)(iAbstractVariantImpl::Create, IX_NULLPTR, IX_NULLPTR), &iAbstractVariantImpl::free);
-    if (!other.convert(m_typeId, tDataImpl->_data))
+    if (other.type() == myType)
+        return handler.equal(selfData, other.dataPtr());
+
+    if (m_typeId < 0) {
+        // SOO: use a stack buffer for the temporary.
+        iVariantRawStorage tmpBuf;
+        handler.defaultConstruct(tmpBuf._buf);
+        const bool ok = other.convert(myType, tmpBuf._buf);
+        const bool result = ok && handler.equal(selfData, tmpBuf._buf);
+        handler.destroy(tmpBuf._buf);
+        return result;
+    }
+
+    // Heap path: need a default-constructed temporary of our type for other to convert into.
+    const iAbstractVariantImpl::ImplFn implFn = heapShared().data()->_impl;
+    const size_t bufSize = reinterpret_cast<size_t>(implFn(iAbstractVariantImpl::BufferSize, IX_NULLPTR, IX_NULLPTR));
+
+    // Use a stack buffer for types that fit within the limit to avoid a heap allocation.
+    enum { kMaxStackImplSize = 128 };
+    if (bufSize <= kMaxStackImplSize) {
+        union { char buf[kMaxStackImplSize]; void* align; } stackStorage;
+        iAbstractVariantImpl* tmp = implFn(iAbstractVariantImpl::Create, IX_NULLPTR, stackStorage.buf);
+        const bool ok = other.convert(myType, tmp->_data);
+        const bool result = ok && handler.equal(selfData, tmp->_data);
+        implFn(iAbstractVariantImpl::Destroy, tmp, stackStorage.buf);
+        return result;
+    }
+
+    // Large type (> kMaxStackImplSize): fall back to heap allocation.
+    iAbstractVariantImpl* tmp = implFn(iAbstractVariantImpl::Create, IX_NULLPTR, IX_NULLPTR);
+    iSharedPtr<iAbstractVariantImpl> tDataImpl(tmp, &iAbstractVariantImpl::free);
+    if (!other.convert(myType, tDataImpl->_data))
         return false;
 
-    return handler.equal(m_dataImpl->_data, tDataImpl->_data);
+    return handler.equal(selfData, tDataImpl->_data);
 }
 
 bool iVariant::canConvert(int targetTypeId) const
 {
-    if (targetTypeId == m_typeId)
+    if (targetTypeId == type())
         return true;
 
     return convert(targetTypeId, IX_NULLPTR);
@@ -192,7 +270,8 @@ bool iVariant::canConvert(int targetTypeId) const
 
 bool iVariant::convert(int t, void *result) const
 {
-    IX_ASSERT(m_typeId != t);
+    const int myType = type();
+    IX_ASSERT(myType != t);
 
     const int charTypeId = iMetaTypeId<char>(0);
     const int ccharTypeId = iMetaTypeId<const char>(0);
@@ -205,35 +284,25 @@ bool iVariant::convert(int t, void *result) const
             break;
 
         std::string *str = static_cast<std::string *>(result);
-        if (charTypeId == m_typeId) {
-            iVariantImpl<char>* imp = static_cast< iVariantImpl<char>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
+        const void* ai = dataPtr();
 
+        if (charTypeId == myType) {
+            if (str) *str = *static_cast<const char*>(ai);
             return true;
         }
 
-        if (ccharTypeId == m_typeId) {
-            iVariantImpl<const char>* imp = static_cast< iVariantImpl<const char>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
-
+        if (ccharTypeId == myType) {
+            if (str) *str = *static_cast<const char*>(ai);
             return true;
         }
 
-        if (charXTypeId == m_typeId) {
-            iVariantImpl<char*>* imp = static_cast< iVariantImpl<char*>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
-
+        if (charXTypeId == myType) {
+            if (str) *str = *static_cast<char* const*>(ai);
             return true;
         }
 
-        if (ccharXTypeId == m_typeId) {
-            iVariantImpl<const char*>* imp = static_cast< iVariantImpl<const char*>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
-
+        if (ccharXTypeId == myType) {
+            if (str) *str = *static_cast<const char* const*>(ai);
             return true;
         }
     } while (0);
@@ -249,42 +318,25 @@ bool iVariant::convert(int t, void *result) const
             break;
 
         std::wstring *str = static_cast<std::wstring *>(result);
-        if (wCharTypeId == m_typeId) {
-            iVariantImpl<wchar_t>* imp = static_cast< iVariantImpl<wchar_t>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
+        const void* ai = dataPtr();
 
+        if (wCharTypeId == myType) {
+            if (str) *str = *static_cast<const wchar_t*>(ai);
             return true;
         }
 
-        if (wcCharTypeId == m_typeId) {
-            iVariantImpl<const wchar_t>* imp = static_cast< iVariantImpl<const wchar_t>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
-
+        if (wcCharTypeId == myType) {
+            if (str) *str = *static_cast<const wchar_t*>(ai);
             return true;
         }
 
-        if (wCharXTypeId == m_typeId) {
-            iVariantImpl<wchar_t*>* imp = static_cast< iVariantImpl<wchar_t*>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
+        if (wCharXTypeId == myType) {
+            if (str) *str = *static_cast<wchar_t* const*>(ai);
             return true;
         }
 
-        if (wcCharXTypeId == m_typeId) {
-            iVariantImpl<const wchar_t*>* imp = static_cast< iVariantImpl<const wchar_t*>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
-
-            return true;
-        }
-
-        if (wcCharXTypeId == m_typeId) {
-            iVariantImpl<const wchar_t*>* imp = static_cast< iVariantImpl<const wchar_t*>* >(m_dataImpl.data());
-            if (str)
-                *str = imp->_value;
-
+        if (wcCharXTypeId == myType) {
+            if (str) *str = *static_cast<const wchar_t* const*>(ai);
             return true;
         }
     } while (0);
@@ -294,93 +346,59 @@ bool iVariant::convert(int t, void *result) const
         if (iStringTypeId != t)
             break;
 
-        iString *str = static_cast<iString *>(result);
-        if (charTypeId == m_typeId) {
-            iVariantImpl<char>* imp = static_cast< iVariantImpl<char>* >(m_dataImpl.data());
-            if (str)
-                *str = iChar(imp->_value);
+        iString* str = static_cast<iString*>(result);
+        const void* ai = dataPtr();
 
+        if (charTypeId == myType) {
+            if (str) *str = iChar(*static_cast<const char*>(ai));
             return true;
         }
-
-        if (ccharTypeId == m_typeId) {
-            iVariantImpl<const char>* imp = static_cast< iVariantImpl<const char>* >(m_dataImpl.data());
-            if (str)
-                *str = iChar(imp->_value);
-
+        if (ccharTypeId == myType) {
+            if (str) *str = iChar(*static_cast<const char*>(ai));
             return true;
         }
-
-        if (charXTypeId == m_typeId) {
-            iVariantImpl<char*>* imp = static_cast< iVariantImpl<char*>* >(m_dataImpl.data());
-            if (str)
-                *str = iString::fromUtf8(iByteArrayView(imp->_value));
-
+        if (charXTypeId == myType) {
+            if (str) *str = iString::fromUtf8(iByteArrayView(*static_cast<char* const*>(ai)));
             return true;
         }
-
-        if (ccharXTypeId == m_typeId) {
-            iVariantImpl<const char*>* imp = static_cast< iVariantImpl<const char*>* >(m_dataImpl.data());
-            if (str)
-                *str = iString::fromUtf8(iByteArrayView(imp->_value));
-
+        if (ccharXTypeId == myType) {
+            if (str) *str = iString::fromUtf8(iByteArrayView(*static_cast<const char* const*>(ai)));
             return true;
         }
-
-        if (stringTypeId == m_typeId) {
-            iVariantImpl<std::string>* imp = static_cast< iVariantImpl<std::string>* >(m_dataImpl.data());
-            if (str)
-                *str = iString::fromStdString(imp->_value);
-
+        if (stringTypeId == myType) {
+            if (str) *str = iString::fromStdString(*static_cast<const std::string*>(ai));
             return true;
         }
-
-        if (wCharTypeId == m_typeId) {
-            iVariantImpl<wchar_t>* imp = static_cast< iVariantImpl<wchar_t>* >(m_dataImpl.data());
-            if (str)
-                *str = iChar(imp->_value);
-
+        if (wCharTypeId == myType) {
+            if (str) *str = iChar(*static_cast<const wchar_t*>(ai));
             return true;
         }
-
-        if (wcCharTypeId == m_typeId) {
-            iVariantImpl<const wchar_t>* imp = static_cast< iVariantImpl<const wchar_t>* >(m_dataImpl.data());
-            if (str)
-                *str = iChar(imp->_value);
-
+        if (wcCharTypeId == myType) {
+            if (str) *str = iChar(*static_cast<const wchar_t*>(ai));
             return true;
         }
-
-        if (wCharXTypeId == m_typeId) {
-            iVariantImpl<wchar_t*>* imp = static_cast< iVariantImpl<wchar_t*>* >(m_dataImpl.data());
-            if (str)
-                *str = iString::fromWCharArray(imp->_value);
-
+        if (wCharXTypeId == myType) {
+            if (str) *str = iString::fromWCharArray(*static_cast<wchar_t* const*>(ai));
             return true;
         }
-
-        if (wStringTypeId == m_typeId) {
-            iVariantImpl<std::wstring>* imp = static_cast< iVariantImpl<std::wstring>* >(m_dataImpl.data());
-            if (str)
-                *str = iString::fromStdWString(imp->_value);
-
+        if (wStringTypeId == myType) {
+            if (str) *str = iString::fromStdWString(*static_cast<const std::wstring*>(ai));
             return true;
         }
-
 
     } while (0);
 
     IX_ASSERT(_iMetaTypeDef.exists());
     iMetaTypeConverter::const_iterator it;
     iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
-    it = _iMetaTypeDef->_metaTypeConverter.find(std::pair<int, int>(m_typeId, t));
+    it = _iMetaTypeDef->_metaTypeConverter.find(std::pair<int, int>(myType, t));
     if (it == _iMetaTypeDef->_metaTypeConverter.end() || !it->second)
         return false;
 
     if (IX_NULLPTR == result)
         return true;
 
-    return it->second->convert(it->second, m_dataImpl->_data, result);
+    return it->second->convert(it->second, dataPtr(), result);
 }
 
 /////////////////////////////////////////////////////////////////

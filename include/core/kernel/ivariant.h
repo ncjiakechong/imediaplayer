@@ -48,10 +48,9 @@ public:
     iVariant(const iVariant &other);
 
     template<typename T>
-    iVariant(T data)
-        : m_typeId(iMetaTypeId<typename type_wrapper<T>::TYPE>(0))
-        , m_dataImpl(new iVariantImpl<typename type_wrapper<T>::TYPE>(data), &iAbstractVariantImpl::free)
-    {}
+    iVariant(const T& data, typename enable_if<!is_same<typename type_wrapper<T>::TYPE, iVariant>::value>::type* = IX_NULLPTR)
+        : m_typeId(0)
+    { constructFrom<typename type_wrapper<T>::TYPE>(data); }
 
     iVariant& operator=(const iVariant &other);
 
@@ -60,11 +59,12 @@ public:
     inline bool operator!=(const iVariant &v) const
     { return !equal(v); }
 
-    int type() const { return m_typeId; }
+    int type() const
+    { return m_typeId < 0 ? -m_typeId : m_typeId; /* SOO: -m_typeId, heap: m_typeId, null: 0 */ }
 
     bool canConvert(int targetTypeId) const;
 
-    inline bool isValid() const {return !isNull(); }
+    inline bool isValid() const { return !isNull(); }
     bool isNull() const;
 
     void clear();
@@ -75,22 +75,28 @@ public:
 
     template<typename T>
     typename type_wrapper<T>::TYPE value() const {
-        if (m_dataImpl.isNull())
+        if (isNull())
             return TYPEWRAPPER_DEFAULTVALUE(T);
 
-        int toTypeId = iMetaTypeId<typename type_wrapper<T>::TYPE>(0);
-        if (toTypeId == m_typeId)
-            return static_cast< iVariantImpl<typename type_wrapper<T>::TYPE>* >(m_dataImpl.data())->_value;
+        typedef typename type_wrapper<T>::TYPE TT;
+        int toTypeId = iMetaTypeId<TT>(0);
+        if (toTypeId == type())
+            return *static_cast<const TT*>(dataPtr());
 
-        typename type_wrapper<T>::TYPE t = TYPEWRAPPER_DEFAULTVALUE(T);
+        TT t = TYPEWRAPPER_DEFAULTVALUE(T);
         convert(toTypeId, &t);
         return t;
     }
 
     template<typename T>
-    void setValue(T data) {
-        m_typeId = iMetaTypeId<typename type_wrapper<T>::TYPE>(0);
-        m_dataImpl.reset(new iVariantImpl<typename type_wrapper<T>::TYPE>(data), &iAbstractVariantImpl::free);
+    void setValue(const T& data) {
+        if (m_typeId < 0) {
+            destroySooAt();            // call ~T() for the live SOO object
+        } else {
+            heapShared().~iSharedPtr<iAbstractVariantImpl>();
+        }
+
+        constructFrom<typename type_wrapper<T>::TYPE>(data);
     }
 
     template<typename T>
@@ -98,9 +104,15 @@ public:
 
     struct iTypeHandler
     {
-        typedef bool (*EqualFunc)(void* t1, void* t2);
+        typedef bool (*EqualFunc)            (void* t1, void* t2);
+        typedef void (*CopyConstructFunc)    (void* dst, const void* src);
+        typedef void (*DefaultConstructFunc) (void* dst);
+        typedef void (*DestroyFunc)          (void* obj);
 
-        EqualFunc equal;
+        EqualFunc            equal;
+        CopyConstructFunc    copyConstruct;
+        DefaultConstructFunc defaultConstruct;
+        DestroyFunc          destroy;
     };
 
     template <typename T>
@@ -109,6 +121,12 @@ public:
         {
             static bool equal(void* t1, void* t2)
             { return (*static_cast<T*>(t1) == *static_cast<T*>(t2)); }
+            static void copyConstruct(void* dst, const void* src)
+            { new(dst) T(*static_cast<const T*>(src)); }
+            static void defaultConstruct(void* dst)
+            { new(dst) T(); }
+            static void destroy(void* obj)
+            { static_cast<T*>(obj)->~T(); }
         };
 
         static int typeId = 0;
@@ -116,15 +134,21 @@ public:
             return typeId;
 
         iTypeHandler handler;
-        handler.equal = &_HandleHelper::equal;
+        handler.equal            = &_HandleHelper::equal;
+        handler.copyConstruct    = &_HandleHelper::copyConstruct;
+        handler.defaultConstruct = &_HandleHelper::defaultConstruct;
+        handler.destroy          = &_HandleHelper::destroy;
         typeId = iRegisterMetaType(typeid(T).name(), handler, hint);
         return typeId;
     }
 
 private:
+    // ----------------------------------------------------------------
+    // Heap-allocated type-erased base (used only for the heap path)
+    // ----------------------------------------------------------------
     struct IX_CORE_EXPORT iAbstractVariantImpl
     {
-        enum Operation { Destroy, Create };
+        enum Operation { Destroy, Create, BufferSize };
 
         // don't use virtual functions here; we don't want the
         // compiler to create tons of per-polymorphic-class stuff that
@@ -147,37 +171,76 @@ private:
             : iAbstractVariantImpl(&_value, &iVariantImpl::impl), _value(data) {}
         ~iVariantImpl() {}
 
-        static iAbstractVariantImpl* impl(int which, const iAbstractVariantImpl* this_, void*) {
-            iAbstractVariantImpl* ret = IX_NULLPTR;
+        static iAbstractVariantImpl* impl(int which, const iAbstractVariantImpl* this_, void* arg) {
             switch (which) {
             case Destroy:
-                delete static_cast<const iVariantImpl*>(this_);
+                if (arg) {   // placement path: explicit destructor, no delete
+                    static_cast<const iVariantImpl*>(this_)->~iVariantImpl();
+                } else {    // heap path: delete
+                    delete static_cast<const iVariantImpl*>(this_);
+                }
                 break;
-
             case Create:
-                ret = new iVariantImpl(TYPEWRAPPER_DEFAULTVALUE(T));
+                if (arg) {   // placement path: construct in caller-supplied buffer
+                    return new(arg) iVariantImpl(TYPEWRAPPER_DEFAULTVALUE(T));
+                } else {
+                    return new iVariantImpl(TYPEWRAPPER_DEFAULTVALUE(T)); // heap path
+                }
                 break;
-
+            case BufferSize:
+                return reinterpret_cast<iAbstractVariantImpl*>(sizeof(iVariantImpl));
             default:
                 break;
             }
-
-            return ret;
+            return IX_NULLPTR;
         }
 
         T _value;
     };
 
-    static int iRegisterMetaType(const char* type, const iTypeHandler& handler, int hint);
+    enum { IX_VARIANT_SOO_SIZE = 32 };
+    union iVariantRawStorage {
+        double _d_align;                      ///< 8-byte alignment guarantee
+        void*  _p_align;                      ///< pointer alignment guarantee
+        char   _buf[IX_VARIANT_SOO_SIZE];     ///< 16 bytes
+    };
 
+    void* dataPtr() const {
+        IX_ASSERT(m_typeId != 0); // caller must check isNull() first
+        if (m_typeId < 0) return const_cast<void*>(static_cast<const void*>(m_rawStore._buf));
+        return heapShared().data()->_data;
+    }
+
+    iSharedPtr<iAbstractVariantImpl>& heapShared()
+    { return *reinterpret_cast<iSharedPtr<iAbstractVariantImpl>*>(m_rawStore._buf); }
+    const iSharedPtr<iAbstractVariantImpl>& heapShared() const
+    { return *reinterpret_cast<const iSharedPtr<iAbstractVariantImpl>*>(m_rawStore._buf); }
+
+    // Construct a value of type TT into this variant (assumes old state already destroyed).
+    template<typename TT>
+    void constructFrom(const TT& data) {
+        const int rawId = iMetaTypeId<TT>(0);
+        if (sizeof(TT) <= IX_VARIANT_SOO_SIZE) {
+            new (m_rawStore._buf) TT(data); // store T directly in-place
+            m_typeId = -rawId;              // negative → SOO
+        } else {
+            m_typeId = rawId;               // positive → heap
+            new (m_rawStore._buf) iSharedPtr<iAbstractVariantImpl>(new iVariantImpl<TT>(data), &iAbstractVariantImpl::free);
+        }
+    }
+
+    // Destroy the SOO object currently in m_rawStore._buf (requires m_typeId < 0).
+    void destroySooAt();
+
+    static int iRegisterMetaType(const char* type, const iTypeHandler& handler, int hint);
     static bool registerConverterFunction(const iAbstractConverterFunction *f, int from, int to);
     static void unregisterConverterFunction(int from, int to);
 
     bool convert(int t, void *result) const;
     bool equal(const iVariant &other) const;
 
-    int m_typeId;
-    iSharedPtr< iAbstractVariantImpl > m_dataImpl;
+    int                m_typeId;   ///< 0=null, negative=SOO, positive=heap
+    iVariantRawStorage m_rawStore;
 
     friend struct iAbstractConverterFunction;
     friend inline bool operator==(const iVariant &, const iVariantComparisonHelper&);

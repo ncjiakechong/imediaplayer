@@ -36,17 +36,17 @@ public:
     iMetaCallEvent(iSemaphore* semph = IX_NULLPTR);
     ~iMetaCallEvent();
 
-    void* arg(_iConnection* conn, void* arg, _iConnection::ArgumentWraper wraper, _iConnection::ArgumentDeleter deleter, bool userWraper = true);
+    void* arg(_iConnection* conn, void* arg, _iConnection::ArgumentWrapper wrapper, _iConnection::ArgumentDeleter deleter, bool userWrapper = true);
 
     iSemaphore* semaphore;
     _iConnection* connection;
-    _iConnection::ArgumentWraper argWraper;
+    _iConnection::ArgumentWrapper argWrapper;
     _iConnection::ArgumentDeleter argDeleter;
     iVarLengthArray<char, 128> arguments; // 128 bytes for inline buffer
 };
 
 iMetaCallEvent::iMetaCallEvent(iSemaphore* semph)
-    : iEvent(MetaCall), semaphore(semph), connection(IX_NULLPTR), argWraper(IX_NULLPTR), argDeleter(IX_NULLPTR)
+    : iEvent(MetaCall), semaphore(semph), connection(IX_NULLPTR), argWrapper(IX_NULLPTR), argDeleter(IX_NULLPTR)
 {}
 
 iMetaCallEvent::~iMetaCallEvent()
@@ -61,20 +61,20 @@ iMetaCallEvent::~iMetaCallEvent()
         semaphore->release();
 }
 
-void* iMetaCallEvent::arg(_iConnection* conn, void* arg, _iConnection::ArgumentWraper wraper, _iConnection::ArgumentDeleter deleter, bool userWraper) {
+void* iMetaCallEvent::arg(_iConnection* conn, void* arg, _iConnection::ArgumentWrapper wrapper, _iConnection::ArgumentDeleter deleter, bool userWrapper) {
     IX_ASSERT(!connection);
     connection = conn;
 
-    if (!userWraper) return arg;
-    if (argWraper) return arguments.data();
+    if (!userWrapper) return arg;
+    if (argWrapper) return arguments.data();
 
     int size = 0;
-    argWraper = wraper;
+    argWrapper = wrapper;
     argDeleter = deleter;
-    argWraper(IX_NULLPTR, IX_NULLPTR, &size);
+    argWrapper(IX_NULLPTR, IX_NULLPTR, &size);
     if (size > 0) {
         arguments.resize(size);
-        argWraper(arg, arguments.data(), IX_NULLPTR);
+        argWrapper(arg, arguments.data(), IX_NULLPTR);
     }
 
     return arguments.data();
@@ -845,7 +845,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
             || (DirectConnection == _type)) {
             locker.unlock();
             _iSender sender(receiver, this, receiverInSameThread);
-            conn->emits(propertyArg.arg(IX_NULLPTR, args, conn->_argWraper, conn->_argDeleter, conn->_isArgAdapter), ret);
+            conn->emits(propertyArg.arg(IX_NULLPTR, args, conn->_argWrapper, conn->_argDeleter, conn->_isArgAdapter), ret);
 
             if (connectionLists->orphaned)
                 break;
@@ -855,7 +855,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         } else if (BlockingQueuedConnection != _type) {
             conn->ref();
             iMetaCallEvent* event = new iMetaCallEvent;
-            event->arg(conn, args, conn->_argWraper, conn->_argDeleter);
+            event->arg(conn, args, conn->_argWrapper, conn->_argDeleter);
             iCoreApplication::postEvent(receiver, event);
             continue;
         } else {}
@@ -868,7 +868,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         conn->ref();
         iSemaphore semaphore;
         iMetaCallEvent* event = new iMetaCallEvent(&semaphore);
-        event->arg(conn, args, conn->_argWraper, conn->_argDeleter);
+        event->arg(conn, args, conn->_argWrapper, conn->_argDeleter);
         iCoreApplication::postEvent(receiver, event);
         locker.unlock();
         semaphore.acquire();
@@ -942,7 +942,7 @@ bool iObject::observePropertyImp(const char* name, _iConnection& conn)
             continue;
 
         conn.setSignal(this, tProperty->_signalRaw);
-        conn._argWraper = tProperty->_argWraper;
+        conn._argWrapper = tProperty->_argWrapper;
         conn._argDeleter = tProperty->_argDeleter;
         conn._isArgAdapter = true;
 
@@ -1062,7 +1062,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
 
         _cloned->ref();
         iMetaCallEvent* event = new iMetaCallEvent(&semaphore);
-        event->arg(_cloned, args, _cloned->_argWraper, _cloned->_argDeleter);
+        event->arg(_cloned, args, _cloned->_argWrapper, _cloned->_argDeleter);
         iCoreApplication::postEvent(receiver, event);
         semaphore.acquire();
         return true;
@@ -1070,7 +1070,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
 
     _iConnection* _cloned = c.clone();
     iMetaCallEvent* event = new iMetaCallEvent;
-    event->arg(_cloned, args, _cloned->_argWraper, _cloned->_argDeleter);
+    event->arg(_cloned, args, _cloned->_argWrapper, _cloned->_argDeleter);
     iCoreApplication::postEvent(receiver, event);
     return true;
 }
@@ -1088,7 +1088,7 @@ _iConnection::_iConnection(ImplFn impl, ConnectionType type, xuint16 signalSize,
     , _sender(IX_NULLPTR)
     , _receiver(IX_NULLPTR)
     , _impl(impl)
-    , _argWraper(IX_NULLPTR)
+    , _argWrapper(IX_NULLPTR)
     , _argDeleter(IX_NULLPTR)
     , _signal(IX_NULLPTR)
     , _slot(IX_NULLPTR)

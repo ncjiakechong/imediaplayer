@@ -133,6 +133,38 @@ template <typename T>
 struct is_integral
 { enum { value = _Is_integral<typename remove_cv<T>::type>::value }; };
 
+template <typename>
+struct _Is_floating_point
+{ enum { value = 0 }; };
+
+template <> struct _Is_floating_point<float>       { enum { value = 1 }; };
+template <> struct _Is_floating_point<double>      { enum { value = 1 }; };
+template <> struct _Is_floating_point<long double> { enum { value = 1 }; };
+
+template <typename T>
+struct is_floating_point
+{ enum { value = _Is_floating_point<typename remove_cv<T>::type>::value }; };
+
+template <typename T>
+struct is_pointer_type
+{ enum { value = 0 }; };
+
+template <typename T> struct is_pointer_type<T*>                { enum { value = 1 }; };
+template <typename T> struct is_pointer_type<T* const>          { enum { value = 1 }; };
+template <typename T> struct is_pointer_type<T* volatile>       { enum { value = 1 }; };
+template <typename T> struct is_pointer_type<T* const volatile> { enum { value = 1 }; };
+
+/// is_trivially_copyable: true for types that can be safely copied with memcpy
+/// (integrals, floats, enums, pointers - the same set eligible for SOO in iVariant)
+template <typename T>
+struct is_trivially_copyable
+{
+    enum { value = is_integral<T>::value
+                || is_floating_point<T>::value
+                || is_enum<T>::value
+                || is_pointer_type<typename remove_cv<T>::type>::value };
+};
+
 template <typename T>
 struct type_wrapper
     /// Use the type wrapper if you want to decouple constness and references from template types.
@@ -168,6 +200,15 @@ struct type_wrapper<T&>
     typedef const T CONSTTYPE;
     typedef T& REFTYPE;
     typedef const T& CONSTREFTYPE;
+};
+
+template <typename T, size_t N>
+struct type_wrapper<T[N]>
+{
+    typedef const T* TYPE;
+    typedef const T* CONSTTYPE;
+    typedef const T* REFTYPE;
+    typedef const T* CONSTREFTYPE;
 };
 
 template <class T>

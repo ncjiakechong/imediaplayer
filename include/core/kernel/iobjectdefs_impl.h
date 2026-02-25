@@ -1788,7 +1788,7 @@ template<> struct FunctionHelper< IX_TYPEOF(IX_NULLPTR), IX_TYPEOF(IX_NULLPTR)>
 class IX_CORE_EXPORT _iConnection
 {
 public:
-    typedef void* (*ArgumentWraper)(void* args, void* buffer, int* size);
+    typedef void* (*ArgumentWrapper)(void* args, void* buffer, int* size);
     typedef void (*ArgumentDeleter)(void* args, bool deletePointer);
 
     void ref();
@@ -1833,7 +1833,7 @@ protected:
     const iObject* _receiver;
 
     ImplFn _impl;
-    ArgumentWraper _argWraper;
+    ArgumentWrapper _argWrapper;
     ArgumentDeleter _argDeleter;
     _iMemberFunction _signal;
     // Point to _func of subclass, NULL indicate invalid value
@@ -1949,7 +1949,7 @@ class _iConnectionHelper : public _iConnection
         , _func(other._func) {
         this->_slotObj = other._slotObj;
         this->_receiver = other._receiver;
-        this->_argWraper = other._argWraper;
+        this->_argWrapper = other._argWrapper;
         this->_argDeleter = other._argDeleter;
         this->_isArgAdapter = other._isArgAdapter;
         this->setSignal(other._sender, other._signal);
@@ -1969,7 +1969,7 @@ public:
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
         _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
         setSignal(sender, tSignal);
-        _argWraper = &SignalFuncType::cloneArgs;
+        _argWrapper = &SignalFuncType::cloneArgs;
         _argDeleter = &SignalFuncType::freeArgs;
 
         void* const* tSlot = IX_NULLPTR;
@@ -1991,7 +1991,7 @@ public:
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
         _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
         setSignal(sender, tSignal);
-        _argWraper = &SignalFuncType::cloneArgs;
+        _argWrapper = &SignalFuncType::cloneArgs;
         _argDeleter = &SignalFuncType::freeArgs;
 
         void* const* tSlot = IX_NULLPTR;
@@ -2011,7 +2011,7 @@ public:
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
         _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
         setSignal(sender, tSignal);
-        _argWraper = &SignalFuncType::cloneArgs;
+        _argWrapper = &SignalFuncType::cloneArgs;
         _argDeleter = &SignalFuncType::freeArgs;
 
         void* const* tSlot = IX_NULLPTR;
@@ -2038,7 +2038,7 @@ public:
 
     _iProperty(get_t get, set_t set, signal_t signal)
         : _get(get), _set(set), _signal(signal)
-        , _signalRaw(IX_NULLPTR), _argWraper(IX_NULLPTR), _argDeleter(IX_NULLPTR) {}
+        , _signalRaw(IX_NULLPTR), _argWrapper(IX_NULLPTR), _argDeleter(IX_NULLPTR) {}
     // virtual ~_iProperty(); // ignore destructor
 
     const get_t _get;
@@ -2047,7 +2047,7 @@ public:
 
 protected:
     _iMemberFunction _signalRaw;
-    _iConnection::ArgumentWraper _argWraper;
+    _iConnection::ArgumentWrapper _argWrapper;
     _iConnection::ArgumentDeleter _argDeleter;
 
     friend class iObject;
@@ -2065,7 +2065,7 @@ public:
         SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(_signalfunc);
         _signalRaw = static_cast<_iMemberFunction>(tSignalAdptor);
 
-        _argWraper = &_iPropertyHelper::argumentWraper;
+        _argWrapper = &_iPropertyHelper::argumentWrapper;
         _argDeleter = &_iPropertyHelper::argumentDeleter;
     }
 
@@ -2113,7 +2113,7 @@ public:
         return true;
     }
 
-    static void* argumentWraper(void* args, void* buffer, int* size) {
+    static void* argumentWrapper(void* args, void* buffer, int* size) {
         typedef FunctionPointer<SignalFunc> SignalFuncType;
         typedef iTuple<iVariant> ArgumentsAdaptor;
         typedef typename SignalFuncType::Arguments Arguments;

@@ -68,7 +68,7 @@ namespace isharedpointer {
     // ExternalRefCountWithContiguousData
     struct IX_CORE_EXPORT ExternalRefCountData {
         typedef void (*DestroyerFn)(ExternalRefCountData*);
-        virtual ~ExternalRefCountData();
+        ~ExternalRefCountData() { IX_ASSERT(!_weakRef.value()); IX_ASSERT(_strongRef.value() <= 0); }
 
         inline int strongCount() { return _strongRef.value(); }
         inline bool strongRef() { return _strongRef.ref(); }
@@ -99,38 +99,96 @@ namespace isharedpointer {
         friend class iShell::iObject;
     };
 
-    // This class extends ExternalRefCountData and implements
-    // the static function that deletes the object. The pointer and the
-    // custom deleter are kept in the "extra" member so we can construct
-    // and destruct it independently of the full structure.
+    // Common base for control blocks that own a user-supplied object deleter.
+    //
+    // Holds the CustomDeleter "extra" member and provides the single shared
+    // objDeleter implementation used by all derived control blocks.
+    // Keeping "extra" here avoids duplicating both the member and the
+    // execute+explicit-destruct logic across ExternalRefCountWithCustomDeleter
+    // and ExternalRefCountWithAllocator.
     template <class T, typename Deleter>
-    struct ExternalRefCountWithCustomDeleter: public ExternalRefCountData {
-        typedef ExternalRefCountWithCustomDeleter Self;
-        typedef ExternalRefCountData BaseClass;
+    struct ExternalRefCountWithDeleterBase : public ExternalRefCountData {
+        typedef ExternalRefCountWithDeleterBase Self;
         CustomDeleter<T, Deleter> extra;
 
-        ExternalRefCountWithCustomDeleter(T *ptr, Deleter objDeleter, DestroyerFn dataDeleter)
-            : ExternalRefCountData(1, 1, ExternalRefCountWithCustomDeleter::objDeleter, dataDeleter)
-            , extra(ptr, objDeleter) {
+        ExternalRefCountWithDeleterBase(T *ptr, Deleter objDel,
+                                        ExternalRefCountData::DestroyerFn objFn,
+                                        ExternalRefCountData::DestroyerFn extFn)
+            : ExternalRefCountData(1, 1, objFn, extFn)
+            , extra(ptr, objDel) {
             setObjectShared(ptr, true);
         }
 
+        // Run the user deleter and explicitly destroy its storage so that
+        // derived dataDeleter implementations can safely free the raw memory
+        // without triggering a second destructor call on "extra".
         static inline void objDeleter(ExternalRefCountData *self) {
             IX_CHECK_PTR(self);
             Self *realself = static_cast<Self *>(self);
             realself->extra.execute();
-
-            // delete the deleter too
             realself->extra.~CustomDeleter<T, Deleter>();
         }
-        static inline void dataDeleter(ExternalRefCountData *self) {
-            delete self;
-        }
+
     private:
-        // prevent construction
+        ExternalRefCountWithDeleterBase();
+        ExternalRefCountWithDeleterBase(const ExternalRefCountWithDeleterBase &);
+        ExternalRefCountWithDeleterBase& operator=(const ExternalRefCountWithDeleterBase &);
+    };
+
+    // Control block without a custom allocator.
+    template <class T, typename Deleter>
+    struct ExternalRefCountWithCustomDeleter : public ExternalRefCountWithDeleterBase<T, Deleter> {
+        typedef ExternalRefCountWithCustomDeleter Self;
+        typedef ExternalRefCountWithDeleterBase<T, Deleter> Base;
+
+        ExternalRefCountWithCustomDeleter(T *ptr, Deleter d, ExternalRefCountData::DestroyerFn extFn)
+            : Base(ptr, d, Base::objDeleter, extFn) {}
+
+        static inline void dataDeleter(ExternalRefCountData *self) { delete self; }
+
+    private:
         ExternalRefCountWithCustomDeleter();
-        ExternalRefCountWithCustomDeleter(const ExternalRefCountWithCustomDeleter&);
-        ExternalRefCountWithCustomDeleter& operator = (const ExternalRefCountWithCustomDeleter&);
+        ExternalRefCountWithCustomDeleter(const ExternalRefCountWithCustomDeleter &);
+        ExternalRefCountWithCustomDeleter& operator=(const ExternalRefCountWithCustomDeleter &);
+    };
+
+    // Control block with a user-supplied allocator for the block itself.
+    // The allocator is rebound to the concrete Self type so that any
+    // STL-conformant allocator (e.g. iCacheAllocator) works.
+    //
+    // Lifetime:
+    //   objDeleter  – strong-count → 0: run user deleter, explicitly destroy extra
+    //   dataDeleter – weak-count  → 0: copy allocator, destroy m_alloc, free block
+    //
+    // NOTE: we do NOT call ~Self() in dataDeleter because "extra" was already
+    // explicitly destructed by objDeleter; calling the full destructor chain
+    // would double-destruct "extra" for non-trivial Deleters.
+    template <class T, typename Deleter, typename Alloc>
+    struct ExternalRefCountWithAllocator : public ExternalRefCountWithDeleterBase<T, Deleter> {
+        typedef ExternalRefCountWithAllocator Self;
+        typedef ExternalRefCountWithDeleterBase<T, Deleter> Base;
+        typedef typename Alloc::template rebind<Self>::other SelfAlloc;
+
+        SelfAlloc m_alloc; ///< rebound allocator – owns the block memory
+
+        ExternalRefCountWithAllocator(T *ptr, Deleter d, ExternalRefCountData::DestroyerFn extFn, const Alloc &alloc)
+            : Base(ptr, d, Base::objDeleter, extFn)
+            , m_alloc(alloc) {}
+
+        static inline void dataDeleter(ExternalRefCountData *self) {
+            Self *realself = static_cast<Self *>(self);
+            // Save allocator before destroying it.
+            SelfAlloc a = realself->m_alloc;
+            // Destroy only m_alloc; "extra" was already handled by objDeleter.
+            realself->m_alloc.~SelfAlloc();
+            // Return the raw block to the pool (no destructor semantics).
+            a.deallocate(realself, 1);
+        }
+
+    private:
+        ExternalRefCountWithAllocator();
+        ExternalRefCountWithAllocator(const ExternalRefCountWithAllocator &);
+        ExternalRefCountWithAllocator& operator=(const ExternalRefCountWithAllocator &);
     };
 
     // This class extends ExternalRefCountData and implements
@@ -161,12 +219,10 @@ namespace isharedpointer {
         static inline void dataDeleter(ExternalRefCountData *self) { delete self; }
     private:
         WeakRefCountWithCustomDeleter()
-            : ExternalRefCountData(2, -1, IX_NULLPTR, dataDeleter)
-        {}
-
-        // prevent construction
+            : ExternalRefCountData(2, -1, IX_NULLPTR, dataDeleter) {}
+    
         WeakRefCountWithCustomDeleter(const WeakRefCountWithCustomDeleter&);
-        WeakRefCountWithCustomDeleter& operator = (const WeakRefCountWithCustomDeleter&);
+        WeakRefCountWithCustomDeleter& operator =(const WeakRefCountWithCustomDeleter&);
     };
 } // namespace isharedpointer
 
@@ -201,6 +257,10 @@ public:
     template <class X, typename Deleter>
     inline iSharedPtr(X *ptr, Deleter deleter) : value(ptr)
     { internalConstruct(ptr, deleter); }
+
+    template <class X, typename Deleter, typename Alloc>
+    inline iSharedPtr(X *ptr, Deleter deleter, const Alloc& alloc) : value(ptr)
+    { internalConstructWithAlloc(ptr, deleter, alloc); }
 
     iSharedPtr(const iSharedPtr &other) : value(other.value), d(other.d)
     { if (d) ref(); }
@@ -238,6 +298,9 @@ public:
     template <typename Deleter>
     inline void reset(T *t, Deleter deleter)
     { iSharedPtr copy(t, deleter); swap(copy); }
+    template <typename Deleter, typename Alloc>
+    inline void reset(T *t, Deleter deleter, const Alloc& alloc)
+    { iSharedPtr copy(t, deleter, alloc); swap(copy); }
 
     inline void clear() { iSharedPtr copy; swap(copy); }
 
@@ -265,6 +328,25 @@ private:
 
         typedef isharedpointer::ExternalRefCountWithCustomDeleter<X, Deleter> Private;
         d = new Private(ptr, deleter, Private::dataDeleter);
+    }
+
+    /// Like internalConstruct but uses the supplied allocator for the control
+    /// block.  The allocator is rebound to the concrete control-block type so
+    /// that any STL-compatible allocator (e.g. iCacheAllocator) works.
+    template <typename X, typename Deleter, typename Alloc>
+    inline void internalConstructWithAlloc(X *ptr, Deleter deleter, const Alloc& alloc) {
+        if (!ptr) {
+            d = IX_NULLPTR;
+            return;
+        }
+
+        typedef isharedpointer::ExternalRefCountWithAllocator<X, Deleter, Alloc> Private;
+        typedef typename Private::SelfAlloc SelfAlloc;
+
+        SelfAlloc sa(alloc); // rebind allocator to Private
+        Private *block = sa.allocate(1);
+        new (block) Private(ptr, deleter, &Private::dataDeleter, alloc);
+        d = block;
     }
 
     void internalSwap(iSharedPtr &other) {
@@ -413,6 +495,26 @@ private:
 
 template <class T>
 iWeakPtr<T> iSharedPtr<T>::toWeakRef() const { return iWeakPtr<T>(*this); }
+
+/// @name Allocator-aware factory functions
+/// Create an iSharedPtr from a raw pointer using the default deleter, where
+/// the ref-count control block is allocated via @p alloc.
+///
+/// @tparam T     Pointed-to type (usually inferred).
+/// @tparam Alloc STL-conformant allocator.  It will be internally rebound to
+///               the concrete control-block type, so the value_type does not
+///               need to match T.  The allocator object (or a rebound copy of
+///               it) is stored inside the control block and is used to
+///               deallocate the block once the last weak reference is gone.
+template <class T, typename Alloc>
+inline iSharedPtr<T> iMakeSharedPtr(T *ptr, const Alloc& alloc)
+{ return iSharedPtr<T>(ptr, isharedpointer::NormalDeleter(), alloc); }
+
+/// Create an iSharedPtr from a raw pointer using a custom deleter and an
+/// allocator for the ref-count control block.
+template <class T, typename Deleter, typename Alloc>
+inline iSharedPtr<T> iAllocateShared(T *ptr, Deleter deleter, const Alloc& alloc)
+{ return iSharedPtr<T>(ptr, deleter, alloc); }
 
 } // namespace iShell
 
