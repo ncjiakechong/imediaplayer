@@ -122,9 +122,9 @@ public:
             static bool equal(void* t1, void* t2)
             { return (*static_cast<T*>(t1) == *static_cast<T*>(t2)); }
             static void copyConstruct(void* dst, const void* src)
-            { new(dst) T(*static_cast<const T*>(src)); }
+            { new (dst) T(*static_cast<const T*>(src)); }
             static void defaultConstruct(void* dst)
-            { new(dst) T(); }
+            { new (dst) T(); }
             static void destroy(void* obj)
             { static_cast<T*>(obj)->~T(); }
         };
@@ -143,9 +143,6 @@ public:
     }
 
 private:
-    // ----------------------------------------------------------------
-    // Heap-allocated type-erased base (used only for the heap path)
-    // ----------------------------------------------------------------
     struct IX_CORE_EXPORT iAbstractVariantImpl
     {
         enum Operation { Destroy, Create, BufferSize };
@@ -174,17 +171,17 @@ private:
         static iAbstractVariantImpl* impl(int which, const iAbstractVariantImpl* this_, void* arg) {
             switch (which) {
             case Destroy:
-                if (arg) {   // placement path: explicit destructor, no delete
+                if (arg) {
                     static_cast<const iVariantImpl*>(this_)->~iVariantImpl();
-                } else {    // heap path: delete
+                } else {
                     delete static_cast<const iVariantImpl*>(this_);
                 }
                 break;
             case Create:
-                if (arg) {   // placement path: construct in caller-supplied buffer
-                    return new(arg) iVariantImpl(TYPEWRAPPER_DEFAULTVALUE(T));
+                if (arg) {
+                    return new (arg) iVariantImpl(TYPEWRAPPER_DEFAULTVALUE(T));
                 } else {
-                    return new iVariantImpl(TYPEWRAPPER_DEFAULTVALUE(T)); // heap path
+                    return new iVariantImpl(TYPEWRAPPER_DEFAULTVALUE(T));
                 }
                 break;
             case BufferSize:

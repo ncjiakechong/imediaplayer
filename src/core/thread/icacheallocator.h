@@ -126,11 +126,11 @@ public:
         ::operator delete(p);
     }
 
-    void construct(pointer p, const T& val) { new((void*)p) T(val); }
+    void construct(pointer p, const T& val) { new ((void*)p) T(val); }
     
     // Support for C++11/Modern libc++ strict const-correctness
     template<typename U>
-    void construct(U* p, const U& val) { new((void*)p) U(val); }
+    void construct(U* p, const U& val) { new ((void*)p) U(val); }
 
     void destroy(pointer p) { p->~T(); }
 
