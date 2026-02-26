@@ -67,15 +67,12 @@ protected:
     GIdleTimerSource* m_idleTimerSource;
 
     #if __cplusplus < 201103L
-    typedef std::map<iPollFD*, GPollFD*> FdMap;
     typedef std::map<iEventSource*, iEventSourceWrapper*> WrapperMap;
     #else
-    typedef std::unordered_map<iPollFD*, GPollFD*> FdMap;
     typedef std::unordered_map<iEventSource*, iEventSourceWrapper*> WrapperMap;
     #endif
 
     WrapperMap m_wrapperMap;
-    FdMap m_fd2gfdMap;
 };
 
 } // namespace iShell

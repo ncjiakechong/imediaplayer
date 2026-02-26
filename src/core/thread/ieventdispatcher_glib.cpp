@@ -51,13 +51,11 @@ static gboolean timerSourceCheckHelper(GTimerSource *src)
 static gboolean timerSourcePrepare(GSource *source, gint *timeout)
 {
     gint dummy;
-    if (!timeout)
-        timeout = &dummy;
+    if (!timeout) timeout = &dummy;
 
     GTimerSource *src = reinterpret_cast<GTimerSource *>(source);
     if (src->runWithIdlePriority) {
-        if (timeout)
-            *timeout = -1;
+        if (timeout) *timeout = -1;
         return false;
     }
 
@@ -67,8 +65,7 @@ static gboolean timerSourcePrepare(GSource *source, gint *timeout)
 static gboolean timerSourceCheck(GSource *source)
 {
     GTimerSource *src = reinterpret_cast<GTimerSource *>(source);
-    if (src->runWithIdlePriority)
-        return false;
+    if (src->runWithIdlePriority) return false;
 
     return timerSourceCheckHelper(src);
 }
@@ -102,8 +99,7 @@ static gboolean idleTimerSourcePrepare(GSource *source, gint *timeout)
     GTimerSource *timerSource = idleTimerSource->timerSource;
     if (!timerSource->runWithIdlePriority) {
         // Yield to the normal priority timer source
-        if (timeout)
-            *timeout = -1;
+        if (timeout) *timeout = -1;
         return false;
     }
 
@@ -114,10 +110,9 @@ static gboolean idleTimerSourceCheck(GSource *source)
 {
     GIdleTimerSource *idleTimerSource = reinterpret_cast<GIdleTimerSource *>(source);
     GTimerSource *timerSource = idleTimerSource->timerSource;
-    if (!timerSource->runWithIdlePriority) {
-        // Yield to the normal priority timer source
-        return false;
-    }
+    // Yield to the normal priority timer source
+    if (!timerSource->runWithIdlePriority) return false;
+
     return timerSourceCheckHelper(timerSource);
 }
 
@@ -148,12 +143,10 @@ struct GPostEventSource
 static gboolean postEventSourcePrepare(GSource *s, gint *timeout)
 {
     iThreadData *data = iThreadData::current();
-    if (!data)
-        return false;
+    if (!data) return false;
 
     gint dummy;
-    if (!timeout)
-        timeout = &dummy;
+    if (!timeout) timeout = &dummy;
     *timeout =  -1;
 
     const bool canWait = data->canWaitLocked();
@@ -189,51 +182,23 @@ struct iEventSourceWrapper
     GSource source;
     iEventSource* imp;
     iEventDispatcher_Glib* dispatcher;
-    #if __cplusplus < 201103L
-    typedef std::map<GPollFD*, iPollFD*> GfdMap;
-    #else
-    typedef std::unordered_map<GPollFD*, iPollFD*> GfdMap;
-    #endif
-    GfdMap gfd2fdMap;
 };
 
 static gboolean eventSourceWrapperPrepare(GSource *s, gint *timeout)
 {
     gint dummy = -1;
-    if (!timeout)
-        timeout = &dummy;
+    if (!timeout) timeout = &dummy;
 
     xint64 timeout_wrapper = -1;
     iEventSourceWrapper *source = reinterpret_cast<iEventSourceWrapper *>(s);
     bool ret = source->imp->detectablePrepare(&timeout_wrapper);
-    *timeout = (gint)((timeout_wrapper + 999999LL) / (1000LL * 1000LL));
+    *timeout = (timeout_wrapper >= 0) ? (gint)((timeout_wrapper + 999999LL) / (1000LL * 1000LL)) : -1;
     return ret;
 }
 
 static gboolean eventSourceWrapperCheck(GSource *s)
 {
     iEventSourceWrapper *source = reinterpret_cast<iEventSourceWrapper *>(s);
-
-    iEventSourceWrapper::GfdMap::const_iterator mapIt;
-    for (mapIt = source->gfd2fdMap.begin(); mapIt != source->gfd2fdMap.end(); ++mapIt) {
-        GPollFD* gfd = mapIt->first;
-        iPollFD* ifd = mapIt->second;
-
-        ifd->revents = 0;
-        if (gfd->revents & G_IO_IN)
-            ifd->revents |= IX_IO_IN;
-        if (gfd->revents & G_IO_OUT)
-            ifd->revents |= IX_IO_OUT;
-        if (gfd->revents & G_IO_PRI)
-            ifd->revents |= IX_IO_PRI;
-        if (gfd->revents & G_IO_ERR)
-            ifd->revents |= IX_IO_ERR;
-        if (gfd->revents & G_IO_HUP)
-            ifd->revents |= IX_IO_HUP;
-        if (gfd->revents & G_IO_NVAL)
-            ifd->revents |= IX_IO_NVAL;
-    }
-
     return source->imp->detectableCheck();
 }
 
@@ -431,9 +396,7 @@ void iEventDispatcher_Glib::wakeUp()
 }
 
 void iEventDispatcher_Glib::runTimersOnceWithNormalPriority()
-{
-    m_timerSource->runWithIdlePriority = false;
-}
+{ m_timerSource->runWithIdlePriority = false; }
 
 int iEventDispatcher_Glib::addEventSource(iEventSource* source)
 {
@@ -446,14 +409,12 @@ int iEventDispatcher_Glib::addEventSource(iEventSource* source)
 
     iEventSourceWrapper* wrapper = reinterpret_cast<iEventSourceWrapper *>(g_source_new(&eventSourceWrapperFuncs,
                                                                         sizeof(iEventSourceWrapper)));
-    (void) new (&wrapper->gfd2fdMap) iEventSourceWrapper::GfdMap();
     source->ref();
     wrapper->imp = source;
     wrapper->dispatcher = this;
     g_source_set_can_recurse(&wrapper->source, true);
     g_source_attach(&wrapper->source, m_mainContext);
     m_wrapperMap.insert(std::pair<iEventSource*, iEventSourceWrapper*>(source, wrapper));
-
     return 0;
 }
 
@@ -466,125 +427,39 @@ int iEventDispatcher_Glib::removeEventSource(iEventSource* source)
         return -1;
     }
 
-    typedef iEventSourceWrapper::GfdMap GfdMapT;
     iEventSourceWrapper* wrapper = it->second;
     m_wrapperMap.erase(it);
-    wrapper->gfd2fdMap.~GfdMapT();
     g_source_destroy(&wrapper->source);
     g_source_unref(&wrapper->source);
     source->deref();
-
     return 0;
 }
 
 int iEventDispatcher_Glib::addPoll(iPollFD* fd, iEventSource* source)
 {
-    FdMap::const_iterator itMap;
-    itMap = m_fd2gfdMap.find(fd);
-    if (itMap != m_fd2gfdMap.end()) {
-        ilog_warn("fd has added->", fd);
-        return -1;
-    }
-
-    iEventSourceWrapper* sourceWrapper = IX_NULLPTR;
-    WrapperMap::const_iterator it;
-    it = m_wrapperMap.find(source);
-    if (it != m_wrapperMap.end()) {
-        sourceWrapper = it->second;
-    }
-
     int priority = 0;
-    if (source)
-        priority = source->priority();
+    if (source) priority = source->priority();
 
-    // setup post event source
-    GPollFD* wrapper = g_new0 (GPollFD, 1);
-    wrapper->fd = fd->fd;
-    if (fd->events & IX_IO_IN)
-        wrapper->events |= G_IO_IN;
-    if (fd->events & IX_IO_OUT)
-        wrapper->events |= G_IO_OUT;
-    if (fd->events & IX_IO_PRI)
-        wrapper->events |= G_IO_PRI;
-    if (fd->events & IX_IO_ERR)
-        wrapper->events |= G_IO_ERR;
-    if (fd->events & IX_IO_HUP)
-        wrapper->events |= G_IO_HUP;
-    if (fd->events & IX_IO_NVAL)
-        wrapper->events |= G_IO_NVAL;
-
-    g_main_context_add_poll(m_mainContext, wrapper, priority);
-    m_fd2gfdMap.insert(std::pair<iPollFD*, GPollFD*>(fd, wrapper));
-    if (sourceWrapper)
-        sourceWrapper->gfd2fdMap.insert(std::pair<GPollFD*, iPollFD*>(wrapper, fd));
-
+    IX_COMPILER_VERIFY(sizeof(iPollFD) == sizeof(GPollFD));
+    g_main_context_add_poll(m_mainContext, reinterpret_cast<GPollFD*>(fd), priority);
     return 0;
 }
 
-int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource* source)
+int iEventDispatcher_Glib::removePoll(iPollFD* fd, iEventSource*)
 {
-    FdMap::const_iterator itMap;
-    itMap = m_fd2gfdMap.find(fd);
-    if (itMap == m_fd2gfdMap.end()) {
-        ilog_warn("fd has removed->", fd);
-        return -1;
-    }
-
-    iEventSourceWrapper* sourceWrapper = IX_NULLPTR;
-    WrapperMap::const_iterator it;
-    it = m_wrapperMap.find(source);
-    if (it != m_wrapperMap.end()) {
-        sourceWrapper = it->second;
-    }
-
-    GPollFD* wrapper = itMap->second;
-    m_fd2gfdMap.erase(fd);
-
-    if (sourceWrapper)
-        sourceWrapper->gfd2fdMap.erase(wrapper);
-
-    g_main_context_remove_poll(m_mainContext, wrapper);
-    g_free(wrapper);
-
+    IX_COMPILER_VERIFY(sizeof(iPollFD) == sizeof(GPollFD));
+    g_main_context_remove_poll(m_mainContext, reinterpret_cast<GPollFD*>(fd));
     return 0;
 }
 
 int iEventDispatcher_Glib::updatePoll(iPollFD* fd, iEventSource* source)
 {
-    FdMap::const_iterator itMap;
-    itMap = m_fd2gfdMap.find(fd);
-    if (itMap == m_fd2gfdMap.end()) {
-        ilog_warn("fd not found for update->", fd);
-        return -1;
-    }
-
     int priority = 0;
-    if (source)
-        priority = source->priority();
+    if (source) priority = source->priority();
 
-    GPollFD* wrapper = itMap->second;
-
-    // Remove old GPollFD from context
-    g_main_context_remove_poll(m_mainContext, wrapper);
-
-    // Update GPollFD events from iPollFD
-    wrapper->events = 0;
-    if (fd->events & IX_IO_IN)
-        wrapper->events |= G_IO_IN;
-    if (fd->events & IX_IO_OUT)
-        wrapper->events |= G_IO_OUT;
-    if (fd->events & IX_IO_PRI)
-        wrapper->events |= G_IO_PRI;
-    if (fd->events & IX_IO_ERR)
-        wrapper->events |= G_IO_ERR;
-    if (fd->events & IX_IO_HUP)
-        wrapper->events |= G_IO_HUP;
-    if (fd->events & IX_IO_NVAL)
-        wrapper->events |= G_IO_NVAL;
-
-    // Re-add GPollFD to context with updated events
-    g_main_context_add_poll(m_mainContext, wrapper, priority);
-
+    GPollFD* gfd = reinterpret_cast<GPollFD*>(fd);
+    g_main_context_remove_poll(m_mainContext, gfd);
+    g_main_context_add_poll(m_mainContext, gfd, priority);
     return 0;
 }
 

@@ -199,4 +199,6 @@ TEST_F(IThreadBasicTest, DispatcherSwitching) {
     iThread::msleep(50);
     worker2.exit();
     worker2.wait();
+
+    setUseGlibDispatcher(false);
 }
