@@ -315,7 +315,7 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
     data->postEventList.addEvent(pe);
     event->m_posted = true;
     ++receiver->m_postedEvents;
-    data->canWait = false;
+    data->canWait = 0;
     data->postEventList.mutex.unlock();
 
     if (needWake && data->dispatcher.load())
@@ -382,14 +382,14 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
     // by default, we assume that the event dispatcher can go to sleep after
     // processing all events. if any new events are posted while we send
     // events, canWait will be set to false.
-    threadData->canWait = (threadData->postEventList.size() == 0);
+    threadData->canWait = (threadData->postEventList.size() == 0) ? 1 : 0;
 
     if (threadData->postEventList.size() == 0 || (receiver && !receiver->m_postedEvents)) {
         --threadData->postEventList.recursion;
         return;
     }
 
-    threadData->canWait = true;
+    threadData->canWait = 1;
 
     // okay. here is the tricky loop. be careful about optimizing
     // this, it looks the way it does for good reasons.
@@ -411,7 +411,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
         {
             if (exceptionCaught) {
                 // since we were interrupted, we need another pass to make sure we clean everything up
-                data->canWait = false;
+                data->canWait = 0;
             }
 
             --data->postEventList.recursion;
@@ -446,7 +446,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
         if (!pe.event)
             continue;
         if ((receiver && receiver != pe.receiver) || (event_type && event_type != pe.event->type())) {
-            threadData->canWait = false;
+            threadData->canWait = 0;
             continue;
         }
 

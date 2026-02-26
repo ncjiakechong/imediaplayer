@@ -18,11 +18,20 @@
 
 namespace iShell {
 
-timespec igettime()
+timespec igettime(TimerType timerType)
 {
-    timespec tv;
-    clock_gettime(CLOCK_MONOTONIC, &tv);
-    return tv;
+    // Use CLOCK_MONOTONIC_COARSE for coarse/very-coarse timers: the kernel caches
+    // this value per jiffy (~4 ms resolution) so no vDSO trip is needed, making
+    // it ~10x faster than CLOCK_MONOTONIC while still being accurate enough for
+    // coarse-timer purposes.  PreciseTimer keeps the full CLOCK_MONOTONIC path.
+    struct timespec ts;
+    #if defined(CLOCK_MONOTONIC_COARSE)
+    ::clock_gettime(timerType == PreciseTimer ? CLOCK_MONOTONIC : CLOCK_MONOTONIC_COARSE, &ts);
+    #else
+    ::clock_gettime(CLOCK_MONOTONIC, &ts);
+    #endif
+
+    return ts;
 }
 
 int ix_open_pipe (xintptr *fds, int flags)

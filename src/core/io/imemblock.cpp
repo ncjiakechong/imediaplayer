@@ -588,7 +588,7 @@ static void* ix_xmemdup(const void* p, size_t l) {
     ::memcpy(r, p, l);
     return r;
 }
-static void freeWarper(void* pointer, void* userData)
+static void freeWrapper(void* pointer, void* userData)
 {
     free(pointer);
 }
@@ -620,7 +620,7 @@ void iMemBlock::makeLocal()
 
     /* Humm, not enough space in the pool, so lets allocate the memory with malloc() */
     m_data = ix_xmemdup(m_data.load(), m_length);
-    m_user.freeCb = freeWarper;
+    m_user.freeCb = freeWrapper;
     m_user.freeCbData = m_data.load();
 
     m_type = MEMBLOCK_USER;

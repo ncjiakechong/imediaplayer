@@ -10,46 +10,21 @@
 
 #include "core/global/imacro.h"
 #include "core/kernel/ideadlinetimer.h"
-
-#ifdef IX_HAVE_CXX11
-#include <ctime>
-#include <chrono>
-#else
 #include "kernel/icoreposix.h"
-#endif
 
 namespace iShell {
 
-#ifdef IX_HAVE_CXX11
-
 iDeadlineTimer iDeadlineTimer::current(TimerType timerType)
 {
-    // ensure we get nanoseconds; this will work so long as steady_clock's
-    // time_point isn't of finer resolution (picoseconds)
-    std::chrono::nanoseconds ns = std::chrono::steady_clock::now().time_since_epoch();
-
     iDeadlineTimer result;
-    result.t1 = ns.count();
-    result.type = timerType;
-    return result;
-}
-
-#else
-
-iDeadlineTimer iDeadlineTimer::current(TimerType timerType)
-{
-    timespec currentTime = igettime();
-    iDeadlineTimer result;
+    timespec currentTime = igettime(timerType);
     result.t1 = currentTime.tv_sec * 1000LL * 1000LL * 1000LL + currentTime.tv_nsec;
     result.type = timerType;
     return result;
 }
-#endif
 
 iDeadlineTimer::iDeadlineTimer(xint64 msecs, TimerType type)
-{
-    setRemainingTime(msecs, type);
-}
+{ setRemainingTime(msecs, type); }
 
 void iDeadlineTimer::setRemainingTime(xint64 msecs, TimerType timerType)
 {
@@ -93,9 +68,7 @@ bool iDeadlineTimer::hasExpired() const
 }
 
 void iDeadlineTimer::setTimerType(TimerType timerType)
-{
-    type = timerType;
-}
+{ type = timerType; }
 
 xint64 iDeadlineTimer::remainingTime() const
 {

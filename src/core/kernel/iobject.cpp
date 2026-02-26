@@ -9,6 +9,9 @@
 /////////////////////////////////////////////////////////////////
 
 #include <cstring>
+#ifdef IX_HAVE_CXX11
+#include <algorithm>
+#endif
 
 #include "core/kernel/ievent.h"
 #include "core/kernel/iobject.h"
@@ -21,10 +24,6 @@
 #include "core/utils/ivarlengtharray.h"
 #include "thread/ithread_p.h"
 #include "core/io/ilog.h"
-
-#ifdef IX_HAVE_CXX11
-#include <algorithm>
-#endif
 
 #define ILOG_TAG "ix_core"
 
@@ -412,7 +411,7 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
     // Cache dispatcher pointer to avoid race condition with double load()
     iEventDispatcher* dispatcher = targetData->dispatcher.load();
     if (eventsMoved > 0 && dispatcher) {
-        targetData->canWait = false;
+        targetData->canWait = 0;
         dispatcher->wakeUp();
     }
 

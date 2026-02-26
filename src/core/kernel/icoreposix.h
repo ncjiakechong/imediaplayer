@@ -14,10 +14,11 @@
 #include <sys/time.h> // struct timeval
 
 #include <core/global/iglobal.h>
+#include <core/global/inamespace.h>
 
 namespace iShell {
 
-timespec igettime();
+timespec igettime(TimerType timerType = CoarseTimer);
 
 // Internal operator functions for timespecs
 inline timespec &normalizedTimespec(timespec &t)

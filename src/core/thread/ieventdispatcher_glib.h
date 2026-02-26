@@ -10,6 +10,12 @@
 #ifndef IEVENTDISPATCHER_GLIB_H
 #define IEVENTDISPATCHER_GLIB_H
 
+#if __cplusplus < 201103L
+#include <map>
+#else
+#include <unordered_map>
+#endif
+
 #include <glib.h>
 #include <core/kernel/ieventdispatcher.h>
 
@@ -60,8 +66,16 @@ protected:
     GTimerSource* m_timerSource;
     GIdleTimerSource* m_idleTimerSource;
 
-    std::map<iEventSource*, iEventSourceWrapper*> m_wrapperMap;
-    std::map<iPollFD*, GPollFD*> m_fd2gfdMap;
+    #if __cplusplus < 201103L
+    typedef std::map<iPollFD*, GPollFD*> FdMap;
+    typedef std::map<iEventSource*, iEventSourceWrapper*> WrapperMap;
+    #else
+    typedef std::unordered_map<iPollFD*, GPollFD*> FdMap;
+    typedef std::unordered_map<iEventSource*, iEventSourceWrapper*> WrapperMap;
+    #endif
+
+    WrapperMap m_wrapperMap;
+    FdMap m_fd2gfdMap;
 };
 
 } // namespace iShell

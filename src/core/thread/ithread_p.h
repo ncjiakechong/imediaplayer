@@ -97,17 +97,12 @@ public:
     static iThreadData *current(bool createIfNecessary = true);
     static void clearCurrentThreadData();
 
+    bool canWaitLocked() const { return canWait.value() != 0; }
     inline bool ref() { return m_ref.ref(true); }
     bool deref();
 
-    bool canWaitLocked() {
-        iScopedLock<iMutex> locker(postEventList.mutex);
-        return canWait;
-    }
-
 public:
     bool                            quitNow;
-    bool                            canWait;
     bool                            isAdopted;
     bool                            requiresCoreApplication;
 
@@ -116,16 +111,17 @@ public:
 
     std::list<iEventLoop *>         eventLoops;
     iPostEventList                  postEventList;
+    iAtomicPointer<iEventDispatcher> dispatcher;
     iAtomicCounter<xintptr>         threadHd;
     iAtomicPointer<iThread>         thread;
-    iAtomicPointer<iEventDispatcher> dispatcher;
+    iAtomicCounter<int>             canWait;
 
     #if __cplusplus >= 201103L
     typedef std::unordered_map<xuintptr, void*> TLSMap;
     #else
     typedef std::map<xuintptr, void*> TLSMap;
     #endif
-    TLSMap tls;
+    TLSMap                          tls;
 private:
     iRefCount                       m_ref;
 };
