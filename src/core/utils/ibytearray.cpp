@@ -1690,11 +1690,33 @@ iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, iByteArrayView aft
         }
         return *this;
     } else {
-        // TODO: Optimize by implementing in-place replacement without remove+insert
-        // Current implementation performs two operations (remove then insert) which
-        // may cause unnecessary memory allocations and data copying
-        remove(pos, len);
-        return insert(pos, after);
+        // Different sizes: single-pass in-place replace.
+        // Avoids the O(2n) cost of separate remove() + insert() which
+        // each perform their own memmove and potential reallocation.
+        const xsizetype oldSize = size();
+        const xsizetype asize = after.size();
+        const xsizetype diff = asize - len;
+        const xsizetype newSize = oldSize + diff;
+
+        if (diff > 0) {
+            // Growing: ensure capacity, then shift tail right, then copy
+            d.detachAndGrow(Data::GrowsForward, diff, IX_NULLPTR, IX_NULLPTR);
+            char *p = d.data();
+            memmove(p + pos + asize, p + pos + len, (oldSize - pos - len) * sizeof(char));
+            if (asize > 0)
+                memcpy(p + pos, after.data(), asize * sizeof(char));
+            d.size = newSize;
+        } else {
+            // Shrinking: shift tail left, then truncate
+            detach();
+            char *p = d.data();
+            memmove(p + pos + asize, p + pos + len, (oldSize - pos - len) * sizeof(char));
+            if (asize > 0)
+                memcpy(p + pos, after.data(), asize * sizeof(char));
+            d.size = newSize;
+        }
+        d.data()[d.size] = '\0';
+        return *this;
     }
 }
 

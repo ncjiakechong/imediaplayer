@@ -64,7 +64,7 @@ class IX_CORE_EXPORT iINCConnection : public iObject
     IX_OBJECT(iINCConnection)
 public:
     /// Get unique connection identifier
-    xuint64 connectionId() const { return m_connId; }
+    xuint32 connectionId() const { return m_connId; }
 
     /// Get client address (IP or pipe path)
     iString peerAddress() const;

@@ -212,7 +212,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     }
 
     // Create connection object (it will create protocol internally)
-    xuint64 connId = ++m_nextChannelId;
+    xuint32 connId = ++m_nextChannelId;
     iINCConnection* conn = new iINCConnection(incDevice, connId);
 
     // Create handshake handler for this connection
@@ -262,7 +262,7 @@ void iINCServer::handleListenDeviceDisconnected()
 
 void iINCServer::handleListenDeviceError(int errorCode)
 {
-if (!m_listening) return;
+    if (!m_listening) return;
 
     // Listen socket errors are usually fatal for the server
     // Examples: EADDRINUSE, EACCES, port conflicts, etc.

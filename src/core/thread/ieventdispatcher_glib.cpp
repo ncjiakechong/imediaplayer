@@ -34,7 +34,8 @@ static gboolean timerSourcePrepareHelper(GTimerSource *src, gint *timeout)
 {
     xint64 __dummy_timeout = -1;
     if (src->timerList.timerWait(__dummy_timeout)) {
-        *timeout = (__dummy_timeout + 999999LL) / (1000LL * 1000LL); // convert to milliseconds
+        xint64 ms = (__dummy_timeout + 999999LL) / (1000LL * 1000LL);
+        *timeout = (ms > (xint64)G_MAXINT) ? G_MAXINT : (gint)ms;
     } else {
         *timeout = -1;
     }
@@ -413,6 +414,7 @@ int iEventDispatcher_Glib::addEventSource(iEventSource* source)
     wrapper->imp = source;
     wrapper->dispatcher = this;
     g_source_set_can_recurse(&wrapper->source, true);
+    g_source_set_priority(&wrapper->source, source->priority());
     g_source_attach(&wrapper->source, m_mainContext);
     m_wrapperMap.insert(std::pair<iEventSource*, iEventSourceWrapper*>(source, wrapper));
     return 0;

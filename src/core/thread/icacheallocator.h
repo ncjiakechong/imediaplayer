@@ -77,6 +77,9 @@ public:
     typedef std::ptrdiff_t difference_type;
 
     /// @brief Rebind allocator to different type (required by STL)
+    /// When sizeof(U) == sizeof(T), the rebound allocator shares the same pool
+    /// (STL list nodes wrap T, so _List_node<T> != T but the pool slot size
+    /// is sizeof(T*) which is type-independent — safe to share).
     template<typename U>
     struct rebind {
         typedef iCacheAllocator<U, MAXSIZE> other;
@@ -92,13 +95,17 @@ public:
     iCacheAllocator(const iCacheAllocator& other)
         : m_pool(other.m_pool) {}
 
-    /// @brief Rebind constructor: creates new pool for different type
-    /// @tparam U The source allocator's element type
-    /// @param other The allocator to rebind from (ignored, creates new pool)
+    /// @brief Rebind constructor: shares pool when element sizes match,
+    /// otherwise creates a new pool for the different-sized type.
+    /// This ensures STL internal node allocators (e.g. _List_node<T>)
+    /// actually reuse the same lock-free pool as the user-facing allocator
+    /// when element sizes are compatible.
     template<typename U>
     iCacheAllocator(const iCacheAllocator<U, MAXSIZE>& other)
-        : m_pool(new iFreeList<T*>(MAXSIZE, cleanup_pool)) {
-        IX_UNUSED(other);
+        : m_pool(sizeof(U) == sizeof(T)
+                 ? reinterpret_cast<const iCacheAllocator&>(other).m_pool
+                 : iSharedPtr< iFreeList<T*> >(new iFreeList<T*>(MAXSIZE, cleanup_pool)))
+    {
     }
 
     /// @brief Allocate memory for n elements

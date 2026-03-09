@@ -83,9 +83,7 @@ void iCoreApplication::init()
 
     m_threadData->dispatcher = dispatcher;
 
-    if (needStarting
-        && IX_NULLPTR != dispatcher
-        && m_threadData->dispatcher.load() != dispatcher)
+    if (needStarting && IX_NULLPTR != dispatcher)
         dispatcher->startingUp();
 
 }

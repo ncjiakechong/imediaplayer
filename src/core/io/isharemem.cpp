@@ -126,10 +126,8 @@ iShareMem* iShareMem::createPrivateMem(const char* prefix, size_t size)
 static void ix_random(void *ret_data, size_t length) {
     IX_ASSERT(ret_data && (length > 0));
 
-    size_t l = length;
-    xuint8* p = (xuint8*)ret_data;
-    srand(iDeadlineTimer::current().deadlineNSecs());
-    for (p = (xuint8*)ret_data, l = length; l > 0; p++, l--)
+    srand((unsigned)iDeadlineTimer::current(PreciseTimer).deadlineNSecs() ^ (unsigned)(xintptr)ret_data);
+    for (xuint8* p = (xuint8*)ret_data; length > 0; p++, length--)
         *p = (xuint8) rand();
 }
 

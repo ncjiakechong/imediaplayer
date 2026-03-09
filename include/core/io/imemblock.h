@@ -285,6 +285,7 @@ public:
 private:
     iMemImportSegment* segmentAttach(MemType type, uint shmId, int memfd_fd, bool writable);
     static void segmentDetach(iMemImportSegment* seg);
+    void drainPendingReleases();
 
     iMutex m_mutex;
 
@@ -307,6 +308,10 @@ private:
 
     iMemImport* _next;
     iMemImport* _prev;
+
+    /// Lock-free pending release queue: block IDs pushed here from release()
+    /// without acquiring m_mutex, drained under lock by get()/destructor.
+    iFreeList<uint> m_pendingReleases;
 
     friend class iMemBlock;
     IX_DISABLE_COPY(iMemImport)

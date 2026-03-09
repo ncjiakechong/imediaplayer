@@ -71,7 +71,7 @@ public:
             newEvents |= IX_IO_OUT;
         }
 
-        m_monitorEvents |= newEvents;
+        m_monitorEvents = newEvents;
         if (!newEvents && m_pollFd.events) {
             removePoll(&m_pollFd);
             m_pollFd.events = 0;
