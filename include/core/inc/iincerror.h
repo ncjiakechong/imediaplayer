@@ -66,6 +66,11 @@ enum iINCError {
     INC_ERROR_ACCESS_DENIED     = INC_ERROR_CATEGORY_RESOURCE + 6,     ///< Access denied
     INC_ERROR_NOT_SUBSCRIBED    = INC_ERROR_CATEGORY_RESOURCE + 7,     ///< Not subscribed to event
 
+    // Router errors (0xE000 + 10~19)
+    INC_ERROR_SERVER_NOT_FOUND      = INC_ERROR_CATEGORY_RESOURCE + 10,      ///< Target server not found/not allowed
+    INC_ERROR_UPSTREAM_UNREACHABLE  = INC_ERROR_CATEGORY_RESOURCE + 11,      ///< Router cannot connect to upstream server
+    INC_ERROR_HOP_LIMIT_EXCEEDED    = INC_ERROR_CATEGORY_RESOURCE + 12,      ///< Router hop count limit exceeded
+
     // Application errors (0xF000 + 1~99)
     INC_ERROR_INTERNAL          = INC_ERROR_CATEGORY_APPLICATION + 1,     ///< Internal error
     INC_ERROR_UNKNOWN           = INC_ERROR_CATEGORY_APPLICATION + 2,     ///< Unknown error

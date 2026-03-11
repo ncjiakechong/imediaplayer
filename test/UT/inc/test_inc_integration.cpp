@@ -1740,20 +1740,19 @@ TEST_P(INCIntegrationTest, PingPong) {
 TEST_P(INCIntegrationTest, DISABLED_LargePayload) {
     // NOTE: This test is disabled because it tests behavior beyond protocol limits.
     //
-    // INC Protocol has MAX_MESSAGE_SIZE = 1KB (defined in iincmessage.cpp).
-    // This small limit enforces the use of shared memory for large data transfers.
-    // Message header is 24 bytes, so max payload = 1KB - 24 bytes = 1000 bytes.
+    // INC Protocol has MAX_MESSAGE_SIZE = 8KB (defined in iincmessage.cpp).
+    // For very large data transfer, use iINCStream with shared memory.
     //
-    // For large data transfer (>1KB), you MUST use iINCStream with shared memory.
+    // For large data transfer (>8KB), you MUST use iINCStream with shared memory.
     // Stream channels support arbitrary data sizes with zero-copy shared memory.
     //
     // Design philosophy:
-    //   - Small messages (<1KB): Use regular INC messages
-    //   - Large data (>1KB): Use iINCStream with shared memory for efficiency
+    //   - Small messages (<8KB): Use regular INC messages
+    //   - Large data (>8KB): Use iINCStream with shared memory for efficiency
     //
     // To test maximum payload capacity, see MaxPayloadSize test below.
 
-    GTEST_SKIP() << "Large payloads exceed 1KB protocol limit. "
+    GTEST_SKIP() << "Large payloads exceed 8KB protocol limit. "
                  << "Use iINCStream for large data transfer.";
 }
 
@@ -1766,10 +1765,9 @@ TEST_P(INCIntegrationTest, MaxPayloadSize) {
     ASSERT_TRUE(connectClient());
 
     // Calculate maximum payload size
-    // MAX_MESSAGE_SIZE = 1KB applies to entire message (header + payload)
-    // Header is 32 bytes (updated with dts field), so max payload = 1KB - 32 bytes = 992 bytes
-    // This enforces using shared memory for large data (>1KB)
-    const int maxPayload = 1024 - 32;  // 992 bytes
+    // MAX_MESSAGE_SIZE = 8KB applies to entire message (header + payload)
+    // Header is 32 bytes (updated with dts field)
+    const int maxPayload = 8 * 1024 - 32;
 
     // Reset test completion flags
     helper->testCompleted = false;

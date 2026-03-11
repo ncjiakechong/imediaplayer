@@ -164,6 +164,9 @@ public:
     int             m_monitorEvents;
 };
 
+const char* iUnixDevice::SCHEME = "unix";
+const char* iUnixDevice::SCHEME_PIPE = "pipe";
+
 iUnixDevice::iUnixDevice(Role role, iObject *parent)
     : iINCDevice(role, parent)
     , m_sockfd(-1)

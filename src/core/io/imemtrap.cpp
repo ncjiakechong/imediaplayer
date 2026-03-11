@@ -55,7 +55,7 @@ void iMemTrap::signalHandler(void* data)
 
     if (!m) {
         s_aupdate.readEnd();
-        ilog_error("Failed to handle SIGBUS");
+        iLogger::asprintf(ILOG_TAG, ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, "Failed to handle SIGBUS");
         return;
     }
 
@@ -65,7 +65,7 @@ void iMemTrap::signalHandler(void* data)
     void* r = mmap((void*)m->m_start, m->m_size, PROT_READ|PROT_WRITE, MAP_ANONYMOUS|MAP_FIXED|MAP_PRIVATE, -1, 0);
     if (MAP_FAILED == r) {
         s_aupdate.readEnd();
-        ilog_error("mmap() failed.\n");
+        iLogger::asprintf(ILOG_TAG, ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__, "mmap() failed in signal handler");
         return;
     }
 

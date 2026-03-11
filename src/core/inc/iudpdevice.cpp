@@ -165,6 +165,8 @@ public:
     int            m_monitorEvents;
 };
 
+const char* iUDPDevice::SCHEME = "udp";
+
 iUDPDevice::iUDPDevice(Role role, iObject *parent)
     : iINCDevice(role, parent)
     , m_sockfd(-1)
@@ -312,12 +314,16 @@ int iUDPDevice::bindOn(const iString& address, xuint16 port)
     return INC_OK;
 }
 
-iString iUDPDevice::peerAddress() const
+iString iUDPDevice::peerAddress(bool withScheme) const
 {
     if (m_peerAddr.isEmpty()) {
         return "unknown";
     }
-    return m_peerAddr + ":" + iString::number(m_peerPort);
+    iString addr = m_peerAddr + ":" + iString::number(m_peerPort);
+    if (withScheme) {
+        return iString(SCHEME) + "://" + addr;
+    }
+    return addr;
 }
 
 bool iUDPDevice::isLocal() const

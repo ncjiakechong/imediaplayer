@@ -62,13 +62,13 @@ iINCConnection::~iINCConnection()
     clearHandshake();
 }
 
-iString iINCConnection::peerAddress() const
+iString iINCConnection::peerAddress(bool withScheme) const
 {
     if (!m_protocol || !m_protocol->device()) {
         return iString();
     }
 
-    return m_protocol->device()->peerAddress();
+    return m_protocol->device()->peerAddress(withScheme);
 }
 
 bool iINCConnection::isConnected() const

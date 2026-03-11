@@ -15,7 +15,7 @@ namespace iShell {
 
 // Define static constants for iINCMessageHeader
 const xuint32 iINCMessageHeader::MAGIC = 0x494E4300;
-const xint32 iINCMessageHeader::MAX_MESSAGE_SIZE = 1024;  // 1K
+const xint32 iINCMessageHeader::MAX_MESSAGE_SIZE = 8 * 1024;
 
 iINCMessage::iINCMessage(iINCMessageType type, xuint32 channelID, xuint32 seqNum)
     : m_type(type)

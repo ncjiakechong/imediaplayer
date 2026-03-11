@@ -55,11 +55,15 @@ iUDPClientDevice::~iUDPClientDevice()
     close();
 }
 
-iString iUDPClientDevice::peerAddress() const
+iString iUDPClientDevice::peerAddress(bool withScheme) const
 {
     char buf[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &m_clientAddr.sin_addr, buf, sizeof(buf));
-    return iString(buf) + ":" + iString::number(ntohs(m_clientAddr.sin_port));
+    iString addr = iString(buf) + ":" + iString::number(ntohs(m_clientAddr.sin_port));
+    if (withScheme) {
+        return iString(iUDPDevice::SCHEME) + "://" + addr;
+    }
+    return addr;
 }
 
 bool iUDPClientDevice::isLocal() const

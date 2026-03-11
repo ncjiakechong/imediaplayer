@@ -39,8 +39,9 @@ public:
     Role role() const { return m_role; }
 
     /// Get peer address (for logging/debugging)
+    /// @param withScheme If true, prefix with transport scheme (e.g. "tcp://", "unix://", "udp://")
     /// @return Peer address string (format depends on transport: "IP:port" for TCP, "path" for Unix socket)
-    virtual iString peerAddress() const = 0;
+    virtual iString peerAddress(bool withScheme = false) const = 0;
 
     /// get connction is in local domain
     virtual bool isLocal() const = 0;

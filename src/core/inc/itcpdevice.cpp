@@ -165,6 +165,8 @@ public:
     int             m_monitorEvents;
 };
 
+const char* iTcpDevice::SCHEME = "tcp";
+
 iTcpDevice::iTcpDevice(Role role, iObject *parent)
     : iINCDevice(role, parent)
     , m_sockfd(-1)
@@ -671,12 +673,16 @@ void iTcpDevice::updateLocalInfo()
     }
 }
 
-iString iTcpDevice::peerAddress() const
+iString iTcpDevice::peerAddress(bool withScheme) const
 {
     if (m_peerAddr.isEmpty()) {
         return iString();
     }
-    return m_peerAddr + ":" + iString::number(m_peerPort);
+    iString addr = m_peerAddr + ":" + iString::number(m_peerPort);
+    if (withScheme) {
+        return iString(SCHEME) + "://" + addr;
+    }
+    return addr;
 }
 
 int iTcpDevice::getSocketError()

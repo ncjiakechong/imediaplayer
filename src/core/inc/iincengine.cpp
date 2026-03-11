@@ -62,13 +62,13 @@ iINCDevice* iINCEngine::createClientTransport(const iStringView& url)
         return IX_NULLPTR;
     }
 
-    if (parsed.scheme == "tcp") {
+    if (parsed.scheme == iTcpDevice::SCHEME) {
         return createTcpClient(parsed);
     }
-    else if (parsed.scheme == "udp") {
+    else if (parsed.scheme == iUDPDevice::SCHEME) {
         return createUdpClient(parsed);
     }
-    else if (parsed.scheme == "pipe" || parsed.scheme == "unix") {
+    else if (parsed.scheme == iUnixDevice::SCHEME_PIPE || parsed.scheme == iUnixDevice::SCHEME) {
         return createUnixClient(parsed);
     }
 
@@ -84,13 +84,13 @@ iINCDevice* iINCEngine::createServerTransport(const iStringView& url)
         return IX_NULLPTR;
     }
 
-    if (parsed.scheme == "tcp") {
+    if (parsed.scheme == iTcpDevice::SCHEME) {
         return createTcpServer(parsed);
     }
-    else if (parsed.scheme == "udp") {
+    else if (parsed.scheme == iUDPDevice::SCHEME) {
         return createUdpServer(parsed);
     }
-    else if (parsed.scheme == "pipe" || parsed.scheme == "unix") {
+    else if (parsed.scheme == iUnixDevice::SCHEME_PIPE || parsed.scheme == iUnixDevice::SCHEME) {
         return createUnixServer(parsed);
     }
 
@@ -113,7 +113,7 @@ iINCEngine::ParsedUrl iINCEngine::parseUrl(const iStringView& url)
         return result;
     }
 
-    if (result.scheme == "tcp" || result.scheme == "udp") {
+    if (result.scheme == iTcpDevice::SCHEME || result.scheme == iUDPDevice::SCHEME) {
         // tcp://host:port or udp://host:port
         result.host = parsedUrl.host();
         int p = parsedUrl.port();
@@ -130,7 +130,7 @@ iINCEngine::ParsedUrl iINCEngine::parseUrl(const iStringView& url)
 
         result.valid = true;
     }
-    else if (result.scheme == "pipe" || result.scheme == "unix") {
+    else if (result.scheme == iUnixDevice::SCHEME_PIPE || result.scheme == iUnixDevice::SCHEME) {
         // pipe:///path/to/socket or unix:///path/to/socket
         result.path = parsedUrl.path();
 

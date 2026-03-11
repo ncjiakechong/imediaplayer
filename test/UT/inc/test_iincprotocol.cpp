@@ -25,7 +25,10 @@ public:
         setOpenMode(mode);
     }
 
-    iString peerAddress() const override { return "mock://localhost"; }
+    iString peerAddress(bool withScheme = false) const override {
+        if (withScheme) return "mock://localhost";
+        return "mock://localhost";
+    }
     bool isLocal() const override { return true; }
 
     // Mock implementation for new API

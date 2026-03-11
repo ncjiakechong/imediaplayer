@@ -42,6 +42,7 @@ iINCContext::iINCContext(const iStringView& name, iObject *parent)
     , m_customState(STATE_READY)
     , m_reconnectTimerId(0)
     , m_reconnectAttempts(0)
+    , m_connectMode(0)
 {
     // Create engine - each context owns its own engine
     m_engine = new iINCEngine(this);
@@ -65,6 +66,10 @@ iINCContext::State iINCContext::state() const
         return m_state;
     }
 
+    if (!m_routerUrl.isEmpty() && (0x01 == m_connectMode)) {
+        return STATE_CONNECTING;
+    }
+
     if (m_config.autoReconnect() && m_reconnectAttempts < m_config.maxReconnectAttempts()) {
         return STATE_CONNECTING;
     }
@@ -84,27 +89,40 @@ void iINCContext::setState(State newState)
     if (previous != current) { IEMIT stateChanged(previous, current); }
 }
 
-int iINCContext::connectTo(const iStringView& url)
+int iINCContext::connectTo(const iStringView& serverUrl, const iStringView& routerUrl)
 {
     if (STATE_CONNECTING == m_state || STATE_CONNECTED == m_state || STATE_AUTHORIZING == m_state) {
         ilog_warn("[", objectName(), "] Already connecting or connected");
         return INC_ERROR_ALREADY_CONNECTED;
     }
 
-    // Use url parameter if provided, otherwise use config default server
-    iString connectUrl = url.isEmpty() ? m_config.defaultServer() : url.toString();
-    if (connectUrl.isEmpty()) {
+    iString server = serverUrl.isEmpty() ? m_config.defaultServer() : serverUrl.toString();
+    if (server.isEmpty()) {
         ilog_error("[", objectName(), "] No server URL specified and no default server in config");
         return INC_ERROR_INVALID_ARGS;
     }
 
-    m_serverUrl = connectUrl;
+    m_serverUrl = server;
+    m_routerUrl = routerUrl.toString();
+
+    // Always start with direct
+    m_connectMode = 0x01;
+    return doConnect(m_serverUrl);
+}
+
+int iINCContext::doConnect(const iStringView& url)
+{
+    if (STATE_CONNECTING == m_state || STATE_CONNECTED == m_state || STATE_AUTHORIZING == m_state) {
+        ilog_warn("[", objectName(), "] Already connecting or connected");
+        return INC_ERROR_ALREADY_CONNECTED;
+    }
+    
     setState(STATE_CONNECTING);
 
     // Create transport device using engine (EventSource is created but NOT attached yet)
-    iINCDevice* device = m_engine->createClientTransport(connectUrl);
+    iINCDevice* device = m_engine->createClientTransport(url);
     if (!device) {
-        ilog_error("[", objectName(), "] Failed to create transport device for", connectUrl);
+        ilog_error("[", objectName(), "] Failed to create transport device for", url);
         setState(STATE_FAILED);
         scheduleReconnect();
         return INC_ERROR_CONNECTION_FAILED;
@@ -138,6 +156,8 @@ int iINCContext::connectTo(const iStringView& url)
     localData.nodeName = objectName();
     localData.protocolVersion = m_config.protocolVersionCurrent();
     localData.capabilities = iINCHandshakeData::CAP_STREAM;  // Support streams
+    localData.targetServer = (m_connectMode & 0x0A) ? m_serverUrl : iString();  // 0x02|0x08 = router modes
+    localData.hopCount = 0;
     handshake->setLocalData(localData);
     m_connection->setHandshakeHandler(handshake);
 
@@ -385,6 +405,9 @@ void iINCContext::handleHandshakeAck(iINCConnection* conn, const iINCMessage& ms
     conn->setPeerName(remote.nodeName);
     conn->setPeerProtocolVersion(remote.protocolVersion);
 
+    // Solidify connection mode
+    if (m_connectMode == 0x01) m_connectMode = 0x04;
+    else if (m_connectMode == 0x02) m_connectMode = 0x08;
     invokeMethod(this, &iINCContext::setState, STATE_CONNECTED);
     ilog_info("[", objectName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                 "] Handshake completed with", conn->peerName(), "protocol version", conn->peerProtocolVersion());
@@ -417,14 +440,21 @@ void iINCContext::scheduleReconnect()
         m_reconnectTimerId = 0;
     }
 
-    if (!m_config.autoReconnect() || m_serverUrl.isEmpty()) {
-        return;
-    }
+    do {
+        // force to try router url
+        if (!m_routerUrl.isEmpty() && (0x01 == m_connectMode)) {
+            break;
+        }
 
-    if (m_reconnectAttempts >= m_config.maxReconnectAttempts()) {
-        ilog_warn("[", objectName(), "] Reconnect attempts exceed limit ", m_reconnectAttempts);
-        return;
-    }
+        if (!m_config.autoReconnect() || m_serverUrl.isEmpty()) {
+            return;
+        }
+
+        if (m_reconnectAttempts >= m_config.maxReconnectAttempts()) {
+            ilog_warn("[", objectName(), "] Reconnect attempts exceed limit ", m_reconnectAttempts);
+            return;
+        }
+    } while (false);
 
     xint64 delay = m_config.reconnectIntervalMs();
     m_reconnectTimerId = startTimer(static_cast<int>(delay), 0, CoarseTimer);
@@ -442,10 +472,13 @@ bool iINCContext::event(iEvent* e)
         m_reconnectTimerId = 0;
         ++m_reconnectAttempts;
 
-        // Handle reconnect timer
-        ilog_info("[", objectName(), "] Attempting reconnection to ", m_serverUrl, " ", m_reconnectAttempts, " times");
-        // Failed, schedule another reconnect if enabled
-        if (connectTo(m_serverUrl) != INC_OK) {
+        // switch to next url
+        if (!(m_connectMode & 0x0C) && !m_routerUrl.isEmpty()) {
+            m_connectMode ^= 0x03;  // toggle: 0x01 <-> 0x02
+        }
+        iString url = (m_connectMode & 0x0A) ? m_routerUrl : m_serverUrl;  // 0x02|0x08 = router
+        ilog_info("[", objectName(), "] Attempting reconnection to ", url, " ", m_reconnectAttempts, " times");
+        if (doConnect(url) != INC_OK) {
             scheduleReconnect();
         }
 

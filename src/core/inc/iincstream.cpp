@@ -249,6 +249,7 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
     if (!peerWantsShmNegotiation) {
         ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Stream attached, mode=", stream->m_mode);
+        stream->m_context->regeisterChannel(stream, static_cast<MemType>(0), iByteArray(), 0);
         iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
         return;
     }
@@ -264,6 +265,7 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
         || !result.eof()) {
         ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Stream attached, mode=", stream->m_mode, " and no negotiated SHM");
+        stream->m_context->regeisterChannel(stream, static_cast<MemType>(0), iByteArray(), 0);
         iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
         return;
     }

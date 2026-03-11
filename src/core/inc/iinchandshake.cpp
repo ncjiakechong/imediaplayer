@@ -45,6 +45,10 @@ iByteArray iINCHandshake::serializeHandshakeData(const iINCHandshakeData& data)
     // Optional auth token - use empty array if not present
     tags.putBytes(data.authToken);
 
+    // Router extension fields
+    tags.putString(data.targetServer);
+    tags.putUint8(data.hopCount);
+
     return tags.data();
 }
 
@@ -66,6 +70,14 @@ bool iINCHandshake::deserializeHandshakeData(const iByteArray& bytes, iINCHandsh
     if (!tags.getBytes(data.authToken)) {
         // Ignore error for optional field
         data.authToken.clear();
+    }
+
+    // Router extension fields (optional for backward compatibility)
+    if (!tags.getString(data.targetServer)) {
+        data.targetServer.clear();
+    }
+    if (!tags.getUint8(data.hopCount)) {
+        data.hopCount = 0;
     }
 
     return true;

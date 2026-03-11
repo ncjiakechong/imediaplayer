@@ -7,6 +7,7 @@
 
 #include <core/inc/iincserver.h>
 #include <core/inc/iincserverconfig.h>
+#include <core/inc/iincrouter.h>
 #include <core/inc/iincconnection.h>
 #include <core/inc/iinccontext.h>
 #include <core/inc/iincstream.h>
@@ -304,24 +305,40 @@ private:
             return false;
         }
 
-        // Calculate checksum for verification
-        xint64 checksum = m_options.enableChecksum ? calculateChecksum(data.constData(), data.size()) : 0;
+        // Calculate max chunk size for protocol copy path
+        // Overhead per message: putInt64(pos)=9 bytes, putBytes tag=1+4+1('\0')=6 bytes = 15 bytes
+        const xsizetype maxChunk = iINCMessageHeader::MAX_MESSAGE_SIZE - 15;
 
-        // Send to all clients with checksum in pos parameter
-        SharedPacket* packet = new SharedPacket(data, checksum);
+        // Send to all clients in chunks with per-chunk checksum
+        SharedPacket* packet = new SharedPacket(data, 0);
         int successfulSends = 0;
         for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
             ClientInfo& client = *it;
-            iSharedDataPointer<iINCOperation> op = sendBinaryData(client.conn, client.channelId, checksum, data);
-            if (op) {
-                op->setTimeout(m_options.opTimeoutMs);
-                CallbackContext* ctx = new CallbackContext(this, client.conn, client.channelId, packet);
-                op->setFinishedCallback(&StreamServer::onPacketSent, ctx);
-                client.pendingOps++;
-                packet->pending++;
-                successfulSends++;
-            } else {
-                ilog_warn("[Server] sendBinaryData returned nullptr");
+            xsizetype offset = 0;
+            bool clientOk = true;
+            while (offset < data.size()) {
+                xsizetype sendSize = std::min(maxChunk, data.size() - offset);
+                bool isLast = (offset + sendSize >= data.size());
+                xint64 chunkChecksum = m_options.enableChecksum
+                    ? calculateChecksum(data.constData() + offset, sendSize) : 0;
+                iByteArray chunk(data.constData() + offset, sendSize);
+                iSharedDataPointer<iINCOperation> op = sendBinaryData(client.conn, client.channelId, chunkChecksum, chunk);
+                if (op) {
+                    if (isLast) {
+                        // Track only the last chunk's operation for flow control
+                        op->setTimeout(m_options.opTimeoutMs);
+                        CallbackContext* ctx = new CallbackContext(this, client.conn, client.channelId, packet);
+                        op->setFinishedCallback(&StreamServer::onPacketSent, ctx);
+                        client.pendingOps++;
+                        packet->pending++;
+                        successfulSends++;
+                    }
+                } else {
+                    ilog_warn("[Server] sendBinaryData returned nullptr");
+                    clientOk = false;
+                    break;
+                }
+                offset += sendSize;
             }
         }
 
@@ -568,6 +585,8 @@ static void printIncUsage() {
     ilog_info("Usage: imediaplayertest --inc [options]\n"
               "  -t <sec>        : timeout (seconds), 0 = no timeout\n"
               "  -u <url>        : server url (default: unix:///tmp/imediaplayer_inc.sock)\n"
+              "  -r <url>        : router url (client connects via this router)\n"
+              "  --router <url>  : start router on <url>, proxy to server -u\n"
               "  -n <num>        : number of clients\n"
               "  -s <mb>         : shared memory size (MB)\n"
               "  -p <kb>         : payload size per packet (KB, default 63)\n"
@@ -599,6 +618,8 @@ int test_inc_pref(void (*callback)())
     #endif
     bool isServer = false;
     bool isClient = false;
+    iString routerListenUrl;  // --router <url>: start router on this address
+    iString routerConnectUrl; // -r <url>: client connects via this router
     PerfOptions options;
 
     for (size_t i = 1; i < args.size(); ++i) {
@@ -609,6 +630,10 @@ int test_inc_pref(void (*callback)())
             timeoutSec = atoi(args[++i].toUtf8().constData());
         } else if (arg == "-u" && i + 1 < args.size()) {
             url = args[++i];
+        } else if (arg == "-r" && i + 1 < args.size()) {
+            routerConnectUrl = args[++i];
+        } else if (arg == "--router" && i + 1 < args.size()) {
+            routerListenUrl = args[++i];
         } else if (arg == "-n" && i + 1 < args.size()) {
             numClients = atoi(args[++i].toUtf8().constData());
         } else if (arg == "-s" && i + 1 < args.size()) {
@@ -656,6 +681,8 @@ int test_inc_pref(void (*callback)())
     ilog_info("Configuration:");
     ilog_info("  Mode: ", (isServer && isClient) ? "Combined" : (isServer ? "Server Only" : "Client Only"));
     ilog_info("  URL: ", url.toUtf8().constData());
+    if (!routerListenUrl.isEmpty()) ilog_info("  Router Listen: ", routerListenUrl.toUtf8().constData());
+    if (!routerConnectUrl.isEmpty()) ilog_info("  Router Connect: ", routerConnectUrl.toUtf8().constData());
     ilog_info("  Timeout: ", timeoutSec, " seconds");
     if (isServer) ilog_info("  Num Clients (Expected): ", numClients);
     ilog_info("  SHM Size: ", shmSizeMB, " MB");
@@ -668,6 +695,7 @@ int test_inc_pref(void (*callback)())
 
     iCoreApplication* app = iCoreApplication::instance();
     StreamServer* server = IX_NULLPTR;
+    iINCRouter* router = IX_NULLPTR;
     std::vector<StreamClient*> clients;
 
     if (isServer) {
@@ -686,12 +714,39 @@ int test_inc_pref(void (*callback)())
         }
     }
 
+    // Start Router if --router specified
+    if (!routerListenUrl.isEmpty()) {
+        router = new iINCRouter(iString("Router"), app);
+        iINCServerConfig routerCfg;
+        routerCfg.setEnableIOThread(true);
+        router->setConfig(routerCfg);
+        router->addRoute(iString(".*"), url);
+
+        if (router->listenOn(routerListenUrl) != 0) {
+            ilog_error("Failed to start router on ", routerListenUrl.toUtf8().constData());
+            delete router;
+            return -1;
+        }
+        ilog_info("[Router] Listening on ", routerListenUrl.toUtf8().constData(), " -> ", url.toUtf8().constData());
+    }
+
     if (isClient) {
-        // Create multiple clients
-        // If running in client-only mode, numClients determines how many client instances to spawn in this process
         for (int i = 0; i < numClients; ++i) {
             StreamClient* client = new StreamClient(i + 1, options, app);
-            if (client->connectTo(url) < 0) {
+            int ret;
+            if (!routerConnectUrl.isEmpty()) {
+                // When connecting via router, handshake takes longer due to extra hop
+                iINCContextConfig ctxCfg;
+                ctxCfg.setProtocolTimeoutMs(3000);
+                ctxCfg.setMaxReconnectAttempts(10);
+                client->setConfig(ctxCfg);
+                // Connect via router: serverUrl=url, routerUrl=routerConnectUrl
+                ret = client->connectTo(url, routerConnectUrl);
+                ilog_info("[Client ", i+1, "] Connecting via router ", routerConnectUrl.toUtf8().constData(), " -> ", url.toUtf8().constData());
+            } else {
+                ret = client->connectTo(url);
+            }
+            if (ret < 0) {
                 ilog_error("Client ", i+1, " failed to connect");
                 delete client;
             } else {

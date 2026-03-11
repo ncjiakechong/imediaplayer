@@ -39,7 +39,7 @@ public:
     virtual ~iUDPClientDevice();
 
     // --- iINCDevice interface ---
-    iString peerAddress() const IX_OVERRIDE;
+    iString peerAddress(bool withScheme = false) const IX_OVERRIDE;
     bool isLocal() const IX_OVERRIDE;
     xint64 bytesAvailable() const IX_OVERRIDE;
     void close() IX_OVERRIDE;

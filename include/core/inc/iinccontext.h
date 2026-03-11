@@ -59,9 +59,14 @@ public:
     void setConfig(const iINCContextConfig& config) { m_config = config; }
 
     /// Connect to server at specified URL
-    /// @param url Format: "tcp://host:port" or "pipe:///path/to/socket"
-    /// @return 0 on success, negative on error
-    int connectTo(const iStringView& url);
+    /// Always tries direct connection to serverUrl first.
+    /// If direct connection fails asynchronously (e.g. handshake rejected),
+    /// falls back to connecting through routerUrl.
+    /// Once a method succeeds, it is solidified for reconnection.
+    /// @param serverUrl Target server URL (e.g. "tcp://host:port")
+    /// @param routerUrl Optional Router URL for fallback
+    /// @return 0 on success (connection attempt started), negative on error
+    int connectTo(const iStringView& serverUrl, const iStringView& routerUrl = iStringView());
 
     /// Close connection and disconnect from server immediately
     void close();
@@ -119,12 +124,12 @@ private:
     void handleHandshakeAck(iINCConnection* conn, const iINCMessage& msg);
     void handleEvent(iINCConnection* conn, const iINCMessage& msg);
     void scheduleReconnect();
-    void onReconnectTimeout();
-    void attemptReconnect();
-    void cleanupOperations();
 
     /// implement Close connection and disconnect from server immediately
     void doClose(State state);
+
+    /// Establish transport connection and start handshake to the given URL
+    int doConnect(const iStringView& url);
 
     /// Set state and emit stateChanged signal with previous state
     void setState(State newState);
@@ -161,7 +166,9 @@ private:
     iThread*        m_ioThread;     ///< IO thread for network operations
     State           m_state;
     State           m_customState;  ///< custom requested state
-    iString         m_serverUrl;
+    iString         m_serverUrl;       ///< Target server URL from connectTo
+    iString         m_routerUrl;       ///< Router URL from connectTo
+    int             m_connectMode;     ///< Connection mode state machine (0x01=try direct, 0x02=try router, 0x04=fixed direct, 0x08=fixed router)
 
     // Auto-reconnect timer ID (using iObject::startTimer/killTimer)
     int             m_reconnectTimerId;

@@ -67,7 +67,8 @@ public:
     xuint32 connectionId() const { return m_connId; }
 
     /// Get client address (IP or pipe path)
-    iString peerAddress() const;
+    /// @param withScheme If true, prefix with transport scheme (e.g. "tcp://", "udp://")
+    iString peerAddress(bool withScheme = false) const;
 
     /// Get client name (set during handshake)
     iString peerName() const { return m_peerName; }
@@ -195,6 +196,7 @@ private:
     ChannelMap m_channels;  ///< channelId -> mode
 
     friend class iINCServer;
+    friend class iINCRouter;
     friend class iINCContext;
     IX_DISABLE_COPY(iINCConnection)
 };

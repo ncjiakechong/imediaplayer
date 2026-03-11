@@ -304,8 +304,8 @@ TEST_F(INCMessageTest, HeaderConstants) {
     // Verify header size (32 bytes with dts field)
     EXPECT_EQ(sizeof(iINCMessageHeader), 32u);
 
-    // Verify max message size (1 KB - enforces use of shared memory for large data)
-    EXPECT_EQ(iINCMessageHeader::MAX_MESSAGE_SIZE, 1024);
+    // Verify max message size (8KB for TCP transport)
+    EXPECT_EQ(iINCMessageHeader::MAX_MESSAGE_SIZE, 8 * 1024);
 }
 
 /**

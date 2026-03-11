@@ -159,6 +159,14 @@ protected:
     /// Acquire a memory block from global pool
     iMemBlock* acquireBuffer(xsizetype size);
 
+protected:
+    /// Called when a message is received from a client connection
+    /// @note Override in iINCRouter to intercept and forward messages
+    virtual void onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg);
+
+    iThread* ioThread() const { return m_ioThread; }
+    iINCEngine* engine() const { return m_engine; }
+
 private:
     void handleCustomer(xintptr action);
     void handleListenDeviceDisconnected();
@@ -168,7 +176,6 @@ private:
     void handleHandshake(iINCConnection* conn, const iINCMessage& msg);
     void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data);
     void onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCode);
-    void onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg);
 
     iINCServerConfig m_config;          ///< Server configuration
     iINCEngine*     m_engine;           ///< Owned engine instance

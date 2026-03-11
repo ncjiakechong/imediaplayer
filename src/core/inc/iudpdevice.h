@@ -35,6 +35,8 @@ class IX_CORE_EXPORT iUDPDevice : public iINCDevice
     IX_OBJECT(iUDPDevice)
     friend class iUDPEventSource;  // Allow EventSource to access m_serverAccepted
 public:
+    static const char* SCHEME;  ///< "udp"
+
     /// @brief Create UDP device
     /// @param role Device role (client or server, mainly for semantic purposes)
     /// @param parent Parent object
@@ -65,7 +67,7 @@ public:
 
     /// Get peer address (format: "IP:port")
     /// @note For unconnected sockets, returns last received peer
-    iString peerAddress() const IX_OVERRIDE;
+    iString peerAddress(bool withScheme = false) const IX_OVERRIDE;
 
     /// Get peer IP address only
     iString peerIpAddress() const { return m_peerAddr; }

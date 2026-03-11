@@ -24,6 +24,9 @@ class IX_CORE_EXPORT iUnixDevice : public iINCDevice
 {
     IX_OBJECT(iUnixDevice)
 public:
+    static const char* SCHEME;       ///< "unix"
+    static const char* SCHEME_PIPE;  ///< "pipe" (alias)
+
     /// @brief Create Unix domain socket device
     /// @param role Device role (client or server)
     /// @param parent Parent object
@@ -50,8 +53,10 @@ public:
 
     // --- Common Methods ---
 
-    /// Get peer address (returns socket path)
-    iString peerAddress() const IX_OVERRIDE { return m_socketPath; }
+    /// Get peer address (returns socket path, optionally with unix:// scheme)
+    iString peerAddress(bool withScheme = false) const IX_OVERRIDE {
+        return !withScheme ? m_socketPath : iString(SCHEME) + "://" + m_socketPath;
+    }
 
     /// Get socket path
     iString socketPath() const { return m_socketPath; }

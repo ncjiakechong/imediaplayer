@@ -31,6 +31,8 @@ struct IX_CORE_EXPORT iINCHandshakeData
     iString     nodeId;              ///< Unique node identifier (UUID-like)
     xuint32     capabilities;        ///< Feature flags
     iByteArray  authToken;           ///< Optional authentication token
+    iString     targetServer;        ///< Target server URL (for Router routing)
+    xuint8      hopCount;            ///< Number of Router hops (Client initial=0)
 
     /// Capability flags
     enum Capabilities {
@@ -41,12 +43,14 @@ struct IX_CORE_EXPORT iINCHandshakeData
         CAP_PRIORITY        = 0x00000008,   ///< Supports message priority
         CAP_MULTIPLEXING    = 0x00000010,   ///< Supports channel multiplexing
         CAP_FILE_TRANSFER   = 0x00000020,   ///< Supports file descriptor passing
+        CAP_ROUTER          = 0x00000040,   ///< Identifies this node as a Router
         CAP_ALL             = 0xFFFFFFFF
     };
 
     iINCHandshakeData()
         : protocolVersion(0)
         , capabilities(CAP_STREAM)  // Default: support streams only
+        , hopCount(0)
     {
     }
 

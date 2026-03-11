@@ -74,6 +74,7 @@ set (ComSource
 	inc/iincoperation.cpp
 	inc/iinccontext.cpp
 	inc/iincserver.cpp
+	inc/iincrouter.cpp
 	inc/iincconnection.cpp
 	inc/iincstream.cpp
 	inc/iinccontextconfig.cpp

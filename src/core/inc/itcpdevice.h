@@ -26,6 +26,8 @@ class IX_CORE_EXPORT iTcpDevice : public iINCDevice
 {
     IX_OBJECT(iTcpDevice)
 public:
+    static const char* SCHEME;  ///< "tcp"
+
     /// @brief Create TCP device
     /// @param role Device role (client or server)
     /// @param parent Parent object
@@ -58,7 +60,7 @@ public:
     // --- Common Methods ---
 
     /// Get peer address (format: "IP:port")
-    iString peerAddress() const IX_OVERRIDE;
+    iString peerAddress(bool withScheme = false) const IX_OVERRIDE;
 
     /// Get peer IP address only
     iString peerIpAddress() const { return m_peerAddr; }

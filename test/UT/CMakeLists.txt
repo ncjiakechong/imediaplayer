@@ -56,6 +56,7 @@ set(INC_TEST_SOURCES
     inc/test_inc_reconnection.cpp
     inc/test_iincprotocol.cpp
     inc/test_iudpclientdevice.cpp
+    inc/test_iincrouter.cpp
 )
 
 set(IO_TEST_SOURCES
