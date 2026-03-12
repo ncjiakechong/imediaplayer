@@ -25,6 +25,7 @@
 #include <core/kernel/iobject.h>
 #include <core/inc/iincmessage.h>
 #include <core/inc/iincoperation.h>
+#include "inc/iincmetrics.h"
 #include <core/utils/ifreelist.h>
 #include "thread/icacheallocator.h"
 #include "inc/iincdevice.h"
@@ -77,6 +78,9 @@ public:
     /// Enable shared memory with existing pool
     void enableMempool(iSharedDataPointer<iMemPool> pool);
     iSharedDataPointer<iMemPool> mempool() const { return m_memPool; }
+
+    /// Get runtime metrics for this protocol instance
+    const iINCMetrics& metrics() const { return m_metrics; }
 
     /// Release operation and associated resources (e.g. SHM slots)
     /// Called when operation is cancelled or timed out by the user
@@ -134,6 +138,8 @@ private:
     #endif
     OperationsMap               m_operations;  ///< Maps seqNum -> operation (uses lock-free pool)
     iSharedDataPointer<iINCOperationPool> m_opPool;
+
+    iINCMetrics                 m_metrics;     ///< Per-connection metrics (lock-free)
 
     IX_DISABLE_COPY(iINCProtocol)
 };

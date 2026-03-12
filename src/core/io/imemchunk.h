@@ -24,7 +24,7 @@ namespace iShell {
  * pop() until it returns -1. If pop() returns
  * 0, the memchunk *c is valid and aligned to the granularity.
  */
-class IX_CORE_EXPORT iMCAlign
+class iMCAlign
 {
 public:
     iMCAlign(size_t base);

@@ -37,7 +37,7 @@ iEventSource::~iEventSource()
 bool iEventSource::ref()
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn("in diffrent thread");
+        ilog_warn("in different thread");
     }
 
     ++m_refCount;
@@ -47,7 +47,7 @@ bool iEventSource::ref()
 bool iEventSource::deref()
 {
     if (m_dispatcher && (iThread::currentThread() != m_dispatcher->thread())) {
-        ilog_warn("in diffrent thread");
+        ilog_warn("in different thread");
     }
 
     --m_refCount;

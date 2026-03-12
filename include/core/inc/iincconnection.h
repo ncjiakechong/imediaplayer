@@ -147,15 +147,15 @@ private:
     /// Allocate channel for stream
     /// @param channel Stream channel requested
     /// @return Allocated channel ID, or 0 if allocation failed
-    xuint32 regeisterChannel(iINCChannel* channel);
+    xuint32 registerChannel(iINCChannel* channel);
 
     /// Release channel
     /// @param channelId Channel to release
     /// @return Allocated channel instance
-    iINCChannel* unregeisterChannel(xuint32 channelId);
+    iINCChannel* unregisterChannel(xuint32 channelId);
 
-    /// find allocated channel by id
-    iINCChannel* find2Channel(xuint32 channelId);
+    /// Find allocated channel by id
+    iINCChannel* findChannel(xuint32 channelId);
 
     /// Clear all allocated channels
     void clearChannels();

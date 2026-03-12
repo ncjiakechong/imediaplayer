@@ -47,7 +47,7 @@ const int testFreeListConstants::Sizes[testFreeListConstants::BlockCount] = {
 
 struct tst_Variant
 {
-    tst_Variant(){ilog_debug("tst_Variant constract");}
+    tst_Variant(){ilog_debug("tst_Variant construct");}
 
 private:
     tst_Variant(const tst_Variant&) {};

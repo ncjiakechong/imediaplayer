@@ -425,7 +425,7 @@ void iINCContext::handleEvent(iINCConnection*, const iINCMessage& msg)
         || !msg.payload().getBytes(data)
         || !msg.payload().eof()) {
         ilog_warn("[", objectName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                    "] Failed to parser event payload");
+                    "] Failed to parse event payload");
         return;
     }
 
@@ -540,7 +540,7 @@ iSharedDataPointer<iINCOperation> iINCContext::releaseChannel(xuint32 channelId)
     return op;
 }
 
-xuint32 iINCContext::regeisterChannel(iINCChannel* channel, MemType type, const iByteArray& shmName, xint32 shmSize)
+xuint32 iINCContext::registerChannel(iINCChannel* channel, MemType type, const iByteArray& shmName, xint32 shmSize)
 {
     IX_ASSERT(STATE_CONNECTED == m_state && m_connection);
     if ((0 != type) && !m_connection->mempool()) {
@@ -552,13 +552,13 @@ xuint32 iINCContext::regeisterChannel(iINCChannel* channel, MemType type, const 
         m_connection->enableMempool(iSharedDataPointer<iMemPool>(memPool));
     }
 
-    return m_connection->regeisterChannel(channel);
+    return m_connection->registerChannel(channel);
 }
 
-iINCChannel* iINCContext::unregeisterChannel(xuint32 channelId)
+iINCChannel* iINCContext::unregisterChannel(xuint32 channelId)
 {
     IX_ASSERT(STATE_CONNECTED == m_state && m_connection);
-    return m_connection->unregeisterChannel(channelId);
+    return m_connection->unregisterChannel(channelId);
 }
 
 iSharedDataPointer<iINCOperation> iINCContext::sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data)

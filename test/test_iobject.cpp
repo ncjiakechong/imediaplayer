@@ -20,18 +20,18 @@ using namespace iShell;
 // Some types
 struct D
 {
-    D(){ilog_debug("D constract");}
-    D(const D&){ilog_debug("D copy constract");}
+    D(){ilog_debug("D construct");}
+    D(const D&){ilog_debug("D copy construct");}
 };
 struct E:D
 {
-    E(){ilog_debug("E constract");}
-    E(const E& O):D(O) {ilog_debug("E copy constract");}
+    E(){ilog_debug("E construct");}
+    E(const E& O):D(O) {ilog_debug("E copy construct");}
 };
 struct F
 {
-    F(){ilog_debug("F constract");}
-    F(const F&){ilog_debug("F copy constract");}
+    F(){ilog_debug("F construct");}
+    F(const F&){ilog_debug("F copy construct");}
 };
 
 iLogger& operator<<(iLogger& logger, const iObject* value)

@@ -146,11 +146,11 @@ private:
     /// @note Returns immediately, set callback to get result
     iSharedDataPointer<iINCOperation> releaseChannel(xuint32 channelId);
 
-    /// record channel for stream
-    xuint32 regeisterChannel(iINCChannel* channel, MemType type, const iByteArray& shmName = iByteArray(), xint32 shmSize = 0);
+    /// Register channel for stream
+    xuint32 registerChannel(iINCChannel* channel, MemType type, const iByteArray& shmName = iByteArray(), xint32 shmSize = 0);
 
-    /// unrecord channel for stream
-    iINCChannel* unregeisterChannel(xuint32 channelId);
+    /// Unregister channel for stream
+    iINCChannel* unregisterChannel(xuint32 channelId);
 
     /// Send binary data with zero-copy optimization via shared memory
     iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data);

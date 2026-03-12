@@ -79,8 +79,10 @@ class StreamServer : public iINCServer
     IX_OBJECT(StreamServer)
 public:
     struct ClientInfo {
-        ClientInfo(iINCConnection* c = IX_NULLPTR, xuint32 id = 0, xint32 p = 0) : conn(c), channelId(id), pendingOps(p) {}
+        ClientInfo(iINCConnection* c = IX_NULLPTR, xuint32 id = 0, xint32 p = 0)
+            : conn(c), connId(c ? c->connectionId() : 0), channelId(id), pendingOps(p) {}
         iINCConnection* conn;
+        xuint64 connId;
         xuint32 channelId;
         xint32 pendingOps;  // Track pending operations
     };
@@ -128,9 +130,11 @@ public:
     };
 
     struct CallbackContext {
-        CallbackContext(StreamServer* s, iINCConnection* c, xuint32 id, SharedPacket* p) : server(s), conn(c), channelId(id), packet(p) {}
+        CallbackContext(StreamServer* s, iINCConnection* c, xuint32 id, SharedPacket* p)
+            : server(s), conn(c), connId(c ? c->connectionId() : 0), channelId(id), packet(p) {}
         StreamServer* server;
         iINCConnection* conn;
+        xuint64 connId;
         xuint32 channelId;
         SharedPacket* packet;
     };
@@ -201,6 +205,7 @@ public:
             double speed = (double)m_totalBytesSent / diff * 1000.0 / 1024.0 / 1024.0;
             ilog_info("[Server] Final Throughput: ", speed, " MB/s (Total: ", m_totalBytesSent, " bytes in ", diff, " ms)");
         }
+        ilog_info("[Server] ", dumpMetrics(true).toUtf8().constData());
     }
 
 protected:
@@ -376,24 +381,37 @@ private:
             return;
         }
         
-        // Check for errors or timeout
         if (op) {
             iINCOperation::State state = op->getState();
+
+            // During shutdown the protocol destructor cancels all pending
+            // operations after erasing them from its map. At that point the
+            // owning connection (and potentially other connections) may have
+            // already been destroyed, so we must not touch ctx->conn at all.
+            // Just clean up our callback context and return.
+            if (state == iINCOperation::STATE_CANCELLED) {
+                if (ctx->packet) {
+                    if (--ctx->packet->pending == 0) {
+                        delete ctx->packet;
+                    }
+                }
+                delete ctx;
+                return;
+            }
+
             if (state == iINCOperation::STATE_FAILED) {
                 ilog_warn("[Server] Send operation failed, error code: ", op->errorCode());
             } else if (state == iINCOperation::STATE_TIMEOUT) {
                 ilog_warn("[Server] Send operation timeout");
             }
             
-            // Always release the operation to prevent memory leak and performance degradation
-            // (The connection implementation likely keeps track of operations until released)
             if (ctx->conn) {
                 ctx->conn->releaseOperation(op);
             }
         }
         
         if (ctx->server) {
-            ctx->server->handlePacketSent(ctx->conn->connectionId(), ctx->channelId);
+            ctx->server->handlePacketSent(ctx->connId, ctx->channelId);
         }
 
         if (ctx->packet) {
@@ -408,9 +426,10 @@ private:
     }
 
     void handlePacketSent(xuint64 connId, xuint32 channelId) {
-        // Find client
+        // Find client by cached connId — never dereference conn pointers here
+        // because the connection object may have been freed during shutdown.
         for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
-            if (it->conn->connectionId() == connId && it->channelId == channelId) {
+            if (it->connId == connId && it->channelId == channelId) {
                 it->pendingOps--;
                 return;
             }

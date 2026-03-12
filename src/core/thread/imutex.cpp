@@ -13,7 +13,6 @@
 #ifdef IX_HAVE_CXX11
 #include <chrono>
 #include <mutex>
-#include <thread>
 #else
 #include <pthread.h>
 #include <sys/time.h>

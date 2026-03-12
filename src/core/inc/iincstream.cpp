@@ -249,7 +249,7 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
     if (!peerWantsShmNegotiation) {
         ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Stream attached, mode=", stream->m_mode);
-        stream->m_context->regeisterChannel(stream, static_cast<MemType>(0), iByteArray(), 0);
+        stream->m_context->registerChannel(stream, static_cast<MemType>(0), iByteArray(), 0);
         iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
         return;
     }
@@ -265,14 +265,14 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
         || !result.eof()) {
         ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                     "] Stream attached, mode=", stream->m_mode, " and no negotiated SHM");
-        stream->m_context->regeisterChannel(stream, static_cast<MemType>(0), iByteArray(), 0);
+        stream->m_context->registerChannel(stream, static_cast<MemType>(0), iByteArray(), 0);
         iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
         return;
     }
 
     ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                 "] Stream attached, mode=", stream->m_mode, " and with SHM ", negotiontedShmType);
-    stream->m_context->regeisterChannel(stream, static_cast<MemType>(negotiontedShmType), shmName, shmSize);
+    stream->m_context->registerChannel(stream, static_cast<MemType>(negotiontedShmType), shmName, shmSize);
     iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
 }
 
@@ -296,7 +296,7 @@ void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
     IX_ASSERT(STATE_DETACHING == stream->m_state);
     ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
                 "] Stream fully detached");
-    stream->m_context->unregeisterChannel(stream->m_channelId);
+    stream->m_context->unregisterChannel(stream->m_channelId);
     stream->m_mode = MODE_NONE;
     stream->m_channelId = 0;
 

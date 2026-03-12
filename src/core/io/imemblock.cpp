@@ -546,7 +546,7 @@ void* iMemBlock::acquire(size_t offset)
     IX_ASSERT((count() >= 0) && (offset < m_length));
 
     int oldValue = m_nAcquired.value();
-    while (!m_nAcquired.testAndSet(oldValue, oldValue + 1)) {
+    while (!m_nAcquired.testAndSet(oldValue, oldValue + 1, oldValue)) {
         if (oldValue < 0) {
             // Block is being destroyed, fail fast
             return IX_NULLPTR;
@@ -1035,8 +1035,12 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, int memfd_fd,
     drainPendingReleases();
     BlockMap::iterator bit = m_blocks.find(blockId);
     if (bit != m_blocks.end()) {
-        bit->second->ref();
-        return bit->second;
+        if (bit->second->ref()) return bit->second;
+
+        // Block is being freed concurrently (ref count reached 0 between
+        // drainPendingReleases and here). Remove the stale map entry and
+        // fall through to allocate a fresh block for this blockId.
+        m_blocks.erase(bit);
     }
 
     if (m_blocks.size() >= IX_MEMIMPORT_SLOTS_MAX)

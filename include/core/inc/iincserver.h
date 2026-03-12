@@ -90,7 +90,11 @@ public:
     /// Get connection by ID
     /// @param connId Connection identifier
     /// @return Connection object, or nullptr if not found
-    // iINCConnection* connection(xuint64 connId) const;
+    iINCConnection* connection(xuint32 connId) const;
+
+    /// Format aggregated metrics from all connection protocols
+    /// @param perConnection If true, also include per-connection breakdown
+    iString dumpMetrics(bool perConnection = false) const;
 
 // signals:
     /// Emitted when new client connects
@@ -132,17 +136,14 @@ protected:
     /// @param data Binary data payload
     /// @note For async processing:
     ///       1. Store seqNum and conn for later
-    ///       2. When done, call sendBinaryReply(conn, seqNum, writen)
-    virtual void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) = 0;
-    void sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint32 writen);
-
-    /// Send binary data to client on specific channel
-    /// @param conn Client connection
-    /// @param channel Channel ID
-    /// @param pos Position/Offset
-    /// @param data Binary data
-    /// @return Operation handle
+    ///       2. When done, call sendBinaryReply(conn, seqNum, written)
     iSharedDataPointer<iINCOperation> sendBinaryData(iINCConnection* conn, xuint32 channel, xint64 pos, const iByteArray& data);
+    virtual void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) = 0;
+    void sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint32 written);
+
+    /// Called when a message is received from a client connection
+    /// @note Override in iINCRouter to intercept and forward messages
+    virtual void onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg);
 
     /// Override this to handle subscription requests
     /// @param conn Client connection
@@ -158,11 +159,6 @@ protected:
 
     /// Acquire a memory block from global pool
     iMemBlock* acquireBuffer(xsizetype size);
-
-protected:
-    /// Called when a message is received from a client connection
-    /// @note Override in iINCRouter to intercept and forward messages
-    virtual void onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg);
 
     iThread* ioThread() const { return m_ioThread; }
     iINCEngine* engine() const { return m_engine; }

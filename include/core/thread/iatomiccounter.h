@@ -80,6 +80,10 @@ public:
     bool testAndSet(ValueType expectedValue, ValueType newValue);
         /// Returns true if set success, false otherwise.
 
+    bool testAndSet(ValueType expectedValue, ValueType newValue, ValueType &currentValue);
+        /// Returns true if set success, false otherwise.
+        /// On failure, currentValue is updated to the actual value.
+
 private:
 #ifdef IX_HAVE_CXX11
     typedef std::atomic<ValueType> ImplType;
@@ -135,6 +139,13 @@ iAtomicCounter<T>& iAtomicCounter<T>::operator = (iAtomicCounter::ValueType valu
 template <typename T>
 bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue)
 { return m_counter.compare_exchange_weak(expectedValue, newValue); }
+
+template <typename T>
+bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue, ValueType &currentValue)
+{
+    currentValue = expectedValue;
+    return m_counter.compare_exchange_weak(currentValue, newValue);
+}
 
 template <typename T>
 inline iAtomicCounter<T>::operator T() const
@@ -223,6 +234,20 @@ bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue)
         return true;
     }
 
+    return false;
+}
+
+template <typename T>
+bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue, ValueType &currentValue)
+{
+    iMutex::ScopedLock lock(m_counter.mutex);
+    if (expectedValue == m_counter.value) {
+        m_counter.value = newValue;
+        currentValue = expectedValue;
+        return true;
+    }
+
+    currentValue = m_counter.value;
     return false;
 }
 

@@ -97,6 +97,8 @@ private:
     iAtomicCounter<int>  m_readLock;
     iMutex m_writeLock;
     iSemaphore m_semaphore;
+
+    IX_DISABLE_COPY(iAUpdate)
 };
 
 } // namespace iShell

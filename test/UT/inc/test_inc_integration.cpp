@@ -338,7 +338,7 @@ public:
         // Clean up test stream BEFORE closing server or deleting client
         if (helper && helper->testStream) {
             ilog_info("[Worker] Cleaning up test stream");
-            // Stream destructorwill call detach() automatically
+            // Stream destructor will call detach() automatically
             helper->testStream->deleteLater();
             helper->testStream = nullptr;
         }

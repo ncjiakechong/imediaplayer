@@ -14,7 +14,6 @@
 #ifdef IX_HAVE_CXX11
 #include <chrono>
 #include <mutex>
-#include <thread>
 #include <condition_variable>
 #else
 #include <pthread.h>

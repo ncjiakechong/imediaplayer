@@ -18,18 +18,18 @@ using namespace iShell;
 // Some types
 struct A
 {
-    A(){ilog_debug("A constract");}
-    A(const A&){ilog_debug("A copy constract");}
+    A(){ilog_debug("A construct");}
+    A(const A&){ilog_debug("A copy construct");}
 };
 struct B:A
 {
-    B(){ilog_debug("B constract");}
-    B(const B& o):A(o) {ilog_debug("B copy constract");}
+    B(){ilog_debug("B construct");}
+    B(const B& o):A(o) {ilog_debug("B copy construct");}
 };
 struct C
 {
-    C(){ilog_debug("C constract");}
-    C(const C&){ilog_debug("C copy constract");}
+    C(){ilog_debug("C construct");}
+    C(const C&){ilog_debug("C copy construct");}
 };
 
 template <typename T1, typename T2>

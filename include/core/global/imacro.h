@@ -76,7 +76,7 @@
 #      define IX_OS_MACOS
 #    endif
 #  else
-#    error "we has not been ported to this Apple platform"
+#    error "has not been ported to this Apple platform"
 #  endif
 #elif defined(__WEBOS__)
 #  define IX_OS_WEBOS
@@ -134,7 +134,7 @@
 #  define IX_OS_HAIKU
 #elif defined(__MAKEDEPEND__)
 #else
-#  error "we has not been ported to this OS"
+#  error "has not been ported to this OS"
 #endif
 
 #if defined(IX_OS_WIN32) || defined(IX_OS_WIN64)

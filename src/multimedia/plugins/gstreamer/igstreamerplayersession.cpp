@@ -592,7 +592,7 @@ static void block_pad_cb(GstPad *pad, gboolean blocked, gpointer user_data)
 
 void iGstreamerPlayerSession::updateVideoRenderer()
 {
-    ilog_debug("Video sink has chaged, reload video output");
+    ilog_debug("Video sink has changed, reload video output");
 
     if (m_renderer)
         setVideoRenderer(m_renderer);
@@ -806,7 +806,7 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
     if (!linked) {
         m_usingColorspaceElement = true;
     #ifdef DEBUG_PLAYBIN
-        ilog_debug("Failed to connect video output, inserting the colorspace element.";
+        ilog_debug("Failed to connect video output, inserting the colorspace element.");
     #endif
         gst_bin_add(GST_BIN(m_videoOutputBin), m_colorSpace);
         linked = gst_element_link_many(m_videoIdentity, m_colorSpace, m_videoSink, IX_NULLPTR);
@@ -880,7 +880,7 @@ void iGstreamerPlayerSession::insertColorSpaceElement(GstElement *element, gpoin
         return;
     session->m_usingColorspaceElement = true;
 
-    ilog_debug("Failed to connect video output, inserting the colorspace elemnt.");
+    ilog_debug("Failed to connect video output, inserting the colorspace element.");
     ilog_debug("notify the video connector it has to IEMIT a new segment message...");
     //it's necessary to send a new segment event just before
     //the first buffer pushed to the new sink
@@ -1427,7 +1427,7 @@ void iGstreamerPlayerSession::getStreamsInfo()
                 streamProperties.insert(std::pair<iString, iVariant>("Language", iString::fromUtf8(iByteArray((const char*)languageCode))));
 
 
-            //ilog_debug("language for setream", i << iString::fromUtf8(languageCode);
+            //ilog_debug("language for stream", i << iString::fromUtf8(languageCode);
             g_free (languageCode);
             gst_tag_list_free(tags);
         }

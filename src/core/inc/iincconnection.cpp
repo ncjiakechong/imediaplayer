@@ -207,7 +207,7 @@ bool iINCConnection::matchesPattern(const iString& eventName, const iString& pat
     return eventName == pattern;
 }
 
-xuint32 iINCConnection::regeisterChannel(iINCChannel* channel)
+xuint32 iINCConnection::registerChannel(iINCChannel* channel)
 {
     if (!channel->channelId()) {
         ilog_warn("[", m_peerName, "][", channel->channelId(), "] Invalid channel ID");
@@ -219,7 +219,7 @@ xuint32 iINCConnection::regeisterChannel(iINCChannel* channel)
     return channel->channelId();
 }
 
-iINCChannel* iINCConnection::unregeisterChannel(xuint32 channelId)
+iINCChannel* iINCConnection::unregisterChannel(xuint32 channelId)
 {
     ChannelMap::iterator it = m_channels.find(channelId);
     if (it == m_channels.end()) {
@@ -233,7 +233,7 @@ iINCChannel* iINCConnection::unregeisterChannel(xuint32 channelId)
     return channel;
 }
 
-iINCChannel* iINCConnection::find2Channel(xuint32 channelId)
+iINCChannel* iINCConnection::findChannel(xuint32 channelId)
 {
     ChannelMap::iterator it = m_channels.find(channelId);
     if (it == m_channels.end()) {

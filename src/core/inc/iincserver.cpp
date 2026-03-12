@@ -21,6 +21,7 @@
 
 #include "inc/iincengine.h"
 #include "inc/iincprotocol.h"
+#include "inc/iincmetrics.h"
 #include "inc/iinchandshake.h"
 #include "inc/itcpdevice.h"
 #include "inc/iunixdevice.h"
@@ -271,6 +272,12 @@ void iINCServer::handleListenDeviceError(int errorCode)
     iINCServer::close();
 }
 
+iINCConnection* iINCServer::connection(xuint32 connId) const
+{
+    ConnectionMap::const_iterator it = m_connections.find(connId);
+    return (it != m_connections.end()) ? it->second : IX_NULLPTR;
+}
+
 void iINCServer::onClientDisconnected(iINCConnection* conn)
 {
     ConnectionMap::iterator it = m_connections.find(conn->connectionId());
@@ -335,7 +342,7 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
                 || !msg.payload().getBytes(args)
                 || !msg.payload().eof()) {
                 ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parser method call");
+                            "] Failed to parse method call");
                 sendMethodReply(conn, msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
                 return;
             }
@@ -353,7 +360,7 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
             if (!msg.payload().getUint32(mode)
                 || !msg.payload().getBool(peerWantsShmNegotiation)) {
                 ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parser STREAM_OPEN");
+                            "] Failed to parse STREAM_OPEN");
                 break;
             }
 
@@ -366,7 +373,7 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
                     || !msg.payload().getBytes(clientShmName)
                     || !msg.payload().eof()) {
                     ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parser STREAM_OPEN SHM info");
+                            "] Failed to parse STREAM_OPEN SHM info");
                     break;
                 }
 
@@ -393,7 +400,7 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
             }
 
             // Allocate channel
-            xuint32 channelId = conn->regeisterChannel(new _iINCPStream(this, ++m_nextChannelId, static_cast<iINCChannel::Mode>(mode)));
+            xuint32 channelId = conn->registerChannel(new _iINCPStream(this, ++m_nextChannelId, static_cast<iINCChannel::Mode>(mode)));
 
             // Send reply with allocated channel ID using type-safe API
             iINCMessage reply(INC_MSG_STREAM_OPEN_ACK, msg.channelID(), msg.sequenceNumber());
@@ -417,12 +424,12 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
             xuint32 channelId = msg.channelID();
             if (!msg.payload().eof()) {
                 ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                    "] Failed to parser STREAM_CLOSE");
+                    "] Failed to parse STREAM_CLOSE");
                 break;
             }
 
             // Release channel
-            delete conn->unregeisterChannel(channelId);
+            delete conn->unregisterChannel(channelId);
 
             // Send confirmation reply using type-safe API
             ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Channel released and confirmed");
@@ -437,7 +444,7 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
             iString pattern;
             if (!msg.payload().getString(pattern) || !msg.payload().eof()) {
                 ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parser SUBSCRIBE");
+                            "] Failed to parse SUBSCRIBE");
                 iINCMessage ack(INC_MSG_SUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
                 ack.payload().putInt32(INC_ERROR_INVALID_MESSAGE);
                 conn->sendMessage(ack);
@@ -463,7 +470,7 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
             iString pattern;
             if (!msg.payload().getString(pattern) || !msg.payload().eof()) {
                 ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parser UNSUBSCRIBE");
+                            "] Failed to parse UNSUBSCRIBE");
                 break;
             }
             conn->removeSubscription(pattern);
@@ -530,18 +537,18 @@ void iINCServer::sendMethodReply(iINCConnection* conn, xuint32 seqNum, xint32 er
     conn->sendMessage(msg);
 }
 
-void iINCServer::sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint32 writen)
+void iINCServer::sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint32 written)
 {
     IX_ASSERT(conn);
     iINCMessage msg(INC_MSG_BINARY_DATA_ACK, channelId, seqNum);
-    msg.payload().putInt32(writen);
+    msg.payload().putInt32(written);
     conn->sendMessage(msg);
 }
 
 iSharedDataPointer<iINCOperation> iINCServer::sendBinaryData(iINCConnection* conn, xuint32 channel, xint64 pos, const iByteArray& data)
 {
     IX_ASSERT(conn);
-    _iINCPStream* stream = static_cast<_iINCPStream*>(conn->find2Channel(channel));
+    _iINCPStream* stream = static_cast<_iINCPStream*>(conn->findChannel(channel));
     if (!stream || !(stream->mode() & iINCChannel::MODE_READ)) {
         return iSharedDataPointer<iINCOperation>();
     }
@@ -556,6 +563,66 @@ iMemBlock* iINCServer::acquireBuffer(xsizetype size)
     }
 
     return iMemBlock::new4Pool(m_globalPool.data(), size);
+}
+
+iString iINCServer::dumpMetrics(bool perConnection) const
+{
+    xuint64 msgTx = 0, msgRx = 0, bytesTx = 0, bytesRx = 0;
+    xuint64 binTx = 0, binRx = 0, shmHit = 0, shmMiss = 0;
+    xuint64 opsNew = 0, opsDone = 0, opsTimeout = 0;
+    xuint64 qDrops = 0, qPeak = 0;
+    iString detail;
+
+    for (ConnectionMap::const_iterator it = m_connections.begin(); it != m_connections.end(); ++it) {
+        const iINCMetrics::Snapshot s = it->second->m_protocol->metrics().snapshot();
+        msgTx      += s.messagesSent;
+        msgRx      += s.messagesReceived;
+        bytesTx    += s.bytesSent;
+        bytesRx    += s.bytesReceived;
+        binTx      += s.binaryFramesSent;
+        binRx      += s.binaryFramesRecv;
+        shmHit     += s.shmHits;
+        shmMiss    += s.shmMisses;
+        opsNew     += s.operationsCreated;
+        opsDone    += s.operationsCompleted;
+        opsTimeout += s.operationsTimeout;
+        qDrops     += s.sendQueueDrops;
+        if (s.sendQueuePeak > qPeak) qPeak = s.sendQueuePeak;
+
+        if (perConnection) {
+            detail += iString::asprintf(
+                "\n  [%s#%u] msg tx/rx=%llu/%llu bytes tx/rx=%llu/%llu "
+                "bin tx/rx=%llu/%llu shm hit/miss=%llu/%llu "
+                "ops new/done/timeout=%llu/%llu/%llu "
+                "queueDrops=%llu queuePeak=%llu",
+                it->second->peerName().toUtf8().constData(),
+                (unsigned)it->second->connectionId(),
+                (unsigned long long)s.messagesSent, (unsigned long long)s.messagesReceived,
+                (unsigned long long)s.bytesSent, (unsigned long long)s.bytesReceived,
+                (unsigned long long)s.binaryFramesSent, (unsigned long long)s.binaryFramesRecv,
+                (unsigned long long)s.shmHits, (unsigned long long)s.shmMisses,
+                (unsigned long long)s.operationsCreated, (unsigned long long)s.operationsCompleted,
+                (unsigned long long)s.operationsTimeout,
+                (unsigned long long)s.sendQueueDrops, (unsigned long long)s.sendQueuePeak);
+        }
+    }
+
+    iString result = iString::asprintf(
+        "INC Metrics: msg tx/rx=%llu/%llu bytes tx/rx=%llu/%llu "
+        "bin tx/rx=%llu/%llu shm hit/miss=%llu/%llu "
+        "ops new/done/timeout=%llu/%llu/%llu "
+        "queueDrops=%llu queuePeak=%llu "
+        "connections=%llu",
+        (unsigned long long)msgTx, (unsigned long long)msgRx,
+        (unsigned long long)bytesTx, (unsigned long long)bytesRx,
+        (unsigned long long)binTx, (unsigned long long)binRx,
+        (unsigned long long)shmHit, (unsigned long long)shmMiss,
+        (unsigned long long)opsNew, (unsigned long long)opsDone,
+        (unsigned long long)opsTimeout,
+        (unsigned long long)qDrops, (unsigned long long)qPeak,
+        (unsigned long long)m_connections.size());
+    result += detail;
+    return result;
 }
 
 } // namespace iShell

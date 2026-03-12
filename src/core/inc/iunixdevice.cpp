@@ -677,7 +677,10 @@ void iUnixDevice::processRx()
         ilog_error("[", peerAddress(), "] Invalid message header");
         IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
         m_recvBuffer.clear();
-        if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+        if (m_pendingFd >= 0) {
+            ::close(m_pendingFd);
+            m_pendingFd = -1;
+        }
         return;
     }
 
@@ -685,7 +688,10 @@ void iUnixDevice::processRx()
         ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
         IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
         m_recvBuffer.clear();
-        if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+        if (m_pendingFd >= 0) {
+            ::close(m_pendingFd);
+            m_pendingFd = -1;
+        }
         return;
     }
 

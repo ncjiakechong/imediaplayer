@@ -155,6 +155,7 @@ void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
         ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                     "] Send queue full, dropping message");
         IX_ASSERT(op);
+        m_metrics.onSendQueueDrop();
         op->setResult(INC_ERROR_QUEUE_FULL, iByteArray());
         op->deref();  // Release map reference
         return;
@@ -162,9 +163,12 @@ void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
 
     if (op) {
         m_operations[msg.sequenceNumber()] = op;
+        m_metrics.onOperationCreated();
     }
 
     m_sendQueue.push(msg);
+    m_metrics.onMessageSent(msg.payload().size());
+    m_metrics.onSendQueueDepth(m_sendQueue.size());
     onReadyWrite();
 }
 
@@ -215,6 +219,8 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         msg.payload().putUint64(static_cast<xuint64>(data.size()));
 
         msg.setFlags(INC_MSG_FLAG_SHM_DATA);
+        m_metrics.onShmHit();
+        m_metrics.onBinaryFrameSent(data.size());
         iSharedDataPointer<iINCOperation> op = sendMessage(msg);
         op->m_blockID = blockId;
         IX_ASSERT(op);
@@ -222,6 +228,8 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
     } while (false);
 
     // Fallback to data copy using type-safe API
+    m_metrics.onShmMiss();
+    m_metrics.onBinaryFrameSent(data.size());
     msg.setFlags(INC_MSG_FLAG_NONE);
     msg.payload().putInt64(pos);
 
@@ -302,6 +310,8 @@ void iINCProtocol::onMessageReceived(iINCMessage msg)
         m_cachedPeerMemFd = msg.extFd();
     } while (false);
 
+    m_metrics.onMessageReceived(msg.payload().size());
+
     // Check if this is a reply message that completes an operation
     xuint32 seqNum = msg.sequenceNumber();
     if ((msg.type() & 0x1) && seqNum > 0) {
@@ -318,6 +328,7 @@ void iINCProtocol::onMessageReceived(iINCMessage msg)
 
             // Complete the operation
             op->setResult(INC_OK, msg.payload().data());
+            m_metrics.onOperationCompleted();
             op->deref();
         }
     }
@@ -415,6 +426,7 @@ bool iINCProtocol::processDirectBinaryData(const iINCMessage& msg, xuint32 chann
     ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum,
                 "] Received binary data via copy: size=", data.size());
     IEMIT binaryDataReceived(channel, seqNum, pos, data);
+    m_metrics.onBinaryFrameRecv(data.size());
     return true;
 }
 
@@ -465,6 +477,7 @@ bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel,
                                 static_cast<char*>(importedBlock->data().value()),
                                 static_cast<xsizetype>(size64));
     IEMIT binaryDataReceived(channel, seqNum, pos, iByteArray(dp));
+    m_metrics.onBinaryFrameRecv(size64);
     return true;
 }
 

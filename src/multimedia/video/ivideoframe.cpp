@@ -635,7 +635,7 @@ void iVideoFrame::unmap()
         return;
 
     if (d->mappedCount == 0) {
-        ilog_warn("was called more times then iVideoFrame::map()");
+        ilog_warn("was called more times than iVideoFrame::map()");
         return;
     }
 

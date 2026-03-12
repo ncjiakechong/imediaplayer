@@ -344,7 +344,7 @@ void iGstreamerPlayerControl::setVideoOutput(iObject *output)
 {
     iGstreamerVideoRendererInterface* renderer = iobject_cast<iGstreamerVideoRendererInterface*>(output);
     if (output && !renderer) {
-        ilog_warn("invalid argument!!!", output);
+        ilog_warn("invalid argument", output);
         return;
     }
 

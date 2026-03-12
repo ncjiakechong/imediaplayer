@@ -213,7 +213,7 @@ struct type_wrapper<T[N]>
 
 template <class T>
 struct class_wrapper
-    /// Use the calass wrapper if you want to get class info
+    /// Use the class wrapper if you want to get class info
 { typedef T CLASSTYPE; };
 
 template <typename T>
