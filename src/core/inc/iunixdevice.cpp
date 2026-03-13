@@ -33,7 +33,7 @@ namespace iShell {
 class iUnixEventSource : public iEventSource
 {
 public:
-    iUnixEventSource(iUnixDevice* device, int priority = 0)
+    iUnixEventSource(iUnixDevice* device, int priority = IX_PRIORITY_IO)
         : iEventSource(iLatin1StringView("iUnixEventSource"), priority)
         , m_device(device)
         , m_readBytes(0)

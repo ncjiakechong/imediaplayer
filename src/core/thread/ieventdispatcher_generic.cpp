@@ -102,10 +102,10 @@ iEventDispatcher_generic::iEventDispatcher_generic(iObject *parent)
     m_wakeup.getPollfd(&m_wakeUpRec);
     addPoll(&m_wakeUpRec, IX_NULLPTR);
 
-    m_postSource = new iPostEventSource(0);
+    m_postSource = new iPostEventSource(IX_PRIORITY_DEFAULT);
     m_postSource->attach(this);
 
-    m_timerSource = new iTimerEventSource(0);
+    m_timerSource = new iTimerEventSource(IX_PRIORITY_DEFAULT);
     m_timerSource->attach(this);
 }
 
@@ -145,14 +145,14 @@ void iEventDispatcher_generic::interrupt()
     wakeUp();
 }
 
-bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flags)
+bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flags, int maxPriority)
 {
     bool result = false;
     const bool canWait = (flags & iEventLoop::WaitForMoreEvents);
 
     do {
         ++m_nextSeq;
-        result = eventIterate(canWait, true);
+        result = eventIterate(canWait, true, maxPriority);
     } while (!result && canWait);
 
     return result;
@@ -437,7 +437,32 @@ void iEventDispatcher_generic::eventDispatch(std::vector<iEventSource *>* pendin
     }
 }
 
-bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
+static void disablePollFd(iPollFD* fd, void* userdata)
+{
+    static_cast<iPoller*>(userdata)->disableFd(fd);
+}
+
+static void enablePollFd(iPollFD* fd, void* userdata)
+{
+    static_cast<iPoller*>(userdata)->enableFd(fd);
+}
+
+void iEventDispatcher_generic::forEachPollAbove(int priority, void (*fn)(iPollFD*, void*), void* userdata)
+{
+    if (priority >= std::numeric_limits<int>::max())
+        return;
+
+    std::map<int, std::list<iEventSource*> >::reverse_iterator it = m_sources.rbegin();
+    std::map<int, std::list<iEventSource*> >::reverse_iterator rend = m_sources.rend();
+    for (; it != rend && it->first > priority; ++it) {
+        std::list<iEventSource*>::iterator src = it->second.begin();
+        std::list<iEventSource*>::iterator srcEnd = it->second.end();
+        for (; src != srcEnd; ++src)
+            (*src)->pollIterate(fn, userdata);
+    }
+}
+
+bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch, int maxPriority)
 {
     bool some_ready;
     int max_priority = std::numeric_limits<int>::max();
@@ -448,7 +473,12 @@ bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
     if (!block)
         timeout = 0;
 
+    if (maxPriority < max_priority)
+        max_priority = maxPriority;
+
+    forEachPollAbove(max_priority, disablePollFd, &m_poller);
     xint32 ret = m_poller.wait(timeout);
+    forEachPollAbove(max_priority, enablePollFd, &m_poller);
     if (ret < 0)
         ilog_warn("poll error:", ret);
 
@@ -466,7 +496,6 @@ bool iEventDispatcher_generic::eventIterate(bool block, bool dispatch)
       eventDispatch(&pendingDispatches);
 
     m_pendingDispatches.swap(pendingDispatches);
-
     return some_ready;
 }
 

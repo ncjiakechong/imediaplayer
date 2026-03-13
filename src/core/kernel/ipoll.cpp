@@ -39,6 +39,7 @@
 
 #include <vector>
 #include <list>
+#include <unordered_set>
 #include <unistd.h>
 
 #define ILOG_TAG "ix_core"
@@ -133,6 +134,7 @@ public:
     }
 
     int removeFd(iPollFD* fd) {
+        m_disabledFds.erase(fd);
         for (std::vector<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
             if (*it == fd) {
                 m_fds.erase(it);
@@ -148,6 +150,16 @@ public:
         return 0;
     }
 
+    int disableFd(iPollFD* fd) {
+        m_disabledFds.insert(fd);
+        return 0;
+    }
+
+    int enableFd(iPollFD* fd) {
+        m_disabledFds.erase(fd);
+        return 0;
+    }
+
     int wait(xint64 timeout) {
         HANDLE handles[MAXIMUM_WAIT_OBJECTS];
         iPollFD *handle_to_fd[MAXIMUM_WAIT_OBJECTS];
@@ -158,6 +170,10 @@ public:
         size_t nfds = m_fds.size();
         for (size_t idx = 0; idx < nfds; ++idx) {
             iPollFD* f = m_fds[idx];
+            if (m_disabledFds.count(f)) {
+                f->revents = 0;
+                continue;
+            }
             if (f->fd == IX_WIN32_MSG_HANDLE && (f->events & IX_IO_IN)) {
                 msg_fd = f;
             } else if (f->fd > 0) {
@@ -211,6 +227,7 @@ public:
     
 private:
     std::vector<iPollFD*> m_fds;
+    std::unordered_set<iPollFD*> m_disabledFds;
 };
 
 #elif defined(IX_OS_MAC) /* MACOS KQUEUE Fallback removal of Select */
@@ -235,6 +252,7 @@ public:
     }
 
     int removeFd(iPollFD* fd) {
+        m_disabledFds.erase(fd);
         for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
             if (*it != fd) continue;
 
@@ -248,14 +266,25 @@ public:
         return 0;
     }
 
+    int disableFd(iPollFD* fd) {
+        m_disabledFds.insert(fd);
+        return 0;
+    }
+
+    int enableFd(iPollFD* fd) {
+        m_disabledFds.erase(fd);
+        return 0;
+    }
+
     int wait(xint64 timeout) {
         if (m_fds.size() > m_pollFds.size())
             m_pollFds.resize(m_fds.size());
 
         size_t i = 0;
         for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it, ++i) {
-            m_pollFds[i].fd = (*it)->fd;
-            m_pollFds[i].events = (*it)->events;
+            bool disabledFd = !m_disabledFds.empty() && (m_disabledFds.count(*it) > 0);
+            m_pollFds[i].fd = !disabledFd ? (*it)->fd : -1;
+            m_pollFds[i].events = !disabledFd ? (*it)->events : 0;
             m_pollFds[i].revents = 0;
         }
 
@@ -290,6 +319,7 @@ public:
 private:
    std::list<iPollFD*> m_fds;
    std::vector<iPollFD> m_pollFds;
+   std::unordered_set<iPollFD*> m_disabledFds;
 };
 #endif
 
@@ -327,6 +357,20 @@ public:
     }
 
     int updateFd(iPollFD* fd) {
+        struct epoll_event ev;
+        ev.events = fd->events;
+        ev.data.ptr = fd;
+        return epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd->fd, &ev);
+    }
+
+    int disableFd(iPollFD* fd) {
+        struct epoll_event ev;
+        ev.events = 0;
+        ev.data.ptr = fd;
+        return epoll_ctl(m_epfd, EPOLL_CTL_MOD, fd->fd, &ev);
+    }
+
+    int enableFd(iPollFD* fd) {
         struct epoll_event ev;
         ev.events = fd->events;
         ev.data.ptr = fd;
@@ -414,6 +458,20 @@ public:
         return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
     }
 
+    int disableFd(iPollFD* fd) {
+        struct kevent kev[2];
+        EV_SET(&kev[0], fd->fd, EVFILT_READ, EV_DISABLE, 0, 0, fd);
+        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, EV_DISABLE, 0, 0, fd);
+        return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
+    }
+
+    int enableFd(iPollFD* fd) {
+        struct kevent kev[2];
+        EV_SET(&kev[0], fd->fd, EVFILT_READ, ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
+        return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
+    }
+
     int wait(xint64 timeout) {
         for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
             (*it)->revents = 0;
@@ -488,6 +546,14 @@ int iPoller::removeFd(iPollFD* fd) {
 
 int iPoller::updateFd(iPollFD* fd) {
     return static_cast<iPollerImpl*>(m_impl)->updateFd(fd);
+}
+
+int iPoller::disableFd(iPollFD* fd) {
+    return static_cast<iPollerImpl*>(m_impl)->disableFd(fd);
+}
+
+int iPoller::enableFd(iPollFD* fd) {
+    return static_cast<iPollerImpl*>(m_impl)->enableFd(fd);
 }
 
 int iPoller::wait(xint64 timeout) {

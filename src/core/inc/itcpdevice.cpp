@@ -34,7 +34,7 @@ namespace iShell {
 class iTcpEventSource : public iEventSource
 {
 public:
-    iTcpEventSource(iTcpDevice* device, int priority = 0)
+    iTcpEventSource(iTcpDevice* device, int priority = IX_PRIORITY_IO)
         : iEventSource(iLatin1StringView("iTcpEventSource"), priority)
         , m_device(device)
         , m_readBytes(0)

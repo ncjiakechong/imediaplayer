@@ -44,6 +44,10 @@ public:
     int addFd(iPollFD* fd);
     int removeFd(iPollFD* fd);
     int updateFd(iPollFD* fd);
+
+    // Disable/Enable file descriptor for priority-based filtering
+    int disableFd(iPollFD* fd);
+    int enableFd(iPollFD* fd);
     
     // Wait for events
     // After returning, the ready status is written directly to iPollFD->revents

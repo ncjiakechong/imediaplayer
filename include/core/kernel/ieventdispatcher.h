@@ -13,6 +13,7 @@
 
 #include <map>
 #include <list>
+#include <climits>
 #include <core/global/inamespace.h>
 #include <core/kernel/iobject.h>
 #include <core/kernel/ipoll.h>
@@ -48,7 +49,7 @@ public:
 
     static iEventDispatcher *instance(iThread *thread = IX_NULLPTR);
 
-    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags) = 0;
+    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags, int maxPriority = INT_MAX) = 0;
 
     int registerTimer(xint64 interval, TimerType timerType, iObject *object, xintptr userdata);
     virtual void reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata) = 0;

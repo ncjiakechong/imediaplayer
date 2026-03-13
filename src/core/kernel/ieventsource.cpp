@@ -136,6 +136,13 @@ int iEventSource::updatePoll(iPollFD* fd)
     return 0;
 }
 
+void iEventSource::pollIterate(void (*fn)(iPollFD*, void*), void* userdata) const
+{
+    for (std::list<iPollFD*>::const_iterator it = m_pollFds.begin(); it != m_pollFds.end(); ++it) {
+        fn(*it, userdata);
+    }
+}
+
 bool iEventSource::prepare(xint64*)
 { return false; }
 

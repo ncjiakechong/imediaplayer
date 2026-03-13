@@ -36,7 +36,7 @@ namespace iShell {
 class iUDPEventSource : public iEventSource
 {
 public:
-    iUDPEventSource(iUDPDevice* device, int priority = 0)
+    iUDPEventSource(iUDPDevice* device, int priority = IX_PRIORITY_IO)
         : iEventSource(iLatin1StringView("iUDPEventSource"), priority)
         , m_device(device)
         , m_readBytes(0)

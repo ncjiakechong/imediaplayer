@@ -16,6 +16,7 @@
 #include <unordered_map>
 #endif
 
+#include <vector>
 #include <glib.h>
 #include <core/kernel/ieventdispatcher.h>
 
@@ -34,7 +35,7 @@ public:
     explicit iEventDispatcher_Glib(iObject *parent = IX_NULLPTR);
     ~iEventDispatcher_Glib();
 
-    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags) IX_OVERRIDE;
+    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags, int maxPriority = INT_MAX) IX_OVERRIDE;
 
     virtual void reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata) IX_OVERRIDE;
     virtual bool unregisterTimer(int timerId) IX_OVERRIDE;
@@ -73,6 +74,7 @@ protected:
     #endif
 
     WrapperMap m_wrapperMap;
+    std::vector<GPollFD> m_pollFds;
 };
 
 } // namespace iShell

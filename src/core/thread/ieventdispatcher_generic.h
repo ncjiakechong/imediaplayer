@@ -32,7 +32,7 @@ public:
     iEventDispatcher_generic(iObject* parent = IX_NULLPTR);
     ~iEventDispatcher_generic();
 
-    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags) IX_OVERRIDE;
+    virtual bool processEvents(iEventLoop::ProcessEventsFlags flags, int maxPriority = INT_MAX) IX_OVERRIDE;
 
     virtual void reregisterTimer(int timerId, xint64 interval, TimerType timerType, iObject *object, xintptr userdata) IX_OVERRIDE;
     virtual bool unregisterTimer(int timerId) IX_OVERRIDE;
@@ -52,7 +52,8 @@ protected:
     virtual int updatePoll(iPollFD* fd, iEventSource* source) IX_OVERRIDE;
 
 private:
-    bool eventIterate(bool block, bool dispatch);
+    bool eventIterate(bool block, bool dispatch, int maxPriority);
+    void forEachPollAbove(int priority, void (*fn)(iPollFD*, void*), void* userdata);
     bool eventPrepare(int* priority, xint64* timeout);
     bool eventCheck(int max_priority, std::vector<iEventSource *>* pendingDispatches);
     void eventDispatch(std::vector<iEventSource *>* pendingDispatches);

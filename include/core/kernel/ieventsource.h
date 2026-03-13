@@ -25,6 +25,16 @@ typedef enum
   IX_EVENT_SOURCE_BLOCKED = 1 << 2
 } iEventSourceFlags;
 
+/// Well-known priority levels for event sources.
+/// Lower numeric values indicate higher priority (dispatched first).
+enum iEventSourcePriority
+{
+    IX_PRIORITY_HIGH        = -100,   ///< High priority (e.g. urgent signals)
+    IX_PRIORITY_DEFAULT     = 0,      ///< Default priority (timers, posted events)
+    IX_PRIORITY_IO          = 100,    ///< I/O sources (TCP, UDP, Unix socket)
+    IX_PRIORITY_LOW         = 200     ///< Low priority (idle tasks)
+};
+
 class IX_CORE_EXPORT iEventSource
 {
 public:
@@ -38,6 +48,7 @@ public:
     int addPoll(iPollFD* fd);
     int removePoll(iPollFD* fd);
     int updatePoll(iPollFD* fd);
+    void pollIterate(void (*fn)(iPollFD*, void*), void* userdata) const;
 
     int priority() const { return m_priority; }
 

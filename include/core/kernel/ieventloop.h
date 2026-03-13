@@ -10,6 +10,7 @@
 #ifndef IEVENTLOOP_H
 #define IEVENTLOOP_H
 
+#include <climits>
 #include <core/kernel/iobject.h>
 #include <core/thread/iatomiccounter.h>
 
@@ -29,9 +30,9 @@ public:
     iEventLoop(iObject* parent = IX_NULLPTR);
     virtual ~iEventLoop();
 
-    bool processEvents(ProcessEventsFlags flags = AllEvents);
+    bool processEvents(ProcessEventsFlags flags = AllEvents, int maxPriority = INT_MAX);
 
-    int exec(ProcessEventsFlags flags = AllEvents);
+    int exec(ProcessEventsFlags flags = AllEvents, int maxPriority = INT_MAX);
     void exit(int returnCode = 0);
 
 protected:

@@ -308,7 +308,7 @@ iEventDispatcher_Glib::~iEventDispatcher_Glib()
     m_mainContext = IX_NULLPTR;
 }
 
-bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
+bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags, int maxPriority)
 {
     m_inProcess = true;
     bool result = false;
@@ -321,7 +321,49 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags)
 
     do {
         ++m_nextSeq;
-        result = g_main_context_iteration(m_mainContext, canWait);
+
+        if (!g_main_context_acquire(m_mainContext)) {
+            if (!canWait) break;
+
+            // Context held by another thread; yield CPU and retry
+            // (mirrors g_main_context_iteration's blocking wait behavior)
+            g_thread_yield();
+            continue;
+        }
+
+        // Phase 1: Prepare — get the highest-priority ready level
+        gint prepare_priority = G_MAXINT;
+        g_main_context_prepare(m_mainContext, &prepare_priority);
+        gint effective_priority = (maxPriority < prepare_priority) ? static_cast<gint>(maxPriority) : prepare_priority;
+
+        // Phase 2: Query — collect FDs filtered by effective_priority
+        // Use a while loop to handle FD array growth between queries
+        // (mirrors g_main_context_iterate_unlocked's resizing strategy)
+        gint timeout = -1;
+        gint n_fds;
+        for (;;) {
+            n_fds = g_main_context_query(m_mainContext, effective_priority, &timeout,
+                                         m_pollFds.empty() ? nullptr : m_pollFds.data(),
+                                         static_cast<gint>(m_pollFds.size()));
+            if (static_cast<size_t>(n_fds) <= m_pollFds.size())
+                break;
+            m_pollFds.resize(n_fds);
+        }
+
+        if (!canWait)
+            timeout = 0;
+
+        // Phase 3: Poll
+        GPollFunc poll_func = g_main_context_get_poll_func(m_mainContext);
+        poll_func(m_pollFds.data(), static_cast<guint>(n_fds), timeout);
+
+        // Phase 4: Check & Dispatch
+        if (g_main_context_check(m_mainContext, effective_priority, m_pollFds.data(), n_fds)) {
+            g_main_context_dispatch(m_mainContext);
+            result = true;
+        }
+
+        g_main_context_release(m_mainContext);
     } while (!result && canWait);
 
     m_inProcess = false;
