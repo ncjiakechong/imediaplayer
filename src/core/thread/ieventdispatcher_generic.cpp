@@ -222,16 +222,8 @@ int iEventDispatcher_generic::addEventSource(iEventSource* source)
         return -1;
     }
 
-    std::map<int, std::list<iEventSource*> >::iterator it;
-    it = m_sources.find(source->priority());
-    if (it == m_sources.end()) {
-        std::list<iEventSource*> item;
-        m_sources.insert(std::pair<int, std::list<iEventSource*> >(source->priority(), item));
-        it = m_sources.find(source->priority());
-    }
-
     source->ref();
-    std::list<iEventSource*>& item = it->second;
+    std::list<iEventSource*>& item = m_sources[source->priority()];
     item.push_back(source);
     ++m_sourceCount;
     return 0;
@@ -306,18 +298,18 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
 
     std::map<int, std::list<iEventSource*> >::const_iterator mapIt;
     for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
+        const int bucket_priority = mapIt->first;
+
+        if ((n_ready > 0) && (bucket_priority > current_priority))
+            break;
+
         const std::list<iEventSource*>& list = mapIt->second;
         xint64 sourceTimeout = -1;
 
-        bool iterBreak = false;
         std::list<iEventSource*>::const_iterator listIt;
         for (listIt = list.begin(); listIt != list.end(); ++listIt) {
             iEventSource* source = *listIt;
             bool result = false;
-            if ((n_ready > 0) && (source->priority() > current_priority)) {
-                iterBreak = true;
-                break;
-            }
 
             if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
                 ++m_inCheckOrPrepare;
@@ -331,7 +323,7 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
             if (source->flags() & IX_EVENT_SOURCE_READY) {
                 ++n_ready;
                 current_timeout = 0;
-                current_priority = source->priority();
+                current_priority = bucket_priority;
             }
 
             if (sourceTimeout < 0)
@@ -343,9 +335,6 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
                 current_timeout = std::min(current_timeout, sourceTimeout);
             }
         }
-
-        if (iterBreak)
-            break;
     }
 
 
@@ -373,16 +362,16 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, std::vector<iEventSo
     int n_ready = 0;
     std::map<int, std::list<iEventSource*> >::const_iterator mapIt;
     for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
+        const int bucket_priority = mapIt->first;
+
+        if ((n_ready > 0) && (bucket_priority > max_priority))
+            break;
+
         const std::list<iEventSource*>& list = mapIt->second;
-        bool iterBreak = false;
         std::list<iEventSource*>::const_iterator listIt;
         for (listIt = list.begin(); listIt != list.end(); ++listIt) {
             iEventSource* source = *listIt;
             bool result = false;
-            if ((n_ready > 0) && (source->priority() > max_priority)) {
-                iterBreak = true;
-                break;
-            }
 
             if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
                 ++m_inCheckOrPrepare;
@@ -397,15 +386,12 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, std::vector<iEventSo
                 continue;
 
             ++n_ready;
-            max_priority = source->priority();
+            max_priority = bucket_priority;
             if (pendingDispatches) {
                 pendingDispatches->push_back(source);
                 source->ref();
             }
         }
-
-        if (iterBreak)
-            break;
     }
 
     return (n_ready > 0);

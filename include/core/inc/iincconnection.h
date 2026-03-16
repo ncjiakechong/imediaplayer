@@ -125,7 +125,7 @@ private:
     iSharedDataPointer<iMemPool> mempool() const;
     void enableMempool(iSharedDataPointer<iMemPool> pool);
 
-    bool matchesPattern(const iString& eventName, const iString& pattern) const;
+    bool matchesPattern(iStringView eventName, const iString& pattern) const;
 
     /// Allocate next sequence number (thread-safe)
     xuint32 nextSequence();

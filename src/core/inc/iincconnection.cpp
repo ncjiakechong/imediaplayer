@@ -143,9 +143,8 @@ iSharedDataPointer<iINCOperation> iINCConnection::sendBinaryData(xuint32 channel
 
 bool iINCConnection::isSubscribed(const iStringView& eventName) const
 {
-    iString eventStr = eventName.toString();
     for (std::vector<iString>::const_iterator it = m_subscriptions.begin(); it != m_subscriptions.end(); ++it) {
-        if (matchesPattern(eventStr, *it)) {
+        if (matchesPattern(eventName, *it)) {
             return true;
         }
     }
@@ -195,16 +194,16 @@ void iINCConnection::clearHandshake()
     m_handshake = IX_NULLPTR;
 }
 
-bool iINCConnection::matchesPattern(const iString& eventName, const iString& pattern) const
+bool iINCConnection::matchesPattern(iStringView eventName, const iString& pattern) const
 {
     // Simple wildcard matching: "system.*" matches "system.shutdown"
     if (pattern.endsWith(".*")) {
-        iString prefix = pattern.left(pattern.length() - 2);
+        iStringView prefix(pattern.constData(), pattern.length() - 2);
         return eventName.startsWith(prefix);
     }
 
     // Exact match
-    return eventName == pattern;
+    return eventName == iStringView(pattern);
 }
 
 xuint32 iINCConnection::registerChannel(iINCChannel* channel)

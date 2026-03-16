@@ -629,7 +629,7 @@ bool iObject::connectImpl(const _iConnection& conn)
 
         _iConnection* c2 = it->second.first;
         while (c2) {
-            if (conn.compare(c2))
+            if (!c2->_orphaned && conn.compare(c2))
                 return false;
 
             c2 = c2->_nextConnectionList;
@@ -659,8 +659,6 @@ bool iObject::connectImpl(const _iConnection& conn)
         connectionlist.first = c;
     }
     connectionlist.last = c;
-
-    s->cleanConnectionLists();
 
     c->_prev = &(r->m_senders);
     c->_next = *c->_prev;
