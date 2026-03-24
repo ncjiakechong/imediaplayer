@@ -183,28 +183,11 @@ iTcpDevice::~iTcpDevice()
 
 bool iTcpDevice::isLocal() const
 {
-    // Check if peer address is a loopback address
-    // IPv4: 127.0.0.0/8 (127.0.0.1 is most common)
-    // IPv6: ::1
-
     if (m_peerAddr.isEmpty()) {
-        // No peer address yet, assume local for safety
         return true;
     }
 
-    // Check for IPv4 loopback (127.x.x.x)
-    if (m_peerAddr.startsWith("127.")) {
-        return true;
-    }
-
-    // Check for IPv6 loopback (::1)
-    if (m_peerAddr == "::1") {
-        return true;
-    }
-
-    // TODO: Could also check if peer address matches any local interface address
-    // For now, non-loopback addresses are considered non-local
-    return false;
+    return m_peerAddr.startsWith("127.");  // 127.0.0.0/8
 }
 
 int iTcpDevice::connectToHost(const iString& host, xuint16 port)

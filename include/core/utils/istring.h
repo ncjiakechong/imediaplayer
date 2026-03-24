@@ -44,10 +44,8 @@ public:
     iString(iChar c);
     iString(xsizetype size, iChar c);
     inline iString(iLatin1StringView latin1);
-    explicit iString(iStringView sv) {
-        if (sv.size())
-            *this = iString(sv.data(), sv.size());
-    }
+    explicit iString(iStringView sv)
+    { if (sv.size()) *this = iString(sv.data(), sv.size()); }
 
     inline iString(const iString &);
     inline ~iString();
@@ -434,13 +432,10 @@ public:
     static iString number(xulonglong, int base=10);
     static iString number(double, char format='g', int precision=6);
 
-
-    inline iString(const char *ch) {
-        if (ch) *this = fromUtf8(ch, -1);
-    }
-    inline iString(const iByteArray &a) {
-        if (!a.isNull()) *this = fromUtf8(a);
-    }
+    inline iString(const char *ch)
+    { if (ch) *this = fromUtf8(ch, -1); }
+    inline iString(const iByteArray &a)
+    { if (!a.isNull()) *this = fromUtf8(a); }
     inline iString &operator=(const char *ch)
     {
         if (!ch) {
@@ -660,9 +655,7 @@ inline ushort iStringView::toUShort(bool *ok, int base) const
 // iString inline members
 //
 inline iString::iString(iLatin1StringView latin1)
-{
-    *this = iString::fromLatin1(latin1.data(), latin1.size());
-}
+{ *this = iString::fromLatin1(latin1.data(), latin1.size()); }
 inline const iChar iString::at(xsizetype i) const
 { verify(i, 1); return iChar(d.data()[i]); }
 inline const iChar iString::operator[](xsizetype i) const

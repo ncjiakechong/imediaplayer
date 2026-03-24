@@ -310,40 +310,24 @@ private:
             return false;
         }
 
-        // Calculate max chunk size for protocol copy path
-        // Overhead per message: putInt64(pos)=9 bytes, putBytes tag=1+4+1('\0')=6 bytes = 15 bytes
-        const xsizetype maxChunk = iINCMessageHeader::MAX_MESSAGE_SIZE - 15;
+        // Calculate checksum for verification
+        xint64 checksum = m_options.enableChecksum ? calculateChecksum(data.constData(), data.size()) : 0;
 
-        // Send to all clients in chunks with per-chunk checksum
-        SharedPacket* packet = new SharedPacket(data, 0);
+        // Send to all clients with checksum in pos parameter
+        SharedPacket* packet = new SharedPacket(data, checksum);
         int successfulSends = 0;
         for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
             ClientInfo& client = *it;
-            xsizetype offset = 0;
-            bool clientOk = true;
-            while (offset < data.size()) {
-                xsizetype sendSize = std::min(maxChunk, data.size() - offset);
-                bool isLast = (offset + sendSize >= data.size());
-                xint64 chunkChecksum = m_options.enableChecksum
-                    ? calculateChecksum(data.constData() + offset, sendSize) : 0;
-                iByteArray chunk(data.constData() + offset, sendSize);
-                iSharedDataPointer<iINCOperation> op = sendBinaryData(client.conn, client.channelId, chunkChecksum, chunk);
-                if (op) {
-                    if (isLast) {
-                        // Track only the last chunk's operation for flow control
-                        op->setTimeout(m_options.opTimeoutMs);
-                        CallbackContext* ctx = new CallbackContext(this, client.conn, client.channelId, packet);
-                        op->setFinishedCallback(&StreamServer::onPacketSent, ctx);
-                        client.pendingOps++;
-                        packet->pending++;
-                        successfulSends++;
-                    }
-                } else {
-                    ilog_warn("[Server] sendBinaryData returned nullptr");
-                    clientOk = false;
-                    break;
-                }
-                offset += sendSize;
+            iSharedDataPointer<iINCOperation> op = sendBinaryData(client.conn, client.channelId, checksum, data);
+            if (op) {
+                op->setTimeout(m_options.opTimeoutMs);
+                CallbackContext* ctx = new CallbackContext(this, client.conn, client.channelId, packet);
+                op->setFinishedCallback(&StreamServer::onPacketSent, ctx);
+                client.pendingOps++;
+                packet->pending++;
+                successfulSends++;
+            } else {
+                ilog_warn("[Server] sendBinaryData returned nullptr");
             }
         }
 

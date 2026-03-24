@@ -68,8 +68,7 @@ iString iUDPClientDevice::peerAddress(bool withScheme) const
 
 bool iUDPClientDevice::isLocal() const
 {
-    // Delegate to parent device
-    return m_serverDevice ? m_serverDevice->isLocal() : false;
+    return (ntohl(m_clientAddr.sin_addr.s_addr) >> 24) == 127;  // 127.0.0.0/8
 }
 
 xint64 iUDPClientDevice::bytesAvailable() const

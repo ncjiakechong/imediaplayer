@@ -44,7 +44,7 @@ iINCConnection::iINCConnection(iINCDevice* device, xuint32 connId)
     , m_handshake(IX_NULLPTR)
 {
     // Create protocol handler for this device
-    m_protocol = new iINCProtocol(device, this);
+    m_protocol = new iINCProtocol(device, false, this);
 
     // Forward signals to server for handling (connection does not process, only forwards)
     iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCConnection::onErrorOccurred);
@@ -135,6 +135,7 @@ iSharedDataPointer<iINCOperation> iINCConnection::sendMessage(const iINCMessage&
     IX_ASSERT(m_protocol);
     return m_protocol->sendMessage(msg);
 }
+
 iSharedDataPointer<iINCOperation> iINCConnection::sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data)
 {
     IX_ASSERT(m_protocol);

@@ -54,9 +54,8 @@ public:
     // --- Common Methods ---
 
     /// Get peer address (returns socket path, optionally with unix:// scheme)
-    iString peerAddress(bool withScheme = false) const IX_OVERRIDE {
-        return !withScheme ? m_socketPath : iString(SCHEME) + "://" + m_socketPath;
-    }
+    iString peerAddress(bool withScheme = false) const IX_OVERRIDE 
+    { return !withScheme ? m_socketPath : iString(SCHEME) + "://" + m_socketPath; }
 
     /// Get socket path
     iString socketPath() const { return m_socketPath; }
@@ -111,6 +110,7 @@ private:
 
     iByteArray          m_recvBuffer;
     int                 m_pendingFd;
+    int                 m_lastSentFd;   ///< Last FD sent via SCM_RIGHTS (-1 if none), avoids redundant dup
 
     IX_DISABLE_COPY(iUnixDevice)
 };

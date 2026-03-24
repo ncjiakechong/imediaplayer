@@ -43,10 +43,11 @@ public:
     void doFree() IX_OVERRIDE { delete this; }
 };
 
-iINCProtocol::iINCProtocol(iINCDevice* device, iObject* parent)
+iINCProtocol::iINCProtocol(iINCDevice* device, bool passthrough, iObject* parent)
     : iObject(parent)
     , m_device(device)
     , m_seqCounter(1)
+    , m_isPassthrough(passthrough)
     , m_cachedPeerMemFd(-1)
     , m_partialSendOffset(0)
     , m_memExport(IX_NULLPTR)
@@ -334,10 +335,10 @@ void iINCProtocol::onMessageReceived(iINCMessage msg)
     }
 
     // Handle binary data messages specially
-    if (msg.type() == INC_MSG_BINARY_DATA) {
-        processBinaryDataMessage(msg);
-    } else {
+    if (m_isPassthrough || (msg.type() != INC_MSG_BINARY_DATA)) {
         IEMIT messageReceived(msg);
+    } else {
+        processBinaryDataMessage(msg);
     }
 }
 

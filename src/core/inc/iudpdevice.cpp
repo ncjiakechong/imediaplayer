@@ -328,9 +328,7 @@ iString iUDPDevice::peerAddress(bool withScheme) const
 
 bool iUDPDevice::isLocal() const
 {
-    // UDP typically used for network communication
-    // Could be local if peer is 127.0.0.1, but default to false
-    return m_peerAddr == "127.0.0.1" || m_peerAddr == "::1";
+    return m_peerAddr.startsWith("127.");  // 127.0.0.0/8
 }
 
 xint64 iUDPDevice::bytesAvailable() const
@@ -392,7 +390,8 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
             m_pendingClient = IX_NULLPTR;
             client->updateClientInfo(srcAddr);
             m_addrToChannel[addrSrcKey] = client;
-            return result;  // Return first packet data directly
+            client->receivedData(result);
+            return iByteArray();
         }
 
         // Fallback: create new client on-the-fly (shouldn't happen in two-stage pattern)

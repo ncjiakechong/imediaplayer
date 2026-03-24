@@ -55,9 +55,8 @@ public:
     iByteArray(const char *, xsizetype size = -1);
     iByteArray(xsizetype size, char c);
     iByteArray(xsizetype size, iShell::Initialization);
-    explicit iByteArray(iByteArrayView v) {
-        *this = iByteArray(v.data(), v.size());
-    }
+    explicit iByteArray(iByteArrayView v) 
+    { *this = iByteArray(v.data(), v.size()); }
     inline iByteArray(const iByteArray &);
     inline ~iByteArray();
 
@@ -378,10 +377,7 @@ inline bool iByteArray::contains(iByteArrayView bv) const
 inline bool iByteArray::contains(char c) const
 { return indexOf(c) != -1; }
 inline int iByteArray::compare(iByteArrayView bv, iShell::CaseSensitivity cs) const
-{
-    return cs == iShell::CaseSensitive ? iPrivate::compareMemory(*this, bv) :
-                                     istrnicmp(data(), size(), bv.data(), bv.size());
-}
+{ return cs == iShell::CaseSensitive ? iPrivate::compareMemory(*this, bv) : istrnicmp(data(), size(), bv.data(), bv.size()); }
 
 inline bool operator==(const iByteArray &a1, const iByteArray &a2)
 { return (a1.size() == a2.size()) && (memcmp(a1.constData(), a2.constData(), size_t(a1.size()))==0); }
@@ -451,14 +447,10 @@ inline iByteArray iByteArray::fromStdString(const std::string &s)
 // iByteArrayView members that require iByteArray:
 //
 inline iByteArrayView::iByteArrayView(const iByteArray &ba)
-{
-    *this = iByteArrayView(ba.begin(), ba.size());
-}
+{ *this = iByteArrayView(ba.begin(), ba.size()); }
 
 inline iByteArray iByteArrayView::toByteArray() const
-{
-    return iByteArray(*this);
-}
+{ return iByteArray(*this); }
 
 } // namespace iShell
 

@@ -86,6 +86,12 @@ private:
     /// Handle Router-specific handshake (Phase 1 + Phase 2 + Phase 3)
     void handleRouterHandshake(iINCConnection* conn, const iINCMessage& msg);
 
+    /// Handle STREAM_OPEN: check if both legs are local for SHM passthrough
+    void handleStreamOpen(ClientBridge* bridge, iINCConnection* conn, iINCMessage msg);
+
+    /// Handle STREAM_OPEN_ACK from upstream: enable SHM passthrough if negotiated
+    void handleStreamOpenAck(ClientBridge* bridge, iINCMessage msg);
+
     /// Called when upstream message is received — forward to downstream
     void onUpstreamMessage(ClientBridge* bridge, iINCMessage msg);
 

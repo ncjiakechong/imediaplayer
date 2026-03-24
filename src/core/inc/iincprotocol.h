@@ -49,9 +49,10 @@ class IX_CORE_EXPORT iINCProtocol : public iObject
 public:
     /// @brief Constructor
     /// @param device INC transport device (takes ownership)
+    /// @param passthrough If true, forward binary data as raw messages (no SHM decode)
     /// @param parent Parent object
     /// @note Protocol role is derived from device->role()
-    iINCProtocol(iINCDevice* device, iObject *parent = IX_NULLPTR);
+    iINCProtocol(iINCDevice* device, bool passthrough, iObject *parent = IX_NULLPTR);
     virtual ~iINCProtocol();
 
     /// Allocate next sequence number (thread-safe)
@@ -115,6 +116,7 @@ private:
     // Message queuing
     std::queue<iINCMessage> m_sendQueue;
 
+    bool                    m_isPassthrough;
     int                     m_cachedPeerMemFd;
 
     // Partial write buffer (for incomplete writes)

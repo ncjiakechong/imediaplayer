@@ -99,7 +99,7 @@ protected:
 
         // Create mock device and protocol
         m_mockDevice = new MockINCDevice(iINCDevice::ROLE_CLIENT);
-        m_protocol = new iINCProtocol(m_mockDevice);
+        m_protocol = new iINCProtocol(m_mockDevice, false);
     }
 
     void TearDown() override {

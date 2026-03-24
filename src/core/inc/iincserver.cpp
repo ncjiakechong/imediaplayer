@@ -327,172 +327,173 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
     }
 
     switch (msg.type()) {
-        case INC_MSG_HANDSHAKE: {
+        case INC_MSG_HANDSHAKE:
             handleHandshake(conn, msg);
             break;
-        }
-
-        case INC_MSG_METHOD_CALL: {
-            // Parse payload with type-safe API: version + method name + args
-            xuint16 version;
-            iString method;
-            iByteArray args;
-            if (!msg.payload().getUint16(version)
-                || !msg.payload().getString(method)
-                || !msg.payload().getBytes(args)
-                || !msg.payload().eof()) {
-                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parse method call");
-                sendMethodReply(conn, msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
-                return;
-            }
-
-            // Call handler (may be async!)
-            handleMethod(conn, msg.sequenceNumber(), method, version, args);
+        case INC_MSG_METHOD_CALL:
+            handleMethodCall(conn, msg);
             break;
-        }
-
-        case INC_MSG_STREAM_OPEN: {
-            // Client requesting channel allocation
-            xuint32 mode = 0;
-            bool peerWantsShmNegotiation = false;
-
-            if (!msg.payload().getUint32(mode)
-                || !msg.payload().getBool(peerWantsShmNegotiation)) {
-                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parse STREAM_OPEN");
-                break;
-            }
-
-            // If client requested SHM negotiation, decide and reply
-            xuint16 negotiontedShmType = 0;
-            xuint16 clientSupportedTypes = 0;
-            iByteArray clientShmName;
-            if (peerWantsShmNegotiation) {
-                if (!msg.payload().getUint16(clientSupportedTypes)
-                    || !msg.payload().getBytes(clientShmName)
-                    || !msg.payload().eof()) {
-                    ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parse STREAM_OPEN SHM info");
-                    break;
-                }
-
-                // Check if we should enable shared memory:
-                // 1. Server config allows shared memory
-                // 2. Connection is local (same machine)
-                // 3. Client and server have compatible memory types
-                negotiontedShmType = clientSupportedTypes & m_config.sharedMemoryType();
-                if (m_globalPool && (negotiontedShmType & m_globalPool->type())) {
-                    negotiontedShmType = m_globalPool->type();
-                    conn->enableMempool(m_globalPool);
-                } else if (!m_config.disableSharedMemory() && conn->isLocal() && negotiontedShmType)  {
-                    // Select the highest priority bit (lowest bit position) using iCountTrailingZeroBits
-                    // MEMFD (0x02, bit 1) has higher priority than POSIX (0x04, bit 2)
-                    negotiontedShmType = static_cast<xuint16>(1) << iCountTrailingZeroBits(negotiontedShmType);
-                    iMemPool* memPool = iMemPool::create(conn->peerName().toUtf8().constData(), clientShmName.constData(), static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize(), true);
-                    conn->enableMempool(iSharedDataPointer<iMemPool>(memPool));
-                } else {
-                    negotiontedShmType = 0;
-                }
-
-                ilog_info("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Negotiont SHM: client support", clientSupportedTypes, ", and server support ", m_config.sharedMemoryType(), ", result ", negotiontedShmType);
-            }
-
-            // Allocate channel
-            xuint32 channelId = conn->registerChannel(new _iINCPStream(this, ++m_nextChannelId, static_cast<iINCChannel::Mode>(mode)));
-
-            // Send reply with allocated channel ID using type-safe API
-            iINCMessage reply(INC_MSG_STREAM_OPEN_ACK, msg.channelID(), msg.sequenceNumber());
-            reply.payload().putUint32(channelId);
-            reply.payload().putBool(peerWantsShmNegotiation);
-            if (peerWantsShmNegotiation) {
-                reply.payload().putUint16(negotiontedShmType);
-                reply.payload().putBytes(conn->mempool() ? iByteArray(conn->mempool()->prefix()) : iByteArray());
-                reply.payload().putInt32(conn->mempool() ? conn->mempool()->size() : 0);
-                reply.setExtFd(conn->mempool() ? conn->mempool()->fd() : -1);
-            }
-
-            ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Allocated channel, mode=", mode);
-            conn->sendMessage(reply);
-            iObject::invokeMethod(this, &iINCServer::streamOpened, conn, channelId, mode);
+        case INC_MSG_STREAM_OPEN:
+            handleStreamOpen(conn, msg);
             break;
-        }
-
-        case INC_MSG_STREAM_CLOSE: {
-            // Client releasing channel - parse from payload with type-safe API
-            xuint32 channelId = msg.channelID();
-            if (!msg.payload().eof()) {
-                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                    "] Failed to parse STREAM_CLOSE");
-                break;
-            }
-
-            // Release channel
-            delete conn->unregisterChannel(channelId);
-
-            // Send confirmation reply using type-safe API
-            ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Channel released and confirmed");
-            iINCMessage reply(INC_MSG_STREAM_CLOSE_ACK, msg.channelID(), msg.sequenceNumber());
-            conn->sendMessage(reply);
-            IEMIT streamClosed(conn, channelId);
+        case INC_MSG_STREAM_CLOSE:
+            handleStreamClose(conn, msg);
             break;
-        }
-
-        case INC_MSG_SUBSCRIBE: {
-            // Parse payload with type-safe API: event pattern
-            iString pattern;
-            if (!msg.payload().getString(pattern) || !msg.payload().eof()) {
-                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parse SUBSCRIBE");
-                iINCMessage ack(INC_MSG_SUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
-                ack.payload().putInt32(INC_ERROR_INVALID_MESSAGE);
-                conn->sendMessage(ack);
-                break;
-            }
-
-            if (handleSubscribe(conn, pattern)) {
-                conn->addSubscription(pattern);
-                // Send SUBSCRIBE_ACK acknowledgement
-                iINCMessage ack(INC_MSG_SUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
-                ack.payload().putInt32(INC_OK);
-                conn->sendMessage(ack);
-            } else {
-                iINCMessage ack(INC_MSG_SUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
-                ack.payload().putInt32(INC_ERROR_ACCESS_DENIED);
-                conn->sendMessage(ack);
-            }
+        case INC_MSG_SUBSCRIBE:
+            handleSubscribeRequest(conn, msg);
             break;
-        }
-
-        case INC_MSG_UNSUBSCRIBE: {
-            // Parse payload with type-safe API: event pattern
-            iString pattern;
-            if (!msg.payload().getString(pattern) || !msg.payload().eof()) {
-                ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                            "] Failed to parse UNSUBSCRIBE");
-                break;
-            }
-            conn->removeSubscription(pattern);
-            // Send UNSUBSCRIBE_ACK acknowledgement
-            iINCMessage ack(INC_MSG_UNSUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
-            ack.payload().putInt32(INC_OK);
-            conn->sendMessage(ack);
+        case INC_MSG_UNSUBSCRIBE:
+            handleUnsubscribeRequest(conn, msg);
             break;
-        }
-
         case INC_MSG_PING: {
-            // Respond with PONG
             iINCMessage pong(INC_MSG_PONG, msg.channelID(), msg.sequenceNumber());
             conn->sendMessage(pong);
             break;
         }
-
         default:
             ilog_warn("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(), "] Unhandled message type:", msg.type());
             break;
     }
+}
 
+void iINCServer::handleMethodCall(iINCConnection* conn, const iINCMessage& msg)
+{
+    xuint16 version;
+    iString method;
+    iByteArray args;
+    if (!msg.payload().getUint16(version)
+        || !msg.payload().getString(method)
+        || !msg.payload().getBytes(args)
+        || !msg.payload().eof()) {
+        ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+                    "] Failed to parse method call");
+        sendMethodReply(conn, msg.sequenceNumber(), INC_ERROR_INVALID_MESSAGE, iByteArray());
+        return;
+    }
+
+    handleMethod(conn, msg.sequenceNumber(), method, version, args);
+}
+
+void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
+{
+    xuint32 mode = 0;
+    bool peerWantsShmNegotiation = false;
+
+    if (!msg.payload().getUint32(mode)
+        || !msg.payload().getBool(peerWantsShmNegotiation)) {
+        ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+                    "] Failed to parse STREAM_OPEN");
+        return;
+    }
+
+    // If client requested SHM negotiation, decide and reply
+    xuint16 negotiontedShmType = 0;
+    xuint16 clientSupportedTypes = 0;
+    iByteArray clientShmName;
+    if (peerWantsShmNegotiation) {
+        if (!msg.payload().getUint16(clientSupportedTypes)
+            || !msg.payload().getBytes(clientShmName)
+            || !msg.payload().eof()) {
+            ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+                    "] Failed to parse STREAM_OPEN SHM info");
+            return;
+        }
+
+        // Check if we should enable shared memory:
+        // 1. Server config allows shared memory
+        // 2. Connection is local (same machine)
+        // 3. Client and server have compatible memory types
+        negotiontedShmType = clientSupportedTypes & m_config.sharedMemoryType();
+        if (m_globalPool && (negotiontedShmType & m_globalPool->type())) {
+            negotiontedShmType = m_globalPool->type();
+            conn->enableMempool(m_globalPool);
+        } else if (!m_config.disableSharedMemory() && conn->isLocal() && negotiontedShmType)  {
+            // Select the highest priority bit (lowest bit position) using iCountTrailingZeroBits
+            // MEMFD (0x02, bit 1) has higher priority than POSIX (0x04, bit 2)
+            negotiontedShmType = static_cast<xuint16>(1) << iCountTrailingZeroBits(negotiontedShmType);
+            iMemPool* memPool = iMemPool::create(conn->peerName().toUtf8().constData(), clientShmName.constData(), static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize(), true);
+            conn->enableMempool(iSharedDataPointer<iMemPool>(memPool));
+        } else {
+            negotiontedShmType = 0;
+        }
+
+        ilog_info("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+                    "] Negotiont SHM: client support", clientSupportedTypes, ", and server support ", m_config.sharedMemoryType(), ", result ", negotiontedShmType);
+    }
+
+    // Allocate channel
+    xuint32 channelId = conn->registerChannel(new _iINCPStream(this, ++m_nextChannelId, static_cast<iINCChannel::Mode>(mode)));
+
+    // Send reply with allocated channel ID using type-safe API
+    iINCMessage reply(INC_MSG_STREAM_OPEN_ACK, msg.channelID(), msg.sequenceNumber());
+    reply.payload().putUint32(channelId);
+    reply.payload().putBool(peerWantsShmNegotiation);
+    if (peerWantsShmNegotiation) {
+        reply.payload().putUint16(negotiontedShmType);
+        reply.payload().putBytes(conn->mempool() ? iByteArray(conn->mempool()->prefix()) : iByteArray());
+        reply.payload().putInt32(conn->mempool() ? conn->mempool()->size() : 0);
+        reply.setExtFd(conn->mempool() ? conn->mempool()->fd() : -1);
+    }
+
+    ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Allocated channel, mode=", mode);
+    conn->sendMessage(reply);
+    iObject::invokeMethod(this, &iINCServer::streamOpened, conn, channelId, mode);
+}
+
+void iINCServer::handleStreamClose(iINCConnection* conn, const iINCMessage& msg)
+{
+    xuint32 channelId = msg.channelID();
+    if (!msg.payload().eof()) {
+        ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+            "] Failed to parse STREAM_CLOSE");
+        return;
+    }
+
+    delete conn->unregisterChannel(channelId);
+
+    ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Channel released and confirmed");
+    iINCMessage reply(INC_MSG_STREAM_CLOSE_ACK, msg.channelID(), msg.sequenceNumber());
+    conn->sendMessage(reply);
+    IEMIT streamClosed(conn, channelId);
+}
+
+void iINCServer::handleSubscribeRequest(iINCConnection* conn, const iINCMessage& msg)
+{
+    iString pattern;
+    if (!msg.payload().getString(pattern) || !msg.payload().eof()) {
+        ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+                    "] Failed to parse SUBSCRIBE");
+        iINCMessage ack(INC_MSG_SUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
+        ack.payload().putInt32(INC_ERROR_INVALID_MESSAGE);
+        conn->sendMessage(ack);
+        return;
+    }
+
+    if (handleSubscribe(conn, pattern)) {
+        conn->addSubscription(pattern);
+        iINCMessage ack(INC_MSG_SUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
+        ack.payload().putInt32(INC_OK);
+        conn->sendMessage(ack);
+    } else {
+        iINCMessage ack(INC_MSG_SUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
+        ack.payload().putInt32(INC_ERROR_ACCESS_DENIED);
+        conn->sendMessage(ack);
+    }
+}
+
+void iINCServer::handleUnsubscribeRequest(iINCConnection* conn, const iINCMessage& msg)
+{
+    iString pattern;
+    if (!msg.payload().getString(pattern) || !msg.payload().eof()) {
+        ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+                    "] Failed to parse UNSUBSCRIBE");
+        return;
+    }
+
+    conn->removeSubscription(pattern);
+    iINCMessage ack(INC_MSG_UNSUBSCRIBE_ACK, msg.channelID(), msg.sequenceNumber());
+    ack.payload().putInt32(INC_OK);
+    conn->sendMessage(ack);
 }
 
 void iINCServer::handleHandshake(iINCConnection* conn, const iINCMessage& msg)

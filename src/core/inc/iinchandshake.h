@@ -55,9 +55,8 @@ struct IX_CORE_EXPORT iINCHandshakeData
     }
 
     /// Check if capability is supported
-    bool hasCapability(xuint32 cap) const {
-        return (capabilities & cap) != 0;
-    }
+    bool hasCapability(xuint32 cap) const
+    { return (capabilities & cap) != 0; }
 };
 
 /// @brief Handshake state machine

@@ -170,6 +170,11 @@ private:
     void handleNewConnection(iINCDevice* clientDevice);
     void onClientDisconnected(iINCConnection* conn);
     void handleHandshake(iINCConnection* conn, const iINCMessage& msg);
+    void handleMethodCall(iINCConnection* conn, const iINCMessage& msg);
+    void handleStreamOpen(iINCConnection* conn, const iINCMessage& msg);
+    void handleStreamClose(iINCConnection* conn, const iINCMessage& msg);
+    void handleSubscribeRequest(iINCConnection* conn, const iINCMessage& msg);
+    void handleUnsubscribeRequest(iINCConnection* conn, const iINCMessage& msg);
     void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data);
     void onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCode);
 

@@ -140,7 +140,7 @@ protected:
     void SetUp() override {
         device = new MockINCDevice();
         // Protocol takes ownership of device
-        protocol = new iINCProtocol(device); 
+        protocol = new iINCProtocol(device, false); 
     }
 
     void TearDown() override {

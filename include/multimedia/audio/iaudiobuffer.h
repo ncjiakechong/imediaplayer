@@ -94,15 +94,12 @@ public:
     typedef StereoFrame<signed short> S16S;
     typedef StereoFrame<float> S32F;
 
-    template <typename T> const T* constData() const {
-        return static_cast<const T*>(constData());
-    }
-    template <typename T> const T* data() const {
-        return static_cast<const T*>(data());
-    }
-    template <typename T> T* data() {
-        return static_cast<T*>(data());
-    }
+    template <typename T> const T* constData() const
+    { return static_cast<const T*>(constData()); }
+    template <typename T> const T* data() const
+    { return static_cast<const T*>(data()); }
+    template <typename T> T* data()
+    { return static_cast<T*>(data()); }
 private:
     iAudioBufferPrivate *d;
 };

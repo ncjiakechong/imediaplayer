@@ -172,6 +172,7 @@ iUnixDevice::iUnixDevice(Role role, iObject *parent)
     , m_sockfd(-1)
     , m_eventSource(IX_NULLPTR)
     , m_pendingFd(-1)
+    , m_lastSentFd(-1)
 {
 }
 
@@ -587,8 +588,10 @@ xint64 iUnixDevice::writeMessage(const iINCMessage& msg, xint64 offset)
     msgh.msg_iovlen = iovIndex;
 
     // Only attach FD on the very first chunk of the message (offset == 0)
+    // and only when the FD hasn't already been sent to this peer (avoids
+    // redundant SCM_RIGHTS kernel overhead on every SHM message)
     int fdToSend = -1;
-    if (offset == 0 && msg.extFd() >= 0) {
+    if (offset == 0 && msg.extFd() >= 0 && msg.extFd() != m_lastSentFd) {
         fdToSend = msg.extFd();
     }
     
@@ -618,6 +621,7 @@ xint64 iUnixDevice::writeMessage(const iINCMessage& msg, xint64 offset)
         }
 
         if (fdToSend >= 0) {
+            m_lastSentFd = fdToSend;
             ilog_info("[", peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                     "] Sent msg with FD=", fdToSend, " via SCM_RIGHTS");
         }
@@ -640,112 +644,96 @@ xint64 iUnixDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 
 void iUnixDevice::processRx()
 {
-    // Step 1: Ensure header
-    if (m_recvBuffer.size() < sizeof(iINCMessageHeader)) {
-        xint64 needed = sizeof(iINCMessageHeader) - m_recvBuffer.size();
-        int oldSize = m_recvBuffer.size();
-        m_recvBuffer.resize(sizeof(iINCMessageHeader));
-        
-        int receivedFd = -1;
-        ssize_t n = readImpl(m_recvBuffer.data() + oldSize, needed, &receivedFd);
-        
-        if (n <= 0) { // EAGAIN (0) or Error (-1)
-            m_recvBuffer.resize(oldSize);
-            return;
-        }
-        
-        m_recvBuffer.resize(oldSize + n);
-        
-        if (receivedFd >= 0) {
-            if (m_pendingFd >= 0) {
-                ilog_warn("[", peerAddress(), "] Replacing unconsumed FD ", m_pendingFd, " with ", receivedFd);
-                ::close(m_pendingFd);
-            }
-            m_pendingFd = receivedFd;
-            ilog_info("[", peerAddress(), "] Buffered Recv FD=", receivedFd);
-        }
+    // Bulk read: read as much as available in one recvmsg (up to 8KB).
+    // This collapses 2-recvmsg-per-message down to 1-recvmsg-per-many-messages
+    // for small SHM reference messages (~68 bytes each).
+    static const int BULK_READ_SIZE = 8192;
+    int oldSize = m_recvBuffer.size();
+    m_recvBuffer.resize(oldSize + BULK_READ_SIZE);
 
-        if (m_recvBuffer.size() < sizeof(iINCMessageHeader)) {
-            return;
-        }
-    }
+    int receivedFd = -1;
+    ssize_t n = readImpl(m_recvBuffer.data() + oldSize, BULK_READ_SIZE, &receivedFd);
 
-    // Step 2: Parse header to get payload size
-    iINCMessage msg(INC_MSG_INVALID, 0, 0);
-    xint32 payloadLength = msg.parseHeader(iByteArrayView(m_recvBuffer.constData(), sizeof(iINCMessageHeader)));
-    if (payloadLength < 0) {
-        ilog_error("[", peerAddress(), "] Invalid message header");
-        IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
-        m_recvBuffer.clear();
-        if (m_pendingFd >= 0) {
-            ::close(m_pendingFd);
-            m_pendingFd = -1;
-        }
-        return;
-    }
-
-    if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
-        ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
-        IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
-        m_recvBuffer.clear();
-        if (m_pendingFd >= 0) {
-            ::close(m_pendingFd);
-            m_pendingFd = -1;
-        }
-        return;
-    }
-
-    // Step 3: Ensure we have complete message (header + payload)
-    xuint32 totalSize = sizeof(iINCMessageHeader) + payloadLength;
-    if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
-        xint64 needed = totalSize - m_recvBuffer.size();
-        int oldSize = m_recvBuffer.size();
-        m_recvBuffer.resize(totalSize);
-
-        int receivedFd = -1;
-        ssize_t n = readImpl(m_recvBuffer.data() + oldSize, needed, &receivedFd);
-        
-        if (n <= 0) {
-            m_recvBuffer.resize(oldSize);
-            return;
-        }
-        
-        m_recvBuffer.resize(oldSize + n);
-
-        if (receivedFd >= 0) {
-            if (m_pendingFd >= 0) {
-                ilog_warn("[", peerAddress(), "] Replacing unconsumed FD ", m_pendingFd, " with ", receivedFd);
-                ::close(m_pendingFd);
-            }
-            m_pendingFd = receivedFd;
-            ilog_info("[", peerAddress(), "] Buffered Recv FD=", receivedFd);
-        }
-    }
-
-    // Check if we now have complete message
-    if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
-        return;  // Wait for more data (incomplete message)
-    }
-
-    // Step 4: Complete message received - parse header and extract payload
-    if (payloadLength > 0) {
-        msg.payload().setData(m_recvBuffer.mid(sizeof(iINCMessageHeader), payloadLength));
+    if (n <= 0) {
+        m_recvBuffer.resize(oldSize);
+        if (n < 0) return; // Error or disconnect handled by readImpl
+        if (oldSize == 0) return; // EAGAIN and no buffered data
+        // n == 0 (EAGAIN) but have leftover data — fall through to parse
     } else {
-        msg.payload().clear();
+        m_recvBuffer.resize(oldSize + n);
     }
 
-    // Attach pending FD if available
-    if (m_pendingFd >= 0) {
-        msg.setExtFd(m_pendingFd);
-        ilog_info("[", peerAddress(), "] Attached FD=", m_pendingFd, " to msg seq=", msg.sequenceNumber());
-        m_pendingFd = -1;
+    if (receivedFd >= 0) {
+        if (m_pendingFd >= 0) {
+            ilog_warn("[", peerAddress(), "] Replacing unconsumed FD ", m_pendingFd, " with ", receivedFd);
+            ::close(m_pendingFd);
+        }
+        m_pendingFd = receivedFd;
+        ilog_info("[", peerAddress(), "] Buffered Recv FD=", receivedFd);
     }
 
-    // Emit signal
-    IEMIT messageReceived(msg);
+    // Parse and emit all complete messages from the buffer
+    int consumed = 0;
+    const int bufSize = m_recvBuffer.size();
+    const char* bufData = m_recvBuffer.constData();
 
-    // Step 5: Remove consumed data from buffer
-    m_recvBuffer.clear();
+    while (true) {
+        int available = bufSize - consumed;
+
+        // Need at least a complete header
+        if (available < static_cast<int>(sizeof(iINCMessageHeader)))
+            break;
+
+        // Parse header to get payload size
+        iINCMessage msg(INC_MSG_INVALID, 0, 0);
+        xint32 payloadLength = msg.parseHeader(
+            iByteArrayView(bufData + consumed, sizeof(iINCMessageHeader)));
+
+        if (payloadLength < 0) {
+            ilog_error("[", peerAddress(), "] Invalid message header");
+            IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
+            m_recvBuffer.clear();
+            if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+            return;
+        }
+
+        if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
+            ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
+            IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
+            m_recvBuffer.clear();
+            if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+            return;
+        }
+
+        int totalSize = static_cast<int>(sizeof(iINCMessageHeader)) + payloadLength;
+        if (available < totalSize)
+            break;  // Incomplete message — wait for more data
+
+        // Extract payload
+        if (payloadLength > 0) {
+            msg.payload().setData(m_recvBuffer.mid(consumed + sizeof(iINCMessageHeader), payloadLength));
+        }
+
+        // Attach pending FD to the first complete message that arrives with it
+        if (m_pendingFd >= 0) {
+            msg.setExtFd(m_pendingFd);
+            ilog_info("[", peerAddress(), "] Attached FD=", m_pendingFd, " to msg seq=", msg.sequenceNumber());
+            m_pendingFd = -1;
+        }
+
+        consumed += totalSize;
+
+        IEMIT messageReceived(msg);
+    }
+
+    // Remove consumed data, keep leftover for next call
+    if (consumed > 0) {
+        if (consumed >= bufSize) {
+            m_recvBuffer.clear();
+        } else {
+            m_recvBuffer = m_recvBuffer.mid(consumed);
+        }
+    }
 }
 
 bool iUnixDevice::createSocket()

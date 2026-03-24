@@ -36,6 +36,7 @@ struct iINCRouter::ClientBridge
     bool                handshakeComplete;
     iString             clientTargetServer;
     iString             resolvedUrl;
+    bool                shmPassthrough;
 
     ClientBridge(iINCRouter* r)
         : router(r)
@@ -44,6 +45,7 @@ struct iINCRouter::ClientBridge
         , upstreamProto(IX_NULLPTR)
         , clientSeqNum(0)
         , handshakeComplete(false)
+        , shmPassthrough(false)
     {}
 
     void onConnected()              { router->handleUpstreamConnected(this); }
@@ -224,6 +226,10 @@ void iINCRouter::handleUpstreamRawMessage(ClientBridge* bridge, iINCMessage msg)
     // Drop messages before handshake completes
     if (!bridge->handshakeComplete) return;
 
+    if (msg.type() == INC_MSG_STREAM_OPEN_ACK) {
+        handleStreamOpenAck(bridge, msg);
+    }
+
     // Normal forwarding
     onUpstreamMessage(bridge, msg);
 }
@@ -257,6 +263,11 @@ void iINCRouter::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
     if (!bridge || !bridge->handshakeComplete || !bridge->upstreamProto) {
         ilog_warn("[", objectName(), "][", conn->connectionId(),
                   "] No active bridge, dropping message type:", msg.type());
+        return;
+    }
+
+    if (msg.type() == INC_MSG_STREAM_OPEN) {
+        handleStreamOpen(bridge, conn, msg);
         return;
     }
 
@@ -314,6 +325,46 @@ void iINCRouter::onDownstreamBinaryData(ClientBridge* bridge, xuint32 channel, x
 
     // Forward data via sendBinaryData
     bridge->upstreamProto->sendBinaryData(channel, pos, data);
+}
+
+// ---- SHM passthrough ----
+void iINCRouter::handleStreamOpen(ClientBridge* bridge, iINCConnection* conn, iINCMessage msg)
+{
+    // Both legs must be local (Unix socket) for SHM passthrough
+    bool downstreamLocal = conn->isLocal();
+    bool upstreamLocal = bridge->upstreamDevice && bridge->upstreamDevice->isLocal();
+
+    if (downstreamLocal && upstreamLocal) {
+        // Forward STREAM_OPEN as-is, let server negotiate SHM directly
+        bridge->upstreamProto->sendMessage(msg);
+    } else {
+        // Strip SHM negotiation: rewrite peerWantsShmNegotiation to false
+        xuint32 mode = 0;
+        msg.payload().getUint32(mode);
+        iINCMessage stripped(INC_MSG_STREAM_OPEN, msg.channelID(), msg.sequenceNumber());
+        stripped.payload().putUint32(mode);
+        stripped.payload().putBool(false);
+        bridge->upstreamProto->sendMessage(stripped);
+    }
+}
+
+void iINCRouter::handleStreamOpenAck(ClientBridge* bridge, iINCMessage msg)
+{
+    // Parse: channelId, peerWantsShmNegotiation
+    xuint32 channelId = 0;
+    bool hasShmInfo = false;
+    msg.payload().getUint32(channelId);
+    msg.payload().getBool(hasShmInfo);
+
+    if (hasShmInfo) {
+        xuint16 negotiatedShmType = 0;
+        msg.payload().getUint16(negotiatedShmType);
+        if (negotiatedShmType != 0) {
+            bridge->shmPassthrough = true;
+            xuint32 connId = bridge->downstream ? bridge->downstream->connectionId() : 0;
+            ilog_info("[", objectName(), "][", connId, "] SHM passthrough enabled, type=", negotiatedShmType);
+        }
+    }
 }
 
 // ---- Router handshake (Phase 1 → Phase 2 → Phase 3) ----
@@ -381,7 +432,7 @@ void iINCRouter::handleRouterHandshake(iINCConnection* conn, const iINCMessage& 
     // Use IX_NULLPTR as parent: in IO thread mode, 'this' (Router) lives in
     // a different thread from the IO thread where this callback runs.
     // Bridge owns the lifecycle via removeBridge/destructor.
-    iINCProtocol* upProto = new iINCProtocol(upDevice, IX_NULLPTR);
+    iINCProtocol* upProto = new iINCProtocol(upDevice, true, IX_NULLPTR);
     upDevice->setParent(upProto);
 
     // Create bridge (plain struct, serves as signal receiver for DirectConnection)
