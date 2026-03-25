@@ -15,6 +15,7 @@
 #define IINCSERVER_H
 
 #include <map>
+#include <vector>
 #if __cplusplus >= 201103L
 #include <unordered_map>
 #endif
@@ -71,8 +72,10 @@ public:
     explicit iINCServer(const iStringView& name, iObject *parent = IX_NULLPTR);
     virtual ~iINCServer();
 
-    /// Start listening on specified URL
+    /// Start listening on specified URL(s)
     /// @param url Format: "tcp://0.0.0.0:port" or "pipe:///path/to/socket"
+    ///            Multiple URLs can be separated by semicolons:
+    ///            "unix:///tmp/inc.sock;tcp://0.0.0.0:5000;udp://0.0.0.0:5001"
     /// @return 0 on success, negative on error
     int listenOn(const iStringView& url);
 
@@ -178,12 +181,12 @@ private:
     void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data);
     void onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCode);
 
+    bool            m_listening;
     iINCServerConfig m_config;          ///< Server configuration
     iINCEngine*     m_engine;           ///< Owned engine instance
-    iINCDevice*     m_listenDevice;     ///< Listening socket in ioThread
     iThread*        m_ioThread;         ///< Thread for handling I/O operations
-    bool            m_listening;
     iAtomicCounter<xuint32> m_nextChannelId;    ///< Global channel ID generator (server-wide unique, thread-safe atomic)
+    std::vector<iINCDevice*> m_listenDevices;  ///< Listening sockets in ioThread
 
     // Connection tracking
     #if __cplusplus >= 201103L

@@ -159,6 +159,7 @@ void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
         m_metrics.onSendQueueDrop();
         op->setResult(INC_ERROR_QUEUE_FULL, iByteArray());
         op->deref();  // Release map reference
+        IEMIT errorOccurred(INC_ERROR_QUEUE_FULL);
         return;
     }
 
@@ -352,6 +353,25 @@ void iINCProtocol::processBinaryDataMessage(const iINCMessage& msg)
         return;
 
     processSHMBinaryData(msg, channel, seqNum, pos);
+}
+
+void iINCProtocol::cancelAllOperations(int errorCode)
+{
+    // Cancel all pending operations so callers are not left waiting forever.
+    // Called from iINCConnection::close() when the connection is shutting down.
+    while (!m_operations.empty()) {
+        OperationsMap::iterator it = m_operations.begin();
+        iINCOperation* op = it->second;
+        m_operations.erase(it);
+
+        if (m_memExport && (0 != op->m_blockID)) {
+            m_memExport->processRelease(op->m_blockID);
+            op->m_blockID = 0;
+        }
+
+        op->setResult(errorCode, iByteArray());
+        op->deref();
+    }
 }
 
 void iINCProtocol::onDeviceConnected()

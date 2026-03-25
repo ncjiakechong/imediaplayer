@@ -159,67 +159,11 @@ void iINCRouter::handleUpstreamConnected(ClientBridge* bridge)
     bridge->upstreamProto->sendMessage(hsMsg);
 }
 
-void iINCRouter::handleUpstreamRawMessage(ClientBridge* bridge, iINCMessage msg)
+void iINCRouter::handleUpstreamRawMessage(ClientBridge* bridge, const iINCMessage& msg)
 {
     // Phase 3: intercept first HANDSHAKE_ACK from upstream server
     if (!bridge->handshakeComplete && msg.type() == INC_MSG_HANDSHAKE_ACK) {
-        iINCHandshakeData serverData;
-        if (!iINCHandshake::deserializeHandshakeData(msg.payload().data(), serverData)) {
-            ilog_error("Router: failed to parse upstream handshake ACK");
-            iINCConnection* ds = bridge->downstream;
-            xuint32 connId = ds ? ds->connectionId() : 0;
-            removeBridge(connId);
-            if (ds) ds->close();
-            return;
-        }
-
-        // Validate server identity against client's targetServer (if provided).
-        // Covers: absolute URL, plain name, and domain://Name.
-        if (!bridge->clientTargetServer.isEmpty()
-            && (bridge->clientTargetServer != bridge->resolvedUrl)
-            && !bridge->clientTargetServer.endsWith(serverData.nodeName)) {
-            ilog_error("Router: server identity mismatch, client expected: ",
-                        bridge->clientTargetServer, ", got nodeName: ",
-                        serverData.nodeName, ", resolvedUrl: ", bridge->resolvedUrl);
-            iINCConnection* ds = bridge->downstream;
-            xuint32 connId = ds ? ds->connectionId() : 0;
-            removeBridge(connId);
-            if (ds) ds->close();
-            return;
-        }
-
-        // Build ACK for downstream client
-        iINCHandshakeData ackData;
-        ackData.protocolVersion = serverData.protocolVersion;
-        ackData.nodeName = serverData.nodeName;
-        ackData.nodeId = serverData.nodeId;
-        ackData.capabilities = serverData.capabilities | iINCHandshakeData::CAP_ROUTER;
-        ackData.hopCount = serverData.hopCount;
-
-        if (bridge->downstream) {
-            iINCMessage ackMsg(INC_MSG_HANDSHAKE_ACK, bridge->downstream->connectionId(), bridge->clientSeqNum);
-            ackMsg.payload().setData(iINCHandshake::serializeHandshakeData(ackData));
-            bridge->downstream->sendMessage(ackMsg);
-
-            bridge->downstream->setPeerName(serverData.nodeName);
-            bridge->downstream->setPeerProtocolVersion(serverData.protocolVersion);
-
-            // Resume downstream reads
-            if (bridge->downstream->m_protocol && bridge->downstream->m_protocol->device()) {
-                bridge->downstream->m_protocol->device()->configEventAbility(true, false);
-            }
-
-            // Clear downstream handshake handler (no longer needed)
-            bridge->downstream->clearHandshake();
-        }
-
-        bridge->handshakeComplete = true;
-
-        xuint32 connId = bridge->downstream ? bridge->downstream->connectionId() : 0;
-        ilog_info("Router: bridge established [", connId, "] \xe2\x86\x92 ", serverData.nodeName);
-
-        IEMIT clientRouted(bridge->downstream, serverData.nodeName);
-        IEMIT upstreamConnected(bridge->downstream, serverData.nodeName);
+        handleHandshakeAck(bridge, msg);
         return;
     }
 
@@ -232,6 +176,67 @@ void iINCRouter::handleUpstreamRawMessage(ClientBridge* bridge, iINCMessage msg)
 
     // Normal forwarding
     onUpstreamMessage(bridge, msg);
+}
+
+void iINCRouter::handleHandshakeAck(ClientBridge* bridge, const iINCMessage& msg)
+{
+    iINCHandshakeData serverData;
+    if (!iINCHandshake::deserializeHandshakeData(msg.payload().data(), serverData)) {
+        ilog_error("Router: failed to parse upstream handshake ACK");
+        iINCConnection* ds = bridge->downstream;
+        xuint32 connId = ds ? ds->connectionId() : 0;
+        removeBridge(connId);
+        if (ds) ds->close();
+        return;
+    }
+
+    // Validate server identity against client's targetServer (if provided).
+    // Covers: absolute URL, plain name, and domain://Name.
+    if (!bridge->clientTargetServer.isEmpty()
+        && (bridge->clientTargetServer != bridge->resolvedUrl)
+        && !bridge->clientTargetServer.endsWith(serverData.nodeName)) {
+        ilog_error("Router: server identity mismatch, client expected: ",
+                    bridge->clientTargetServer, ", got nodeName: ",
+                    serverData.nodeName, ", resolvedUrl: ", bridge->resolvedUrl);
+        iINCConnection* ds = bridge->downstream;
+        xuint32 connId = ds ? ds->connectionId() : 0;
+        removeBridge(connId);
+        if (ds) ds->close();
+        return;
+    }
+
+    // Build ACK for downstream client
+    iINCHandshakeData ackData;
+    ackData.protocolVersion = serverData.protocolVersion;
+    ackData.nodeName = serverData.nodeName;
+    ackData.nodeId = serverData.nodeId;
+    ackData.capabilities = serverData.capabilities | iINCHandshakeData::CAP_ROUTER;
+    ackData.hopCount = serverData.hopCount;
+
+    if (bridge->downstream) {
+        iINCMessage ackMsg(INC_MSG_HANDSHAKE_ACK, bridge->downstream->connectionId(), bridge->clientSeqNum);
+        ackMsg.payload().setData(iINCHandshake::serializeHandshakeData(ackData));
+        bridge->downstream->sendMessage(ackMsg);
+
+        bridge->downstream->setPeerName(serverData.nodeName);
+        bridge->downstream->setPeerProtocolVersion(serverData.protocolVersion);
+
+        // Resume downstream reads
+        if (bridge->downstream->m_protocol && bridge->downstream->m_protocol->device()) {
+            bridge->downstream->m_protocol->device()->configEventAbility(true, false);
+        }
+
+        // Clear downstream handshake handler (no longer needed)
+        bridge->downstream->clearHandshake();
+    }
+
+    bridge->handshakeComplete = true;
+
+    xuint32 connId = bridge->downstream ? bridge->downstream->connectionId() : 0;
+    ilog_info("Router: bridge established [", connId, "] \xe2\x86\x92 ", serverData.nodeName);
+
+    IEMIT clientRouted(bridge->downstream, serverData.nodeName);
+    IEMIT upstreamConnected(bridge->downstream, serverData.nodeName);
 }
 
 // ---- Message interception (override of iINCServer) ----
@@ -276,7 +281,7 @@ void iINCRouter::onConnectionMessageReceived(iINCConnection* conn, iINCMessage m
 
 // ---- Upstream → Downstream forwarding ----
 
-void iINCRouter::onUpstreamMessage(ClientBridge* bridge, iINCMessage msg)
+void iINCRouter::onUpstreamMessage(ClientBridge* bridge, const iINCMessage& msg)
 {
     // PING from upstream server: respond locally
     if (msg.type() == INC_MSG_PING) {
@@ -328,43 +333,42 @@ void iINCRouter::onDownstreamBinaryData(ClientBridge* bridge, xuint32 channel, x
 }
 
 // ---- SHM passthrough ----
-void iINCRouter::handleStreamOpen(ClientBridge* bridge, iINCConnection* conn, iINCMessage msg)
+void iINCRouter::handleStreamOpen(ClientBridge* bridge, iINCConnection* conn, const iINCMessage& msg)
 {
     // Both legs must be local (Unix socket) for SHM passthrough
     bool downstreamLocal = conn->isLocal();
     bool upstreamLocal = bridge->upstreamDevice && bridge->upstreamDevice->isLocal();
-
     if (downstreamLocal && upstreamLocal) {
         // Forward STREAM_OPEN as-is, let server negotiate SHM directly
         bridge->upstreamProto->sendMessage(msg);
-    } else {
-        // Strip SHM negotiation: rewrite peerWantsShmNegotiation to false
-        xuint32 mode = 0;
-        msg.payload().getUint32(mode);
-        iINCMessage stripped(INC_MSG_STREAM_OPEN, msg.channelID(), msg.sequenceNumber());
-        stripped.payload().putUint32(mode);
-        stripped.payload().putBool(false);
-        bridge->upstreamProto->sendMessage(stripped);
+        return;
     }
+
+    // Strip SHM negotiation: rewrite peerWantsShmNegotiation to false
+    xuint32 mode = 0;
+    msg.payload().getUint32(mode);
+    iINCMessage stripped(INC_MSG_STREAM_OPEN, msg.channelID(), msg.sequenceNumber());
+    stripped.payload().putUint32(mode);
+    stripped.payload().putBool(false);
+    bridge->upstreamProto->sendMessage(stripped);
 }
 
-void iINCRouter::handleStreamOpenAck(ClientBridge* bridge, iINCMessage msg)
+void iINCRouter::handleStreamOpenAck(ClientBridge* bridge, const iINCMessage& msg)
 {
     // Parse: channelId, peerWantsShmNegotiation
     xuint32 channelId = 0;
     bool hasShmInfo = false;
     msg.payload().getUint32(channelId);
     msg.payload().getBool(hasShmInfo);
+    if (!hasShmInfo) return;
 
-    if (hasShmInfo) {
-        xuint16 negotiatedShmType = 0;
-        msg.payload().getUint16(negotiatedShmType);
-        if (negotiatedShmType != 0) {
-            bridge->shmPassthrough = true;
-            xuint32 connId = bridge->downstream ? bridge->downstream->connectionId() : 0;
-            ilog_info("[", objectName(), "][", connId, "] SHM passthrough enabled, type=", negotiatedShmType);
-        }
-    }
+    xuint16 negotiatedShmType = 0;
+    msg.payload().getUint16(negotiatedShmType);
+    if (0 == negotiatedShmType) return;
+
+    bridge->shmPassthrough = true;
+    xuint32 connId = bridge->downstream ? bridge->downstream->connectionId() : 0;
+    ilog_info("[", objectName(), "][", connId, "] SHM passthrough enabled, type=", negotiatedShmType);
 }
 
 // ---- Router handshake (Phase 1 → Phase 2 → Phase 3) ----

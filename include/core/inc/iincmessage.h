@@ -121,6 +121,7 @@ public:
 
 private:
     iINCMessageType m_type;
+    int             m_extFd;
     xuint16         m_flags;
     xuint16         m_protocolVersion;
     xuint16         m_payloadVersion;
@@ -128,7 +129,6 @@ private:
     xuint32         m_seqNum;
     xint64          m_dts;
     iINCTagStruct   m_payload;      ///< Type-safe payload
-    int             m_extFd;           ///< File descriptor for SCM_RIGHTS (-1 if none)
 };
 
 } // namespace iShell

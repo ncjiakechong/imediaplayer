@@ -486,16 +486,20 @@ xint64 iUDPDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 
 void iUDPDevice::processRx()
 {
-    iByteArray data = receiveFrom(m_pendingClient, IX_NULLPTR);
-    if (data.size() < sizeof(iINCMessageHeader)) return;
+    // Drain loop: process all available datagrams in kernel buffer
+    // Limit iterations to avoid starving other event sources
+    static const int MAX_BATCH = 64;
+    for (int i = 0; i < MAX_BATCH; ++i) {
+        iByteArray data = receiveFrom(m_pendingClient, IX_NULLPTR);
+        if (data.isEmpty() || data.size() < static_cast<int>(sizeof(iINCMessageHeader))) break;
 
-    iINCMessage msg(INC_MSG_INVALID, 0, 0);
-    xint32 payloadLen = msg.parseHeader(iByteArrayView(data.constData(), sizeof(iINCMessageHeader)));
-    if (payloadLen < 0 && static_cast<xint64>(data.size()) < (sizeof(iINCMessageHeader) + payloadLen))
-        return;
+        iINCMessage msg(INC_MSG_INVALID, 0, 0);
+        xint32 payloadLen = msg.parseHeader(iByteArrayView(data.constData(), sizeof(iINCMessageHeader)));
+        if (payloadLen < 0 || static_cast<xint64>(data.size()) < static_cast<xint64>(sizeof(iINCMessageHeader) + payloadLen)) break;
 
-    msg.payload().setData(data.mid(sizeof(iINCMessageHeader), payloadLen));
-    IEMIT messageReceived(msg);
+        msg.payload().setData(data.mid(sizeof(iINCMessageHeader), payloadLen));
+        IEMIT messageReceived(msg);
+    }
 }
 
 void iUDPDevice::close()

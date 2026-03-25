@@ -19,18 +19,19 @@ const xint32 iINCMessageHeader::MAX_MESSAGE_SIZE = 8 * 1024;
 
 iINCMessage::iINCMessage(iINCMessageType type, xuint32 channelID, xuint32 seqNum)
     : m_type(type)
+    , m_extFd(-1)
     , m_flags(INC_MSG_FLAG_NONE)
     , m_protocolVersion(0)
     , m_payloadVersion(0)
     , m_channelID(channelID)
     , m_seqNum(seqNum)
     , m_dts(iDeadlineTimer(iDeadlineTimer::Forever).deadlineNSecs())
-    , m_extFd(-1)
 {
 }
 
 iINCMessage::iINCMessage(const iINCMessage& other)
     : m_type(other.m_type)
+    , m_extFd(other.m_extFd)
     , m_flags(other.m_flags)
     , m_protocolVersion(other.m_protocolVersion)
     , m_payloadVersion(other.m_payloadVersion)
@@ -38,7 +39,6 @@ iINCMessage::iINCMessage(const iINCMessage& other)
     , m_seqNum(other.m_seqNum)
     , m_dts(other.m_dts)
     , m_payload(other.m_payload)
-    , m_extFd(other.m_extFd)
 {
 }
 
@@ -46,6 +46,7 @@ iINCMessage& iINCMessage::operator=(const iINCMessage& other)
 {
     if (this != &other) {
         m_type = other.m_type;
+        m_extFd = other.m_extFd;
         m_flags = other.m_flags;
         m_protocolVersion = other.m_protocolVersion;
         m_payloadVersion = other.m_payloadVersion;
@@ -53,7 +54,6 @@ iINCMessage& iINCMessage::operator=(const iINCMessage& other)
         m_seqNum = other.m_seqNum;
         m_dts = other.m_dts;
         m_payload = other.m_payload;
-        m_extFd = other.m_extFd;
     }
     return *this;
 }
@@ -124,9 +124,9 @@ void iINCMessage::clear()
     m_payloadVersion = 0;
     m_channelID = 0;
     m_seqNum = 0;
+    m_extFd = -1;
     m_dts = iDeadlineTimer(iDeadlineTimer::Forever).deadlineNSecs();
     m_payload.clear();
-    m_extFd = -1;
 }
 
 } // namespace iShell

@@ -32,10 +32,9 @@ namespace iShell {
 
 iINCServer::iINCServer(const iStringView& name, iObject *parent)
     : iObject(iString(name), parent)
-    , m_engine(IX_NULLPTR)
-    , m_listenDevice(IX_NULLPTR)
-    , m_ioThread(IX_NULLPTR)
     , m_listening(false)
+    , m_engine(IX_NULLPTR)
+    , m_ioThread(IX_NULLPTR)
     , m_nextChannelId(0)
 {
     // Create and initialize engine
@@ -68,20 +67,6 @@ int iINCServer::listenOn(const iStringView& url)
         return INC_ERROR_INVALID_ARGS;
     }
 
-    // Create listening device
-    // Create server transport using engine (EventSource is created but NOT attached yet)
-    m_listenDevice = m_engine->createServerTransport(url);
-    if (!m_listenDevice) {
-        ilog_error("[", objectName(), "] Failed to create listen device for", url);
-        return INC_ERROR_CONNECTION_FAILED;
-    }
-
-    // Connect the device signal FIRST - use base class signal (works for both TCP and Pipe)
-    iObject::connect(m_listenDevice, &iINCDevice::errorOccurred, this, &iINCServer::handleListenDeviceError);
-    iObject::connect(m_listenDevice, &iINCDevice::disconnected, this, &iINCServer::handleListenDeviceDisconnected);
-    iObject::connect(m_listenDevice, &iINCDevice::customer, this, &iINCServer::handleCustomer, iShell::DirectConnection);
-    iObject::connect(m_listenDevice, &iINCDevice::newConnection, this, &iINCServer::handleNewConnection, iShell::DirectConnection);
-
     // Create global pool if shared memory is enabled
     if (!m_config.disableSharedMemory() && !m_globalPool) {
         MemType poolType = MEMTYPE_SHARED_POSIX;
@@ -91,26 +76,50 @@ int iINCServer::listenOn(const iStringView& url)
             poolType = MEMTYPE_SHARED_POSIX;
         }
 
-        // perClient = false
         m_globalPool = iMemPool::create(objectName().toUtf8().constData(), m_config.sharedMemoryName().constData(), poolType, m_config.sharedMemorySize(), false);
         ilog_info("[", objectName(), "] Created global memory pool with type:", m_globalPool->type(), " name:", m_config.sharedMemoryName().constData());
     }
 
-    m_listening = true;
-
-    // Start IO thread if enabled in config
+    // Start IO thread before creating devices (so moveToThread works immediately)
     if (m_config.enableIOThread()) {
         m_ioThread = new iThread();
         m_ioThread->setObjectName("iINCServer.IOThread-" + objectName());
-
         m_ioThread->start();
-        m_listenDevice->moveToThread(m_ioThread);
-        invokeMethod(m_listenDevice, &iINCDevice::startEventMonitoring, IX_NULLPTR);
-    } else {
-        // Run in main thread (single-threaded mode)
-        m_listenDevice->startEventMonitoring(iEventDispatcher::instance());
     }
 
+    // Create listening devices for each URL, connect signals, and start monitoring
+    iString urlStr = url.toString();
+    IX_ASSERT(m_listenDevices.empty());
+    std::list<iString> urls = urlStr.split(iString(";"), iShell::SkipEmptyParts);
+    for (std::list<iString>::const_iterator it = urls.begin(); it != urls.end(); ++it) {
+        iString singleUrl = it->trimmed();
+        if (singleUrl.isEmpty()) continue;
+
+        iINCDevice* device = m_engine->createServerTransport(singleUrl);
+        if (!device) continue;
+
+        m_listenDevices.push_back(device);
+        iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCServer::handleListenDeviceError);
+        iObject::connect(device, &iINCDevice::disconnected, this, &iINCServer::handleListenDeviceDisconnected);
+        iObject::connect(device, &iINCDevice::customer, this, &iINCServer::handleCustomer, iShell::DirectConnection);
+        iObject::connect(device, &iINCDevice::newConnection, this, &iINCServer::handleNewConnection, iShell::DirectConnection);
+
+        ilog_info("[", objectName(), "] Listening on ", singleUrl);
+        if (m_ioThread && m_config.enableIOThread()) {
+            device->moveToThread(m_ioThread);
+            invokeMethod(device, &iINCDevice::startEventMonitoring, IX_NULLPTR);
+        } else {
+            device->startEventMonitoring(iEventDispatcher::instance());
+        }
+    }
+
+    if(m_listenDevices.empty()) {
+        ilog_error("[", objectName(), "] No valid listen URLs provided");
+        close();
+        return INC_ERROR_INVALID_ARGS;
+    }
+
+    m_listening = true;
     return INC_OK;
 }
 
@@ -142,14 +151,14 @@ void iINCServer::close()
         conn->deleteLater();
     }
 
-    // Close listening device - delete directly
-    if (m_listenDevice) {
-        iObject::disconnect(m_listenDevice, IX_NULLPTR, this, IX_NULLPTR);
-        m_listenDevice->moveToThread(iThread::currentThread());
-        m_listenDevice->close();
-        m_listenDevice->deleteLater();
-        m_listenDevice = IX_NULLPTR;
+    // Close listening devices
+    for (size_t i = 0; i < m_listenDevices.size(); ++i) {
+        iObject::disconnect(m_listenDevices[i], IX_NULLPTR, this, IX_NULLPTR);
+        m_listenDevices[i]->moveToThread(iThread::currentThread());
+        m_listenDevices[i]->close();
+        m_listenDevices[i]->deleteLater();
     }
+    m_listenDevices.clear();
 
     m_listening = false;
     ilog_info("[", objectName(), "] Server closed");
@@ -164,7 +173,7 @@ struct __Action
 
 void iINCServer::broadcastEvent(const iStringView& eventName, xuint16 version, const iByteArray& data)
 {
-    if (!m_listenDevice) {
+    if (m_listenDevices.empty()) {
         return;
     }
 
@@ -173,7 +182,9 @@ void iINCServer::broadcastEvent(const iStringView& eventName, xuint16 version, c
     action->version = version;
     action->data = data;
 
-    invokeMethod(m_listenDevice, &iINCDevice::customer, reinterpret_cast<xintptr>(action));
+    // Dispatch to IO thread via any listen device (all share the same IO thread).
+    // handleCustomer runs via DirectConnection on the device's thread.
+    invokeMethod(m_listenDevices[0], &iINCDevice::customer, reinterpret_cast<xintptr>(action));
 }
 
 void iINCServer::handleCustomer(xintptr action)

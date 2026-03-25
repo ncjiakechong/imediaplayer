@@ -235,9 +235,9 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
     // LIMITATION: Only numeric IPv4 addresses supported (e.g., "127.0.0.1")
     // Hostnames like "localhost" or domain names will fail here
     if (inet_pton(AF_INET, host.toUtf8().constData(), &serverAddr.sin_addr) <= 0) {
+        close();
         // FIXME: DNS resolution not implemented - use getaddrinfo() to support hostnames
         ilog_error("[] Invalid IP address (only numeric IPv4 supported, no DNS) :", host);
-        close();
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -763,77 +763,77 @@ xint64 iTcpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 
 void iTcpDevice::processRx()
 {
-    // Step 1: Ensure header
-    if (m_recvBuffer.size() < sizeof(iINCMessageHeader)) {
-        xint64 needed = sizeof(iINCMessageHeader) - m_recvBuffer.size();
-        int oldSize = m_recvBuffer.size();
-        m_recvBuffer.resize(sizeof(iINCMessageHeader));
+    // Bulk read: read as much as available in one recv call (up to 8KB).
+    // Then parse all complete messages in a loop, keeping leftover bytes
+    // for the next call. This mirrors iUnixDevice::processRx() for
+    // consistent performance across stream transports.
+    static const int BULK_READ_SIZE = 8192;
+    int oldSize = m_recvBuffer.size();
+    m_recvBuffer.resize(oldSize + BULK_READ_SIZE);
 
-        ssize_t n = readImpl(m_recvBuffer.data() + oldSize, needed);
+    ssize_t n = readImpl(m_recvBuffer.data() + oldSize, BULK_READ_SIZE);
 
-        if (n <= 0) { // EAGAIN (0) or Error (-1)
-            m_recvBuffer.resize(oldSize);
-            return;
-        }
-        
-        m_recvBuffer.resize(oldSize + n);
-
-        if (m_recvBuffer.size() < sizeof(iINCMessageHeader)) {
-            return;
-        }
-    }
-
-    // Step 2: Parse header to get payload size
-    iINCMessage msg(INC_MSG_INVALID, 0, 0);
-    xint32 payloadLength = msg.parseHeader(iByteArrayView(m_recvBuffer.constData(), sizeof(iINCMessageHeader)));
-    if (payloadLength < 0) {
-        ilog_error("[", peerAddress(), "] Invalid message header");
-        IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
-        m_recvBuffer.clear();
-        return;
-    }
-
-    if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
-        ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
-        IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
-        m_recvBuffer.clear();
-        return;
-    }
-
-    // Step 3: Ensure we have complete message (header + payload)
-    xuint32 totalSize = sizeof(iINCMessageHeader) + payloadLength;
-    if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
-        xint64 needed = totalSize - m_recvBuffer.size();
-        int oldSize = m_recvBuffer.size();
-        m_recvBuffer.resize(totalSize);
-
-        ssize_t n = readImpl(m_recvBuffer.data() + oldSize, needed);
-
-        if (n <= 0) {
-           m_recvBuffer.resize(oldSize);
-           return;
-        }
-        
-        m_recvBuffer.resize(oldSize + n);
-    }
-
-    // Check if we now have complete message
-    if (static_cast<xuint32>(m_recvBuffer.size()) < totalSize) {
-        return;  // Wait for more data (incomplete message)
-    }
-
-    // Step 4: Complete message received - parse header and extract payload
-    if (payloadLength > 0) {
-        msg.payload().setData(m_recvBuffer.mid(sizeof(iINCMessageHeader), payloadLength));
+    if (n <= 0) {
+        m_recvBuffer.resize(oldSize);
+        if (n < 0) return; // Error or disconnect handled by readImpl
+        if (oldSize == 0) return; // EAGAIN and no buffered data
+        // n == 0 (EAGAIN) but have leftover data — fall through to parse
     } else {
-        msg.payload().clear();
+        m_recvBuffer.resize(oldSize + n);
     }
 
-    // Emit signal
-    IEMIT messageReceived(msg);
+    // Parse and emit all complete messages from the buffer
+    int consumed = 0;
+    const int bufSize = m_recvBuffer.size();
+    const char* bufData = m_recvBuffer.constData();
 
-    // Step 5: Remove consumed data from buffer
-    m_recvBuffer.clear();
+    while (true) {
+        int available = bufSize - consumed;
+
+        // Need at least a complete header
+        if (available < static_cast<int>(sizeof(iINCMessageHeader)))
+            break;
+
+        // Parse header to get payload size
+        iINCMessage msg(INC_MSG_INVALID, 0, 0);
+        xint32 payloadLength = msg.parseHeader(
+            iByteArrayView(bufData + consumed, sizeof(iINCMessageHeader)));
+
+        if (payloadLength < 0) {
+            ilog_error("[", peerAddress(), "] Invalid message header");
+            IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
+            m_recvBuffer.clear();
+            return;
+        }
+
+        if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
+            ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
+            IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
+            m_recvBuffer.clear();
+            return;
+        }
+
+        int totalSize = static_cast<int>(sizeof(iINCMessageHeader)) + payloadLength;
+        if (available < totalSize)
+            break;  // Incomplete message — wait for more data
+
+        // Extract payload
+        if (payloadLength > 0) {
+            msg.payload().setData(m_recvBuffer.mid(consumed + sizeof(iINCMessageHeader), payloadLength));
+        }
+
+        consumed += totalSize;
+        IEMIT messageReceived(msg);
+    }
+
+    // Remove consumed data, keep leftover for next call
+    if (consumed > 0) {
+        if (consumed >= bufSize) {
+            m_recvBuffer.clear();
+        } else {
+            m_recvBuffer = m_recvBuffer.mid(consumed);
+        }
+    }
 }
 
 

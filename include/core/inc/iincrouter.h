@@ -86,14 +86,17 @@ private:
     /// Handle Router-specific handshake (Phase 1 + Phase 2 + Phase 3)
     void handleRouterHandshake(iINCConnection* conn, const iINCMessage& msg);
 
+    /// Handle HANDSHAKE_ACK from upstream: validate, build ACK for downstream
+    void handleHandshakeAck(ClientBridge* bridge, const iINCMessage& msg);
+
     /// Handle STREAM_OPEN: check if both legs are local for SHM passthrough
-    void handleStreamOpen(ClientBridge* bridge, iINCConnection* conn, iINCMessage msg);
+    void handleStreamOpen(ClientBridge* bridge, iINCConnection* conn, const iINCMessage& msg);
 
     /// Handle STREAM_OPEN_ACK from upstream: enable SHM passthrough if negotiated
-    void handleStreamOpenAck(ClientBridge* bridge, iINCMessage msg);
+    void handleStreamOpenAck(ClientBridge* bridge, const iINCMessage& msg);
 
     /// Called when upstream message is received — forward to downstream
-    void onUpstreamMessage(ClientBridge* bridge, iINCMessage msg);
+    void onUpstreamMessage(ClientBridge* bridge, const iINCMessage& msg);
 
     /// Called when upstream binary data is received — forward to downstream
     void onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data);
@@ -122,7 +125,7 @@ private:
     void handleUpstreamConnected(ClientBridge* bridge);
 
     /// Handle upstream raw message: handshake ACK or forwarding
-    void handleUpstreamRawMessage(ClientBridge* bridge, iINCMessage msg);
+    void handleUpstreamRawMessage(ClientBridge* bridge, const iINCMessage& msg);
 
     /// Slot: downstream client disconnected → remove bridge
     void slotClientDisconnected(iINCConnection* conn);

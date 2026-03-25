@@ -87,6 +87,10 @@ public:
     /// Called when operation is cancelled or timed out by the user
     void releaseOperation(iINCOperation* op);
 
+    /// Cancel all pending operations with the given error code.
+    /// Called when the connection is closing to unblock waiting callers.
+    void cancelAllOperations(int errorCode);
+
 // signals:
     /// Emitted when binary data is received (routed by channel ID)
     /// @param channel Channel identifier for routing to appropriate stream

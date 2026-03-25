@@ -177,6 +177,7 @@ void iINCConnection::removeSubscription(const iString& pattern)
 void iINCConnection::close()
 {
     if (m_protocol && m_protocol->device() && m_protocol->device()->isOpen()) {
+        m_protocol->cancelAllOperations(INC_ERROR_DISCONNECTED);
         m_protocol->device()->close();
         IEMIT disconnected(this);
     }

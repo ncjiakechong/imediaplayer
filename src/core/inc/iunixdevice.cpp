@@ -722,7 +722,6 @@ void iUnixDevice::processRx()
         }
 
         consumed += totalSize;
-
         IEMIT messageReceived(msg);
     }
 
