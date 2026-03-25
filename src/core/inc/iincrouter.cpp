@@ -235,7 +235,6 @@ void iINCRouter::handleHandshakeAck(ClientBridge* bridge, const iINCMessage& msg
     xuint32 connId = bridge->downstream ? bridge->downstream->connectionId() : 0;
     ilog_info("Router: bridge established [", connId, "] \xe2\x86\x92 ", serverData.nodeName);
 
-    IEMIT clientRouted(bridge->downstream, serverData.nodeName);
     IEMIT upstreamConnected(bridge->downstream, serverData.nodeName);
 }
 

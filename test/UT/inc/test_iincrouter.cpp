@@ -118,7 +118,7 @@ public:
         condition.broadcast();
     }
 
-    void onClientRouted(iINCConnection* conn, iString target) {
+    void onUpstreamConnected(iINCConnection* conn, iString target) {
         IX_UNUSED(conn);
         iScopedLock<iMutex> lock(mutex);
         routerSignalFired = true;
@@ -185,8 +185,8 @@ public:
                               helper, &RouterTestHelper::onEventReceived);
         }
         if (router && helper) {
-            iObject::disconnect(router, &iINCRouter::clientRouted,
-                              helper, &RouterTestHelper::onClientRouted);
+            iObject::disconnect(router, &iINCRouter::upstreamConnected,
+                              helper, &RouterTestHelper::onUpstreamConnected);
         }
         if (server) {
             server->close();
@@ -254,8 +254,8 @@ public:
             router->addRoute(iString("^tcp://127\\.0\\.0\\.1:"), target);
         }
 
-        iObject::connect(router, &iINCRouter::clientRouted,
-                        helper, &RouterTestHelper::onClientRouted);
+        iObject::connect(router, &iINCRouter::upstreamConnected,
+                        helper, &RouterTestHelper::onUpstreamConnected);
 
         for (int port = 20100; port < 20200; port++) {
             iString url = iString("tcp://127.0.0.1:") + iString::number(port);
@@ -490,7 +490,7 @@ TEST_P(INCRouterTest, BasicRouting) {
     ASSERT_TRUE(startRouter());
     ASSERT_TRUE(connectViaRouter());
 
-    // Verify Router emitted clientRouted signal
+    // Verify Router emitted upstreamConnected signal
     iThread::msleep(50);
     iScopedLock<iMutex> lock(helper->mutex);
     EXPECT_TRUE(helper->routerSignalFired);

@@ -59,10 +59,6 @@ public:
     void setMaxHopCount(xuint8 maxHops) { m_maxHopCount = maxHops; }
 
 // signals:
-    /// Emitted when a client is successfully routed to a target server
-    void clientRouted(iINCConnection* conn, iString targetServer)
-        ISIGNAL(clientRouted, conn, targetServer);
-
     /// Emitted when upstream connection to target server is established
     void upstreamConnected(iINCConnection* conn, iString targetServer)
         ISIGNAL(upstreamConnected, conn, targetServer);
