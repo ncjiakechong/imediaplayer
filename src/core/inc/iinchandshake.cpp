@@ -122,7 +122,7 @@ void iINCHandshake::buildLocalDataFromConfig()
         m_localData.protocolVersion = m_contextConfig->protocolVersionCurrent();
 
         // Client capabilities based on configuration
-        m_localData.capabilities = iINCHandshakeData::CAP_STREAM;  // Always support streams
+        m_localData.capabilities = 0;
 
         if (!m_contextConfig->disableSharedMemory()) {
             m_localData.capabilities |= iINCHandshakeData::CAP_STREAM;
@@ -140,9 +140,8 @@ void iINCHandshake::buildLocalDataFromConfig()
         // Server: use configured protocol version
         m_localData.protocolVersion = m_serverConfig->protocolVersionCurrent();
 
-        // Server capabilities (all features available)
-        m_localData.capabilities = iINCHandshakeData::CAP_STREAM |
-                                   iINCHandshakeData::CAP_MULTIPLEXING |
+        // Server capabilities
+        m_localData.capabilities = iINCHandshakeData::CAP_MULTIPLEXING |
                                    iINCHandshakeData::CAP_FILE_TRANSFER;
 
         if (!m_serverConfig->disableSharedMemory()) {
@@ -190,6 +189,12 @@ iByteArray iINCHandshake::start()
 
 iByteArray iINCHandshake::processHandshake(const iByteArray& data)
 {
+    // Reject if handshake already completed or failed (prevent replay)
+    if (m_state == STATE_COMPLETED || m_state == STATE_FAILED) {
+        ilog_warn("processHandshake() called in terminal state:", m_state);
+        return iByteArray();
+    }
+
     // Parse remote handshake data using iINCTagStruct
     if (!deserializeHandshakeData(data, m_remoteData)) {
         m_state = STATE_FAILED;

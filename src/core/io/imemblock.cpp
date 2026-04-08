@@ -638,15 +638,21 @@ void iMemBlock::makeLocal()
 /* Self-locked. This function is not multiple-caller safe */
 void iMemBlock::replaceImport()
 {
-    IX_ASSERT(MEMBLOCK_IMPORTED == m_type);
+    if (MEMBLOCK_IMPORTED != m_type) {
+        ilog_error("replaceImport called on non-imported block, type:", m_type);
+        return;
+    }
+
+    iMemImportSegment* segment = m_imported.segment;
+    if (!segment || !segment->import) {
+        ilog_error("replaceImport: invalid import segment");
+        return;
+    }
 
     --m_pool->m_stat.nImported;
     m_pool->m_stat.importedSize -= (int) m_length;
 
-    iMemImportSegment* segment = m_imported.segment;
-    IX_ASSERT(segment);
     iMemImport* import = segment->import;
-    IX_ASSERT(import);
 
     iScopedLock<iMutex> _importLock(import->m_mutex);
     import->drainPendingReleases();
@@ -654,7 +660,10 @@ void iMemBlock::replaceImport()
 
     makeLocal();
 
-    IX_ASSERT(segment->n_blocks.value() >= 1);
+    if (segment->n_blocks.value() < 1) {
+        ilog_error("replaceImport: segment n_blocks underflow:", segment->n_blocks.value());
+        return;
+    }
     if (--segment->n_blocks <= 0)
         iMemImport::segmentDetach(segment);
 }

@@ -643,7 +643,8 @@ int iIODevice::requestReadChannel(int channel)
         m_nextReadChannel = channel + 1;
     }
 
-    m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(channel, new iMemBlockQueue(iLatin1StringView("iodeviceRead"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR)));
+    iMemBlockQueue* queue = new iMemBlockQueue(iLatin1StringView("iodeviceRead"), 0, std::numeric_limits<xint32>::max(), 0, 1, 1, 0, 0, IX_NULLPTR);
+    m_readBuffers.insert(std::pair<int, iMemBlockQueue*>(channel, queue));
     setCurrentReadChannel(channel);
     return channel;
 }

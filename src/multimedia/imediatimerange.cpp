@@ -201,40 +201,36 @@ void iMediaTimeRangePrivate::addInterval(const iMediaTimeInterval &interval)
     if(!interval.isNormal())
         return;
 
-    // Find a place to insert the interval
-    int idx = 0;
-    std::list<iMediaTimeInterval>::iterator it = intervals.begin();
-    for (it = intervals.begin(), idx = 0; it != intervals.end(); ++it, ++idx) {
-        // Insert before this element
-        if(interval.s < it->s) {
-            intervals.insert(it, interval);
+    // Find insertion point using iterator (O(n) scan)
+    std::list<iMediaTimeInterval>::iterator insertPos = intervals.begin();
+    for (; insertPos != intervals.end(); ++insertPos) {
+        if(interval.s < insertPos->s) {
             break;
         }
     }
 
-    // Interval needs to be added to the end of the list
-    if (it == intervals.end())
-        intervals.push_back(interval);
+    // Insert at position (O(1) for list)
+    std::list<iMediaTimeInterval>::iterator it = intervals.insert(insertPos, interval);
 
-    // Do we need to correct the element before us?
-    std::list<iMediaTimeInterval>::iterator tmpIt = intervals.begin();
-    if (idx > 0)
-        std::advance(tmpIt, idx - 1);
-    if(idx > 0 && tmpIt->e >= interval.s - 1)
-        idx--;
+    // Merge with predecessor if overlapping
+    if (it != intervals.begin()) {
+        std::list<iMediaTimeInterval>::iterator prev = it;
+        --prev;
+        if (prev->e >= it->s - 1) {
+            prev->e = std::max(prev->e, it->e);
+            intervals.erase(it);
+            it = prev;
+        }
+    }
 
     // Merge trailing ranges
-    while (idx < intervals.size() - 1) {
-        it = intervals.begin();
-        tmpIt = intervals.begin();
-        std::advance(it, idx);
-        std::advance(tmpIt, idx + 1);
-
-        if (it->e < tmpIt->s - 1)
+    std::list<iMediaTimeInterval>::iterator next = it;
+    ++next;
+    while (next != intervals.end()) {
+        if (it->e < next->s - 1)
             break;
-
-        it->e = std::max(it->e, tmpIt->e);
-        intervals.erase(tmpIt);
+        it->e = std::max(it->e, next->e);
+        next = intervals.erase(next);
     }
 }
 

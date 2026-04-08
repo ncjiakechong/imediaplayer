@@ -53,7 +53,6 @@ private:
 
     static iMemTrap* s_memtraps[2];
     static iAUpdate s_aupdate;
-    static iMutex s_mutex; /* only required to serialize access to the write side */
 };
 
 } // namespace iShell

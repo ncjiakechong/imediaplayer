@@ -402,6 +402,17 @@ bool iVariant::convert(int t, void *result) const
 }
 
 /////////////////////////////////////////////////////////////////
+/// system type convert helpers
+/////////////////////////////////////////////////////////////////
+static iString _ix_intToIString(const int& v) { return iString::number(v); }
+static iString _ix_longToIString(const long& v) { return iString::number((xlonglong)v); }
+static iString _ix_llToIString(const long long& v) { return iString::number((xlonglong)v); }
+static iString _ix_ullToIString(const unsigned long long& v) { return iString::number((xulonglong)v); }
+static iString _ix_doubleToIString(const double& v) { return iString::number(v); }
+static int _ix_iStringToInt(const iString& s) { return s.toInt(); }
+static double _ix_iStringToDouble(const iString& s) { return s.toDouble(); }
+
+/////////////////////////////////////////////////////////////////
 /// system type convert implement
 /////////////////////////////////////////////////////////////////
 void _iMetaType::initSystemConvert()
@@ -548,6 +559,31 @@ void _iMetaType::initSystemConvert()
     iRegisterConverter<double, unsigned int>();
     iRegisterConverter<double, unsigned long>();
     iRegisterConverter<double, unsigned long long>();
+
+    // bool <-> integer conversions
+    iRegisterConverter<bool, int>();
+    iRegisterConverter<bool, long>();
+    iRegisterConverter<bool, long long>();
+    iRegisterConverter<bool, unsigned int>();
+    iRegisterConverter<bool, unsigned long>();
+    iRegisterConverter<bool, unsigned long long>();
+    iRegisterConverter<int, bool>();
+    iRegisterConverter<long, bool>();
+    iRegisterConverter<long long, bool>();
+    iRegisterConverter<unsigned int, bool>();
+    iRegisterConverter<unsigned long, bool>();
+    iRegisterConverter<unsigned long long, bool>();
+
+    // numeric -> iString conversions
+    iRegisterConverter<int, iString>(_ix_intToIString);
+    iRegisterConverter<long, iString>(_ix_longToIString);
+    iRegisterConverter<long long, iString>(_ix_llToIString);
+    iRegisterConverter<unsigned long long, iString>(_ix_ullToIString);
+    iRegisterConverter<double, iString>(_ix_doubleToIString);
+
+    // iString -> numeric conversions
+    iRegisterConverter<iString, int>(_ix_iStringToInt);
+    iRegisterConverter<iString, double>(_ix_iStringToDouble);
 
     iRegisterConverter(&std::string::c_str);
     iRegisterConverter(&std::wstring::c_str);

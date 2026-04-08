@@ -918,8 +918,7 @@ bool iObject::setProperty(const char *name, const iVariant& value)
             continue;
 
         bool ret = tProperty->_set(tProperty, this, value);
-        if (!ret)
-            ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] no set function!");
+        if (!ret) ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] no set function!");
 
         return ret;
     } while ((mo = mo->superClass()));
@@ -944,8 +943,7 @@ bool iObject::observePropertyImp(const char* name, _iConnection& conn)
         conn._isArgAdapter = true;
 
         bool ret = connectImpl(conn);
-        if (!ret)
-            ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] no signal func!");
+        if (!ret) ilog_warn("obj[", objectName(), "@", className, "] property[", name, "] no signal func!");
 
         return ret;
     } while ((mo = mo->superClass()));
@@ -1099,8 +1097,7 @@ _iConnection::~_iConnection()
 
 void _iConnection::ref()
 {
-    if (_ref <= 0)
-        ilog_warn("error: ", _ref);
+    if (_ref <= 0) ilog_warn("error: ", _ref);
 
     ++_ref;
 }

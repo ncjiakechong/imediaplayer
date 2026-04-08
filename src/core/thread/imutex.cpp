@@ -137,29 +137,25 @@ private:
 
 iMutex::iMutex(RecursionMode mode)
     : m_recMode(mode)
-    , m_mutex(IX_NULLPTR)
 {
-    IX_COMPILER_VERIFY(sizeof(iMutexImpl) + sizeof(void*) <= sizeof(__pad));
-    m_mutex = new (__pad) iMutexImpl(NonRecursive == mode);
+    IX_COMPILER_VERIFY(sizeof(iMutexImpl) <= sizeof(__pad));
+    new (__pad) iMutexImpl(NonRecursive == mode);
 }
 
 iMutex::~iMutex()
 {
     // Since we used placement new on __pad, we must manually call the destructor
     // and NOT use 'delete', which would attempt to free stack memory.
-    if (m_mutex) {
-        m_mutex->~iMutexImpl();
-        m_mutex = IX_NULLPTR;
-    }
+    impl()->~iMutexImpl();
 }
 
 int iMutex::lock()
-{ return m_mutex->lockImpl(); }
+{ return impl()->lockImpl(); }
 
 int iMutex::tryLock(long milliseconds)
-{ return m_mutex->tryLockImpl(milliseconds); }
+{ return impl()->tryLockImpl(milliseconds); }
 
 int iMutex::unlock()
-{ return m_mutex->unlockImpl(); }
+{ return impl()->unlockImpl(); }
 
 } // namespace iShell

@@ -108,12 +108,13 @@ protected:
     ssize_t readImpl(char* data, xint64 maxlen);
 
 private:
-    bool createSocket();
+    bool createSocket(int family);
     bool setSocketOptions();
     void updatePeerInfo();
     void updateLocalInfo();
 
     int                 m_sockfd;
+    int                 m_addrFamily;   ///< AF_INET or AF_INET6
     iString             m_peerAddr;
     xuint16             m_peerPort;
     iString             m_localAddr;

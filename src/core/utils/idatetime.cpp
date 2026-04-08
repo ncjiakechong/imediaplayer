@@ -107,9 +107,15 @@ enum {
     MSECS_PER_HOUR = 3600000,
     SECS_PER_MIN = 60,
     MSECS_PER_MIN = 60000,
-    TIME_T_MAX = 2145916799,  // int maximum 2037-12-31T23:59:59 UTC
     JULIAN_DAY_FOR_EPOCH = 2440588 // result of julianDayFromDate(1970, 1, 1)
 };
+
+// Use the actual time_t range for the platform.
+// On 64-bit systems (sizeof(time_t) >= 8), localtime_r/mktime handle all practical dates.
+// On 32-bit systems, time_t overflows at 2038-01-19; use 2037-12-31 as safe upper bound.
+static const xint64 TIME_T_MAX = (sizeof(time_t) >= 8)
+    ? xint64(253402300799LL)     // 9999-12-31T23:59:59 UTC
+    : xint64(2145916799LL);      // 2037-12-31T23:59:59 UTC
 
 /*****************************************************************************
   iDate static helper functions
@@ -1374,12 +1380,10 @@ static bool epochMSecsToLocalTime(xint64 msecs, iDate *localDate, iTime *localTi
         if (daylightStatus)
             *daylightStatus = iDateTimePrivate::StandardTime;
         return true;
-    } else if (msecs > (xint64(TIME_T_MAX) * 1000)) {
-        // Handle dates after 2037-12-31 which exceed time_t range (32-bit systems)
-        // Workaround: Map future dates to year 2037 to calculate DST, then adjust back
-        // Limitation: This assumes DST rules remain constant, which may not be accurate
-        // for dates far in the future (e.g., "last Sunday of month" rule may shift)
-        // TODO: Implement proper timezone database support for accurate future DST calculation
+    } else if (msecs > (TIME_T_MAX * 1000)) {
+        // Handle dates beyond the platform's time_t range.
+        // On 64-bit systems this branch is effectively unreachable (time_t covers all practical dates).
+        // On 32-bit systems, map future dates to year 2037 to approximate DST rules.
         iDate utcDate;
         iTime utcTime;
         msecsToTime(msecs, &utcDate, &utcTime);
@@ -1411,7 +1415,7 @@ static xint64 localMSecsToEpochMSecs(xint64 localMsecs,
     iTime tm;
     msecsToTime(localMsecs, &dt, &tm);
 
-    const xint64 msecsMax = xint64(TIME_T_MAX) * 1000;
+    const xint64 msecsMax = TIME_T_MAX * 1000;
 
     if (localMsecs <= xint64(MSECS_PER_DAY)) {
 
@@ -1463,10 +1467,9 @@ static xint64 localMSecsToEpochMSecs(xint64 localMsecs,
                 return utcMsecs;
             }
         }
-        // Handle dates before 1970-01-01 which are below time_t range
-        // Workaround: Map historical dates to year 2037 to calculate DST, then adjust back
-        // Limitation: Assumes DST rules remain constant across different years
-        // TODO: Implement proper timezone database support for accurate historical DST calculation
+        // Dates beyond the platform's time_t range.
+        // On 64-bit systems this branch is effectively unreachable.
+        // On 32-bit systems, map to year 2037 to approximate DST rules.
         int year, month, day;
         dt.getDate(&year, &month, &day);
         // 2037 is not a leap year, so make sure date isn't Feb 29

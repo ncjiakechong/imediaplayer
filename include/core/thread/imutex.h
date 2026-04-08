@@ -61,11 +61,16 @@ public:
     inline bool isRecursive() const { return (Recursive == m_recMode); }
 
 private:
+    inline iMutexImpl* impl() { return reinterpret_cast<iMutexImpl*>(__pad); }
+
     RecursionMode m_recMode;
-    iMutexImpl* m_mutex;
     union
     {
-        char __pad[152]; // use MACOS size
+        #if defined(IX_OS_DARWIN) || defined(IX_OS_MACOS)
+        char __pad[96]; // macOS pthread_mutex_t is ~64 bytes
+        #else
+        char __pad[64]; // Linux/Windows/Android: sufficient for all iMutexImpl variants
+        #endif
         void *__align;
     };
 

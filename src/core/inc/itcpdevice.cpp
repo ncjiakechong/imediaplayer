@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <cstring>
+#include <netdb.h>
 
 #include <core/inc/iincerror.h>
 #include <core/inc/iincmessage.h>
@@ -29,6 +30,23 @@
 #define ILOG_TAG "ix_inc"
 
 namespace iShell {
+
+/// @brief Extract IP string and port from sockaddr_storage (IPv4/IPv6)
+static void addrToString(const struct sockaddr_storage& ss, iString& outAddr, xuint16& outPort)
+{
+    char buf[INET6_ADDRSTRLEN];
+    if (ss.ss_family == AF_INET6) {
+        const struct sockaddr_in6* s6 = reinterpret_cast<const struct sockaddr_in6*>(&ss);
+        inet_ntop(AF_INET6, &s6->sin6_addr, buf, sizeof(buf));
+        outAddr = iString(buf);
+        outPort = ntohs(s6->sin6_port);
+    } else {
+        const struct sockaddr_in* s4 = reinterpret_cast<const struct sockaddr_in*>(&ss);
+        inet_ntop(AF_INET, &s4->sin_addr, buf, sizeof(buf));
+        outAddr = iString(buf);
+        outPort = ntohs(s4->sin_port);
+    }
+}
 
 /// @brief Internal EventSource for TCP transport monitoring
 class iTcpEventSource : public iEventSource
@@ -170,6 +188,7 @@ const char* iTcpDevice::SCHEME = "tcp";
 iTcpDevice::iTcpDevice(Role role, iObject *parent)
     : iINCDevice(role, parent)
     , m_sockfd(-1)
+    , m_addrFamily(AF_INET)
     , m_peerPort(0)
     , m_localPort(0)
     , m_eventSource(IX_NULLPTR)
@@ -187,7 +206,7 @@ bool iTcpDevice::isLocal() const
         return true;
     }
 
-    return m_peerAddr.startsWith("127.");  // 127.0.0.0/8
+    return m_peerAddr.startsWith("127.") || m_peerAddr == "::1";
 }
 
 int iTcpDevice::connectToHost(const iString& host, xuint16 port)
@@ -202,8 +221,25 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
         return INC_ERROR_ALREADY_CONNECTED;
     }
 
-    // Create socket
-    if (!createSocket()) {
+    // Resolve host address (supports IPv4, IPv6, and hostnames)
+    struct addrinfo hints, *addrResult = IX_NULLPTR;
+    std::memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;      // Allow IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM;
+
+    iString portStr = iString::number(port);
+    int gai_err = ::getaddrinfo(host.toUtf8().constData(), portStr.toUtf8().constData(), &hints, &addrResult);
+    if (gai_err != 0 || !addrResult) {
+        ilog_error("[] Failed to resolve host:", host, " error:", gai_strerror(gai_err));
+        if (addrResult) ::freeaddrinfo(addrResult);
+        return INC_ERROR_CONNECTION_FAILED;
+    }
+
+    m_addrFamily = addrResult->ai_family;
+
+    // Create socket matching resolved address family
+    if (!createSocket(m_addrFamily)) {
+        ::freeaddrinfo(addrResult);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -225,25 +261,11 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
     m_peerAddr = host;
     m_peerPort = port;
 
-    // Setup server address
-    struct sockaddr_in serverAddr;
-    std::memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(port);
-
-    // Convert IP address string to binary form
-    // LIMITATION: Only numeric IPv4 addresses supported (e.g., "127.0.0.1")
-    // Hostnames like "localhost" or domain names will fail here
-    if (inet_pton(AF_INET, host.toUtf8().constData(), &serverAddr.sin_addr) <= 0) {
-        close();
-        // FIXME: DNS resolution not implemented - use getaddrinfo() to support hostnames
-        ilog_error("[] Invalid IP address (only numeric IPv4 supported, no DNS) :", host);
-        return INC_ERROR_CONNECTION_FAILED;
-    }
-
-    // Connect
+    // Connect using resolved address
     ilog_info("[] Connection in progress to ", host, ":", port);
-    int result = ::connect(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+    int result = ::connect(m_sockfd, addrResult->ai_addr, addrResult->ai_addrlen);
+    ::freeaddrinfo(addrResult);
+
     if (result < 0 && (errno != EINPROGRESS)) {
         close();
         ilog_error("[] Connect failed: ", strerror(errno), " to ", host);
@@ -280,8 +302,31 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
         return INC_ERROR_INVALID_STATE;
     }
 
-    // Create socket
-    if (!createSocket()) {
+    // Resolve bind address
+    struct addrinfo hints, *addrResult = IX_NULLPTR;
+    std::memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    const char* bindAddr = IX_NULLPTR;
+    if (!address.isEmpty() && address != "0.0.0.0" && address != "::") {
+        bindAddr = address.toUtf8().constData();
+    }
+
+    iString portStr = iString::number(port);
+    int rc = ::getaddrinfo(bindAddr, portStr.toUtf8().constData(), &hints, &addrResult);
+    if (rc != 0 || !addrResult) {
+        close();
+        ilog_error("[] Failed to resolve bind address: ", address, " - ", gai_strerror(rc));
+        return INC_ERROR_CONNECTION_FAILED;
+    }
+
+    m_addrFamily = addrResult->ai_family;
+
+    // Create socket with correct address family
+    if (!createSocket(m_addrFamily)) {
+        ::freeaddrinfo(addrResult);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -289,40 +334,26 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     setSocketOptions();
 
     // Enable address reuse
-    int opt = 1;
-    if (setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        ilog_warn("[", peerAddress(), "] Failed to set SO_REUSEADDR");
-    }
+    int opt2 = 1;
+    setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opt2, sizeof(opt2));
 
     #ifdef SO_REUSEPORT
-    // On macOS and BSD, also set SO_REUSEPORT for immediate port reuse
-    // This allows binding to a port in TIME_WAIT state
-    if (setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-        ilog_warn("[] Failed to set SO_REUSEPORT");
-    }
+    setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEPORT, &opt2, sizeof(opt2));
     #endif
 
-    // Bind to address
-    struct sockaddr_in serverAddr;
-    std::memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(port);
-
-    if (address == "0.0.0.0" || address.isEmpty()) {
-        serverAddr.sin_addr.s_addr = INADDR_ANY;
-    } else {
-        if (inet_pton(AF_INET, address.toUtf8().constData(), &serverAddr.sin_addr) <= 0) {
-            close();
-            ilog_error("[] Invalid bind address:", address);
-            return INC_ERROR_CONNECTION_FAILED;
-        }
+    // For IPv6, allow dual-stack (accept both IPv4 and IPv6)
+    if (m_addrFamily == AF_INET6) {
+        int no = 0;
+        setsockopt(m_sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));
     }
 
-    if (::bind(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
+    if (::bind(m_sockfd, addrResult->ai_addr, addrResult->ai_addrlen) < 0) {
+        ::freeaddrinfo(addrResult);
         close();
         ilog_error("[] Bind failed:", strerror(errno));
         return INC_ERROR_CONNECTION_FAILED;
     }
+    ::freeaddrinfo(addrResult);
 
     // Listen for connections (backlog = 128)
     if (::listen(m_sockfd, 128) < 0) {
@@ -367,7 +398,7 @@ void iTcpDevice::acceptConnection()
         return;
     }
 
-    struct sockaddr_in clientAddr;
+    struct sockaddr_storage clientAddr;
     socklen_t addrLen = sizeof(clientAddr);
 
     int clientFd = ::accept(m_sockfd, (struct sockaddr*)&clientAddr, &addrLen);
@@ -382,12 +413,10 @@ void iTcpDevice::acceptConnection()
     // Create new device for accepted connection
     iTcpDevice* clientDevice = new iTcpDevice(ROLE_CLIENT);
     clientDevice->m_sockfd = clientFd;
+    clientDevice->m_addrFamily = clientAddr.ss_family;
 
     // Extract peer info
-    char peerAddr[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &clientAddr.sin_addr, peerAddr, sizeof(peerAddr));
-    clientDevice->m_peerAddr = iString(peerAddr);
-    clientDevice->m_peerPort = ntohs(clientAddr.sin_port);
+    addrToString(clientAddr, clientDevice->m_peerAddr, clientDevice->m_peerPort);
 
     // Update local info
     clientDevice->updateLocalInfo();
@@ -567,9 +596,9 @@ bool iTcpDevice::setKeepAlive(bool keepAlive)
     return true;
 }
 
-bool iTcpDevice::createSocket()
+bool iTcpDevice::createSocket(int family)
 {
-    m_sockfd = ::socket(AF_INET, SOCK_STREAM, 0);
+    m_sockfd = ::socket(family, SOCK_STREAM, 0);
     if (m_sockfd < 0) {
         ilog_error("Failed to create socket:", strerror(errno));
         return false;
@@ -628,14 +657,11 @@ void iTcpDevice::updatePeerInfo()
         return;
     }
 
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     socklen_t addrLen = sizeof(addr);
 
     if (::getpeername(m_sockfd, (struct sockaddr*)&addr, &addrLen) == 0) {
-        char peerAddr[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &addr.sin_addr, peerAddr, sizeof(peerAddr));
-        m_peerAddr = iString(peerAddr);
-        m_peerPort = ntohs(addr.sin_port);
+        addrToString(addr, m_peerAddr, m_peerPort);
     }
 }
 
@@ -645,14 +671,11 @@ void iTcpDevice::updateLocalInfo()
         return;
     }
 
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     socklen_t addrLen = sizeof(addr);
 
     if (::getsockname(m_sockfd, (struct sockaddr*)&addr, &addrLen) == 0) {
-        char localAddr[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &addr.sin_addr, localAddr, sizeof(localAddr));
-        m_localAddr = iString(localAddr);
-        m_localPort = ntohs(addr.sin_port);
+        addrToString(addr, m_localAddr, m_localPort);
     }
 }
 

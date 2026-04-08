@@ -8,7 +8,6 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
-#include <arpa/inet.h>
 #include <core/io/ilog.h>
 #include <core/inc/iincmessage.h>
 
@@ -33,7 +32,7 @@ iUDPClientDevice::iUDPClientDevice(iUDPDevice* serverDevice, iObject* parent)
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 }
 
-iUDPClientDevice::iUDPClientDevice(iUDPDevice* serverDevice, const struct sockaddr_in& clientAddr, iObject* parent)
+iUDPClientDevice::iUDPClientDevice(iUDPDevice* serverDevice, const struct sockaddr_storage& clientAddr, iObject* parent)
     : iINCDevice(ROLE_CLIENT, parent)  // From server's perspective, this is a client
     , m_serverDevice(serverDevice)
     , m_clientAddr(clientAddr)
@@ -44,7 +43,7 @@ iUDPClientDevice::iUDPClientDevice(iUDPDevice* serverDevice, const struct sockad
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 }
 
-void iUDPClientDevice::updateClientInfo(const struct sockaddr_in& clientAddr)
+void iUDPClientDevice::updateClientInfo(const struct sockaddr_storage& clientAddr)
 {
     m_clientAddr = clientAddr;
     m_addrKey = iUDPDevice::packAddrKey(clientAddr);
@@ -57,9 +56,10 @@ iUDPClientDevice::~iUDPClientDevice()
 
 iString iUDPClientDevice::peerAddress(bool withScheme) const
 {
-    char buf[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &m_clientAddr.sin_addr, buf, sizeof(buf));
-    iString addr = iString(buf) + ":" + iString::number(ntohs(m_clientAddr.sin_port));
+    iString addrStr;
+    xuint16 port = 0;
+    iUDPDevice::addrToString(m_clientAddr, addrStr, port);
+    iString addr = addrStr + ":" + iString::number(port);
     if (withScheme) {
         return iString(iUDPDevice::SCHEME) + "://" + addr;
     }
@@ -68,7 +68,7 @@ iString iUDPClientDevice::peerAddress(bool withScheme) const
 
 bool iUDPClientDevice::isLocal() const
 {
-    return (ntohl(m_clientAddr.sin_addr.s_addr) >> 24) == 127;  // 127.0.0.0/8
+    return iUDPDevice::isLoopback(m_clientAddr);
 }
 
 xint64 iUDPClientDevice::bytesAvailable() const

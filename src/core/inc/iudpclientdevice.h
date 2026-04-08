@@ -10,6 +10,7 @@
 #ifndef IUDPCLIENTDEVICE_H
 #define IUDPCLIENTDEVICE_H
 
+#include <sys/socket.h>
 #include <netinet/in.h>
 #include "iincdevice.h"
 
@@ -32,9 +33,9 @@ public:
     
     /// @brief Constructor with full client information
     /// @param serverDevice Parent UDP server device (not owned, just referenced)
-    /// @param clientAddr Client address (sockaddr_in)
+    /// @param clientAddr Client address (sockaddr_storage)
     /// @param parent iObject parent (typically iINCConnection)
-    iUDPClientDevice(iUDPDevice* serverDevice, const struct sockaddr_in& clientAddr, iObject* parent = IX_NULLPTR);
+    iUDPClientDevice(iUDPDevice* serverDevice, const struct sockaddr_storage& clientAddr, iObject* parent = IX_NULLPTR);
 
     virtual ~iUDPClientDevice();
 
@@ -50,12 +51,12 @@ public:
 
     int socketDescriptor() const { return -1; }  // Virtual device has no real socket
     
-    /// Get client address key (ip in high 32 bits, port in low 32 bits)
+    /// Get client address key
     xuint64 addrKey() const { return m_addrKey; }
     
     /// Update client address and channel info (called after first packet received)
-    void updateClientInfo(const struct sockaddr_in& clientAddr);
-    struct sockaddr_in clientAddr() const { return m_clientAddr; }
+    void updateClientInfo(const struct sockaddr_storage& clientAddr);
+    struct sockaddr_storage clientAddr() const { return m_clientAddr; }
 
     virtual xint64 writeMessage(const iINCMessage& msg, xint64 offset) IX_OVERRIDE;
     void receivedData(const iByteArray& data);
@@ -65,9 +66,9 @@ protected:
     xint64 writeData(const iByteArray& data) IX_OVERRIDE;
 
 private:
-    iUDPDevice*         m_serverDevice;  ///< Reference to parent UDP server device (not owned)
-    struct sockaddr_in  m_clientAddr;    ///< Client address
-    xuint64             m_addrKey;       ///< Address key (ip:port packed into uint64)
+    iUDPDevice*              m_serverDevice;  ///< Reference to parent UDP server device (not owned)
+    struct sockaddr_storage  m_clientAddr;    ///< Client address
+    xuint64                  m_addrKey;       ///< Address key (hashed addr:port)
     int                 m_monitorEvents;
     iByteArray          m_recvBuffer;
 

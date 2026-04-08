@@ -123,8 +123,14 @@ public:
 
     int getSocketError();
 
-    /// Pack sockaddr_in into xuint64 key (ip in high 32 bits, port in low 32 bits)
-    static xuint64 packAddrKey(const struct sockaddr_in& addr);
+    /// Pack sockaddr_storage into xuint64 key for client lookup
+    static xuint64 packAddrKey(const struct sockaddr_storage& addr);
+
+    /// @brief Extract IP string and port from sockaddr_storage (IPv4/IPv6)
+    static void addrToString(const struct sockaddr_storage& ss, iString& outAddr, xuint16& outPort);
+
+    /// @brief Check if a sockaddr_storage represents a loopback address
+    static bool isLoopback(const struct sockaddr_storage& ss);
 
 protected:
     /// Read complete UDP datagram
@@ -135,12 +141,13 @@ protected:
     xint64 writeData(const iByteArray& data) IX_OVERRIDE;
 
 private:
-    bool createSocket();
+    bool createSocket(int family);
     bool setSocketOptions();
-    void updatePeerInfo(const struct sockaddr_in& addr);
+    void updatePeerInfo(const struct sockaddr_storage& addr);
     void updateLocalInfo();
 
     int                 m_sockfd;
+    int                 m_addrFamily;   ///< AF_INET or AF_INET6
     iString             m_peerAddr;
     xuint16             m_peerPort;
     iString             m_localAddr;

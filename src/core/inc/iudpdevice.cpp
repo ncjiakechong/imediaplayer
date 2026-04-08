@@ -73,7 +73,7 @@ public:
             newEvents |= IX_IO_OUT;
         }
 
-        m_monitorEvents |= newEvents;
+        m_monitorEvents = newEvents;
         if (!newEvents && m_pollFd.events) {
             removePoll(&m_pollFd);
             m_pollFd.events = 0;
@@ -170,6 +170,7 @@ const char* iUDPDevice::SCHEME = "udp";
 iUDPDevice::iUDPDevice(Role role, iObject *parent)
     : iINCDevice(role, parent)
     , m_sockfd(-1)
+    , m_addrFamily(AF_INET)
     , m_peerPort(0)
     , m_localPort(0)
     , m_isConnected(false)
@@ -191,31 +192,36 @@ int iUDPDevice::connectToHost(const iString& host, xuint16 port)
         return INC_ERROR_ALREADY_CONNECTED;
     }
 
-    // Create socket
-    if (!createSocket()) {
+    // Create socket (will be recreated after address resolution)
+    // Resolve hostname using thread-safe getaddrinfo
+    struct addrinfo hints, *addrResult = IX_NULLPTR;
+    std::memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    iString portStr = iString::number(port);
+    int gai_err = ::getaddrinfo(host.toUtf8().constData(), portStr.toUtf8().constData(), &hints, &addrResult);
+    if (gai_err != 0 || !addrResult) {
+        ilog_error("[] Failed to resolve hostname:", host, " error:", gai_strerror(gai_err));
+        if (addrResult) ::freeaddrinfo(addrResult);
+        return INC_ERROR_CONNECTION_FAILED;
+    }
+
+    m_addrFamily = addrResult->ai_family;
+
+    // Create socket with resolved family
+    if (!createSocket(m_addrFamily)) {
+        ::freeaddrinfo(addrResult);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
     // Set non-blocking mode
     setNonBlocking(true);
 
-    // Resolve hostname
-    struct hostent* host_entry = ::gethostbyname(host.toUtf8().constData());
-    if (!host_entry) {
-        close();
-        ilog_error("[] Failed to resolve hostname:", host);
-        return INC_ERROR_CONNECTION_FAILED;
-    }
-
-    // Setup server address
-    struct sockaddr_in serverAddr;
-    std::memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(port);
-    std::memcpy(&serverAddr.sin_addr, host_entry->h_addr_list[0], host_entry->h_length);
-
     // UDP "connect" - sets default destination, doesn't establish connection
-    int result = ::connect(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+    int result = ::connect(m_sockfd, addrResult->ai_addr, addrResult->ai_addrlen);
+    ::freeaddrinfo(addrResult);
+
     if (result < 0) {
         close();
         ilog_error("[] UDP connect failed:", strerror(errno));
@@ -223,7 +229,7 @@ int iUDPDevice::connectToHost(const iString& host, xuint16 port)
     }
 
     m_isConnected = true;
-    m_peerAddr = ::inet_ntoa(serverAddr.sin_addr);
+    m_peerAddr = host;
     m_peerPort = port;
 
     // Update local info
@@ -255,39 +261,56 @@ int iUDPDevice::bindOn(const iString& address, xuint16 port)
         return INC_ERROR_INVALID_STATE;
     }
 
-    // Create socket
-    if (!createSocket()) {
+    // Resolve bind address
+    struct addrinfo hints, *addrResult = IX_NULLPTR;
+    std::memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    const char* bindAddr = IX_NULLPTR;
+    if (!address.isEmpty() && address != "0.0.0.0" && address != "::") {
+        bindAddr = address.toUtf8().constData();
+    }
+
+    iString portStr = iString::number(port);
+    int rc = ::getaddrinfo(bindAddr, portStr.toUtf8().constData(), &hints, &addrResult);
+    if (rc != 0 || !addrResult) {
+        ilog_error("[] Failed to resolve bind address: ", address, " - ", gai_strerror(rc));
+        if (addrResult) ::freeaddrinfo(addrResult);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
-    // Setup bind address
-    struct sockaddr_in bindAddr;
-    std::memset(&bindAddr, 0, sizeof(bindAddr));
-    bindAddr.sin_family = AF_INET;
-    bindAddr.sin_port = htons(port);
+    m_addrFamily = addrResult->ai_family;
 
-    if (address.isEmpty() || address == "0.0.0.0") {
-        bindAddr.sin_addr.s_addr = INADDR_ANY;
-    } else {
-        if (::inet_pton(AF_INET, address.toUtf8().constData(), &bindAddr.sin_addr) <= 0) {
-            close();
-            ilog_error("[] Invalid bind address:", address);
-            return INC_ERROR_CONNECTION_FAILED;
-        }
+    // Create socket with resolved family
+    if (!createSocket(m_addrFamily)) {
+        ::freeaddrinfo(addrResult);
+        return INC_ERROR_CONNECTION_FAILED;
+    }
+
+    // For IPv6, allow dual-stack
+    if (m_addrFamily == AF_INET6) {
+        int no = 0;
+        setsockopt(m_sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));
     }
 
     // Bind
-    if (::bind(m_sockfd, (struct sockaddr*)&bindAddr, sizeof(bindAddr)) < 0) {
+    if (::bind(m_sockfd, addrResult->ai_addr, addrResult->ai_addrlen) < 0) {
+        ::freeaddrinfo(addrResult);
         close();
         ilog_error("[] Bind failed:", strerror(errno));
         return INC_ERROR_CONNECTION_FAILED;
     }
+    ::freeaddrinfo(addrResult);
 
     // Update local port if it was 0
     if (port == 0) {
-        socklen_t len = sizeof(bindAddr);
-        if (::getsockname(m_sockfd, (struct sockaddr*)&bindAddr, &len) == 0) {
-            port = ntohs(bindAddr.sin_port);
+        struct sockaddr_storage localAddr;
+        socklen_t len = sizeof(localAddr);
+        if (::getsockname(m_sockfd, (struct sockaddr*)&localAddr, &len) == 0) {
+            iString tmpAddr;
+            addrToString(localAddr, tmpAddr, port);
         }
     }
 
@@ -328,7 +351,7 @@ iString iUDPDevice::peerAddress(bool withScheme) const
 
 bool iUDPDevice::isLocal() const
 {
-    return m_peerAddr.startsWith("127.");  // 127.0.0.0/8
+    return m_peerAddr.startsWith("127.") || m_peerAddr == "::1";
 }
 
 xint64 iUDPDevice::bytesAvailable() const
@@ -354,7 +377,7 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
     // Always allocate full INCMessage size to avoid truncation
     result.resize(sizeof(iINCMessageHeader) + iINCMessageHeader::MAX_MESSAGE_SIZE);
 
-    struct sockaddr_in srcAddr;
+    struct sockaddr_storage srcAddr;
     socklen_t addrLen = sizeof(srcAddr);
     ssize_t bytesRead = ::recvfrom(m_sockfd, result.data(), result.size(), 0, (struct sockaddr*)&srcAddr, &addrLen);
 
@@ -451,11 +474,11 @@ xint64 iUDPDevice::sendTo(iUDPClientDevice* client, const iINCMessage& msg)
     msgh.msg_iov = iov;
     msgh.msg_iovlen = payload.isEmpty() ? 1 : 2;
 
-    struct sockaddr_in addr;
+    struct sockaddr_storage addr;
     if (client) {
         addr = client->clientAddr();
         msgh.msg_name = &addr;
-        msgh.msg_namelen = sizeof(addr);
+        msgh.msg_namelen = (addr.ss_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
     } else {
         msgh.msg_name = IX_NULLPTR;
         msgh.msg_namelen = 0;
@@ -639,9 +662,9 @@ int iUDPDevice::getSocketError()
     return error;
 }
 
-bool iUDPDevice::createSocket()
+bool iUDPDevice::createSocket(int family)
 {
-    m_sockfd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    m_sockfd = ::socket(family, SOCK_DGRAM, 0);
     if (m_sockfd < 0) {
         ilog_error("Failed to create UDP socket:", strerror(errno));
         return false;
@@ -662,10 +685,9 @@ bool iUDPDevice::setSocketOptions()
     return true;
 }
 
-void iUDPDevice::updatePeerInfo(const struct sockaddr_in& addr)
+void iUDPDevice::updatePeerInfo(const struct sockaddr_storage& addr)
 {
-    m_peerAddr = ::inet_ntoa(addr.sin_addr);
-    m_peerPort = ntohs(addr.sin_port);
+    addrToString(addr, m_peerAddr, m_peerPort);
 }
 
 void iUDPDevice::updateLocalInfo()
@@ -674,7 +696,7 @@ void iUDPDevice::updateLocalInfo()
         return;
     }
 
-    struct sockaddr_in localAddr;
+    struct sockaddr_storage localAddr;
     socklen_t addrLen = sizeof(localAddr);
 
     if (::getsockname(m_sockfd, (struct sockaddr*)&localAddr, &addrLen) < 0) {
@@ -682,14 +704,52 @@ void iUDPDevice::updateLocalInfo()
         return;
     }
 
-    m_localAddr = ::inet_ntoa(localAddr.sin_addr);
-    m_localPort = ntohs(localAddr.sin_port);
+    addrToString(localAddr, m_localAddr, m_localPort);
 }
 
-xuint64 iUDPDevice::packAddrKey(const struct sockaddr_in& addr)
+xuint64 iUDPDevice::packAddrKey(const struct sockaddr_storage& addr)
 {
-    // Pack: high 32 bits = IP, low 32 bits = port (keep network byte order for consistency)
-    return (static_cast<xuint64>(addr.sin_addr.s_addr) << 32) | static_cast<xuint64>(addr.sin_port);
+    if (addr.ss_family == AF_INET) {
+        const struct sockaddr_in* s4 = reinterpret_cast<const struct sockaddr_in*>(&addr);
+        return (static_cast<xuint64>(s4->sin_addr.s_addr) << 32) | static_cast<xuint64>(s4->sin_port);
+    }
+    // IPv6: FNV-1a hash of 16-byte address + port into xuint64
+    const struct sockaddr_in6* s6 = reinterpret_cast<const struct sockaddr_in6*>(&addr);
+    xuint64 h = 14695981039346656037ULL;
+    const unsigned char* bytes = s6->sin6_addr.s6_addr;
+    for (int i = 0; i < 16; ++i) {
+        h ^= bytes[i];
+        h *= 1099511628211ULL;
+    }
+    h ^= static_cast<xuint64>(s6->sin6_port);
+    h *= 1099511628211ULL;
+    return h;
+}
+
+void iUDPDevice::addrToString(const struct sockaddr_storage& ss, iString& outAddr, xuint16& outPort)
+{
+    char buf[INET6_ADDRSTRLEN];
+    if (ss.ss_family == AF_INET6) {
+        const struct sockaddr_in6* s6 = reinterpret_cast<const struct sockaddr_in6*>(&ss);
+        inet_ntop(AF_INET6, &s6->sin6_addr, buf, sizeof(buf));
+        outAddr = iString(buf);
+        outPort = ntohs(s6->sin6_port);
+    } else {
+        const struct sockaddr_in* s4 = reinterpret_cast<const struct sockaddr_in*>(&ss);
+        inet_ntop(AF_INET, &s4->sin_addr, buf, sizeof(buf));
+        outAddr = iString(buf);
+        outPort = ntohs(s4->sin_port);
+    }
+}
+
+bool iUDPDevice::isLoopback(const struct sockaddr_storage& ss)
+{
+    if (ss.ss_family == AF_INET6) {
+        const struct sockaddr_in6* s6 = reinterpret_cast<const struct sockaddr_in6*>(&ss);
+        return IN6_IS_ADDR_LOOPBACK(&s6->sin6_addr);
+    }
+    const struct sockaddr_in* s4 = reinterpret_cast<const struct sockaddr_in*>(&ss);
+    return (ntohl(s4->sin_addr.s_addr) >> 24) == 127;
 }
 
 void iUDPDevice::removeClient(iUDPClientDevice* client)

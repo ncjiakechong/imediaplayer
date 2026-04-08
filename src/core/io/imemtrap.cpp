@@ -32,7 +32,6 @@ namespace iShell {
 
 iMemTrap* iMemTrap::s_memtraps[2] = {IX_NULLPTR, IX_NULLPTR};
 iAUpdate iMemTrap::s_aupdate;
-iMutex iMemTrap::s_mutex;
 
 #ifdef IX_HAVE_SIGACTION
 static void (*s_handlerAdaptor)(void*) = IX_NULLPTR;
@@ -89,28 +88,20 @@ iMemTrap::iMemTrap(const void *start, size_t size)
     _prev[0] = IX_NULLPTR;
     _prev[1] = IX_NULLPTR;
 
-    s_mutex.lock();
-
     uint j = s_aupdate.writeBegin();
     link(j);
     j = s_aupdate.writeSwap();
     link(j);
     s_aupdate.writeEnd();
-
-    s_mutex.unlock();
 }
 
 iMemTrap::~iMemTrap()
 {
-    s_mutex.lock();
-
     uint j = s_aupdate.writeBegin();
     unlink(j);
     j = s_aupdate.writeSwap();
     unlink(j);
     s_aupdate.writeEnd();
-
-    s_mutex.unlock();
 }
 
 void iMemTrap::update(const void *start, size_t size)
@@ -120,13 +111,10 @@ void iMemTrap::update(const void *start, size_t size)
     start = ix_page_align_ptr(start);
     size = ix_page_align(size);
 
-    s_mutex.lock();
-
     uint j = s_aupdate.writeBegin();
 
     if (m_start == start && m_size == size) {
         s_aupdate.writeEnd();
-        s_mutex.unlock();
         return;
     }
 
@@ -141,7 +129,6 @@ void iMemTrap::update(const void *start, size_t size)
     link(j);
 
     s_aupdate.writeEnd();
-    s_mutex.unlock();
 }
 
 void iMemTrap::link(uint idx)

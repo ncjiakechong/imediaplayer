@@ -33,13 +33,14 @@ TEST_F(iUDPClientDeviceTest, Constructor) {
 }
 
 TEST_F(iUDPClientDeviceTest, ConstructorWithAddress) {
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(12345);
-    inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+    struct sockaddr_storage ss;
+    memset(&ss, 0, sizeof(ss));
+    struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(&ss);
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons(12345);
+    inet_pton(AF_INET, "127.0.0.1", &addr->sin_addr);
 
-    iUDPClientDevice clientDevice(m_serverDevice, addr);
+    iUDPClientDevice clientDevice(m_serverDevice, ss);
     EXPECT_EQ(clientDevice.role(), iINCDevice::ROLE_CLIENT);
     EXPECT_EQ(clientDevice.peerAddress(), "127.0.0.1:12345");
 }
@@ -47,13 +48,14 @@ TEST_F(iUDPClientDeviceTest, ConstructorWithAddress) {
 TEST_F(iUDPClientDeviceTest, UpdateClientInfo) {
     iUDPClientDevice clientDevice(m_serverDevice);
     
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(54321);
-    inet_pton(AF_INET, "192.168.1.1", &addr.sin_addr);
+    struct sockaddr_storage ss;
+    memset(&ss, 0, sizeof(ss));
+    struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(&ss);
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons(54321);
+    inet_pton(AF_INET, "192.168.1.1", &addr->sin_addr);
 
-    clientDevice.updateClientInfo(addr);
+    clientDevice.updateClientInfo(ss);
     EXPECT_EQ(clientDevice.peerAddress(), "192.168.1.1:54321");
 }
 
@@ -174,7 +176,10 @@ TEST_F(iUDPClientDeviceTest, WriteData) {
     getsockname(clientSock, (struct sockaddr*)&clientAddr, &len);
 
     // 3. Create iUDPClientDevice
-    iUDPClientDevice clientDevice(m_serverDevice, clientAddr);
+    struct sockaddr_storage ss;
+    memset(&ss, 0, sizeof(ss));
+    memcpy(&ss, &clientAddr, sizeof(clientAddr));
+    iUDPClientDevice clientDevice(m_serverDevice, ss);
 
     // 4. Construct INC Message
     iByteArray payload = "Payload";

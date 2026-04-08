@@ -95,7 +95,7 @@ TEST_F(VariantExtendedTest, ByteArrayType) {
 /**
  * Test: Type conversion - int to string
  */
-TEST_F(VariantExtendedTest, DISABLED_IntToStringConversion) {
+TEST_F(VariantExtendedTest, IntToStringConversion) {
     iVariant vInt(12345);
     iString str = vInt.value<iString>();
 
@@ -105,7 +105,7 @@ TEST_F(VariantExtendedTest, DISABLED_IntToStringConversion) {
 /**
  * Test: Type conversion - string to int
  */
-TEST_F(VariantExtendedTest, DISABLED_StringToIntConversion) {
+TEST_F(VariantExtendedTest, StringToIntConversion) {
     iVariant vStr(iString("678"));
     int value = vStr.value<int>();
 
@@ -115,7 +115,7 @@ TEST_F(VariantExtendedTest, DISABLED_StringToIntConversion) {
 /**
  * Test: Type conversion - bool to int
  */
-TEST_F(VariantExtendedTest, DISABLED_BoolToIntConversion) {
+TEST_F(VariantExtendedTest, BoolToIntConversion) {
     iVariant vTrue(true);
     EXPECT_EQ(vTrue.value<int>(), 1);
 
@@ -126,7 +126,7 @@ TEST_F(VariantExtendedTest, DISABLED_BoolToIntConversion) {
 /**
  * Test: Type conversion - int to bool
  */
-TEST_F(VariantExtendedTest, DISABLED_IntToBoolConversion) {
+TEST_F(VariantExtendedTest, IntToBoolConversion) {
     iVariant vZero(0);
     EXPECT_FALSE(vZero.value<bool>());
 
@@ -255,7 +255,7 @@ TEST_F(VariantExtendedTest, ZeroValue) {
 /**
  * Test: Negative numbers
  */
-TEST_F(VariantExtendedTest, DISABLED_NegativeNumbers) {
+TEST_F(VariantExtendedTest, NegativeNumbers) {
     iVariant vNeg(-42);
 
     EXPECT_EQ(vNeg.value<int>(), -42);
@@ -295,7 +295,7 @@ TEST_F(VariantExtendedTest, StringUnicode) {
 /**
  * Test: Multiple conversions chain
  */
-TEST_F(VariantExtendedTest, DISABLED_ConversionChain) {
+TEST_F(VariantExtendedTest, ConversionChain) {
     iVariant v(42);
 
     // int -> string
