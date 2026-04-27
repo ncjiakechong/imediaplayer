@@ -231,7 +231,7 @@ int iUnixDevice::connectToPath(const iString& path)
     if (result < 0) {
         if (errno != EINPROGRESS) {
             close();
-            ilog_error("[] Connect failed:", strerror(errno));
+            ilog_error("[] Connect failed:", errno);
             return INC_ERROR_CONNECTION_FAILED;
         }
 
@@ -285,7 +285,7 @@ int iUnixDevice::listenOn(const iString& path)
     // Bind
     if (::bind(m_sockfd, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
         close();
-        ilog_error("[] Bind failed:", strerror(errno));
+        ilog_error("[] Bind failed:", errno);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -293,7 +293,7 @@ int iUnixDevice::listenOn(const iString& path)
     if (::listen(m_sockfd, 128) < 0) {
         close();
         removeSocketFile();
-        ilog_error("[] Listen failed:", strerror(errno));
+        ilog_error("[] Listen failed:", errno);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -332,7 +332,7 @@ void iUnixDevice::acceptConnection()
     int clientFd = ::accept(m_sockfd, IX_NULLPTR, IX_NULLPTR);
     if (clientFd < 0) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            ilog_error("[", peerAddress(), "] Accept failed:", strerror(errno));
+            ilog_error("[", peerAddress(), "] Accept failed:", errno);
             IEMIT errorOccurred(INC_ERROR_CONNECTION_FAILED);
         }
         return;
@@ -440,7 +440,7 @@ ssize_t iUnixDevice::readImpl(char* data, xint64 maxlen, int* fd) {
     }
     
     if (m_eventSource) m_eventSource->detach();
-    ilog_error("[", peerAddress(), "] recvmsg failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] recvmsg failed:", errno);
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return -1;
 }
@@ -503,7 +503,7 @@ bool iUnixDevice::setNonBlocking(bool nonBlocking)
 
     int flags = ::fcntl(m_sockfd, F_GETFL, 0);
     if (flags < 0) {
-        ilog_error("fcntl F_GETFL failed:", strerror(errno));
+        ilog_error("fcntl F_GETFL failed:", errno);
         return false;
     }
 
@@ -514,7 +514,7 @@ bool iUnixDevice::setNonBlocking(bool nonBlocking)
     }
 
     if (::fcntl(m_sockfd, F_SETFL, flags) < 0) {
-        ilog_error("fcntl F_SETFL failed:", strerror(errno));
+        ilog_error("fcntl F_SETFL failed:", errno);
         return false;
     }
 
@@ -637,7 +637,7 @@ xint64 iUnixDevice::writeMessage(const iINCMessage& msg, xint64 offset)
     if (m_eventSource) {
         m_eventSource->detach();
     }
-    ilog_error("[", peerAddress(), "] writeMessage failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] writeMessage failed:", errno);
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return -1;
 }
@@ -739,7 +739,7 @@ bool iUnixDevice::createSocket()
 {
     m_sockfd = ::socket(AF_UNIX, SOCK_STREAM, 0);
     if (m_sockfd < 0) {
-        ilog_error("Failed to create socket:", strerror(errno));
+        ilog_error("Failed to create socket:", errno);
         return false;
     }
 

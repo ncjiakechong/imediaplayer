@@ -373,7 +373,7 @@ int iShareMem::doAttach(MemType type, uint id, xintptr memfd, bool writable, boo
 
 	    if (fd < 0) {
             if ((errno != EACCES && errno != ENOENT) || !for_cleanup)
-                ilog_warn("shm_open('", fn, "') failed: ", errno, " (", strerror(errno), ")");
+                ilog_warn("shm_open('", fn, "') failed: ", errno);
             return -1;
         }
         #endif

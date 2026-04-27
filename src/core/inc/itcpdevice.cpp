@@ -230,7 +230,7 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
     iString portStr = iString::number(port);
     int gai_err = ::getaddrinfo(host.toUtf8().constData(), portStr.toUtf8().constData(), &hints, &addrResult);
     if (gai_err != 0 || !addrResult) {
-        ilog_error("[] Failed to resolve host:", host, " error:", gai_strerror(gai_err));
+        ilog_error("[] Failed to resolve host:", host, " error:", gai_err);
         if (addrResult) ::freeaddrinfo(addrResult);
         return INC_ERROR_CONNECTION_FAILED;
     }
@@ -268,7 +268,7 @@ int iTcpDevice::connectToHost(const iString& host, xuint16 port)
 
     if (result < 0 && (errno != EINPROGRESS)) {
         close();
-        ilog_error("[] Connect failed: ", strerror(errno), " to ", host);
+        ilog_error("[] Connect failed: ", errno, " to ", host);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -309,16 +309,17 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
+    iByteArray addressUtf8 = address.toUtf8();
     const char* bindAddr = IX_NULLPTR;
     if (!address.isEmpty() && address != "0.0.0.0" && address != "::") {
-        bindAddr = address.toUtf8().constData();
+        bindAddr = addressUtf8.constData();
     }
 
     iString portStr = iString::number(port);
     int rc = ::getaddrinfo(bindAddr, portStr.toUtf8().constData(), &hints, &addrResult);
     if (rc != 0 || !addrResult) {
         close();
-        ilog_error("[] Failed to resolve bind address: ", address, " - ", gai_strerror(rc));
+        ilog_error("[] Failed to resolve bind address: ", address, " - ", rc);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -335,22 +336,25 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
 
     // Enable address reuse
     int opt2 = 1;
-    setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opt2, sizeof(opt2));
+    if (setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &opt2, sizeof(opt2)) < 0)
+        ilog_warn("[] Failed to set SO_REUSEADDR:", errno);
 
     #ifdef SO_REUSEPORT
-    setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEPORT, &opt2, sizeof(opt2));
+    if (setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEPORT, &opt2, sizeof(opt2)) < 0)
+        ilog_warn("[] Failed to set SO_REUSEPORT:", errno);
     #endif
 
     // For IPv6, allow dual-stack (accept both IPv4 and IPv6)
     if (m_addrFamily == AF_INET6) {
         int no = 0;
-        setsockopt(m_sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));
+        if (setsockopt(m_sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no)) < 0)
+            ilog_warn("[] Failed to set IPV6_V6ONLY:", errno);
     }
 
     if (::bind(m_sockfd, addrResult->ai_addr, addrResult->ai_addrlen) < 0) {
         ::freeaddrinfo(addrResult);
         close();
-        ilog_error("[] Bind failed:", strerror(errno));
+        ilog_error("[] Bind failed:", errno);
         return INC_ERROR_CONNECTION_FAILED;
     }
     ::freeaddrinfo(addrResult);
@@ -358,7 +362,7 @@ int iTcpDevice::listenOn(const iString& address, xuint16 port)
     // Listen for connections (backlog = 128)
     if (::listen(m_sockfd, 128) < 0) {
         close();
-        ilog_error("[] Listen failed:", strerror(errno));
+        ilog_error("[] Listen failed:", errno);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -404,11 +408,14 @@ void iTcpDevice::acceptConnection()
     int clientFd = ::accept(m_sockfd, (struct sockaddr*)&clientAddr, &addrLen);
     if (clientFd < 0) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            ilog_error("[] Accept failed:", strerror(errno));
+            ilog_error("[] Accept failed:", errno);
             IEMIT errorOccurred(INC_ERROR_CONNECTION_FAILED);
         }
         return;
     }
+
+    // Set close-on-exec to prevent FD leak to child processes
+    ::fcntl(clientFd, F_SETFD, FD_CLOEXEC);
 
     // Create new device for accepted connection
     iTcpDevice* clientDevice = new iTcpDevice(ROLE_CLIENT);
@@ -490,7 +497,7 @@ ssize_t iTcpDevice::readImpl(char* data, xint64 maxlen)
     }
 
     if (m_eventSource) m_eventSource->detach();
-    ilog_error("[", peerAddress(), "] Read failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] Read failed:", errno);
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return -1;
 }
@@ -548,7 +555,7 @@ bool iTcpDevice::setNonBlocking(bool nonBlocking)
 
     int flags = ::fcntl(m_sockfd, F_GETFL, 0);
     if (flags < 0) {
-        ilog_error("fcntl F_GETFL failed:", strerror(errno));
+        ilog_error("fcntl F_GETFL failed:", errno);
         return false;
     }
 
@@ -559,7 +566,7 @@ bool iTcpDevice::setNonBlocking(bool nonBlocking)
     }
 
     if (::fcntl(m_sockfd, F_SETFL, flags) < 0) {
-        ilog_error("fcntl F_SETFL failed:", strerror(errno));
+        ilog_error("fcntl F_SETFL failed:", errno);
         return false;
     }
 
@@ -574,7 +581,7 @@ bool iTcpDevice::setNoDelay(bool noDelay)
 
     int flag = noDelay ? 1 : 0;
     if (::setsockopt(m_sockfd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag)) < 0) {
-        ilog_warn("Failed to set TCP_NODELAY:", strerror(errno));
+        ilog_warn("Failed to set TCP_NODELAY:", errno);
         return false;
     }
 
@@ -589,7 +596,7 @@ bool iTcpDevice::setKeepAlive(bool keepAlive)
 
     int flag = keepAlive ? 1 : 0;
     if (::setsockopt(m_sockfd, SOL_SOCKET, SO_KEEPALIVE, &flag, sizeof(flag)) < 0) {
-        ilog_warn("Failed to set SO_KEEPALIVE:", strerror(errno));
+        ilog_warn("Failed to set SO_KEEPALIVE:", errno);
         return false;
     }
 
@@ -598,9 +605,9 @@ bool iTcpDevice::setKeepAlive(bool keepAlive)
 
 bool iTcpDevice::createSocket(int family)
 {
-    m_sockfd = ::socket(family, SOCK_STREAM, 0);
+    m_sockfd = ::socket(family, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if (m_sockfd < 0) {
-        ilog_error("Failed to create socket:", strerror(errno));
+        ilog_error("Failed to create socket:", errno);
         return false;
     }
 
@@ -622,22 +629,26 @@ bool iTcpDevice::setSocketOptions()
     int keepCnt = 3;     // Give up after 3 failed keepalives
 
     #ifdef TCP_KEEPIDLE
-    setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(keepIdle));
+    if (setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(keepIdle)) < 0)
+        ilog_warn("Failed to set TCP_KEEPIDLE:", errno);
     #endif
 
     #ifdef TCP_KEEPINTVL
-    setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &keepIntvl, sizeof(keepIntvl));
+    if (setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &keepIntvl, sizeof(keepIntvl)) < 0)
+        ilog_warn("Failed to set TCP_KEEPINTVL:", errno);
     #endif
 
     #ifdef TCP_KEEPCNT
-    setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPCNT, &keepCnt, sizeof(keepCnt));
+    if (setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPCNT, &keepCnt, sizeof(keepCnt)) < 0)
+        ilog_warn("Failed to set TCP_KEEPCNT:", errno);
     #endif
 
     #ifdef TCP_SYNCNT
     // Configure SYN retry count for faster connection failure
     // Default is usually 5 or 6 (approx 63s or 127s)
     int synCnt = 2;      // Fail after ~7 seconds (1s + 2s + 4s)
-    setsockopt(m_sockfd, IPPROTO_TCP, TCP_SYNCNT, &synCnt, sizeof(synCnt));
+    if (setsockopt(m_sockfd, IPPROTO_TCP, TCP_SYNCNT, &synCnt, sizeof(synCnt)) < 0)
+        ilog_warn("Failed to set TCP_SYNCNT:", errno);
     #endif
 
     // Configure TCP_USER_TIMEOUT to detect dead peers during data transmission
@@ -645,7 +656,8 @@ bool iTcpDevice::setSocketOptions()
     // TCP will retransmit for ~15 mins. This forces a timeout much sooner.
     #ifdef TCP_USER_TIMEOUT
     int userTimeout = 15000; // 15 seconds
-    setsockopt(m_sockfd, IPPROTO_TCP, TCP_USER_TIMEOUT, &userTimeout, sizeof(userTimeout));
+    if (setsockopt(m_sockfd, IPPROTO_TCP, TCP_USER_TIMEOUT, &userTimeout, sizeof(userTimeout)) < 0)
+        ilog_warn("Failed to set TCP_USER_TIMEOUT:", errno);
     #endif
 
     return true;
@@ -779,7 +791,7 @@ xint64 iTcpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
     if (m_eventSource) {
         m_eventSource->detach();
     }
-    ilog_error("[", peerAddress(), "] Write failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] Write failed:", errno);
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return -1;
 }

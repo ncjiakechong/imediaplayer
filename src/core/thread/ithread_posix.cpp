@@ -326,6 +326,12 @@ bool iThreadImpl::start()
         code = pthread_create(&threadHd, &attr, __internal_thread_func, this);
     }
 
+    if (code != 0) {
+        ilog_error("pthread_create failed: ", code);
+        pthread_attr_destroy(&attr);
+        return false;
+    }
+
     m_thread->m_data->threadHd = (xintptr)threadHd;
     pthread_attr_destroy(&attr);
 

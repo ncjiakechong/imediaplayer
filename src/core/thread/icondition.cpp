@@ -17,7 +17,7 @@
 #include <condition_variable>
 #else
 #include <pthread.h>
-#include <sys/time.h>
+#include <time.h>
 #endif
 
 #include "core/thread/icondition.h"
@@ -98,9 +98,14 @@ public:
         }
 
         pthread_mutexattr_destroy(&attr);
-        if (pthread_cond_init(&_cond, IX_NULLPTR)) {
+
+        pthread_condattr_t condattr;
+        pthread_condattr_init(&condattr);
+        pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
+        if (pthread_cond_init(&_cond, &condattr)) {
             ilog_error("pthread_cond_init error");
         }
+        pthread_condattr_destroy(&condattr);
     }
     ~iConditionImpl()
     {
@@ -126,14 +131,12 @@ public:
         mutex.unlock();
 
         struct timespec abstime;
-        struct timeval tv;
-
-        gettimeofday(&tv, IX_NULLPTR);
-        abstime.tv_sec  = tv.tv_sec + milliseconds / 1000;
-        abstime.tv_nsec = tv.tv_usec*1000 + (milliseconds % 1000)*1000000;
-        if (abstime.tv_nsec >= 1000000000)
+        clock_gettime(CLOCK_MONOTONIC, &abstime);
+        abstime.tv_sec  += milliseconds / 1000;
+        abstime.tv_nsec += (milliseconds % 1000) * 1000000L;
+        if (abstime.tv_nsec >= 1000000000L)
         {
-            abstime.tv_nsec -= 1000000000;
+            abstime.tv_nsec -= 1000000000L;
             abstime.tv_sec++;
         }
         retValue = pthread_cond_timedwait(&_cond, &_mutex, &abstime);

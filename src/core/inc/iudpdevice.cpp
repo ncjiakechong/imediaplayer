@@ -202,7 +202,7 @@ int iUDPDevice::connectToHost(const iString& host, xuint16 port)
     iString portStr = iString::number(port);
     int gai_err = ::getaddrinfo(host.toUtf8().constData(), portStr.toUtf8().constData(), &hints, &addrResult);
     if (gai_err != 0 || !addrResult) {
-        ilog_error("[] Failed to resolve hostname:", host, " error:", gai_strerror(gai_err));
+        ilog_error("[] Failed to resolve hostname:", host, " error:", gai_err);
         if (addrResult) ::freeaddrinfo(addrResult);
         return INC_ERROR_CONNECTION_FAILED;
     }
@@ -224,7 +224,7 @@ int iUDPDevice::connectToHost(const iString& host, xuint16 port)
 
     if (result < 0) {
         close();
-        ilog_error("[] UDP connect failed:", strerror(errno));
+        ilog_error("[] UDP connect failed:", errno);
         return INC_ERROR_CONNECTION_FAILED;
     }
 
@@ -268,15 +268,16 @@ int iUDPDevice::bindOn(const iString& address, xuint16 port)
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE;
 
+    iByteArray addressUtf8 = address.toUtf8();
     const char* bindAddr = IX_NULLPTR;
     if (!address.isEmpty() && address != "0.0.0.0" && address != "::") {
-        bindAddr = address.toUtf8().constData();
+        bindAddr = addressUtf8.constData();
     }
 
     iString portStr = iString::number(port);
     int rc = ::getaddrinfo(bindAddr, portStr.toUtf8().constData(), &hints, &addrResult);
     if (rc != 0 || !addrResult) {
-        ilog_error("[] Failed to resolve bind address: ", address, " - ", gai_strerror(rc));
+        ilog_error("[] Failed to resolve bind address: ", address, " - ", rc);
         if (addrResult) ::freeaddrinfo(addrResult);
         return INC_ERROR_CONNECTION_FAILED;
     }
@@ -299,7 +300,7 @@ int iUDPDevice::bindOn(const iString& address, xuint16 port)
     if (::bind(m_sockfd, addrResult->ai_addr, addrResult->ai_addrlen) < 0) {
         ::freeaddrinfo(addrResult);
         close();
-        ilog_error("[] Bind failed:", strerror(errno));
+        ilog_error("[] Bind failed:", errno);
         return INC_ERROR_CONNECTION_FAILED;
     }
     ::freeaddrinfo(addrResult);
@@ -440,7 +441,7 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
     }
 
     if (readErr) *readErr = -1;
-    ilog_error("[", peerAddress(), "] UDP read failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] UDP read failed:", errno);
     IEMIT errorOccurred(INC_ERROR_DISCONNECTED);
     return iByteArray();
 }
@@ -496,7 +497,7 @@ xint64 iUDPDevice::sendTo(iUDPClientDevice* client, const iINCMessage& msg)
         return 0;  // Would block
     }
 
-    ilog_error("[", peerAddress(), "] UDP sendto failed:", strerror(errno));
+    ilog_error("[", peerAddress(), "] UDP sendto failed:", errno);
     return -1;
 }
 
@@ -614,7 +615,7 @@ bool iUDPDevice::setNonBlocking(bool nonBlocking)
 
     int flags = ::fcntl(m_sockfd, F_GETFL, 0);
     if (flags < 0) {
-        ilog_error("fcntl F_GETFL failed:", strerror(errno));
+        ilog_error("fcntl F_GETFL failed:", errno);
         return false;
     }
 
@@ -625,7 +626,7 @@ bool iUDPDevice::setNonBlocking(bool nonBlocking)
     }
 
     if (::fcntl(m_sockfd, F_SETFL, flags) < 0) {
-        ilog_error("fcntl F_SETFL failed:", strerror(errno));
+        ilog_error("fcntl F_SETFL failed:", errno);
         return false;
     }
 
@@ -640,7 +641,7 @@ bool iUDPDevice::setBroadcast(bool broadcast)
 
     int optval = broadcast ? 1 : 0;
     if (::setsockopt(m_sockfd, SOL_SOCKET, SO_BROADCAST, &optval, sizeof(optval)) < 0) {
-        ilog_error("setsockopt SO_BROADCAST failed:", strerror(errno));
+        ilog_error("setsockopt SO_BROADCAST failed:", errno);
         return false;
     }
 
@@ -666,7 +667,7 @@ bool iUDPDevice::createSocket(int family)
 {
     m_sockfd = ::socket(family, SOCK_DGRAM, 0);
     if (m_sockfd < 0) {
-        ilog_error("Failed to create UDP socket:", strerror(errno));
+        ilog_error("Failed to create UDP socket:", errno);
         return false;
     }
 
@@ -679,7 +680,7 @@ bool iUDPDevice::setSocketOptions()
     // Enable address reuse
     int reuse = 1;
     if (::setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
-        ilog_warn("setsockopt SO_REUSEADDR failed:", strerror(errno));
+        ilog_warn("setsockopt SO_REUSEADDR failed:", errno);
     }
 
     return true;
@@ -700,7 +701,7 @@ void iUDPDevice::updateLocalInfo()
     socklen_t addrLen = sizeof(localAddr);
 
     if (::getsockname(m_sockfd, (struct sockaddr*)&localAddr, &addrLen) < 0) {
-        ilog_warn("getsockname failed:", strerror(errno));
+        ilog_warn("getsockname failed:", errno);
         return;
     }
 

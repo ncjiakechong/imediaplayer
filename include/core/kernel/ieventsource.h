@@ -13,6 +13,7 @@
 #include <list>
 #include <core/kernel/ipoll.h>
 #include <core/utils/ilatin1stringview.h>
+#include <core/thread/iatomiccounter.h>
 
 namespace iShell {
 
@@ -103,9 +104,8 @@ protected:
 
 private:
     iLatin1StringView m_name;
+    iAtomicCounter<int> m_refCount;
     int m_priority;
-    int m_refCount;
-
     int m_flags;
 
     xuint32 m_nextSeq;

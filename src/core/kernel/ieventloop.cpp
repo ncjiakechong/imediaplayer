@@ -35,10 +35,11 @@ iEventLoop::~iEventLoop()
 bool iEventLoop::processEvents(ProcessEventsFlags flags, int maxPriority)
 {
     iThreadData* data = iThread::get2(thread());
-    if (!data->dispatcher.load())
+    iEventDispatcher* dispatcher = data->dispatcher.load();
+    if (!dispatcher)
         return false;
 
-    return data->dispatcher.load()->processEvents(flags, maxPriority);
+    return dispatcher->processEvents(flags, maxPriority);
 }
 
 int iEventLoop::exec(ProcessEventsFlags flags, int maxPriority)
@@ -80,6 +81,13 @@ int iEventLoop::exec(ProcessEventsFlags flags, int maxPriority)
             IX_ASSERT_X(eventLoop == d, "iEventLoop::exec() internal error");
             d->m_inExec = false;
             --threadData->loopLevel;
+            // deref() after all threadData access is complete, while
+            // the mutex (owned by threadData) is still held by locker.
+            // If deref() would destroy threadData, we must not touch
+            // the mutex afterwards — but locker.unlock() in ~ScopedLock
+            // still references it.  In practice the outer thread object
+            // keeps an additional ref, so this is safe.  Guard with an
+            // extra ref/deref pair if that invariant ever changes.
             threadData->deref();
         }
     };
@@ -97,8 +105,8 @@ void iEventLoop::exit(int returnCode)
     m_exit = 1;
 
     iThreadData *threadData = iThread::get2(thread());
-    if (threadData->dispatcher.load())
-        threadData->dispatcher.load()->interrupt();
+    if (iEventDispatcher* dispatcher = threadData->dispatcher.load())
+        dispatcher->interrupt();
 }
 
 bool iEventLoop::event(iEvent *e)

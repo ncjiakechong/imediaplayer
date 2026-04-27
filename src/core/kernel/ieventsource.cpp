@@ -20,8 +20,8 @@ namespace iShell {
 
 iEventSource::iEventSource(iLatin1StringView name, int priority)
     : m_name(name)
-    , m_priority(priority)
     , m_refCount(1)
+    , m_priority(priority)
     , m_flags(0)
     , m_nextSeq(0)
     , m_comboCount(0)
@@ -50,8 +50,7 @@ bool iEventSource::deref()
         ilog_warn("in different thread");
     }
 
-    --m_refCount;
-    if (0 == m_refCount) {
+    if (0 == --m_refCount) {
         delete this;
         return false;
     }

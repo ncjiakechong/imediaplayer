@@ -67,9 +67,9 @@ private:
     union
     {
         #if defined(IX_OS_DARWIN) || defined(IX_OS_MACOS)
-        char __pad[96]; // macOS pthread_mutex_t is ~64 bytes
+        char __pad[152]; // macOS pthread_mutex_t is ~136 bytes
         #else
-        char __pad[64]; // Linux/Windows/Android: sufficient for all iMutexImpl variants
+        char __pad[64]; // Linux/Windows and other platforms: sufficient for all iMutexImpl variants
         #endif
         void *__align;
     };
