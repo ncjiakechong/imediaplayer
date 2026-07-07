@@ -11,7 +11,7 @@
 
 #include "core/global/imacro.h"
 
-#ifdef IX_HAVE_CXX11
+#if defined(IX_HAVE_CXX11) && defined(IX_OS_WIN)
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
@@ -27,7 +27,7 @@
 
 namespace iShell {
 
-#ifdef IX_HAVE_CXX11
+#if defined(IX_HAVE_CXX11) && defined(IX_OS_WIN)
 
 class iConditionImpl
 {

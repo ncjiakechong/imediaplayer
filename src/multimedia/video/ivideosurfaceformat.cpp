@@ -570,7 +570,7 @@ void iVideoSurfaceFormat::setProperty(const char *name, const iVariant &value)
                 break;
         }
 
-        if (id < d->propertyValues.size()) {
+        if (static_cast<size_t>(id) < d->propertyValues.size()) {
             std::list<iVariant>::iterator value_it = d->propertyValues.begin();
             std::advance(value_it, id);
             if (value.isNull()) {

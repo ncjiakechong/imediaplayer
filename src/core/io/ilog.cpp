@@ -109,17 +109,17 @@ static void ilog_default_data_callback(void*, const char* tag, iLogLevel level, 
                     tag, cur_level, file, line, function);
 
     int limit_len = std::min(4, size);
-    for (int idx = 0; idx < limit_len && (meta_len < sizeof(meta_buf)); ++idx) {
+    for (int idx = 0; idx < limit_len && (meta_len < static_cast<int>(sizeof(meta_buf))); ++idx) {
         meta_len = snprintf(meta_buf + meta_len, sizeof(meta_buf) - meta_len, "0x%hhx ", data[idx]) + meta_len;
     }
 
-    if (size > 8 && (meta_len < sizeof(meta_buf))) {
+    if (size > 8 && (meta_len < static_cast<int>(sizeof(meta_buf)))) {
         meta_len = snprintf(meta_buf + meta_len, sizeof(meta_buf) - meta_len, "... ") + meta_len;
     }
 
     --meta_len;
     limit_len = std::min(4, size - limit_len);
-    for (int idx = 0; idx < limit_len && (meta_len < sizeof(meta_buf)); ++idx) {
+    for (int idx = 0; idx < limit_len && (meta_len < static_cast<int>(sizeof(meta_buf))); ++idx) {
         meta_len = snprintf(meta_buf + meta_len, sizeof(meta_buf) - meta_len, " 0x%hhx", data[size - limit_len + idx]) + meta_len;
     }
 

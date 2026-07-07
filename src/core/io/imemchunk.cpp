@@ -44,26 +44,26 @@ void iMCAlign::push(const iByteArray& c)
             m_leftover.data_ptr().size += c.length();
 
             /* If the new chunk is larger than m_base, move it to current */
-            if (m_leftover.length() >= m_base) {
+            if (m_leftover.length() >= static_cast<xsizetype>(m_base)) {
                 m_current = m_leftover;
                 m_leftover.clear();
             }
 
         } else {
             /* We have to copy */
-            IX_ASSERT(m_leftover.length() < m_base);
+            IX_ASSERT(m_leftover.length() < static_cast<xsizetype>(m_base));
             size_t l = m_base - m_leftover.length();
 
-            if (l > c.length())
+            if (static_cast<xsizetype>(l) > c.length())
                 l = c.length();
 
             /* Can we use the current block? */
             m_leftover.append(c.constData(), l);
 
-            IX_ASSERT(m_leftover.length() <= m_base);
-            IX_ASSERT(m_leftover.length() <= m_leftover.data_ptr().allocatedCapacity());
+            IX_ASSERT(m_leftover.length() <= static_cast<xsizetype>(m_base));
+            IX_ASSERT(m_leftover.length() <= static_cast<xsizetype>(m_leftover.data_ptr().allocatedCapacity()));
 
-            if (c.length() > l) {
+            if (c.length() > static_cast<xsizetype>(l)) {
                 /* Save the remainder of the memory block */
                 m_current.data_ptr().setBegin(m_current.data_ptr().begin() + l);
                 m_current.data_ptr().size -= l;
@@ -71,7 +71,7 @@ void iMCAlign::push(const iByteArray& c)
         }
     } else {
         /* Nothing to merge or copy, just store it */
-        if (c.length() >= m_base)
+        if (c.length() >= static_cast<xsizetype>(m_base))
             m_current = c;
         else
             m_leftover = c;
@@ -83,10 +83,10 @@ int iMCAlign::pop(iByteArray& c)
     /* First test if there's a leftover memory block available */
     if (m_leftover.data_ptr().d_ptr()) {
         IX_ASSERT(m_leftover.length() > 0);
-        IX_ASSERT(m_leftover.length() <= m_base);
+        IX_ASSERT(m_leftover.length() <= static_cast<xsizetype>(m_base));
 
         /* The leftover memory block is not yet complete */
-        if (m_leftover.length() < m_base)
+        if (m_leftover.length() < static_cast<xsizetype>(m_base))
             return -1;
 
         /* Return the leftover memory block */
@@ -94,7 +94,7 @@ int iMCAlign::pop(iByteArray& c)
         m_leftover.clear();
 
         /* If the current memblock is too small move it the leftover */
-        if (m_current.data_ptr().d_ptr() && m_current.length() < m_base) {
+        if (m_current.data_ptr().d_ptr() && m_current.length() < static_cast<xsizetype>(m_base)) {
             m_leftover = m_current;
             m_current.clear();
         }
@@ -104,7 +104,7 @@ int iMCAlign::pop(iByteArray& c)
 
     /* Now let's see if there is other data available */
     if (m_current.data_ptr().d_ptr()) {
-        IX_ASSERT(m_current.length() >= m_base);
+        IX_ASSERT(m_current.length() >= static_cast<xsizetype>(m_base));
 
         /* The length of the returned memory block */
         size_t l = m_current.length();
@@ -117,8 +117,8 @@ int iMCAlign::pop(iByteArray& c)
         c.data_ptr().size = l;
 
         /* Drop that from the current memory block */
-        IX_ASSERT(l <= m_current.length());
-        if (l < m_current.length()) {
+        IX_ASSERT(static_cast<xsizetype>(l) <= m_current.length());
+        if (static_cast<xsizetype>(l) < m_current.length()) {
             m_current.data_ptr().setBegin(m_current.data_ptr().begin() + l);
             m_current.data_ptr().size -= l;
         } else {
@@ -130,7 +130,7 @@ int iMCAlign::pop(iByteArray& c)
             m_current.clear();
         } else {
             /* Move the remainder to leftover */
-            IX_ASSERT(m_current.length() < m_base && !m_leftover.data_ptr().d_ptr());
+            IX_ASSERT(m_current.length() < static_cast<xsizetype>(m_base) && !m_leftover.data_ptr().d_ptr());
             m_leftover = m_current;
         }
 

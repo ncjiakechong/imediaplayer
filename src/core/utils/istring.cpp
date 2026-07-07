@@ -478,7 +478,7 @@ static int ucstricmp(xsizetype alen, const xuint16 *a, xsizetype blen, const cha
 }
 
 // Case-insensitive comparison between a Unicode string and a UTF-8 string
-static int ucstricmp8(const char *utf8, const char *utf8end, const iChar *utf16, const iChar *utf16end)
+static IX_GCC_UNUSED int ucstricmp8(const char *utf8, const char *utf8end, const iChar *utf16, const iChar *utf16end)
 {
     const uchar *src1 = reinterpret_cast<const uchar *>(utf8);
     const uchar *end1 = reinterpret_cast<const uchar *>(utf8end);
@@ -4345,7 +4345,7 @@ static uint parse_flag_characters(const char * &c)
     }
 }
 
-static int parse_field_width(const char *&c, xsizetype size)
+static int parse_field_width(const char *&c, xsizetype /*size*/)
 {
     IX_ASSERT(isAsciiDigit(*c));
 

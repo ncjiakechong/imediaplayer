@@ -66,7 +66,7 @@ public:
 
     void addEvent(const iPostEvent &ev) {
         int priority = ev.priority;
-        if (empty() || (back().priority >= priority)|| (insertionOffset >= size())) {
+        if (empty() || (back().priority >= priority)|| (static_cast<size_t>(insertionOffset) >= size())) {
             // optimization: we can simply append if the last event in
             // the queue has higher or equal priority
             push_back(ev);

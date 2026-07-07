@@ -499,7 +499,7 @@ static gchar * _gst_debug_print_object (GObject* object)
 
 static void _printf_extension_log_func (GstDebugCategory* category,
             GstDebugLevel level, const gchar* file, const gchar* function, gint line,
-            GObject* object, GstDebugMessage* message, gpointer unused)
+            GObject* object, GstDebugMessage* message, gpointer /*unused*/)
 {
     const gchar *dbg_msg;
     gchar *obj = IX_NULLPTR;
@@ -619,7 +619,7 @@ iMultimedia::SupportEstimate iGstUtils::hasSupport(const iString &mimeType,
             supportedCodecCount++;
         }
     }
-    if (supportedCodecCount > 0 && supportedCodecCount == codecs.size())
+    if (supportedCodecCount > 0 && static_cast<size_t>(supportedCodecCount) == codecs.size())
         return iMultimedia::ProbablySupported;
 
     if (supportedCodecCount == 0 && !containsMimeType)

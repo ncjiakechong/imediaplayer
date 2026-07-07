@@ -27,6 +27,14 @@
 
 #include "inc/itcpdevice.h"
 
+// macOS/BSD portability: emulate the Linux-only SOCK_CLOEXEC / MSG_NOSIGNAL.
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 0
+#endif
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
 #define ILOG_TAG "ix_inc"
 
 namespace iShell {
@@ -112,7 +120,7 @@ public:
         updatePoll(&m_pollFd);
     }
 
-    bool detectHang(xuint32 combo) IX_OVERRIDE {
+    bool detectHang(xuint32 /*combo*/) IX_OVERRIDE {
         if ((m_monitorEvents & IX_IO_IN) && m_readBytes == 0) {
             m_monitorEvents = m_pollFd.events;
             return true;
@@ -129,7 +137,7 @@ public:
         return false;
     }
 
-    bool prepare(xint64 *timeout) IX_OVERRIDE {
+    bool prepare(xint64 */*timeout*/) IX_OVERRIDE {
         return false;
     }
 
@@ -416,6 +424,10 @@ void iTcpDevice::acceptConnection()
 
     // Set close-on-exec to prevent FD leak to child processes
     ::fcntl(clientFd, F_SETFD, FD_CLOEXEC);
+#if defined(IX_OS_MAC) || defined(IX_OS_BSD4)
+    int nosigpipe = 1;
+    ::setsockopt(clientFd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe));
+#endif
 
     // Create new device for accepted connection
     iTcpDevice* clientDevice = new iTcpDevice(ROLE_CLIENT);
@@ -461,14 +473,14 @@ xint64 iTcpDevice::bytesAvailable() const
     return static_cast<xint64>(available);
 }
 
-iByteArray iTcpDevice::readData(xint64 maxlen, xint64* readErr)
+iByteArray iTcpDevice::readData(xint64 /*maxlen*/, xint64* readErr)
 {
     IX_ASSERT(0);
     if (readErr) *readErr = 0;
     return iByteArray();
 }
 
-xint64 iTcpDevice::writeData(const iByteArray& data)
+xint64 iTcpDevice::writeData(const iByteArray& /*data*/)
 {
     IX_ASSERT(0);
     return -1;
@@ -611,6 +623,13 @@ bool iTcpDevice::createSocket(int family)
         return false;
     }
 
+#if defined(IX_OS_MAC) || defined(IX_OS_BSD4)
+    // macOS/BSD lack SOCK_CLOEXEC and MSG_NOSIGNAL; apply the equivalents.
+    int nosigpipe = 1;
+    ::setsockopt(m_sockfd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe));
+    ::fcntl(m_sockfd, F_SETFD, FD_CLOEXEC);
+#endif
+
     return true;
 }
 
@@ -740,7 +759,7 @@ xint64 iTcpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
     // Serialize message
     iINCMessageHeader header = msg.header();
     const iByteArray& payload = msg.payload().data();
-    if (offset >= sizeof(iINCMessageHeader) + payload.size()) {
+    if (offset >= static_cast<xint64>(sizeof(iINCMessageHeader) + payload.size())) {
         return 0; 
     }
 
@@ -751,7 +770,7 @@ xint64 iTcpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
     int iovIndex = 0;
 
     // 1. Header
-    if (offset < sizeof(iINCMessageHeader)) {
+    if (offset < static_cast<xint64>(sizeof(iINCMessageHeader))) {
         iov[iovIndex].iov_base = reinterpret_cast<char*>(&header) + offset;
         iov[iovIndex].iov_len = sizeof(iINCMessageHeader) - offset;
         iovIndex++;
@@ -759,7 +778,7 @@ xint64 iTcpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 
     // 2. Payload
     xint64 payloadOffset = 0;
-    if (offset > sizeof(iINCMessageHeader)) {
+    if (offset > static_cast<xint64>(sizeof(iINCMessageHeader))) {
         payloadOffset = offset - sizeof(iINCMessageHeader);
     }
     

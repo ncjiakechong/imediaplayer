@@ -7,6 +7,12 @@ cmake_minimum_required(VERSION 3.10)
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
+# FindGTest doesn't set gmock include dir; derive it from gtest include path
+get_filename_component(_GTEST_SRC_ROOT "${GTEST_INCLUDE_DIR}/../.." ABSOLUTE)
+if(EXISTS "${_GTEST_SRC_ROOT}/googlemock/include")
+    include_directories("${_GTEST_SRC_ROOT}/googlemock/include")
+endif()
+
 # Include project headers
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
@@ -100,11 +106,25 @@ set(UTILS_TEST_SOURCES
     utils/test_istringmatcher.cpp
     utils/test_iarraydata.cpp
     utils/test_ihashfunctions.cpp
+    utils/test_ivariant_extended.cpp
 )
 
 set(GLOBAL_TEST_SOURCES
     global/test_global.cpp
 )
+
+# Multimedia tests are only built when the multimedia library is available
+# (it depends on GStreamer). Detected here so the sources can be added to the
+# executable before add_executable() below.
+find_package(PkgConfig)
+pkg_check_modules(GST_PKG gstreamer-1.0)
+set(MULTIMEDIA_TEST_SOURCES)
+if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LDFLAGS)
+    set(MULTIMEDIA_TEST_SOURCES
+        multimedia/test_iaudioformat.cpp
+        multimedia/test_imediatimerange.cpp
+    )
+endif()
 
 # Main test runner
 set(MAIN_SOURCE
@@ -120,6 +140,7 @@ set(ALL_TEST_SOURCES
     ${IO_TEST_SOURCES}
     ${UTILS_TEST_SOURCES}
     ${GLOBAL_TEST_SOURCES}
+    ${MULTIMEDIA_TEST_SOURCES}
 )
 
 # Create test executable

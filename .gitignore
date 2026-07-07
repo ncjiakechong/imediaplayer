@@ -31,7 +31,19 @@
 *.out
 *.app
 
-# prject file
+# project file
 *.pro.user*
 .vscode
-build
+
+# Build directories (all CMake preset / manual variants)
+build/
+build*/
+
+# Coverage & profiling artifacts
+coverage_report/
+*.gcda
+*.gcno
+*.gcov
+callgrind.out.*
+perf.data*
+

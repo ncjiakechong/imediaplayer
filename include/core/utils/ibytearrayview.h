@@ -114,6 +114,9 @@ public:
     iByteArrayView(const iByteArrayView &c)
         : m_size(c.size()), m_data(c.data()) {}
 
+    iByteArrayView &operator=(const iByteArrayView &other)
+    { m_size = other.m_size; m_data = other.m_data; return *this; }
+
     inline iByteArrayView(const iByteArray &ba);
 
     template <typename Byte, size_t Size>

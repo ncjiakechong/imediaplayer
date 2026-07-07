@@ -82,11 +82,11 @@ struct iMemImportSegment {
 };
 
 iMemDataWrapper::iMemDataWrapper(const iMemBlock* block, size_t offset)
-    : _block(block), _data(const_cast<iMemBlock*>(block)->acquire(offset))
+    : _data(const_cast<iMemBlock*>(block)->acquire(offset)), _block(block)
 {}
 
 iMemDataWrapper::iMemDataWrapper(const iMemDataWrapper& other)
-    : _block(other._block), _data(other._data)
+    : _data(other._data), _block(other._block)
 {
     const_cast<iMemBlock*>(_block)->acquire(0);
 }
@@ -396,11 +396,11 @@ iMemBlock* iMemBlock::new4Pool(iMemPool* pool, size_t elementCount, size_t eleme
     xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
     xsizetype capacity = (allocSize - headerSize) / elementSize;   // Element capacity (without extra bytes)
     allocSize = reserveExtraBytes(allocSize);
-    if ((allocSize < 0) || ((allocSize - (xsizetype)headerSize) < 0) || (allocSize > pool->m_blockSize)) {  // handle overflow. cannot allocate reliably
+    if ((allocSize < 0) || ((allocSize - (xsizetype)headerSize) < 0) || (allocSize > static_cast<xsizetype>(pool->m_blockSize))) {  // handle overflow. cannot allocate reliably
         return IX_NULLPTR;
     }
 
-    if (pool->m_blockSize >= allocSize) {
+    if (static_cast<xsizetype>(pool->m_blockSize) >= allocSize) {
         iMemPool::Slot* slot = pool->allocateSlot();
         if (IX_NULLPTR == slot)
             return IX_NULLPTR;
@@ -475,7 +475,7 @@ iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t elementCount, size_t e
     xsizetype allocSize = calculateBlockSize(elementCount, elementSize, headerSize, options);
     xsizetype capacity = (allocSize - headerSize) / elementSize;   // Element capacity (without extra bytes)
     allocSize = reserveExtraBytes(allocSize);
-    if (((allocSize - headerSize) < 0) /*|| (allocSize > block->m_pool->m_blockSize)*/) {  // handle overflow. cannot allocate reliably
+    if ((allocSize < (xsizetype)headerSize) /*|| (allocSize > block->m_pool->m_blockSize)*/) {  // handle overflow. cannot allocate reliably
         return IX_NULLPTR;
     }
 
@@ -483,7 +483,7 @@ iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t elementCount, size_t e
     xptrdiff offset = reinterpret_cast<char *>(block->m_data.load()) - reinterpret_cast<char *>(block);
     IX_ASSERT(offset < allocSize);
 
-    iMemBlock* newBlock = static_cast<iMemBlock *>(::realloc(block, allocSize));
+    iMemBlock* newBlock = static_cast<iMemBlock *>(::realloc(static_cast<void *>(block), allocSize));
     newBlock->m_data = reinterpret_cast<char *>(newBlock) + offset;
     newBlock->m_options = options;
     newBlock->m_length = allocSize - headerSize;
@@ -592,7 +592,7 @@ static void* ix_xmemdup(const void* p, size_t l) {
     ::memcpy(r, p, l);
     return r;
 }
-static void freeWrapper(void* pointer, void* userData)
+static void freeWrapper(void* pointer, void* /*userData*/)
 {
     free(pointer);
 }
@@ -739,11 +739,11 @@ iMemPool::iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint
     , m_memory(memory)
     , m_imports(IX_NULLPTR)
     , m_exports(IX_NULLPTR)
+    , m_freeSlots(n_blocks)
+    , m_cacheHeads(128)
     , m_nInit(0)
     , m_semaphore(0)
     , m_mutex(iMutex::Recursive)
-    , m_freeSlots(n_blocks)
-    , m_cacheHeads(128)
 {
     IX_ASSERT(m_memory && (m_memory->size() >= (block_size * n_blocks)));
     m_stat.nAllocated = 0;

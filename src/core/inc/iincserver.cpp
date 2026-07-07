@@ -272,7 +272,7 @@ void iINCServer::handleListenDeviceDisconnected()
     iINCServer::close();
 }
 
-void iINCServer::handleListenDeviceError(int errorCode)
+void iINCServer::handleListenDeviceError(int /*errorCode*/)
 {
     if (!m_listening) return;
 

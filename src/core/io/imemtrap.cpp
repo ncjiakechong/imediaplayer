@@ -36,7 +36,7 @@ iAUpdate iMemTrap::s_aupdate;
 #ifdef IX_HAVE_SIGACTION
 static void (*s_handlerAdaptor)(void*) = IX_NULLPTR;
 
-static void signal_handler(int sig, siginfo_t* si, void *data)
+static void signal_handler(int /*sig*/, siginfo_t* si, void */*data*/)
 {
     s_handlerAdaptor(si);
 }

@@ -313,7 +313,7 @@ void iINCRouter::onUpstreamDisconnected(ClientBridge* bridge)
 
 // ---- Binary data forwarding ----
 
-void iINCRouter::onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data)
+void iINCRouter::onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 /*seqNum*/, xint64 pos, iByteArray data)
 {
     if (!bridge->downstream) return;
 
@@ -323,7 +323,7 @@ void iINCRouter::onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xui
     bridge->downstream->sendBinaryData(channel, pos, data);
 }
 
-void iINCRouter::onDownstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data)
+void iINCRouter::onDownstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 /*seqNum*/, xint64 pos, iByteArray data)
 {
     if (!bridge->handshakeComplete || !bridge->upstreamProto) return;
 

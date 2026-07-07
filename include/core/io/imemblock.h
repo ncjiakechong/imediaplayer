@@ -104,7 +104,7 @@ public:
     inline bool needsDetach() const { return isReadOnly(); }
 
     inline xsizetype detachCapacity(xsizetype newSize) const {
-        if ((m_options & CapacityReserved) && (newSize < allocatedCapacity()))
+        if ((m_options & CapacityReserved) && (newSize < static_cast<xsizetype>(allocatedCapacity())))
             return allocatedCapacity();
         return newSize;
     }

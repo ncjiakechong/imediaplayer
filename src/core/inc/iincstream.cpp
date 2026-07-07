@@ -194,7 +194,7 @@ iSharedDataPointer<iINCOperation> iINCStream::write(xint64 pos, const iByteArray
     return m_context->sendBinaryData(m_channelId, pos, data);
 }
 
-void iINCStream::onBinaryDataReceived(iINCConnection*, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data)
+void iINCStream::onBinaryDataReceived(iINCConnection*, xuint32 /*channelId*/, xuint32 seqNum, xint64 pos, iByteArray data)
 {
     invokeMethod(this, &iINCStream::dataReceived, seqNum, pos, data);
 }
@@ -303,7 +303,7 @@ void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
     iObject::invokeMethod(stream, &iINCStream::setState, STATE_DETACHED);
 }
 
-void iINCStream::onContextStateChanged(iINCContext::State previous, iINCContext::State current)
+void iINCStream::onContextStateChanged(iINCContext::State /*previous*/, iINCContext::State current)
 {
     if (iINCContext::STATE_CONNECTED == current) {
         scheduleReconnect();

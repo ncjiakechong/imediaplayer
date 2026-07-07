@@ -102,10 +102,10 @@ public:
     bool isSharedWith(const iArrayDataPointer &other) const { return d && d == other.d; }
     bool needsDetach() const { return !d || d->needsDetach(); }
     size_t detachCapacity(size_t newSize) const { return d ? d->detachCapacity(newSize) : newSize; }
-    const typename Data::ArrayOptions options() const { return d ? typename Data::ArrayOption(d->options()) : Data::DefaultAllocationFlags; }
+    const typename Data::ArrayOptions options() const { return d ? typename Data::ArrayOption(d->options()) : typename Data::ArrayOption(Data::DefaultAllocationFlags); }
     void setOptions(typename Data::ArrayOptions f) { IX_ASSERT(d); d->setOptions(f); }
     void clearOptions(typename Data::ArrayOptions f) { IX_ASSERT(d); d->clearOptions(f); }
-    typename Data::ArrayOptions detachOptions() const { return d ? d->detachOptions() : Data::DefaultAllocationFlags; }
+    typename Data::ArrayOptions detachOptions() const { return d ? d->detachOptions() : typename Data::ArrayOptions(Data::DefaultAllocationFlags); }
 
     Data* d_ptr() { return d; }
     const Data* d_ptr() const { return d; }

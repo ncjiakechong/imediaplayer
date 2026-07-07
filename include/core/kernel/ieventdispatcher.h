@@ -37,7 +37,7 @@ public:
         TimerType timerType;
 
         inline TimerInfo(int id, xint64 i, TimerType t, xintptr u)
-            : timerId(id), interval(i), timerType(t), userdata(u)
+            : timerId(id), interval(i), userdata(u), timerType(t)
         {}
     };
 

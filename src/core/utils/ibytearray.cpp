@@ -878,8 +878,8 @@ iByteArray &iByteArray::operator=(const char *str)
     } else {
         const xsizetype len = xsizetype(strlen(str));
         const xsizetype capacityAtEnd = d.allocatedCapacity() - d.freeSpaceAtBegin();
-        if (d.needsDetach() || size_t(len) > capacityAtEnd
-                || (len < size() && size_t(len) < (capacityAtEnd >> 1)))
+        if (d.needsDetach() || size_t(len) > size_t(capacityAtEnd)
+                || (len < size() && size_t(len) < size_t(capacityAtEnd >> 1)))
             reallocData(len, d.detachOptions());
         memcpy(d.data(), str, len + 1); // include null terminator
         d.size = len;
@@ -1720,25 +1720,33 @@ iByteArray &iByteArray::replace(xsizetype pos, xsizetype len, iByteArrayView aft
     }
 }
 
-// TODO: Optimize all replace methods by providing a base implementation:
-// iByteArray::replace(const char *before, int blen, const char *after, int alen)
-// This would allow string and character-based replace to share optimized code path
-
 /*!
     Replaces every occurrence of the byte array \a before with the
-    byte array \a after. */
+    byte array \a after.
+
+    All string-variant replace() overloads in the header funnel through this
+    iByteArrayView-based implementation, so the optimized search/copy logic
+    below is the single shared implementation. The character-based
+    replace(char, char) is intentionally kept separate as a faster
+    in-place equal-length path.
+*/
 iByteArray &iByteArray::replace(iByteArrayView before, iByteArrayView after)
 {
     if (isNull() || (before == after))
         return *this;
 
+    xsizetype bsize = before.size();
+    xsizetype asize = after.size();
+
+    // Empty 'before' would cause infinite/undefined matching; nothing to do.
+    if (bsize <= 0)
+        return *this;
+
     // protect against before or after being part of this
     const char *a = after.constData();
     const char *b = before.constData();
-    xsizetype asize = after.size();
-    xsizetype bsize = before.size();
 
-    if (ix_points_into_range(a, d.constBegin(), d.constEnd())) {
+    if (asize > 0 && ix_points_into_range(a, d.constBegin(), d.constEnd())) {
         char *copy = (char *)malloc(asize);
         IX_CHECK_PTR(copy);
         memcpy(copy, a, asize);
@@ -1751,10 +1759,32 @@ iByteArray &iByteArray::replace(iByteArrayView before, iByteArrayView after)
         b = copy;
     }
 
-    iByteArrayMatcher matcher(b, bsize);
     xsizetype index = 0;
     xsizetype len = size();
     char *d = data(); // Triggers copy-on-write detachment for in-place modification
+
+    // Fast path: bsize == 1 -> use memchr (typically SIMD-optimized in libc)
+    // instead of building a Boyer-Moore matcher.
+    if (bsize == 1 && asize == bsize) {
+        const char target = *b;
+        const char repl = *a;
+        char *p = d;
+        char *e = d + len;
+        while (p < e) {
+            void *hit = memchr(p, static_cast<unsigned char>(target), e - p);
+            if (!hit)
+                break;
+            *static_cast<char *>(hit) = repl;
+            p = static_cast<char *>(hit) + 1;
+        }
+        if (a != after.constData())
+            ::free(const_cast<char *>(a));
+        if (b != before.constData())
+            ::free(const_cast<char *>(b));
+        return *this;
+    }
+
+    iByteArrayMatcher matcher(b, bsize);
 
     if (bsize == asize) {
         if (bsize) {
@@ -1951,7 +1981,7 @@ iByteArray iByteArray::repeated(xsizetype times) const
 }
 
 #define REHASH(a) \
-    if (ol_minus_1 < sizeof(std::size_t) * CHAR_BIT) \
+    if (size_t(ol_minus_1) < sizeof(std::size_t) * CHAR_BIT) \
         hashHaystack -= (a) << ol_minus_1; \
     hashHaystack <<= 1
 

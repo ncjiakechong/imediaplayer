@@ -49,6 +49,7 @@ iThreadStorageData::iThreadStorageData(void (*func)(void *))
          no where to store it, and no way to actually call it.
          */
         iThreadData *data = iThreadData::current();
+        IX_UNUSED(data);
         ilog_warn("Allocated id ", this, ", destructor ", func, " cannot be stored");
         return;
     }

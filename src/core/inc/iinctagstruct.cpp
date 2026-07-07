@@ -194,7 +194,7 @@ bool iINCTagStruct::getUint16(xuint16& value) const
         return false;
     }
 
-    if (m_readIndex + sizeof(xuint16) > static_cast<xsizetype>(m_data.size())) {
+    if (m_readIndex + sizeof(xuint16) > static_cast<size_t>(m_data.size())) {
         return false;
     }
 
@@ -211,7 +211,7 @@ bool iINCTagStruct::getUint32(xuint32& value) const
         return false;
     }
 
-    if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
+    if (m_readIndex + sizeof(xuint32) > static_cast<size_t>(m_data.size())) {
         return false;
     }
 
@@ -228,7 +228,7 @@ bool iINCTagStruct::getUint64(xuint64& value) const
         return false;
     }
 
-    if (m_readIndex + sizeof(xuint64) > static_cast<xsizetype>(m_data.size())) {
+    if (m_readIndex + sizeof(xuint64) > static_cast<size_t>(m_data.size())) {
         return false;
     }
 
@@ -247,7 +247,7 @@ bool iINCTagStruct::getInt32(xint32& value) const
         return false;
     }
 
-    if (m_readIndex + sizeof(xint32) > static_cast<xsizetype>(m_data.size())) {
+    if (m_readIndex + sizeof(xint32) > static_cast<size_t>(m_data.size())) {
         return false;
     }
 
@@ -264,7 +264,7 @@ bool iINCTagStruct::getInt64(xint64& value) const
         return false;
     }
 
-    if (m_readIndex + sizeof(xint64) > static_cast<xsizetype>(m_data.size())) {
+    if (m_readIndex + sizeof(xint64) > static_cast<size_t>(m_data.size())) {
         return false;
     }
 
@@ -300,7 +300,7 @@ bool iINCTagStruct::getString(iString& value) const
     }
 
     // Read length
-    if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
+    if (m_readIndex + sizeof(xuint32) > static_cast<size_t>(m_data.size())) {
         return false;
     }
 
@@ -333,7 +333,7 @@ bool iINCTagStruct::getBytes(iByteArray& value) const
     }
 
     // Read length
-    if (m_readIndex + sizeof(xuint32) > static_cast<xsizetype>(m_data.size())) {
+    if (m_readIndex + sizeof(xuint32) > static_cast<size_t>(m_data.size())) {
         return false;
     }
 
@@ -368,7 +368,7 @@ bool iINCTagStruct::getDouble(double& value) const
         return false;
     }
 
-    if (m_readIndex + sizeof(double) > static_cast<xsizetype>(m_data.size())) {
+    if (m_readIndex + sizeof(double) > static_cast<size_t>(m_data.size())) {
         return false;
     }
 
@@ -462,7 +462,7 @@ iString iINCTagStruct::dump() const
                 break;
 
             case TAG_UINT16:
-                if (tempIndex + sizeof(xuint16) <= static_cast<xsizetype>(m_data.size())) {
+                if (tempIndex + sizeof(xuint16) <= static_cast<size_t>(m_data.size())) {
                     xuint16 netValue;
                     memcpy(&netValue, m_data.constData() + tempIndex, sizeof(xuint16));
                     result += iString::asprintf("%u\n", ntohs(netValue));
@@ -472,7 +472,7 @@ iString iINCTagStruct::dump() const
 
             case TAG_UINT32:
             case TAG_INT32:
-                if (tempIndex + sizeof(xuint32) <= static_cast<xsizetype>(m_data.size())) {
+                if (tempIndex + sizeof(xuint32) <= static_cast<size_t>(m_data.size())) {
                     xuint32 netValue;
                     memcpy(&netValue, m_data.constData() + tempIndex, sizeof(xuint32));
                     if (tag == TAG_UINT32) {
@@ -493,7 +493,7 @@ iString iINCTagStruct::dump() const
 
             case TAG_STRING:
             case TAG_BYTES:
-                if (tempIndex + sizeof(xuint32) <= static_cast<xsizetype>(m_data.size())) {
+                if (tempIndex + sizeof(xuint32) <= static_cast<size_t>(m_data.size())) {
                     xuint32 netLength;
                     memcpy(&netLength, m_data.constData() + tempIndex, sizeof(xuint32));
                     xuint32 length = ntohl(netLength);

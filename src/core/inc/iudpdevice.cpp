@@ -96,7 +96,7 @@ public:
         updatePoll(&m_pollFd);
     }
 
-    bool detectHang(xuint32 combo) IX_OVERRIDE {
+    bool detectHang(xuint32 /*combo*/) IX_OVERRIDE {
         if ((m_monitorEvents & IX_IO_IN) && m_readBytes == 0) {
             m_monitorEvents = m_pollFd.events;
             return true;
@@ -113,7 +113,7 @@ public:
         return false;
     }
 
-    bool prepare(xint64 *timeout) IX_OVERRIDE {
+    bool prepare(xint64 */*timeout*/) IX_OVERRIDE {
         return false;
     }
 
@@ -365,7 +365,7 @@ xint64 iUDPDevice::bytesAvailable() const
     return static_cast<xint64>(available);
 }
 
-iByteArray iUDPDevice::readData(xint64 maxlen, xint64* readErr)
+iByteArray iUDPDevice::readData(xint64 /*maxlen*/, xint64* readErr)
 {
     IX_ASSERT(0);
     if (readErr) *readErr = 0;
@@ -446,7 +446,7 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
     return iByteArray();
 }
 
-xint64 iUDPDevice::writeData(const iByteArray& data)
+xint64 iUDPDevice::writeData(const iByteArray& /*data*/)
 {
     IX_ASSERT(0);
     return -1;

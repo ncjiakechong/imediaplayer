@@ -186,7 +186,7 @@ iMediaTimeRangePrivate::iMediaTimeRangePrivate()
 {}
 
 iMediaTimeRangePrivate::iMediaTimeRangePrivate(const iMediaTimeRangePrivate &other)
-    : intervals(other.intervals)
+    : iSharedData(), intervals(other.intervals)
 {}
 
 iMediaTimeRangePrivate::iMediaTimeRangePrivate(const iMediaTimeInterval &interval)

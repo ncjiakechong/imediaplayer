@@ -14,6 +14,7 @@
 #include <map>
 #include <list>
 #include <cstdarg>
+#include <cstring>
 #if __cplusplus >= 201103L
 #include <unordered_map>
 #endif
@@ -26,6 +27,22 @@
 #include <core/utils/ihashfunctions.h>
 
 namespace iShell {
+
+// Reinterpret a pointer-to-member-function as another PMF type of the *same*
+// class. The signal/slot and property machinery erases every signal to one
+// canonical type (void (Object::*)()) and casts it back before invoking it.
+// A direct reinterpret_cast between pointer-to-member-function types trips
+// GCC's -Wcast-function-type. Because both PMFs belong to the same class they
+// share an identical, trivially copyable representation, so copying the bytes
+// expresses the same intent without the warning (and without disabling it).
+template <typename To, typename From>
+IX_ALWAYS_INLINE To ix_reinterpret_pmf(From from)
+{
+    To to;
+    std::memcpy(&to, &from, sizeof(to));
+    IX_COMPILER_VERIFY(sizeof(To) == sizeof(From));
+    return to;
+}
 
 /*
  * Logic that check if the arguments of the slot matches the argument of the signal.
@@ -1928,7 +1945,7 @@ public:
         , _func(slot) {
         typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
 
-        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
+        SignalFuncAdaptor tSignalAdptor = ix_reinterpret_pmf<SignalFuncAdaptor>(signal);
         _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
         setSignal(sender, tSignal);
         _argWrapper = &SignalFuncType::cloneArgs;
@@ -1949,7 +1966,7 @@ public:
         typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
 
         IX_ASSERT(0 == slotObj);
-        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
+        SignalFuncAdaptor tSignalAdptor = ix_reinterpret_pmf<SignalFuncAdaptor>(signal);
         _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
         setSignal(sender, tSignal);
         _argWrapper = &SignalFuncType::cloneArgs;
@@ -1969,7 +1986,7 @@ public:
         , _func(slot) {
         typedef void (SignalFuncType::Object::*SignalFuncAdaptor)();
 
-        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(signal);
+        SignalFuncAdaptor tSignalAdptor = ix_reinterpret_pmf<SignalFuncAdaptor>(signal);
         _iMemberFunction tSignal = static_cast<_iMemberFunction>(tSignalAdptor);
         setSignal(sender, tSignal);
         _argWrapper = &SignalFuncType::cloneArgs;
@@ -2023,8 +2040,7 @@ public:
         , _getFunc(_getfunc), _setFunc(_setfunc), _signalFunc(_signalfunc) {
         typedef void (FunctionPointer<SignalFunc>::Object::*SignalFuncAdaptor)();
 
-        SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(_signalfunc);
-        _signalRaw = static_cast<_iMemberFunction>(tSignalAdptor);
+        _signalRaw = static_cast<_iMemberFunction>(ix_reinterpret_pmf<SignalFuncAdaptor>(_signalfunc));
 
         _argWrapper = &_iPropertyHelper::argumentWrapper;
         _argDeleter = &_iPropertyHelper::argumentDeleter;
@@ -2214,7 +2230,7 @@ private:
     typedef void (IX_ThisType::*SignalFuncAdaptor)();                                                                     \
     typedef ThisFuncitonPointer::Arguments Arguments;                                                                     \
                                                                                                                           \
-    SignalFuncAdaptor tSignalAdptor = reinterpret_cast<SignalFuncAdaptor>(&IX_ThisType::name);                            \
+    SignalFuncAdaptor tSignalAdptor = iShell::ix_reinterpret_pmf<SignalFuncAdaptor>(&IX_ThisType::name);                  \
     iShell::_iMemberFunction tSignal = static_cast< iShell::_iMemberFunction >(tSignalAdptor);                            \
                                                                                                                           \
     Arguments args = Arguments(__VA_ARGS__);                                                                              \

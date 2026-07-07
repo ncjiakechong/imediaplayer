@@ -1132,12 +1132,12 @@ static bool nameMatch_impl_impl(const char *a, const Char *b, const Char *b_end)
     return false;
 }
 
-static bool nameMatch_impl(const char *a, iLatin1StringView b)
+static IX_GCC_UNUSED bool nameMatch_impl(const char *a, iLatin1StringView b)
 {
     return nameMatch_impl_impl(a, b.begin(), b.end());
 }
 
-static bool nameMatch_impl(const char *a, iStringView b)
+static IX_GCC_UNUSED bool nameMatch_impl(const char *a, iStringView b)
 {
     return nameMatch_impl_impl(a, b.utf16(), b.utf16() + b.size()); // uses xuint16*, not iChar*
 }

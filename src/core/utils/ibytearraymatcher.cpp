@@ -211,7 +211,7 @@ static xsizetype iFindByteArrayBoyerMoore(
 }
 
 #define REHASH(a) \
-    if (sl_minus_1 < sizeof(std::size_t) * CHAR_BIT) \
+    if (size_t(sl_minus_1) < sizeof(std::size_t) * CHAR_BIT) \
         hashHaystack -= std::size_t(a) << sl_minus_1; \
     hashHaystack <<= 1
 

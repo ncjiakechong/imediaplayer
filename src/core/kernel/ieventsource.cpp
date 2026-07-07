@@ -151,7 +151,7 @@ bool iEventSource::check()
 bool iEventSource::dispatch()
 { return true; }
 
-bool iEventSource::detectHang(xuint32 combo)
+bool iEventSource::detectHang(xuint32 /*combo*/)
 { return true; }
 
 bool iEventSource::detectablePrepare(xint64 *timeout_)

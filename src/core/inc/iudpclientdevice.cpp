@@ -77,7 +77,7 @@ xint64 iUDPClientDevice::bytesAvailable() const
     return m_serverDevice->bytesAvailable();
 }
 
-iByteArray iUDPClientDevice::readData(xint64 maxlen, xint64* readErr)
+iByteArray iUDPClientDevice::readData(xint64 /*maxlen*/, xint64* readErr)
 {
     IX_ASSERT(0);
     if (readErr) *readErr = 0;
@@ -86,11 +86,11 @@ iByteArray iUDPClientDevice::readData(xint64 maxlen, xint64* readErr)
 
 void iUDPClientDevice::receivedData(const iByteArray& data)
 {
-    if (data.size() < sizeof(iINCMessageHeader)) return;
+    if (data.size() < static_cast<xsizetype>(sizeof(iINCMessageHeader))) return;
 
     iINCMessage msg(INC_MSG_INVALID, 0, 0);
     xint32 payloadLen = msg.parseHeader(iByteArrayView(data.constData(), sizeof(iINCMessageHeader)));
-    if (payloadLen < 0 && static_cast<xint64>(data.size()) < (sizeof(iINCMessageHeader) + payloadLen)) return;
+    if (payloadLen < 0 && static_cast<xint64>(data.size()) < (static_cast<xint64>(sizeof(iINCMessageHeader)) + payloadLen)) return;
     msg.payload().setData(data.mid(sizeof(iINCMessageHeader), payloadLen));
     IEMIT messageReceived(msg);
 }
@@ -102,7 +102,7 @@ xint64 iUDPClientDevice::writeMessage(const iINCMessage& msg, xint64 offset)
     return m_serverDevice->sendTo(this, msg);
 }
 
-xint64 iUDPClientDevice::writeData(const iByteArray& data)
+xint64 iUDPClientDevice::writeData(const iByteArray& /*data*/)
 {
     IX_ASSERT(0);
     return -1;
@@ -122,7 +122,7 @@ void iUDPClientDevice::close()
     IEMIT disconnected();
 }
 
-bool iUDPClientDevice::startEventMonitoring(iEventDispatcher* dispatcher)
+bool iUDPClientDevice::startEventMonitoring(iEventDispatcher* /*dispatcher*/)
 {
     // Virtual device doesn't have its own EventSource
     // Events come from parent device and are forwarded via signal connections

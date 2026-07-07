@@ -28,7 +28,7 @@ class IX_CORE_EXPORT iSharedData
 {
 public:
     inline iSharedData() : _ref(0) {}
-    inline iSharedData(const iSharedData& other) : _ref(0) {}
+    inline iSharedData(const iSharedData& /*other*/) : _ref(0) {}
     virtual ~iSharedData();
 
     inline int count() const { return _ref.value(); }

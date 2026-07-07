@@ -257,7 +257,7 @@ int iEventDispatcher_generic::removeEventSource(iEventSource* source)
     return 0;
 }
 
-int iEventDispatcher_generic::addPoll(iPollFD* fd, iEventSource* source)
+int iEventDispatcher_generic::addPoll(iPollFD* fd, iEventSource* /*source*/)
 {
     IX_ASSERT(fd);
     if (thread() != iThread::currentThread()) {

@@ -406,7 +406,7 @@ int iMemBlockQueue::peek(iByteArray& chunk)
         if (!m_silence.isEmpty()) {
             chunk = m_silence;
 
-            if (length > 0 && length < chunk.length())
+            if (length > 0 && static_cast<xsizetype>(length) < chunk.length())
                 chunk.data_ptr().size = length;
         } else {
 
@@ -440,7 +440,7 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iByteArray& chunk)
     if (peek(tchunk) < 0)
         return -1;
 
-    if (tchunk.length() >= block_size) {
+    if (tchunk.length() >= static_cast<xsizetype>(block_size)) {
         chunk = tchunk;
         chunk.data_ptr().truncate(block_size);
         return 0;
@@ -454,7 +454,7 @@ int iMemBlockQueue::peekFixedSize(size_t block_size, iByteArray& chunk)
     iMBQListItem* item = m_currentRead;
     xint64 ri = m_readIndex + tchunk.length();
 
-    while (rchunk.length() < block_size) {
+    while (rchunk.length() < static_cast<xsizetype>(block_size)) {
 
         if (!item || item->index > ri) {
             /* Do we need to append silence? */

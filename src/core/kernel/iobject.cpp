@@ -1143,7 +1143,7 @@ bool iConKeyCompFunc::operator()(const _iMemberFunction& a, const _iMemberFuncti
 }
 
 iObject::_iSender::_iSender(iObject *receiver, iObject *sender, bool record)
-    : _receiver(record ? receiver : IX_NULLPTR), _sender(sender), _previous(IX_NULLPTR)
+    : _previous(IX_NULLPTR), _receiver(record ? receiver : IX_NULLPTR), _sender(sender)
 {
     if (IX_NULLPTR != _receiver) {
         _previous = _receiver->m_currentSender;

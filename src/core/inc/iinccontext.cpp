@@ -40,9 +40,9 @@ iINCContext::iINCContext(const iStringView& name, iObject *parent)
     , m_ioThread(IX_NULLPTR)
     , m_state(STATE_READY)
     , m_customState(STATE_READY)
+    , m_connectMode(0)
     , m_reconnectTimerId(0)
     , m_reconnectAttempts(0)
-    , m_connectMode(0)
 {
     // Create engine - each context owns its own engine
     m_engine = new iINCEngine(this);

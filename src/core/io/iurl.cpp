@@ -842,7 +842,7 @@ static const xuint16 * const pathInUrl = userNameInUrl + 5;
 static const xuint16 * const queryInUrl = userNameInUrl + 6;
 static const xuint16 * const fragmentInUrl = userNameInUrl + 6;
 
-static void recodeFromUser(iString &output, const iString &input, const ushort *actions, iUrl::ParsingMode mode)
+static IX_GCC_UNUSED void recodeFromUser(iString &output, const iString &input, const ushort *actions, iUrl::ParsingMode mode)
 {
     output.resize(0);
     xsizetype appended;
