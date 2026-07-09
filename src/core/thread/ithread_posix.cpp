@@ -193,6 +193,8 @@ void iThreadImpl::setPriority()
         param.sched_priority = sched_get_priority_min(sched_policy);
         pthread_setschedparam((pthread_t)m_thread->m_data->threadHd.value(), sched_policy, &param);
     }
+    #else
+    IX_UNUSED(status);
     #endif
 }
 

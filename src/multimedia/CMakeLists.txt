@@ -27,14 +27,14 @@ set (Source
     video/ivideosurfaceformat.cpp)
 
 find_package(PkgConfig)
-pkg_check_modules(GLIB_PKG REQUIRED glib-2.0)
-pkg_check_modules(GST_PKG REQUIRED gstreamer-1.0)
-pkg_check_modules(GST_PKG_APP REQUIRED gstreamer-app-1.0)
-pkg_check_modules(GST_PKG_BASE REQUIRED gstreamer-base-1.0)
-pkg_check_modules(GST_PKG_PLUGIN_BASE REQUIRED gstreamer-plugins-base-1.0)
-pkg_check_modules(GST_PKG_VIDEO REQUIRED gstreamer-video-1.0)
-pkg_check_modules(GST_PKG_AUDIO REQUIRED gstreamer-audio-1.0)
-pkg_check_modules(GST_PKG_PBUTILS REQUIRED gstreamer-pbutils-1.0)
+pkg_check_modules(GLIB_PKG REQUIRED IMPORTED_TARGET glib-2.0)
+pkg_check_modules(GST_PKG REQUIRED IMPORTED_TARGET gstreamer-1.0)
+pkg_check_modules(GST_PKG_APP REQUIRED IMPORTED_TARGET gstreamer-app-1.0)
+pkg_check_modules(GST_PKG_BASE REQUIRED IMPORTED_TARGET gstreamer-base-1.0)
+pkg_check_modules(GST_PKG_PLUGIN_BASE REQUIRED IMPORTED_TARGET gstreamer-plugins-base-1.0)
+pkg_check_modules(GST_PKG_VIDEO REQUIRED IMPORTED_TARGET gstreamer-video-1.0)
+pkg_check_modules(GST_PKG_AUDIO REQUIRED IMPORTED_TARGET gstreamer-audio-1.0)
+pkg_check_modules(GST_PKG_PBUTILS REQUIRED IMPORTED_TARGET gstreamer-pbutils-1.0)
 
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
@@ -63,12 +63,12 @@ target_link_libraries(${PROJECT_NAME}
     PUBLIC
         icore
     PRIVATE
-        ${GLIB_PKG_LDFLAGS}
-        ${GST_PKG_LDFLAGS}
-        ${GST_PKG_APP_LDFLAGS}
-        ${GST_PKG_BASE_LDFLAGS}
-        ${GST_PKG_VIDEO_LDFLAGS}
-        ${GST_PKG_AUDIO_LDFLAGS}
-        ${GST_PKG_PBUTILS_LDFLAGS}
-        ${GST_PKG_PLUGIN_BASE_LDFLAGS}
+        PkgConfig::GLIB_PKG
+        PkgConfig::GST_PKG
+        PkgConfig::GST_PKG_APP
+        PkgConfig::GST_PKG_BASE
+        PkgConfig::GST_PKG_VIDEO
+        PkgConfig::GST_PKG_AUDIO
+        PkgConfig::GST_PKG_PBUTILS
+        PkgConfig::GST_PKG_PLUGIN_BASE
         ix_project_warnings)

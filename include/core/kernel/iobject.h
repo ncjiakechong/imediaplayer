@@ -23,6 +23,7 @@
 #endif
 
 #include <core/thread/iatomicpointer.h>
+#include <core/utils/ivarlengtharray.h>
 #include <core/kernel/iobjectdefs_impl.h>
 
 namespace iShell {
@@ -405,7 +406,7 @@ private:
     _iSender*  m_currentSender;
     iMutex     m_signalSlotLock;
 
-    std::set<int> m_runningTimers;
+    iVarLengthArray<int, 2> m_runningTimers;
 
     IX_DISABLE_COPY(iObject)
     friend class iThreadData;

@@ -1773,7 +1773,7 @@ public:
     void ref();
     void deref();
 
-    inline _iConnection* clone() const {return _impl(Clone, this, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);}
+    inline _iConnection* clone(void* buffer = IX_NULLPTR, int capacity = 0) const {return _impl(Clone, this, IX_NULLPTR, buffer, &capacity);}
     inline bool compare(const _iConnection* other) const {return (IX_NULLPTR != _impl(Compare, this, other, IX_NULLPTR, IX_NULLPTR));}
 
     void emits(void* args, void* ret) const;
@@ -1797,7 +1797,8 @@ protected:
 
     xuint32 _isArgAdapter : 1;
     xuint32 _orphaned : 1;
-    xuint32 _ref : 30;
+    xuint32 _placementNew : 1;
+    xuint32 _ref : 29;
     xuint32 _signalSize : 16;
     xuint32 _slotSize : 16;
     ConnectionType _type;
@@ -1899,11 +1900,23 @@ class _iConnectionHelper : public _iConnection
         case Clone:
             {
             const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
+            const int cap = (IX_NULLPTR != ret) ? *static_cast<int*>(ret) : 0;
+            if ((IX_NULLPTR != args) && (cap >= static_cast<int>(sizeof(_iConnectionHelper)))) {
+                _iConnectionHelper* r = new (args) _iConnectionHelper(*_thisObj);
+                r->_placementNew = true;
+                return r;
+            }
             return new _iConnectionHelper(*_thisObj);
             }
 
         case Destroy:
-            delete static_cast<const _iConnectionHelper*>(_this);
+            {
+            const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
+            if (_thisObj->_placementNew)
+                _thisObj->~_iConnectionHelper();
+            else
+                delete _thisObj;
+            }
             break;
         }
 

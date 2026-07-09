@@ -15,6 +15,7 @@
 #include "inc/itcpdevice.h"
 #include "inc/iunixdevice.h"
 #include "inc/iudpdevice.h"
+#include "inc/irtpdevice.h"
 
 #define ILOG_TAG "ix_inc"
 
@@ -68,6 +69,9 @@ iINCDevice* iINCEngine::createClientTransport(const iStringView& url)
     else if (parsed.scheme == iUDPDevice::SCHEME) {
         return createUdpClient(parsed);
     }
+    else if (parsed.scheme == iRtpDevice::SCHEME) {
+        return createRtpClient(parsed);
+    }
     else if (parsed.scheme == iUnixDevice::SCHEME_PIPE || parsed.scheme == iUnixDevice::SCHEME) {
         return createUnixClient(parsed);
     }
@@ -89,6 +93,9 @@ iINCDevice* iINCEngine::createServerTransport(const iStringView& url)
     }
     else if (parsed.scheme == iUDPDevice::SCHEME) {
         return createUdpServer(parsed);
+    }
+    else if (parsed.scheme == iRtpDevice::SCHEME) {
+        return createRtpServer(parsed);
     }
     else if (parsed.scheme == iUnixDevice::SCHEME_PIPE || parsed.scheme == iUnixDevice::SCHEME) {
         return createUnixServer(parsed);
@@ -113,7 +120,8 @@ iINCEngine::ParsedUrl iINCEngine::parseUrl(const iStringView& url)
         return result;
     }
 
-    if (result.scheme == iTcpDevice::SCHEME || result.scheme == iUDPDevice::SCHEME) {
+    if (result.scheme == iTcpDevice::SCHEME || result.scheme == iUDPDevice::SCHEME
+        || result.scheme == iRtpDevice::SCHEME) {
         // tcp://host:port or udp://host:port
         result.host = parsedUrl.host();
         int p = parsedUrl.port();
@@ -222,6 +230,33 @@ iUDPDevice* iINCEngine::createUdpServer(const ParsedUrl& url)
     }
 
     ilog_info("Created UDP server on", bindAddr, ":", url.port);
+    return device;
+}
+
+iRtpDevice* iINCEngine::createRtpClient(const ParsedUrl& url)
+{
+    iRtpDevice* device = new iRtpDevice(iINCDevice::ROLE_CLIENT);
+
+    if (device->connectToHost(url.host, url.port) != INC_OK) {
+        delete device;
+        return IX_NULLPTR;
+    }
+
+    ilog_info("Created RTP client to", url.host, ":", url.port);
+    return device;
+}
+
+iRtpDevice* iINCEngine::createRtpServer(const ParsedUrl& url)
+{
+    iRtpDevice* device = new iRtpDevice(iINCDevice::ROLE_SERVER);
+
+    iString bindAddr = url.host.isEmpty() ? "0.0.0.0" : url.host;
+    if (device->bindOn(bindAddr, url.port) != INC_OK) {
+        delete device;
+        return IX_NULLPTR;
+    }
+
+    ilog_info("Created RTP server on", bindAddr, ":", url.port);
     return device;
 }
 

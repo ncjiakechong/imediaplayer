@@ -20,6 +20,7 @@ class iINCDevice;
 class iTcpDevice;
 class iUnixDevice;
 class iUDPDevice;
+class iRtpDevice;
 class iEventSource;
 class iTcpEventSource;
 class iUnixEventSource;
@@ -79,6 +80,8 @@ private:
     iUnixDevice* createUnixServer(const ParsedUrl& url);
     iUDPDevice* createUdpClient(const ParsedUrl& url);
     iUDPDevice* createUdpServer(const ParsedUrl& url);
+    iRtpDevice* createRtpClient(const ParsedUrl& url);
+    iRtpDevice* createRtpServer(const ParsedUrl& url);
 
     bool                m_initialized;  ///< Initialization state
 

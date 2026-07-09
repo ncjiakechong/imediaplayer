@@ -43,6 +43,12 @@ iINCTagStruct& iINCTagStruct::operator=(const iINCTagStruct& other)
 
 void iINCTagStruct::writeTag(Tag tag)
 {
+    // On the first write of an outgoing message, reserve a small buffer so the
+    // typical small control message serialises in a single allocation instead
+    // of several geometric reallocations. Parsing incoming data never calls
+    // writeTag(), so this only affects the send path.
+    if (m_data.isEmpty())
+        m_data.reserve(128);
     m_data.append(static_cast<char>(tag));
 }
 
@@ -118,9 +124,13 @@ void iINCTagStruct::putString(iStringView str)
 
 void iINCTagStruct::putBytes(iByteArrayView data)
 {
-    writeTag(TAG_BYTES);
-
     xuint32 length = static_cast<xuint32>(data.size());
+
+    // Reserve the whole record up front (tag + length + data + NUL) so a large
+    // payload grows in one reallocation instead of a geometric sequence.
+    m_data.reserve(m_data.size() + 6 + static_cast<xsizetype>(length));
+
+    writeTag(TAG_BYTES);
 
     // Write length (network byte order)
     xuint32 netLength = htonl(length);

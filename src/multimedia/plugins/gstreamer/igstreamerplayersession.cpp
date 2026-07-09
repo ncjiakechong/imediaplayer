@@ -353,7 +353,7 @@ bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
     if (m_renderer) {
         GstIterator *it = gst_bin_iterate_sinks(GST_BIN(pipeline));
         #if GST_CHECK_VERSION(1,0,0)
-        GValue data = { 0, 0 };
+        GValue data = G_VALUE_INIT;
         while (gst_iterator_next (it, &data) == GST_ITERATOR_OK) {
             GstElement* child = static_cast<GstElement*>(g_value_get_object(&data));
         #else
@@ -374,7 +374,7 @@ bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)
     if (m_appSrc) {
         GstIterator *it = gst_bin_iterate_sources(GST_BIN(pipeline));
         #if GST_CHECK_VERSION(1,0,0)
-        GValue data = { 0, 0 };
+        GValue data = G_VALUE_INIT;
         while (gst_iterator_next (it, &data) == GST_ITERATOR_OK) {
             GstElement* child = static_cast<GstElement*>(g_value_get_object(&data));
         #else

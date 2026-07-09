@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <poll.h>
 #include <cstring>
 
 extern bool g_testINC;
@@ -52,6 +53,22 @@ public:
     void onNewConnection(iINCDevice* dev) { acceptedDevice = static_cast<iTcpDevice*>(dev); }
     iTcpDevice* acceptedDevice;
 };
+
+// Poll the listening server until an incoming connection is accepted or a
+// bounded timeout elapses. A successful loopback connect() does not guarantee
+// the connection is already queued on the listening socket (notably on
+// macOS/BSD), so wait for the socket to become readable and retry the accept.
+static void pollAndAccept(iTcpDevice& server, ConnectionReceiver& receiver)
+{
+    for (int i = 0; i < 100 && receiver.acceptedDevice == IX_NULLPTR; ++i) {
+        struct pollfd pfd;
+        std::memset(&pfd, 0, sizeof(pfd));
+        pfd.fd = server.socketDescriptor();
+        pfd.events = POLLIN;
+        ::poll(&pfd, 1, 10); // wait up to 10ms for the incoming connection
+        server.acceptConnection();
+    }
+}
 
 class TCPDeviceTest : public ::testing::Test {
 protected:
@@ -165,8 +182,8 @@ TEST_F(TCPDeviceTest, AcceptConnection) {
     inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
     ASSERT_EQ(::connect(rawFd, (struct sockaddr*)&addr, sizeof(addr)), 0);
 
-    // Manually trigger accept (normally done by event loop)
-    server.acceptConnection();
+    // Manually trigger accept (normally done by event loop).
+    pollAndAccept(server, receiver);
 
     ASSERT_NE(receiver.acceptedDevice, (iTcpDevice*)IX_NULLPTR);
     EXPECT_TRUE(receiver.acceptedDevice->isOpen());
@@ -245,7 +262,7 @@ TEST_F(TCPDeviceTest, PeerAddressFormat) {
     addr.sin_port = htons(port);
     inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
     ASSERT_EQ(::connect(rawFd, (struct sockaddr*)&addr, sizeof(addr)), 0);
-    server.acceptConnection();
+    pollAndAccept(server, receiver);
 
     ASSERT_NE(receiver.acceptedDevice, (iTcpDevice*)IX_NULLPTR);
     iString peerAddr = receiver.acceptedDevice->peerAddress(false);
@@ -278,7 +295,7 @@ TEST_F(TCPDeviceTest, IsLocalLoopback) {
     addr.sin_port = htons(port);
     inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
     ASSERT_EQ(::connect(rawFd, (struct sockaddr*)&addr, sizeof(addr)), 0);
-    server.acceptConnection();
+    pollAndAccept(server, receiver);
 
     ASSERT_NE(receiver.acceptedDevice, (iTcpDevice*)IX_NULLPTR);
     EXPECT_TRUE(receiver.acceptedDevice->isLocal());

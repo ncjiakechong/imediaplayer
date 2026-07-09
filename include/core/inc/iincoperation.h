@@ -22,6 +22,27 @@
 
 namespace iShell {
 
+class iINCOperation;
+
+/// @brief Internal single-shot timer bound to one iINCOperation.
+/// @details Invokes the owning operation's timeout handler directly from its
+///          event() override, so an operation no longer needs to allocate a
+///          signal/slot connection (connection object + hash-map node) every
+///          time a timeout is armed. Behaviour matches the previous
+///          DirectConnection to iINCOperation::onTimeout().
+class IX_CORE_EXPORT iINCOperationTimer : public iTimer
+{
+    IX_OBJECT(iINCOperationTimer)
+public:
+    explicit iINCOperationTimer(iINCOperation* op, iObject* parent = IX_NULLPTR);
+
+protected:
+    bool event(iEvent* e) IX_OVERRIDE;
+
+private:
+    iINCOperation* m_op;
+};
+
 /// @brief Tracks asynchronous operation state and result
 /// @details Each async operation returns an iSharedDataPointer<iINCOperation> for automatic lifecycle management.
 ///          Application can monitor state changes via callbacks and cancel operations.
@@ -90,7 +111,7 @@ private:
     xint32          m_errorCode;
     xuint32         m_blockID;
 
-    iTimer          m_timer;
+    iINCOperationTimer m_timer;
     xint64          m_timeout;
 
     // Callbacks
@@ -105,6 +126,7 @@ private:
     char    __pad[sizeof(iTimer) + sizeof(void*)];
 
     friend class iINCProtocol;
+    friend class iINCOperationTimer;
     IX_DISABLE_COPY(iINCOperation)
 };
 

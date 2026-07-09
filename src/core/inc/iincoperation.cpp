@@ -12,6 +12,7 @@
 #include <core/inc/iincoperation.h>
 #include <core/kernel/iobject.h>
 #include <core/kernel/itimer.h>
+#include <core/kernel/ievent.h>
 #include <core/thread/ithread.h>
 #include <core/io/ilog.h>
 
@@ -19,13 +20,34 @@
 
 namespace iShell {
 
+iINCOperationTimer::iINCOperationTimer(iINCOperation* op, iObject* parent)
+    : iTimer(parent)
+    , m_op(op)
+{}
+
+bool iINCOperationTimer::event(iEvent* e)
+{
+    // Deliver the timeout straight to the owning operation instead of emitting
+    // the timeout signal, which would require a heap-allocated connection.
+    if (e->type() == iEvent::Timer) {
+        iTimerEvent* te = static_cast<iTimerEvent*>(e);
+        if (te->timerId() == timerId()) {
+            if (isSingleShot())
+                stop();
+            m_op->onTimeout(te->userData());
+            return true;
+        }
+    }
+    return iTimer::event(e);
+}
+
 iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier, void* ownerData)
     : iSharedData()
     , m_seqNum(seqNum)
     , m_state(STATE_RUNNING)
     , m_errorCode(0)
     , m_blockID(0)
-    , m_timer(parent)
+    , m_timer(this, parent)
     , m_timeout(0)
     , m_finishedCallback(IX_NULLPTR)
     , m_finishedUserData(IX_NULLPTR)
@@ -90,7 +112,8 @@ void iINCOperation::setTimeout(xint64 timeout)
 
     m_timeout = timeout;
     if (timeout > 0) {
-        iObject::connect(&m_timer, &iTimer::timeout, this, &iINCOperation::onTimeout, ConnectionType(DirectConnection | UniqueConnection));
+        // The timer delivers timeout() directly to onTimeout() via
+        // iINCOperationTimer::event(), so no signal/slot connection is needed.
         iObject::invokeMethod(&m_timer, static_cast<void (iTimer::*)(int, xintptr)>(&iTimer::start), timeout, 0);
     }
 }

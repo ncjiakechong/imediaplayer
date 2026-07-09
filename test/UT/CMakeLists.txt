@@ -148,11 +148,12 @@ add_executable(${UT_TARGET} ${ALL_TEST_SOURCES})
 
 # Link against project library and GTest
 # Note: NOT linking gtest_main because we have custom main in ut_main.cpp
+# pthread and glib are propagated transitively (PUBLIC) from icore, and
+# GTest::gtest brings Threads::Threads, so they are not repeated here.
 target_link_libraries(${UT_TARGET}
     icore
     GTest::gmock
     GTest::gtest
-    pthread
 )
 
 # Check for GLib
@@ -161,7 +162,8 @@ pkg_check_modules(GLIB_PKG glib-2.0)
 if (DEFINED GLIB_PKG_INCLUDE_DIRS AND DEFINED GLIB_PKG_LDFLAGS)
     add_definitions(-DIBUILD_HAVE_GLIB)
     include_directories(${GLIB_PKG_INCLUDE_DIRS})
-    target_link_libraries(${UT_TARGET} ${GLIB_PKG_LDFLAGS})
+    # glib is linked transitively via icore (PUBLIC); linking it again here
+    # produces a duplicate-library warning from the macOS linker.
 endif()
 
 # Link multimedia library if available (depends on GStreamer)

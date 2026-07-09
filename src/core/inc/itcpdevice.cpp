@@ -39,6 +39,8 @@
 
 namespace iShell {
 
+const char* iTcpDevice::SCHEME = "tcp";
+
 /// @brief Extract IP string and port from sockaddr_storage (IPv4/IPv6)
 static void addrToString(const struct sockaddr_storage& ss, iString& outAddr, xuint16& outPort)
 {
@@ -190,8 +192,6 @@ public:
     int             m_writeBytes;
     int             m_monitorEvents;
 };
-
-const char* iTcpDevice::SCHEME = "tcp";
 
 iTcpDevice::iTcpDevice(Role role, iObject *parent)
     : iINCDevice(role, parent)
@@ -650,6 +650,10 @@ bool iTcpDevice::setSocketOptions()
     #ifdef TCP_KEEPIDLE
     if (setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPIDLE, &keepIdle, sizeof(keepIdle)) < 0)
         ilog_warn("Failed to set TCP_KEEPIDLE:", errno);
+    #elif defined(TCP_KEEPALIVE)
+    // macOS/BSD spell the keepalive idle time (in seconds) as TCP_KEEPALIVE
+    if (setsockopt(m_sockfd, IPPROTO_TCP, TCP_KEEPALIVE, &keepIdle, sizeof(keepIdle)) < 0)
+        ilog_warn("Failed to set TCP_KEEPALIVE:", errno);
     #endif
 
     #ifdef TCP_KEEPINTVL

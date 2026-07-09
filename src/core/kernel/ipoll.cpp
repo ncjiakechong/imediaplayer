@@ -419,28 +419,39 @@ public:
              ilog_error("kqueue failed");
         }
         m_events.resize(16);
+        // Pre-size the scratch buffers. clear() keeps a vector's capacity, so
+        // once these are reserved the steady-state event loop queues changes and
+        // tracks ready fds without ever hitting the heap (they only grow if the
+        // fd count exceeds these hints, and never shrink/thrash afterwards).
+        m_changes.reserve(32);
+        m_active.reserve(16);
     }
 
     ~iPollerKqueue() {
         if (m_kqfd >= 0) ::close(m_kqfd);
     }
 
+    // add/update/enable/disable only queue the filter changes; they are applied
+    // in a single kevent() together with the next wait(). This collapses the
+    // per-fd disable/enable dance the dispatcher performs on every loop
+    // iteration (for priority filtering) into one syscall instead of 2*N.
     int addFd(iPollFD* fd) {
         fd->revents = 0;
-        m_fds.push_back(fd);
-
-        struct kevent kev[2];
-        EV_SET(&kev[0], fd->fd, EVFILT_READ, EV_ADD | ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, EV_ADD | ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-        return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
+        queueChange(fd->fd, EVFILT_READ,  EV_ADD | ((fd->events & IX_IO_IN)  ? EV_ENABLE : EV_DISABLE), fd);
+        queueChange(fd->fd, EVFILT_WRITE, EV_ADD | ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), fd);
+        return 0;
     }
 
     int removeFd(iPollFD* fd) {
-        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
-            if (*it == fd) {
-                m_fds.erase(it);
-                break;
-            }
+        // Removal is applied synchronously so a fd the caller is about to free
+        // can never deliver an event with a dangling udata pointer. Flush the
+        // queued changes first to preserve submission order relative to the
+        // delete.
+        flushChanges();
+
+        for (std::vector<iPollFD*>::iterator it = m_active.begin(); it != m_active.end(); ) {
+            if (*it == fd) it = m_active.erase(it);
+            else ++it;
         }
 
         struct kevent kev[2];
@@ -451,31 +462,29 @@ public:
     }
 
     int updateFd(iPollFD* fd) {
-        struct kevent kev[2];
-        EV_SET(&kev[0], fd->fd, EVFILT_READ, ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-
-        return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
+        queueChange(fd->fd, EVFILT_READ,  (fd->events & IX_IO_IN)  ? EV_ENABLE : EV_DISABLE, fd);
+        queueChange(fd->fd, EVFILT_WRITE, (fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE, fd);
+        return 0;
     }
 
     int disableFd(iPollFD* fd) {
-        struct kevent kev[2];
-        EV_SET(&kev[0], fd->fd, EVFILT_READ, EV_DISABLE, 0, 0, fd);
-        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, EV_DISABLE, 0, 0, fd);
-        return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
+        queueChange(fd->fd, EVFILT_READ,  EV_DISABLE, fd);
+        queueChange(fd->fd, EVFILT_WRITE, EV_DISABLE, fd);
+        return 0;
     }
 
     int enableFd(iPollFD* fd) {
-        struct kevent kev[2];
-        EV_SET(&kev[0], fd->fd, EVFILT_READ, ((fd->events & IX_IO_IN) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-        EV_SET(&kev[1], fd->fd, EVFILT_WRITE, ((fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE), 0, 0, fd);
-        return kevent(m_kqfd, kev, sizeof(kev) / sizeof(kev[0]), IX_NULLPTR, 0, IX_NULLPTR);
+        queueChange(fd->fd, EVFILT_READ,  (fd->events & IX_IO_IN)  ? EV_ENABLE : EV_DISABLE, fd);
+        queueChange(fd->fd, EVFILT_WRITE, (fd->events & IX_IO_OUT) ? EV_ENABLE : EV_DISABLE, fd);
+        return 0;
     }
 
     int wait(xint64 timeout) {
-        for (std::list<iPollFD*>::iterator it = m_fds.begin(); it != m_fds.end(); ++it) {
-            (*it)->revents = 0;
-        }
+        // Clear revents only for the fds that actually reported events last
+        // round, instead of walking the whole fd set on every wait.
+        for (size_t i = 0; i < m_active.size(); ++i)
+            m_active[i]->revents = 0;
+        m_active.clear();
 
         struct timespec ts;
         struct timespec* pts = IX_NULLPTR;
@@ -485,12 +494,31 @@ public:
             pts = &ts;
         }
 
-        int nfds = kevent(m_kqfd, IX_NULLPTR, 0, m_events.data(), m_events.size(), pts);
+        // The eventlist must also have room for any per-change error receipts
+        // produced by the queued changelist.
+        if (m_events.size() < m_changes.size() + 16)
+            m_events.resize(m_changes.size() + 16);
+
+        struct kevent* changes = m_changes.empty() ? IX_NULLPTR : m_changes.data();
+        int nchanges = (int)m_changes.size();
+        int nfds = kevent(m_kqfd, changes, nchanges, m_events.data(), (int)m_events.size(), pts);
+        m_changes.clear();
         if (nfds < 0) return -1;
 
-        for (int i=0; i<nfds; ++i) {
+        int ready = 0;
+        for (int i = 0; i < nfds; ++i) {
+            // EV_ERROR entries are receipts for changelist operations that
+            // failed (e.g. enabling a filter on an already-removed fd); they are
+            // not I/O conditions. Real socket errors/disconnects arrive as
+            // EV_EOF on the read/write filter, handled below.
+            if (m_events[i].flags & EV_ERROR)
+                continue;
+
             iPollFD* fd = (iPollFD*)m_events[i].udata;
-            if (!m_events[i].filter && !m_events[i].flags) continue;
+            if (!fd) continue;
+
+            if (fd->revents == 0)
+                m_active.push_back(fd);
 
             if (EVFILT_READ == m_events[i].filter) {
                 fd->revents |= IX_IO_IN;
@@ -501,22 +529,36 @@ public:
             if (m_events[i].flags & EV_EOF) {
                 fd->revents |= IX_IO_HUP;
             }
-            if (m_events[i].flags & EV_ERROR) {
-                fd->revents |= IX_IO_ERR;
-            }
+
+            ++ready;
         }
 
         if (nfds >= (int)m_events.size()) {
             m_events.resize(m_events.size() + 4);
         }
 
-        return nfds;
+        return ready;
     }
 
 private:
+    void queueChange(int ident, int filter, unsigned int flags, iPollFD* udata) {
+        struct kevent kev;
+        EV_SET(&kev, ident, filter, flags, 0, 0, udata);
+        m_changes.push_back(kev);
+    }
+
+    void flushChanges() {
+        if (m_changes.empty()) return;
+        // nevents == 0: apply the changelist and return immediately without
+        // blocking or consuming any ready events.
+        kevent(m_kqfd, m_changes.data(), (int)m_changes.size(), IX_NULLPTR, 0, IX_NULLPTR);
+        m_changes.clear();
+    }
+
     int m_kqfd;
     std::vector<struct kevent> m_events;
-    std::list<iPollFD*> m_fds;
+    std::vector<struct kevent> m_changes;
+    std::vector<iPollFD*> m_active;
 };
 #endif
 

@@ -125,7 +125,7 @@ static inline xsizetype iLastIndexOf(Haystack haystack, iChar needle, xsizetype 
     return -1;
 }
 template <> xsizetype
-iLastIndexOf(iString, iChar, xsizetype, iShell::CaseSensitivity) ; // unwanted, would detach
+iLastIndexOf(iString, iChar, xsizetype, iShell::CaseSensitivity) IX_GCC_UNUSED; // unwanted, would detach
 
 template<typename Haystack, typename Needle>
 static xsizetype iLastIndexOf(Haystack haystack0, xsizetype from,
@@ -5934,7 +5934,7 @@ iString iString::arg(double a, int fieldWidth, char fmt, int prec, iChar fillCha
 
 
 static inline xuint16 to_unicode(const iChar c) { return c.unicode(); }
-static inline xuint16 to_unicode(const char c) { return iLatin1Char(c).unicode(); }
+IX_GCC_UNUSED static inline xuint16 to_unicode(const char c) { return iLatin1Char(c).unicode(); }
 
 template <typename Char>
 static int getEscape(const Char *uc, xsizetype *pos, xsizetype len)

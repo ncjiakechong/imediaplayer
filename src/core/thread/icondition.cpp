@@ -18,6 +18,7 @@
 #else
 #include <pthread.h>
 #include <time.h>
+#include <unistd.h>
 #endif
 
 #include "core/thread/icondition.h"
@@ -101,7 +102,9 @@ public:
 
         pthread_condattr_t condattr;
         pthread_condattr_init(&condattr);
+        #if defined(_POSIX_CLOCK_SELECTION) && (_POSIX_CLOCK_SELECTION > 0) && defined(CLOCK_MONOTONIC)
         pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
+        #endif
         if (pthread_cond_init(&_cond, &condattr)) {
             ilog_error("pthread_cond_init error");
         }
@@ -130,8 +133,21 @@ public:
         pthread_mutex_lock(&_mutex);
         mutex.unlock();
 
+        #if defined(IX_OS_MAC)
+        // Darwin has no monotonic condition variables, but it does provide a
+        // relative-timeout wait that is immune to wall-clock adjustments.
+        struct timespec reltime;
+        reltime.tv_sec  = milliseconds / 1000;
+        reltime.tv_nsec = (milliseconds % 1000) * 1000000L;
+        retValue = pthread_cond_timedwait_relative_np(&_cond, &_mutex, &reltime);
+        #else
         struct timespec abstime;
+        // Must use the same clock that the condition variable was configured with.
+        #if defined(_POSIX_CLOCK_SELECTION) && (_POSIX_CLOCK_SELECTION > 0) && defined(CLOCK_MONOTONIC)
         clock_gettime(CLOCK_MONOTONIC, &abstime);
+        #else
+        clock_gettime(CLOCK_REALTIME, &abstime);
+        #endif
         abstime.tv_sec  += milliseconds / 1000;
         abstime.tv_nsec += (milliseconds % 1000) * 1000000L;
         if (abstime.tv_nsec >= 1000000000L)
@@ -140,6 +156,7 @@ public:
             abstime.tv_sec++;
         }
         retValue = pthread_cond_timedwait(&_cond, &_mutex, &abstime);
+        #endif
         pthread_mutex_unlock(&_mutex);
         mutex.lock();
 

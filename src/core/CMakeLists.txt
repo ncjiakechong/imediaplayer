@@ -77,6 +77,11 @@ set (ComSource
         inc/iincstream.cpp
         inc/iinccontextconfig.cpp
         inc/iincserverconfig.cpp
+
+        # RTP-over-UDP transport (RFC3550 + H.264/H.265 packetization)
+        inc/irtp.cpp
+        inc/irtpdevice.cpp
+        inc/irtpclientdevice.cpp
 )
 
 find_package(PkgConfig)

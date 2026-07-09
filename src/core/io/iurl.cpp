@@ -379,7 +379,7 @@ namespace iShell {
 
 using namespace iMiscUtils;
 
-static inline iString ftpScheme()
+IX_GCC_UNUSED static inline iString ftpScheme()
 {
     return iStringLiteral("ftp");
 }
@@ -389,12 +389,12 @@ static inline iString fileScheme()
     return iStringLiteral("file");
 }
 
-static inline iString webDavScheme()
+IX_GCC_UNUSED static inline iString webDavScheme()
 {
     return iStringLiteral("webdavs");
 }
 
-static inline iString webDavSslTag()
+IX_GCC_UNUSED static inline iString webDavSslTag()
 {
     return iStringLiteral("@SSL");
 }
@@ -900,8 +900,8 @@ inline void iUrlPrivate::appendUserInfo(iString &appendTo, iUrl::FormattingOptio
     if (!hasUserInfo())
         return;
 
-    const xuint16 *userNameActions;
-    const xuint16 *passwordActions;
+    const xuint16 *userNameActions = userNameInUrl;
+    const xuint16 *passwordActions = passwordInUrl;
     if (options & iUrl::EncodeDelimiters) {
         userNameActions = userNameInUrl;
         passwordActions = passwordInUrl;

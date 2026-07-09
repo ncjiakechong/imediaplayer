@@ -36,12 +36,16 @@ public:
     ~iMetaCallEvent();
 
     void* arg(_iConnection* conn, void* arg, _iConnection::ArgumentWrapper wrapper, _iConnection::ArgumentDeleter deleter, bool userWrapper = true);
-
     iSemaphore* semaphore;
     _iConnection* connection;
     _iConnection::ArgumentWrapper argWrapper;
     _iConnection::ArgumentDeleter argDeleter;
     iVarLengthArray<char, 128> arguments; // 128 bytes for inline buffer
+    union {
+        char   buf[sizeof(_iConnectionHelper<IX_TYPEOF(&iObject::objectName), IX_TYPEOF(&iObject::objectName)>)];
+        xint64 _align1;
+        void*  _align2;
+    } connStorage;
 };
 
 iMetaCallEvent::iMetaCallEvent(iSemaphore* semph)
@@ -299,7 +303,7 @@ iObject::~iObject()
     if (m_parent)
         setParent(IX_NULLPTR);
 
-    if (!m_runningTimers.empty()) {
+    if (!m_runningTimers.isEmpty()) {
         if (m_threadData == iThreadData::current()) {
             // unregister pending timers
             // Cache dispatcher pointer to avoid race condition with double load()
@@ -465,7 +469,7 @@ int iObject::startPreciseTimer(xint64 nsec, xintptr userdata, TimerType timerTyp
     }
 
     int timerId = dispatcher->registerTimer(nsec, timerType, this, userdata);
-    m_runningTimers.insert(timerId);
+    m_runningTimers.append(timerId);
     return timerId;
 }
 
@@ -481,8 +485,8 @@ void iObject::killTimer(int id)
         return;
     }
 
-    std::set<int>::const_iterator at = m_runningTimers.find(id);
-    if (at == m_runningTimers.end()) {
+    int idx = m_runningTimers.indexOf(id);
+    if (idx < 0) {
         ilog_warn("Error: timer id ", id,
                   " is not valid for object ", this,
                   " (", objectName(), "), timer has not been killed");
@@ -495,7 +499,8 @@ void iObject::killTimer(int id)
         dispatcher->unregisterTimer(id);
     }
 
-    m_runningTimers.erase(at);
+    m_runningTimers[idx] = m_runningTimers.last();
+    m_runningTimers.removeLast();
 }
 
 void iObject::setParent(iObject *o)
@@ -1063,8 +1068,8 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
         return true;
     }
 
-    _iConnection* _cloned = c.clone();
     iMetaCallEvent* event = new iMetaCallEvent;
+    _iConnection* _cloned = c.clone(event->connStorage.buf, static_cast<int>(sizeof(event->connStorage.buf)));
     event->arg(_cloned, args, _cloned->_argWrapper, _cloned->_argDeleter);
     iCoreApplication::postEvent(receiver, event);
     return true;
@@ -1073,6 +1078,7 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
 _iConnection::_iConnection(ImplFn impl, ConnectionType type, xuint16 signalSize, xuint16 slotSize)
     : _isArgAdapter(false)
     , _orphaned(false)
+    , _placementNew(false)
     , _ref(1)
     , _signalSize(signalSize)
     , _slotSize(slotSize)

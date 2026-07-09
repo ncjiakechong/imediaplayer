@@ -65,7 +65,7 @@ std::list<iTimerInfoList::TimerInfo>::iterator iTimerInfoList::timerInsert(const
         return --m_timers.end();
     }
 
-    std::list<TimerInfo>::iterator insert_it = m_timers.begin();
+    TimerContainer::iterator insert_it = m_timers.begin();
     while (insert_it != m_timers.end()) {
         if (ti.timeout < insert_it->timeout) {
             return m_timers.insert(insert_it, ti);
@@ -219,7 +219,7 @@ bool iTimerInfoList::timerWait(xint64 &tm)
 
     // Find first waiting timer not already active
     const TimerInfo *t = IX_NULLPTR;
-    for (std::list<TimerInfo>::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
+    for (TimerContainer::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
         if (!it->activateRef) {
             t = &(*it);
             break;
@@ -248,7 +248,7 @@ bool iTimerInfoList::timerWait(xint64 &tm)
 xint64 iTimerInfoList::timerRemainingTime(int timerId)
 {
     xint64 currentTime = updateCurrentTime();
-    for (std::list<TimerInfo>::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
+    for (TimerContainer::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
         if (it->id != timerId) continue;
 
         // time to wait
@@ -312,7 +312,7 @@ void iTimerInfoList::registerTimer(int timerId, xint64 interval, TimerType timer
 bool iTimerInfoList::unregisterTimer(int timerId)
 {
     iEventDispatcher::releaseTimerId(timerId);
-    std::list<TimerInfo>::iterator it = m_timers.begin();
+    TimerContainer::iterator it = m_timers.begin();
     while (it != m_timers.end()) {
         if (it->id == timerId) {
             // found it
@@ -338,7 +338,7 @@ bool iTimerInfoList::unregisterTimers(iObject *object, bool releaseId)
     if (m_timers.size() <= 0)
         return false;
 
-    std::list<TimerInfo>::iterator it = m_timers.begin();
+    TimerContainer::iterator it = m_timers.begin();
     while (it != m_timers.end()) {
         if (it->obj == object) {
             // object found
@@ -362,7 +362,7 @@ bool iTimerInfoList::unregisterTimers(iObject *object, bool releaseId)
 std::list<iEventDispatcher::TimerInfo> iTimerInfoList::registeredTimers(iObject *object) const
 {
     std::list<iEventDispatcher::TimerInfo> list;
-    for (std::list<TimerInfo>::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
+    for (TimerContainer::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
         if (it->obj == object) {
             iEventDispatcher::TimerInfo insert(it->id, it->interval, it->timerType, it->userdata);
             list.push_back(insert);
@@ -386,7 +386,7 @@ int iTimerInfoList::activateTimers()
     xint64 currentTime = updateCurrentTime();
 
     // Find out how many timer have expired
-    for (std::list<TimerInfo>::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
+    for (TimerContainer::const_iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
         if (currentTime < it->timeout)
             break;
         maxCount++;
@@ -417,7 +417,7 @@ int iTimerInfoList::activateTimers()
         calculateNextTimeout(currentTimerInfo, currentTime);
 
         // reinsert timer
-        std::list<TimerInfo>::iterator cur_it = timerInsert(currentTimerInfo);
+        TimerContainer::iterator cur_it = timerInsert(currentTimerInfo);
         IX_ASSERT(cur_it != m_timers.end());
         if (cur_it->interval > 0)
             n_act++;

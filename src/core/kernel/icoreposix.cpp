@@ -28,6 +28,7 @@ timespec igettime(TimerType timerType)
     #if defined(CLOCK_MONOTONIC_COARSE)
     ::clock_gettime(timerType == PreciseTimer ? CLOCK_MONOTONIC : CLOCK_MONOTONIC_COARSE, &ts);
     #else
+    IX_UNUSED(timerType);
     ::clock_gettime(CLOCK_MONOTONIC, &ts);
     #endif
 

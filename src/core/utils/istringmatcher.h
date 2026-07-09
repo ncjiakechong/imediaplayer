@@ -50,7 +50,7 @@ public:
 private:
     void updateSkipTable();
 
-    iStringMatcherPrivate *d_ptr;
+    iStringMatcherPrivate *d_ptr IX_GCC_UNUSED;
     iString ix_pattern;
     iShell::CaseSensitivity ix_cs;
     iStringView ix_sv;

@@ -575,7 +575,7 @@ static iString getLocaleListData(const xuint16 *data, int size, int index)
     return getLocaleData(data, end - data);
 }
 
-static const int locale_data_size = sizeof(locale_data)/sizeof(iLocaleData) - 1;
+static const int locale_data_size IX_GCC_UNUSED = sizeof(locale_data)/sizeof(iLocaleData) - 1;
 
 IX_GLOBAL_STATIC_WITH_ARGS(iSharedDataPointer<iLocalePrivate>, defaultLocalePrivate,
                           (iLocalePrivate::create(defaultData(), default_number_options)))
@@ -1869,6 +1869,7 @@ iString iLocaleData::longLongToString(const iChar zero, const iChar group,
     iString num_str = iulltoa(negative ? -xulonglong(l) : xulonglong(l), base, zero);
 
     uint cnt_thousand_sep = 0;
+    IX_UNUSED(cnt_thousand_sep);
     if (flags & ThousandsGroup && base == 10) {
         for (int i = num_str.length() - 3; i > 0; i -= 3) {
             num_str.insert(i, group);
@@ -1953,6 +1954,7 @@ iString iLocaleData::unsLongLongToString(const iChar zero, const iChar group,
     }
 
     uint cnt_thousand_sep = 0;
+    IX_UNUSED(cnt_thousand_sep);
     if (flags & ThousandsGroup && base == 10) {
         for (int i = num_str.length() - 3; i > 0; i -=3) {
             num_str.insert(i, group);
@@ -2034,6 +2036,7 @@ bool iLocaleData::numberToCLocale(iStringView s, iLocale::NumberOptions number_o
     }
 
     int group_cnt = 0; // counts number of group chars
+    IX_UNUSED(group_cnt);
     int decpt_idx = -1;
     int last_separator_idx = -1;
     int start_of_digits_idx = -1;

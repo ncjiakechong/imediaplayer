@@ -12,6 +12,7 @@
 
 #include <core/global/inamespace.h>
 #include <core/kernel/ieventdispatcher.h>
+#include "thread/icacheallocator.h"
 
 namespace iShell {
 
@@ -53,13 +54,17 @@ public:
     bool existTimeout();
 
 private:
-    std::list<TimerInfo>::iterator timerInsert(const TimerInfo&);
+    // Pool the timer-list nodes through the project's lock-free cache allocator,
+    // so arming/stopping a timer recycles a node instead of hitting the heap.
+    typedef std::list<TimerInfo, iCacheAllocator<TimerInfo> > TimerContainer;
+
+    TimerContainer::iterator timerInsert(const TimerInfo&);
 
     xint64 m_currentTime; // nanosecond
 
     // state variables used by activateTimers()
     TimerInfo m_firstTimerInfo;
-    std::list<TimerInfo> m_timers;
+    TimerContainer m_timers;
 };
 
 } // namespace iShell

@@ -472,7 +472,7 @@ int iShareMem::attach(MemType type, uint id, xintptr memfd, bool writable)
 }
 
 /* Convert the string s to an unsigned integer in *ret_u */
-static int ix_atou(const char *s, xuint32 *ret_u)
+IX_GCC_UNUSED static int ix_atou(const char *s, xuint32 *ret_u)
 {
     IX_ASSERT(s && ret_u);
 
@@ -515,6 +515,7 @@ static int ix_atou(const char *s, xuint32 *ret_u)
 
 int iShareMem::cleanup(const char* prefix)
 {
+    IX_UNUSED(prefix);
     #if defined(SHM_PATH)
     DIR *d = opendir(SHM_PATH);
     if (!d) {

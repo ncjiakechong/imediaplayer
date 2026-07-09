@@ -31,7 +31,7 @@ class iMemPool;
 class iMemBlock;
 class iMemImport;
 class iMemExport;
-class iMemImportSegment;
+struct iMemImportSegment;
 
 /** A generic free() like callback prototype */
 typedef void (*iFreeCb)(void* pointer, void* userData);
