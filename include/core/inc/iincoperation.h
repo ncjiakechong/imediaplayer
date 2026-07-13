@@ -15,32 +15,34 @@
 #ifndef IINCOPERATION_H
 #define IINCOPERATION_H
 
-#include <core/kernel/itimer.h>
+#include <core/kernel/iobject.h>
 #include <core/utils/ishareddata.h>
 #include <core/inc/iinctagstruct.h>
 #include <core/thread/iatomiccounter.h>
 
 namespace iShell {
 
-class iINCOperation;
-
 /// @brief Internal single-shot timer bound to one iINCOperation.
 /// @details Invokes the owning operation's timeout handler directly from its
 ///          event() override, so an operation no longer needs to allocate a
-///          signal/slot connection (connection object + hash-map node) every
-///          time a timeout is armed. Behaviour matches the previous
-///          DirectConnection to iINCOperation::onTimeout().
-class IX_CORE_EXPORT iINCOperationTimer : public iTimer
+///          signal/slot connection. 
+class IX_CORE_EXPORT iINCOperationTimer : public iObject
 {
     IX_OBJECT(iINCOperationTimer)
 public:
-    explicit iINCOperationTimer(iINCOperation* op, iObject* parent = IX_NULLPTR);
+    explicit iINCOperationTimer(iObject* parent = IX_NULLPTR);
+
+    void stop();
+    void toggleDeleter(xintptr userdata);
+    void toggleAlarm(xint64 timeout, xintptr userdata);
+    bool isActive() const { return m_alarmId > 0; }
 
 protected:
     bool event(iEvent* e) IX_OVERRIDE;
 
 private:
-    iINCOperation* m_op;
+    int            m_alarmId;
+    int            m_deleterId;
 };
 
 /// @brief Tracks asynchronous operation state and result
@@ -95,13 +97,17 @@ private:
     iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier = IX_NULLPTR, void* ownerData = IX_NULLPTR);
     virtual ~iINCOperation();
 
-    void doFree() IX_OVERRIDE;
-
     void setState(State st);
     void setResult(xint32 errorCode, const iByteArray& data);
 
-    /// Static timeout handler for iTimer::singleShot
-    void onTimeout(xintptr userData);
+    void onTimeout();
+
+    void doFree() IX_OVERRIDE;
+
+    /// Delete this operation (or hand it to the owner's deleter). Runs on
+    /// m_timer's thread, either synchronously from doFree() or from the
+    /// Deleter-mode timer's event().
+    void doDeleter();
 
     xuint32         m_seqNum;
     iAtomicCounter<State> m_state;
@@ -112,7 +118,6 @@ private:
     xuint32         m_blockID;
 
     iINCOperationTimer m_timer;
-    xint64          m_timeout;
 
     // Callbacks
     FinishedCallback m_finishedCallback;
@@ -121,9 +126,6 @@ private:
     // Custom deleter support
     Notify  m_ownerNotify;
     void*   m_ownerData;
-
-    iTimer* m_safeDeleteTimer;
-    char    __pad[sizeof(iTimer) + sizeof(void*)];
 
     friend class iINCProtocol;
     friend class iINCOperationTimer;

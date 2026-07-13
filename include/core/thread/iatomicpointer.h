@@ -41,6 +41,7 @@ public:
     bool testAndSet(Type expectedValue, Type newValue);
 
     operator Type() const {return load(); }
+    Type operator->() const { return load(); }
     Type operator=(Type newValue) { store(newValue); return newValue; }
 
 private:

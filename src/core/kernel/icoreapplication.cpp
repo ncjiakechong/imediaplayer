@@ -248,8 +248,7 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
         return;
     }
 
-    iThreadData * volatile * pdata = &receiver->m_threadData;
-    iThreadData *data = *pdata;
+    iThreadData *data = receiver->m_threadData.load();
     if (!data) {
         // posting during destruction? just delete the event to prevent a leak
         delete event;
@@ -260,10 +259,10 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
     data->postEventList.mutex.lock();
 
     // if object has moved to another thread, follow it
-    while (data != *pdata) {
+    while (data != receiver->m_threadData.load()) {
         data->postEventList.mutex.unlock();
 
-        data = *pdata;
+        data = receiver->m_threadData.load();
         if (!data) {
             // posting during destruction? just delete the event to prevent a leak
             delete event;

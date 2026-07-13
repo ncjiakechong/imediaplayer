@@ -25,6 +25,8 @@
 #include <core/kernel/ivariant.h>
 #include <core/global/inamespace.h>
 #include <core/utils/ihashfunctions.h>
+#include <core/thread/iatomiccounter.h>
+#include <core/thread/iatomicpointer.h>
 
 namespace iShell {
 
@@ -1796,21 +1798,32 @@ protected:
     void setSignal(const iObject* sender, _iMemberFunction signal);
 
     xuint32 _isArgAdapter : 1;
-    xuint32 _orphaned : 1;
     xuint32 _placementNew : 1;
-    xuint32 _ref : 29;
-    xuint32 _signalSize : 16;
-    xuint32 _slotSize : 16;
-    ConnectionType _type;
+    xuint32 _signalSize   : 8;
+    xuint32 _slotSize     : 15;
+    xuint32 _type         : 6;
+    // Monotonic id assigned by the sender's connection list on connect. emit
+    // snapshots the highest id so connections made *during* the emission are
+    // skipped this round, without depending on a mutable last-pointer. This is
+    // the groundwork for releasing the signal/slot lock around slot dispatch.
+    xuint32 _id;
+    iAtomicCounter<xint32> _ref;
 
-    // The next pointer for the singly-linked ConnectionList
-    _iConnection* _nextConnectionList;
+    // The next/prev pointers for the doubly-linked per-signal ConnectionList.
+    // _nextConnectionList is read without the lock by a lock-free emit, so it is
+    // atomic; a disconnected node keeps it intact so an emit that is mid-traversal
+    // can still advance past the node before it is reclaimed.
+    iAtomicPointer<_iConnection> _nextConnectionList;
+    _iConnection* _prevConnectionList;
+    // Intrusive singly-linked list of orphaned (disconnected but not yet freed)
+    // connections, rooted at _iObjectConnectionList::orphaned.
+    _iConnection* _nextInOrphanList;
     // senders linked list
     _iConnection* _next;
     _iConnection** _prev;
 
     const iObject* _sender;
-    const iObject* _receiver;
+    iAtomicPointer<const iObject> _receiver;
 
     ImplFn _impl;
     ArgumentWrapper _argWrapper;
@@ -1936,11 +1949,11 @@ class _iConnectionHelper : public _iConnection
     }
 
     _iConnectionHelper(const _iConnectionHelper& other)
-        : _iConnection(&impl, other._type, other._signalSize, other._slotSize)
+        : _iConnection(&impl, static_cast<ConnectionType>(other._type), other._signalSize, other._slotSize)
         , _funcObj(other._funcObj)
         , _func(other._func) {
         this->_slotObj = other._slotObj;
-        this->_receiver = other._receiver;
+        this->_receiver = other._receiver.load();
         this->_argWrapper = other._argWrapper;
         this->_argDeleter = other._argDeleter;
         this->_isArgAdapter = other._isArgAdapter;

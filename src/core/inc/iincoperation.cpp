@@ -20,25 +20,59 @@
 
 namespace iShell {
 
-iINCOperationTimer::iINCOperationTimer(iINCOperation* op, iObject* parent)
-    : iTimer(parent)
-    , m_op(op)
-{}
+iINCOperationTimer::iINCOperationTimer(iObject* parent)
+    : iObject(parent)
+    , m_alarmId(0)
+    , m_deleterId(0)
+{
+}
+
+void iINCOperationTimer::stop()
+{
+    if (0 == m_alarmId)
+        return;
+
+    killTimer(m_alarmId);
+    m_alarmId = 0;
+}
+
+void iINCOperationTimer::toggleAlarm(xint64 timeout, xintptr userdata)
+{
+    if (0 != m_alarmId)
+        killTimer(m_alarmId);
+
+    m_alarmId = startTimer(timeout, userdata);
+}
+
+void iINCOperationTimer::toggleDeleter(xintptr userdata)
+{
+    stop();
+
+    if (0 != m_deleterId)
+        killTimer(m_deleterId);
+
+    m_deleterId = startTimer(0, userdata);
+}
 
 bool iINCOperationTimer::event(iEvent* e)
 {
-    // Deliver the timeout straight to the owning operation instead of emitting
-    // the timeout signal, which would require a heap-allocated connection.
-    if (e->type() == iEvent::Timer) {
-        iTimerEvent* te = static_cast<iTimerEvent*>(e);
-        if (te->timerId() == timerId()) {
-            if (isSingleShot())
-                stop();
-            m_op->onTimeout(te->userData());
-            return true;
-        }
-    }
-    return iTimer::event(e);
+    if (e->type() != iEvent::Timer)
+        return iObject::event(e);
+
+    // Deliver the fire straight to the owning operation instead of emitting the
+    // timeout signal, which would require a heap-allocated connection.
+    iTimerEvent* te = static_cast<iTimerEvent*>(e);
+    if (te->timerId() == m_deleterId) {
+        m_deleterId = 0;
+        killTimer(te->timerId());
+        reinterpret_cast<iINCOperation*>(te->userData())->doDeleter();
+    } else if (te->timerId() == m_alarmId ) {
+        m_alarmId = 0;
+        killTimer(te->timerId());
+        reinterpret_cast<iINCOperation*>(te->userData())->onTimeout();
+    } else {}
+
+    return true;
 }
 
 iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier, void* ownerData)
@@ -47,56 +81,46 @@ iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier, v
     , m_state(STATE_RUNNING)
     , m_errorCode(0)
     , m_blockID(0)
-    , m_timer(this, parent)
-    , m_timeout(0)
+    , m_timer(parent)
     , m_finishedCallback(IX_NULLPTR)
     , m_finishedUserData(IX_NULLPTR)
     , m_ownerNotify(notifier)
     , m_ownerData(ownerData)
-    , m_safeDeleteTimer(IX_NULLPTR)
 {
-    m_timer.setSingleShot(true);
 }
 
 iINCOperation::~iINCOperation()
 {
-    if (m_safeDeleteTimer) {
-        m_safeDeleteTimer->~iTimer();
-        m_safeDeleteTimer = IX_NULLPTR;
+}
+
+void iINCOperation::doDeleter()
+{
+    if (m_ownerNotify) {
+        m_ownerNotify(this, true, m_ownerData);
+        return;
     }
+
+    delete this;
 }
 
 void iINCOperation::doFree()
 {
-    struct __DeleterHelper {
-        static void doDelete(xintptr userdata) {
-            iINCOperation* op = reinterpret_cast<iINCOperation*>(userdata);
-            if (op->m_ownerNotify) {
-                op->m_ownerNotify(op, true, op->m_ownerData);
-                return;
-            }
-
-            delete op;
-        }
-    };
-
     if (!m_timer.isActive()) {
-        __DeleterHelper::doDelete(reinterpret_cast<xintptr>(this));
+        doDeleter();
         return;
     }
 
     iThread* _workThread = m_timer.thread();
     iThread* _curThread = iThread::currentThread();
-    if (!_workThread || !_workThread->isRunning() || _workThread == _curThread) {
+    if (!_workThread || !_workThread->isRunning() || (_workThread == _curThread)) {
         m_timer.moveToThread(_curThread);
-        __DeleterHelper::doDelete(reinterpret_cast<xintptr>(this));
+        doDeleter();
         return;
     }
 
-    m_safeDeleteTimer = new (__pad) iTimer();
-    m_safeDeleteTimer->setSingleShot(true);
-    iObject::connect(m_safeDeleteTimer, &iTimer::timeout, &m_timer, &__DeleterHelper::doDelete);
-    m_safeDeleteTimer->start(0, reinterpret_cast<xintptr>(this));
+    // The timeout timer is still armed on another running thread. Hand the delete
+    // to that thread by re-arming the same timer in Deleter mode there;
+    iObject::invokeMethod(&m_timer, &iINCOperationTimer::toggleDeleter, reinterpret_cast<xintptr>(this));
 }
 
 void iINCOperation::cancel()
@@ -110,17 +134,11 @@ void iINCOperation::setTimeout(xint64 timeout)
         return;
     }
 
-    m_timeout = timeout;
-    if (timeout > 0) {
-        // The timer delivers timeout() directly to onTimeout() via
-        // iINCOperationTimer::event(), so no signal/slot connection is needed.
-        iObject::invokeMethod(&m_timer, static_cast<void (iTimer::*)(int, xintptr)>(&iTimer::start), timeout, 0);
-    }
+    iObject::invokeMethod(&m_timer, &iINCOperationTimer::toggleAlarm, timeout, reinterpret_cast<xintptr>(this));
 }
 
-void iINCOperation::onTimeout(xintptr userData)
+void iINCOperation::onTimeout()
 {
-    IX_UNUSED(userData);
     setState(STATE_TIMEOUT);
 }
 
@@ -142,7 +160,7 @@ void iINCOperation::setState(State st)
     while (m_state.value() == STATE_RUNNING) {
         if (!m_state.testAndSet(STATE_RUNNING, st)) continue;
 
-        iObject::invokeMethod(&m_timer, &iTimer::stop);
+        iObject::invokeMethod(&m_timer, &iINCOperationTimer::stop);
         if (m_ownerNotify) {
             m_ownerNotify(this, false, m_ownerData);
         }

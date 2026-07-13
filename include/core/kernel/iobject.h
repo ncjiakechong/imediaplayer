@@ -360,12 +360,12 @@ private:
 
     struct _iObjectConnectionList
     {
-        bool orphaned; //the iObject owner of this vector has been destroyed while the vector was inUse
-        bool dirty; //some Connection have been disconnected (their receiver is 0) but not removed from the list yet
-        int inUse; //number of functions that are currently accessing this object or its connections
+        iAtomicCounter<xint32> ref; //lifetime: owner baseline (1) + one per in-flight activation; the list is freed at 0
+        iAtomicCounter<xuint32> currentConnectionId; //monotonic id source; set to 0 by the destructor to stop emission
+        iAtomicPointer<_iConnection> orphaned; //head of the deferred-reclaim list: disconnected connections not yet freed
         sender_map allsignals;
 
-        _iObjectConnectionList() : orphaned(false), dirty(false), inUse(0) {}
+        _iObjectConnectionList() : ref(1), currentConnectionId(0), orphaned(IX_NULLPTR) {}
     };
 
     bool observePropertyImp(const char* name, _iConnection &conn);
@@ -375,6 +375,12 @@ private:
 
     void cleanConnectionLists();
     bool disconnectHelper(const _iConnection& conn);
+
+    // Splice c out of both its lists and move it onto connectionLists->orphaned for
+    // deferred reclaim; drainOrphaned frees everything parked there once no
+    // activation is walking the list.
+    static void removeConnectionFromLists(_iObjectConnectionList* connectionLists, _iConnection* c);
+    static void drainOrphaned(_iObjectConnectionList* connectionLists);
 
     void setThreadData_helper(iThreadData *currentData, iThreadData *targetData);
     void moveToThread_helper();
@@ -393,8 +399,7 @@ private:
     iString     m_objName;
 
     iAtomicPointer< isharedpointer::ExternalRefCountData > m_refCount;
-
-    iThreadData* m_threadData;
+    iAtomicPointer<iThreadData> m_threadData;
 
     iObject* m_parent;
     iObject* m_currentChildBeingDeleted;

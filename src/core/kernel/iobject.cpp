@@ -40,7 +40,7 @@ public:
     _iConnection* connection;
     _iConnection::ArgumentWrapper argWrapper;
     _iConnection::ArgumentDeleter argDeleter;
-    iVarLengthArray<char, 128> arguments; // 128 bytes for inline buffer
+    iVarLengthArray<char, 96> arguments; // inline arg buffer;
     union {
         char   buf[sizeof(_iConnectionHelper<IX_TYPEOF(&iObject::objectName), IX_TYPEOF(&iObject::objectName)>)];
         xint64 _align1;
@@ -225,38 +225,37 @@ iObject::~iObject()
 
         // disconnect all receivers
         if (IX_NULLPTR != m_connectionLists) {
-            ++m_connectionLists->inUse;
+            // Stop any in-flight lock-free emit (the sentinel makes activate break
+            // promptly), then orphan every outgoing connection.
+            m_connectionLists->currentConnectionId = 0;
             for (sender_map::iterator it = m_connectionLists->allsignals.begin(); it != m_connectionLists->allsignals.end(); ++it) {
                 _iConnectionList& connectionList = it->second;
                 while (_iConnection *c = connectionList.first) {
-                    if (c->_orphaned) {
-                        connectionList.first = c->_nextConnectionList;
-                        c->deref();
+                    iObject* rcv = const_cast<iObject*>(c->_receiver.load());
+                    if (IX_NULLPTR == rcv) {
+                        // Orphaned by a concurrent receiver destruction; it is on
+                        // the orphaned list already. Unlink from this list and move on.
+                        connectionList.first = c->_nextConnectionList.load();
                         continue;
                     }
 
-                    iMutex *m = &const_cast<iObject*>(c->_receiver)->m_signalSlotLock;
+                    iMutex *m = &rcv->m_signalSlotLock;
                     bool needToUnlock = iOrderedMutexLocker::relock(signalSlotMutex, m);
 
-                    if (c->_receiver) {
-                        *c->_prev = c->_next;
-                        if (c->_next) { c->_next->_prev = c->_prev; }
-                    }
-                    c->_orphaned = true;
+                    // removeConnectionFromLists splices c out (advancing
+                    // connectionList.first) and parks it on the orphaned list.
+                    removeConnectionFromLists(m_connectionLists, c);
+
                     if (needToUnlock)
                         m->unlock();
-
-                    connectionList.first = c->_nextConnectionList;
-
-                    c->deref(); // for sender
-                    c->deref(); // for receiver
                 }
             }
 
-            if (0 == --m_connectionLists->inUse) {
+            // Drop the owner's baseline reference. If no activation is in flight we
+            // reclaim now; otherwise the last activation to finish drains + deletes.
+            if (0 == --m_connectionLists->ref) {
+                drainOrphaned(m_connectionLists);
                 delete m_connectionLists;
-            } else {
-                m_connectionLists->orphaned = true;
             }
             m_connectionLists = IX_NULLPTR;
         }
@@ -286,9 +285,32 @@ iObject::~iObject()
                 m->unlock();
                 continue;
             }
-            node->_orphaned = true;
-            if (IX_NULLPTR != sender->m_connectionLists)
-                sender->m_connectionLists->dirty = true;
+
+            // Splice node out of the sender's per-signal list and move it onto the
+            // sender's orphaned list (which inherits node's sender-side reference);
+            // the sender reclaims it later when no activation is walking its list.
+            _iObjectConnectionList* senderCd = sender->m_connectionLists;
+            if (IX_NULLPTR != senderCd) {
+                sender_map::iterator sit = senderCd->allsignals.find(node->_signal);
+                if (senderCd->allsignals.end() != sit) {
+                    _iConnectionList& sl = sit->second;
+                    _iConnection* nn = node->_nextConnectionList.load();
+                    if (sl.first == node)
+                        sl.first = nn;
+                    if (sl.last == node)
+                        sl.last = node->_prevConnectionList;
+                    if (IX_NULLPTR != nn)
+                        nn->_prevConnectionList = node->_prevConnectionList;
+                    if (IX_NULLPTR != node->_prevConnectionList)
+                        node->_prevConnectionList->_nextConnectionList = nn;
+                    node->_prevConnectionList = IX_NULLPTR;
+                }
+                node->_nextInOrphanList = senderCd->orphaned.load();
+                senderCd->orphaned = node;
+            }
+
+            // Publish the disconnect (null receiver) only after splicing.
+            node->_receiver = IX_NULLPTR;
 
             _iConnection* oldNode = node;
             node = node->_next;
@@ -553,42 +575,70 @@ void iObject::setObjectName(const iString &name)
     IEMIT objectNameChanged(m_objName);
 }
 
+void iObject::drainOrphaned(_iObjectConnectionList* connectionLists)
+{
+    // Reclaim connections parked on the orphaned list. The caller must ensure no
+    // activation is walking the list (ref <= 1), so the final deref that frees
+    // each node cannot race with a reader.
+    _iConnection* c = connectionLists->orphaned.load();
+    connectionLists->orphaned = IX_NULLPTR;
+    while (c) {
+        _iConnection* next = c->_nextInOrphanList;
+        c->_nextInOrphanList = IX_NULLPTR;
+        c->deref();
+        c = next;
+    }
+}
+
+void iObject::removeConnectionFromLists(_iObjectConnectionList* connectionLists, _iConnection* c)
+{
+    if (IX_NULLPTR == c->_receiver.load())
+        return;
+
+    // Unlink from the receiver's senders list (caller holds the receiver lock).
+    if (IX_NULLPTR != c->_prev) {
+        *c->_prev = c->_next;
+        if (IX_NULLPTR != c->_next)
+            c->_next->_prev = c->_prev;
+        c->_prev = IX_NULLPTR;
+        c->_next = IX_NULLPTR;
+    }
+
+    // Splice out of the sender's per-signal list, but keep c->_nextConnectionList
+    // intact so a concurrent emit that is mid-traversal can still advance past c.
+    sender_map::iterator it = connectionLists->allsignals.find(c->_signal);
+    if (connectionLists->allsignals.end() != it) {
+        _iConnectionList& l = it->second;
+        _iConnection* n = c->_nextConnectionList.load();
+        if (l.first == c)
+            l.first = n;
+        if (l.last == c)
+            l.last = c->_prevConnectionList;
+        if (IX_NULLPTR != n)
+            n->_prevConnectionList = c->_prevConnectionList;
+        if (IX_NULLPTR != c->_prevConnectionList)
+            c->_prevConnectionList->_nextConnectionList = n;
+        c->_prevConnectionList = IX_NULLPTR;
+    }
+
+    // Publish the disconnect only after the node has been spliced out, so a null
+    // receiver reliably implies "already removed from the per-signal list".
+    c->_receiver = IX_NULLPTR;
+
+    // Move c onto the deferred-reclaim list. It leaves two active lists and joins
+    // one orphaned list, so drop exactly one reference here; the orphaned list
+    // holds the last one until drainOrphaned() reclaims it.
+    c->_nextInOrphanList = connectionLists->orphaned.load();
+    connectionLists->orphaned = c;
+    c->deref();
+}
+
 void iObject::cleanConnectionLists()
 {
     if ((IX_NULLPTR != m_connectionLists)
-        && m_connectionLists->dirty
-        && (0 == m_connectionLists->inUse)) {
-        // remove broken connections
-        for (sender_map::iterator it = m_connectionLists->allsignals.begin(); it != m_connectionLists->allsignals.end(); ++it) {
-            _iConnectionList& connectionList = it->second;
-
-            // Set to the last entry in the connection list that was *not*
-            // deleted.  This is needed to update the list's last pointer
-            // at the end of the cleanup.
-            _iConnection* last = IX_NULLPTR;
-
-            _iConnection** prev = &connectionList.first;
-            _iConnection* c = *prev;
-            while (c) {
-                if (!c->_orphaned) {
-                    last = c;
-                    prev = &c->_nextConnectionList;
-                    c = *prev;
-                } else {
-                    _iConnection* next = c->_nextConnectionList;
-                    *prev = next;
-                    c->deref();
-                    c = next;
-                }
-            }
-
-            // Correct the connection list's last pointer.
-            // As conectionList.last could equal last, this could be a noop
-            connectionList.last = last;
-            IX_ASSERT(IX_NULLPTR == last || IX_NULLPTR == last->_nextConnectionList);
-        }
-
-        m_connectionLists->dirty = false;
+        && (IX_NULLPTR != m_connectionLists->orphaned.load())
+        && (1 == m_connectionLists->ref)) {
+        drainOrphaned(m_connectionLists);
     }
 }
 
@@ -619,7 +669,7 @@ bool iObject::connectImpl(const _iConnection& conn)
     }
 
     iObject *s = const_cast<iObject*>(conn._sender);
-    iObject *r = const_cast<iObject*>(conn._receiver);
+    iObject *r = const_cast<iObject*>(conn._receiver.load());
 
     iOrderedMutexLocker locker(&s->m_signalSlotLock, &r->m_signalSlotLock);
 
@@ -634,10 +684,10 @@ bool iObject::connectImpl(const _iConnection& conn)
 
         _iConnection* c2 = it->second.first;
         while (c2) {
-            if (!c2->_orphaned && conn.compare(c2))
+            if ((IX_NULLPTR != c2->_receiver.load()) && conn.compare(c2))
                 return false;
 
-            c2 = c2->_nextConnectionList;
+            c2 = c2->_nextConnectionList.load();
         }
     } while(false);
 
@@ -650,6 +700,11 @@ bool iObject::connectImpl(const _iConnection& conn)
         s->m_connectionLists = connectionLists;
     }
 
+    // Assign the connection its snapshot id while we hold the sender lock, so a
+    // concurrent emit either sees a fully-linked node with id greater than its
+    // snapshot (skipped this round) or does not see the node at all.
+    c->_id = ++connectionLists->currentConnectionId;
+
     sender_map::iterator it = connectionLists->allsignals.find(c->_signal);
     if (connectionLists->allsignals.end() == it) {
         it = connectionLists->allsignals.insert(std::pair<_iMemberFunction, _iConnectionList>(c->_signal, _iConnectionList())).first;
@@ -658,9 +713,12 @@ bool iObject::connectImpl(const _iConnection& conn)
     IX_ASSERT(connectionLists->allsignals.end() != it);
     _iConnectionList& connectionlist = it->second;
 
+    c->_nextConnectionList = IX_NULLPTR;
     if (connectionlist.last) {
+        c->_prevConnectionList = connectionlist.last;
         connectionlist.last->_nextConnectionList = c;
     } else {
+        c->_prevConnectionList = IX_NULLPTR;
         connectionlist.first = c;
     }
     connectionlist.last = c;
@@ -691,29 +749,22 @@ bool iObject::disconnectHelper(const _iConnection &conn)
     _iConnection* c = it->second.first;
 
     while (c) {
-        _iConnection* next = c->_nextConnectionList;
+        // removeConnectionFromLists keeps c->_nextConnectionList intact, so the
+        // successor is still reachable after c has been spliced out.
+        _iConnection* next = c->_nextConnectionList.load();
 
-        if (c->_receiver
-            && !c->_orphaned
+        const iObject* rcv = c->_receiver.load();
+        if ((IX_NULLPTR != rcv)
             && c->compare(&conn)) {
-            bool needToUnlock = false;
-            iMutex *receiverMutex = IX_NULLPTR;
-            if (c->_receiver) {
-                receiverMutex = &const_cast<iObject*>(c->_receiver)->m_signalSlotLock;
-                // need to relock this receiver and sender in the correct order
-                needToUnlock = iOrderedMutexLocker::relock(&m_signalSlotLock, receiverMutex);
-            }
-            if (c->_receiver) {
-                *c->_prev = c->_next;
-                if (c->_next)
-                    c->_next->_prev = c->_prev;
-            }
+            iMutex *receiverMutex = &const_cast<iObject*>(rcv)->m_signalSlotLock;
+            // need to relock this receiver and sender in the correct order
+            bool needToUnlock = iOrderedMutexLocker::relock(&m_signalSlotLock, receiverMutex);
+
+            removeConnectionFromLists(connectionLists, c);
 
             if (needToUnlock)
                 receiverMutex->unlock();
 
-            c->_orphaned = true;
-            c->deref();
             success = true;
         }
 
@@ -739,9 +790,6 @@ bool iObject::disconnectImpl(const _iConnection& conn)
     if ((IX_NULLPTR == connectionLists) || connectionLists->allsignals.empty())
         return false;
 
-    // prevent incoming connections changing the connectionLists while unlocked
-    ++connectionLists->inUse;
-
     bool success = false;
     if (IX_NULLPTR == conn._signal) {
         // remove from all connection lists
@@ -750,19 +798,13 @@ bool iObject::disconnectImpl(const _iConnection& conn)
             c->setSignal(s, it->first);
             if (s->disconnectHelper(*c)) {
                 success = true;
-                connectionLists->dirty = true;
             }
         }
     } else if (s->disconnectHelper(conn)) {
         success = true;
-        connectionLists->dirty = true;
     }
 
-    --connectionLists->inUse;
-    IX_ASSERT(connectionLists->inUse >= 0);
-    if (connectionLists->orphaned && !connectionLists->inUse)
-        delete connectionLists;
-
+    // Reclaim orphaned connections if no activation is walking the list (ref == 1).
     s->cleanConnectionLists();
 
     return success;
@@ -770,115 +812,105 @@ bool iObject::disconnectImpl(const _iConnection& conn)
 
 void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, void* ret)
 {
-    struct ConnectionListsRef {
-        _iObjectConnectionList* connectionLists;
-        ConnectionListsRef(_iObjectConnectionList* c) : connectionLists(c)
-        {
-            if (IX_NULLPTR != connectionLists)
-                ++connectionLists->inUse;
-        }
-        ~ConnectionListsRef()
-        {
-            if (IX_NULLPTR == connectionLists)
-                return;
-
-            --connectionLists->inUse;
-            IX_ASSERT(connectionLists->inUse >= 0);
-            if (connectionLists->orphaned) {
-                if (!connectionLists->inUse)
-                    delete connectionLists;
-            }
-        }
-
-        _iObjectConnectionList* operator->() const { return connectionLists; }
-
-        IX_DISABLE_COPY(ConnectionListsRef)
-    };
-
     if (m_blockSig)
         return;
 
-    iScopedLock<iMutex> locker(m_signalSlotLock);
-    ConnectionListsRef connectionLists(m_connectionLists);
-    if (IX_NULLPTR == connectionLists.connectionLists)
-        return;
-
-    sender_map::iterator it = connectionLists->allsignals.find(signal);
-    if (connectionLists->allsignals.end() == it)
-        return;
-
-    const _iConnectionList& list = it->second;
-    _iConnection* conn = list.first;
-    if (IX_NULLPTR == conn)
-        return;
-
     iThreadData* currentThreadData = iThreadData::current();
+    _iObjectConnectionList* connectionLists = IX_NULLPTR;
+    _iConnection* conn = IX_NULLPTR;
+    xuint32 highestId = 0;
+
+    do {
+        iScopedLock<iMutex> locker(m_signalSlotLock);
+        connectionLists = m_connectionLists;
+        if (IX_NULLPTR == connectionLists)
+            return;
+
+        sender_map::iterator it = connectionLists->allsignals.find(signal);
+        if (connectionLists->allsignals.end() == it)
+            return;
+
+        conn = it->second.first;
+        if (IX_NULLPTR == conn)
+            return;
+
+        // Snapshot the highest connection id present when the emission starts;
+        // connections created during it get a larger id and are skipped this round.
+        highestId = connectionLists->currentConnectionId;
+
+        // Pin the ConnectionData across the unlocked traversal: while ref > 1 the
+        // orphaned list is never drained, so every node we visit stays alive.
+        ++connectionLists->ref;
+    } while (false);
+
     bool inSenderThread = (currentThreadData == this->m_threadData);
     if (!inSenderThread) {
         ilog_info("obj[", this, " ", objectName(), "@", metaObject()->className(), "::", name, "] signal not emit at sender thread");
     }
 
-    // We need to check against last here to ensure that signals added
-    // during the signal emission are not emitted in this emission.
-    _iConnection* last = list.last;
-    iMetaCallEvent propertyArg;
-
     do {
-        if (connectionLists->orphaned)
+        // The destructor sets currentConnectionId to 0 to stop emission promptly.
+        if (0 == connectionLists->currentConnectionId.value())
             break;
 
-        if (conn->_orphaned || (IX_NULLPTR == conn->_receiver))
+        // ids increase monotonically in list order, so once we pass the
+        // snapshot every remaining node is newer than this emission.
+        if (conn->_id > highestId)
+            break;
+
+        iObject* const receiver = const_cast<iObject*>(conn->_receiver.load());
+        if (IX_NULLPTR == receiver)
             continue;
 
-        iObject* const receiver = const_cast<iObject*>(conn->_receiver);
-        bool receiverInSameThread = true;
-        if (inSenderThread || (receiver == this)) {
-            receiverInSameThread = (currentThreadData == receiver->m_threadData);
-        } else {
-            // need to lock before reading the threadId, because moveToThread() could interfere
-            iScopedLock<iMutex> locker2(receiver->m_signalSlotLock);
-            receiverInSameThread = (currentThreadData == receiver->m_threadData);
-        }
+        const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
 
         // determine if this connection should be sent immediately or
         // put into the event queue
         uint _type = conn->_type & Connection_PrimaryMask;
         if ((AutoConnection == _type && receiverInSameThread)
             || (DirectConnection == _type)) {
-            locker.unlock();
+            // Pin the connection across the call so a concurrent disconnect cannot
+            // free it while the slot runs.
+            conn->ref();
+            iMetaCallEvent propertyArg;
             _iSender sender(receiver, this, receiverInSameThread);
             conn->emits(propertyArg.arg(IX_NULLPTR, args, conn->_argWrapper, conn->_argDeleter, conn->_isArgAdapter), ret);
-
-            if (connectionLists->orphaned)
-                break;
-
-            locker.relock();
-            continue;
+            conn->deref();
         } else if (BlockingQueuedConnection != _type) {
             conn->ref();
             iMetaCallEvent* event = new iMetaCallEvent;
             event->arg(conn, args, conn->_argWrapper, conn->_argDeleter);
             iCoreApplication::postEvent(receiver, event);
-            continue;
-        } else {}
+        } else {
+            if (receiverInSameThread) {
+                ilog_warn("obj[", this, " ", objectName(), "@", metaObject()->className(), "::", name, "] Dead lock detected while activating a BlockingQueuedConnection: "
+                    "receiver ", receiver, " ", receiver->objectName(), "@", receiver->metaObject()->className());
+            }
 
-        if (receiverInSameThread) {
-            ilog_warn("obj[", this, " ", objectName(), "@", metaObject()->className(), "::", name, "] Dead lock detected while activating a BlockingQueuedConnection: "
-                "receiver ", receiver, " ", receiver->objectName(), "@", receiver->metaObject()->className());
+            conn->ref();
+            iSemaphore semaphore;
+            iMetaCallEvent* event = new iMetaCallEvent(&semaphore);
+            event->arg(conn, args, conn->_argWrapper, conn->_argDeleter);
+            iCoreApplication::postEvent(receiver, event);
+            semaphore.acquire();
         }
+    } while ((conn = conn->_nextConnectionList.load()) != IX_NULLPTR);
 
-        conn->ref();
-        iSemaphore semaphore;
-        iMetaCallEvent* event = new iMetaCallEvent(&semaphore);
-        event->arg(conn, args, conn->_argWrapper, conn->_argDeleter);
-        iCoreApplication::postEvent(receiver, event);
-        locker.unlock();
-        semaphore.acquire();
-        if (connectionLists->orphaned)
-            break;
+    // Release the activation ref. If the owner was destroyed during the emission
+    // (ref hits 0, re-entrant) we are exclusive and free the ConnectionData; if the
+    // owner is still alive we drain any orphaned nodes under its lock.
+    if (0 == --connectionLists->ref) {
+        drainOrphaned(connectionLists);
+        delete connectionLists;
+        return;
+    }
+    
+    if (IX_NULLPTR == connectionLists->orphaned.load())
+        return;
 
-        locker.relock();
-    } while (conn != last && ((conn = conn->_nextConnectionList) != IX_NULLPTR));
+    iScopedLock<iMutex> locker(m_signalSlotLock);
+    if ((1 == connectionLists->ref) && (IX_NULLPTR != connectionLists->orphaned.load()))
+        drainOrphaned(connectionLists);
 }
 
 const iMetaObject* iObject::metaObject() const
@@ -1036,11 +1068,11 @@ void iObject::reregisterTimers(void* args)
 
 bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
 {
-    if (IX_NULLPTR == c._receiver)
+    if (IX_NULLPTR == c._receiver.load())
         return false;
 
     iThreadData* currentThreadData = iThreadData::current();
-    iObject* const receiver = const_cast<iObject*>(c._receiver);
+    iObject* const receiver = const_cast<iObject*>(c._receiver.load());
     const bool receiverInSameThread = (currentThreadData == receiver->m_threadData);
 
     // determine if this connection should be sent immediately or
@@ -1077,13 +1109,15 @@ bool iObject::invokeMethodImpl(const _iConnection& c, void* args)
 
 _iConnection::_iConnection(ImplFn impl, ConnectionType type, xuint16 signalSize, xuint16 slotSize)
     : _isArgAdapter(false)
-    , _orphaned(false)
     , _placementNew(false)
-    , _ref(1)
     , _signalSize(signalSize)
     , _slotSize(slotSize)
     , _type(type)
+    , _id(0)
+    , _ref(1)
     , _nextConnectionList(IX_NULLPTR)
+    , _prevConnectionList(IX_NULLPTR)
+    , _nextInOrphanList(IX_NULLPTR)
     , _next(IX_NULLPTR)
     , _prev(IX_NULLPTR)
     , _sender(IX_NULLPTR)
@@ -1103,15 +1137,14 @@ _iConnection::~_iConnection()
 
 void _iConnection::ref()
 {
-    if (_ref <= 0) ilog_warn("error: ", _ref);
+    if (_ref.value() <= 0) ilog_warn("error: ", _ref.value());
 
     ++_ref;
 }
 
 void _iConnection::deref()
 {
-    --_ref;
-    if (0 == _ref) {
+    if (0 == --_ref) {
         IX_ASSERT(_impl);
         _impl(Destroy, this, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
     }
@@ -1125,7 +1158,7 @@ void _iConnection::setSignal(const iObject* sender, _iMemberFunction signal)
 
 void _iConnection::emits(void* args, void* ret) const
 {
-    if (_orphaned || (IX_NULLPTR == _impl)) {
+    if ((IX_NULLPTR == _receiver.load()) || (IX_NULLPTR == _impl)) {
         return;
     }
 
