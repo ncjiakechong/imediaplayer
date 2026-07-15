@@ -1156,15 +1156,6 @@ void _iConnection::setSignal(const iObject* sender, _iMemberFunction signal)
     _signal = signal;
 }
 
-void _iConnection::emits(void* args, void* ret) const
-{
-    if ((IX_NULLPTR == _receiver.load()) || (IX_NULLPTR == _impl)) {
-        return;
-    }
-
-    _impl(Call, this, IX_NULLPTR, args, ret);
-}
-
 size_t iConKeyHashFunc::operator()(const _iMemberFunction& key) const
 {
     union {

@@ -299,7 +299,7 @@ void iINCProtocol::enableMempool(iSharedDataPointer<iMemPool> pool)
     m_memImport = new iMemImport(m_memPool.data(), memImportRevokeCallback, this);
 }
 
-void iINCProtocol::onMessageReceived(iINCMessage msg)
+void iINCProtocol::onMessageReceived(const iINCMessage& msg)
 {
     do {
         // Cache peer memfd if provided
@@ -335,12 +335,13 @@ void iINCProtocol::onMessageReceived(iINCMessage msg)
         }
     }
 
-    // Handle binary data messages specially
-    if (m_isPassthrough || (msg.type() != INC_MSG_BINARY_DATA)) {
+    if (m_isPassthrough) {
         IEMIT messageReceived(msg);
-    } else {
+    } else if (msg.type() == INC_MSG_BINARY_DATA) {
         processBinaryDataMessage(msg);
-    }
+    } else if (msg.type() != INC_MSG_BINARY_DATA_ACK) {
+        IEMIT messageReceived(msg);
+    } else {}
 }
 
 void iINCProtocol::processBinaryDataMessage(const iINCMessage& msg)

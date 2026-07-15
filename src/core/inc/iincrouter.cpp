@@ -239,7 +239,7 @@ void iINCRouter::handleHandshakeAck(ClientBridge* bridge, const iINCMessage& msg
 }
 
 // ---- Message interception (override of iINCServer) ----
-void iINCRouter::onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg)
+void iINCRouter::onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg)
 {
     // Drop expired messages before forwarding
     iDeadlineTimer msgTS = msg.dts();

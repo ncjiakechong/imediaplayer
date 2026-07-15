@@ -160,13 +160,11 @@ public:
     iByteArray &prepend(iByteArrayView bv)
     { return insert(0, bv); }
     iByteArray &append(char c)
-    { return insert(size(), c); }
-    iByteArray &append(xsizetype count, char c)
-    { return insert(size(), count, c); }
+    { return append(xsizetype(1), c); }
+    iByteArray &append(xsizetype count, char c);
     iByteArray &append(const char *s, xsizetype len)
-    { return insert(size(), s, len); }
-    iByteArray &append(iByteArrayView bv)
-    { return insert(size(), bv); }
+    { return append(iByteArrayView(s, len)); }
+    iByteArray &append(iByteArrayView bv);
 
     iByteArray &insert(xsizetype i, char c)
     { return insert(i, iByteArrayView(&c, 1)); }

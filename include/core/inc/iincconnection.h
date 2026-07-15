@@ -175,7 +175,7 @@ private:
     void setConnectionId(xuint32 connId) { m_connId = connId; }
 
     void onErrorOccurred(xint32 errorCode);
-    void onMessageReceived(iINCMessage msg);
+    void onMessageReceived(const iINCMessage& msg);
     void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data);
 
     iINCProtocol*           m_protocol;         // Owned protocol instance

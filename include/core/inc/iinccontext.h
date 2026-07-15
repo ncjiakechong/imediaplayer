@@ -118,7 +118,7 @@ protected:
     iSharedDataPointer<iINCOperation> callMethod(iStringView method, xuint16 version, const iByteArray& args, xint64 timeout = 1000);
 
 private:
-    void onMessageReceived(iINCConnection* conn, iINCMessage msg);
+    void onMessageReceived(iINCConnection* conn, const iINCMessage& msg);
     void onErrorOccurred(iINCConnection* conn, xint32 errorCode);
 
     void handleHandshakeAck(iINCConnection* conn, const iINCMessage& msg);

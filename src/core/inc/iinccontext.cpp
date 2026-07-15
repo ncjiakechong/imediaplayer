@@ -291,7 +291,7 @@ iSharedDataPointer<iINCOperation> iINCContext::pingpong()
     return op;
 }
 
-void iINCContext::onMessageReceived(iINCConnection* conn, iINCMessage msg)
+void iINCContext::onMessageReceived(iINCConnection* conn, const iINCMessage& msg)
 {
     if ((msg.type() & 0x1) && (msg.type() != INC_MSG_HANDSHAKE_ACK)) return;
 

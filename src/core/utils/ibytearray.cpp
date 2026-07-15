@@ -1567,6 +1567,37 @@ iByteArray iByteArray::nulTerminated() const
     If \a i is greater than size(), the array is first extended using
     resize().
 */
+iByteArray &iByteArray::append(iByteArrayView data)
+{
+    const char *str = data.data();
+    const xsizetype len = data.size();
+    if (len <= 0)
+        return *this;
+
+    // Fast path: unshared buffer with spare capacity at end -> copy in
+    // place. Otherwise growAppend() detaches / reallocates / handles a
+    // 'str' that aliases into this array. Never routes through insert().
+    if (!d.needsDetach() && d.freeSpaceAtEnd() >= len) {
+        ::memcpy(d.data() + d.size, str, static_cast<size_t>(len));
+        d.size += len;
+    } else {
+        d.growAppend(str, str + len);
+    }
+    d.data()[d.size] = '\0';
+    return *this;
+}
+
+iByteArray &iByteArray::append(xsizetype count, char ch)
+{
+    if (count <=0)
+        return *this;
+
+    d.detachAndGrow(Data::GrowsForward, count, IX_NULLPTR, IX_NULLPTR);
+    d.copyAppend(static_cast<size_t>(count), ch);
+    d.data()[d.size] = '\0';
+    return *this;
+}
+
 iByteArray &iByteArray::insert(xsizetype i, iByteArrayView data)
 {
     const char *str = data.data();

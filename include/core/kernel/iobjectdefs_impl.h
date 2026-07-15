@@ -1778,7 +1778,7 @@ public:
     inline _iConnection* clone(void* buffer = IX_NULLPTR, int capacity = 0) const {return _impl(Clone, this, IX_NULLPTR, buffer, &capacity);}
     inline bool compare(const _iConnection* other) const {return (IX_NULLPTR != _impl(Compare, this, other, IX_NULLPTR, IX_NULLPTR));}
 
-    void emits(void* args, void* ret) const;
+    inline void emits(void* args, void* ret) const {_impl(Call, this, IX_NULLPTR, args, ret);}
 protected:
     enum Operation {
         Destroy,

@@ -326,7 +326,7 @@ void _iINCPStream::onBinaryDataReceived(iINCConnection* conn, xuint32 channelId,
     m_server->onConnectionBinaryData(conn, channelId, seqNum, pos, data);
 }
 
-void iINCServer::onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg)
+void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg)
 {
     if (msg.type() & 0x1) return;
 

@@ -69,7 +69,7 @@ public:
 
 protected:
     /// Override to intercept messages and forward them
-    void onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg) IX_OVERRIDE;
+    void onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg) IX_OVERRIDE;
 
     /// Pure virtual stubs — Router forwards all messages, these are never called
     void handleMethod(iINCConnection*, xuint32, const iString&, xuint16, const iByteArray&) IX_OVERRIDE {}

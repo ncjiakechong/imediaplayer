@@ -101,7 +101,7 @@ public:
     void errorOccurred(xint32 errorCode) ISIGNAL(errorOccurred, errorCode);
 
 private:
-    void onMessageReceived(iINCMessage msg);
+    void onMessageReceived(const iINCMessage& msg);
     void onReadyWrite();
     void onDeviceConnected();  // Handle device connected signal
     void sendMessageImpl(iINCMessage msg, iINCOperation* op);

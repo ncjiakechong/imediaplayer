@@ -146,7 +146,7 @@ protected:
 
     /// Called when a message is received from a client connection
     /// @note Override in iINCRouter to intercept and forward messages
-    virtual void onConnectionMessageReceived(iINCConnection* conn, iINCMessage msg);
+    virtual void onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg);
 
     /// Override this to handle subscription requests
     /// @param conn Client connection

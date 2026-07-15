@@ -274,7 +274,7 @@ void iINCConnection::onErrorOccurred(xint32 errorCode)
     IEMIT errorOccurred(this, errorCode);
 }
 
-void iINCConnection::onMessageReceived(iINCMessage msg)
+void iINCConnection::onMessageReceived(const iINCMessage& msg)
 {
     IEMIT messageReceived(this, msg);
 }
