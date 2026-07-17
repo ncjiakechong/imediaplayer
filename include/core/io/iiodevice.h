@@ -107,12 +107,12 @@ public:
     iString errorString() const;
 
     // SIGNALS
-    void readyRead() ISIGNAL(readyRead);
-    void channelReadyRead(int channel) ISIGNAL(channelReadyRead, channel);
-    void bytesWritten(xint64 bytes) ISIGNAL(bytesWritten, bytes);
-    void channelBytesWritten(int channel, xint64 bytes) ISIGNAL(channelBytesWritten, channel, bytes);
-    void aboutToClose() ISIGNAL(aboutToClose);
-    void readChannelFinished() ISIGNAL(readChannelFinished);
+    void readyRead();
+    void channelReadyRead(int channel);
+    void bytesWritten(xint64 bytes);
+    void channelBytesWritten(int channel, xint64 bytes);
+    void aboutToClose();
+    void readChannelFinished();
 
 protected:
     enum AccessMode {

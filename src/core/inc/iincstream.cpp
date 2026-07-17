@@ -375,4 +375,10 @@ void iINCStream::cleanupPendingOps()
     }
 }
 
+void iINCStream::stateChanged(State previous, State current) ISIGNAL(stateChanged, previous, current)
+
+void iINCStream::dataReceived(xuint32 seqNum, xint64 pos, iByteArray data) ISIGNAL(dataReceived, seqNum, pos, data)
+
+void iINCStream::error(int errorCode) ISIGNAL(error, errorCode)
+
 } // namespace iShell

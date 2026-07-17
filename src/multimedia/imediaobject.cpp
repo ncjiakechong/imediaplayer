@@ -264,5 +264,12 @@ void iMediaObject::setupControls()
     Signal emitted when the availability of the service has changed to \a availability.
 */
 
+void iMediaObject::notifyIntervalChanged(int milliSeconds) ISIGNAL(notifyIntervalChanged, milliSeconds)
+
+void iMediaObject::metaDataAvailableChanged(bool available) ISIGNAL(metaDataAvailableChanged, available)
+
+void iMediaObject::metaDataChanged(iString key, iVariant value) ISIGNAL(metaDataChanged, key, value)
+
+void iMediaObject::availabilityChanged(iMultimedia::AvailabilityStatus availability) ISIGNAL(availabilityChanged, availability)
 
 } // namespace iShell

@@ -557,4 +557,6 @@ xint64 iCoreApplication::applicationPid()
 #endif
 }
 
+void iCoreApplication::aboutToQuit() ISIGNAL(aboutToQuit)
+
 } // namespace iShell

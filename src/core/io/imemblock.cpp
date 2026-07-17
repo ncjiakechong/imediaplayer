@@ -838,7 +838,7 @@ void iMemPool::vacuum()
     while ((slot = list.pop(IX_NULLPTR))) {
         m_memory->punch((size_t) ((xuint8*) slot - (xuint8*) m_memory->data()), m_blockSize);
 
-        while (m_freeSlots.push(slot)) {}
+        while (!m_freeSlots.push(slot)) {}
     }
 }
 

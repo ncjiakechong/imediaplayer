@@ -872,4 +872,32 @@ iMultimedia::AvailabilityStatus iMediaPlayer::availability() const
             iAbstractVideoSurface \l {setVideoOutput()}{output}.
 */
 
+void iMediaPlayer::mediaChanged(const iUrl &media) ISIGNAL(mediaChanged, media)
+
+void iMediaPlayer::currentMediaChanged(const iUrl &media) ISIGNAL(currentMediaChanged, media)
+
+void iMediaPlayer::stateChanged(State newState) ISIGNAL(stateChanged, newState)
+
+void iMediaPlayer::mediaStatusChanged(MediaStatus status) ISIGNAL(mediaStatusChanged, status)
+
+void iMediaPlayer::durationChanged(xint64 duration) ISIGNAL(durationChanged, duration)
+
+void iMediaPlayer::positionChanged(xint64 position) ISIGNAL(positionChanged, position)
+
+void iMediaPlayer::volumeChanged(int volume) ISIGNAL(volumeChanged, volume)
+
+void iMediaPlayer::mutedChanged(bool muted) ISIGNAL(mutedChanged, muted)
+
+void iMediaPlayer::audioAvailableChanged(bool available) ISIGNAL(audioAvailableChanged, available)
+
+void iMediaPlayer::videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable)
+
+void iMediaPlayer::bufferStatusChanged(int percentFilled) ISIGNAL(bufferStatusChanged, percentFilled)
+
+void iMediaPlayer::seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable)
+
+void iMediaPlayer::playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate)
+
+void iMediaPlayer::errorEvent(Error errorNum) ISIGNAL(errorEvent, errorNum)
+
 } // namespace iShell

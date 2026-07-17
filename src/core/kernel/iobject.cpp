@@ -575,6 +575,9 @@ void iObject::setObjectName(const iString &name)
     IEMIT objectNameChanged(m_objName);
 }
 
+void iObject::objectNameChanged(iString name) ISIGNAL(objectNameChanged, name)
+void iObject::destroyed(iObject* obj) ISIGNAL(destroyed, obj)
+
 void iObject::drainOrphaned(_iObjectConnectionList* connectionLists)
 {
     // Reclaim connections parked on the orphaned list. The caller must ensure no

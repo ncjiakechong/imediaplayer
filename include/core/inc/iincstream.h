@@ -114,13 +114,13 @@ public:
     /// Emitted when stream state changes
     /// @param previous Previous state before change
     /// @param current New current state
-    void stateChanged(State previous, State current) ISIGNAL(stateChanged, previous, current);
+    void stateChanged(State previous, State current);
 
     /// Emitted when binary data received
-    void dataReceived(xuint32 seqNum, xint64 pos, iByteArray data) ISIGNAL(dataReceived, seqNum, pos, data);
+    void dataReceived(xuint32 seqNum, xint64 pos, iByteArray data);
 
     /// Emitted on error
-    void error(int errorCode) ISIGNAL(error, errorCode);
+    void error(int errorCode);
 
 private:
     /// Handle binary data received from protocol layer

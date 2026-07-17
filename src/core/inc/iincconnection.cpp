@@ -279,4 +279,10 @@ void iINCConnection::onMessageReceived(const iINCMessage& msg)
     IEMIT messageReceived(this, msg);
 }
 
+void iINCConnection::disconnected(iINCConnection* conn) ISIGNAL(disconnected, conn)
+
+void iINCConnection::messageReceived(iINCConnection* conn, iINCMessage msg) ISIGNAL(messageReceived, conn, msg)
+
+void iINCConnection::errorOccurred(iINCConnection* conn, xint32 errorCode) ISIGNAL(errorOccurred, conn, errorCode)
+
 } // namespace iShell

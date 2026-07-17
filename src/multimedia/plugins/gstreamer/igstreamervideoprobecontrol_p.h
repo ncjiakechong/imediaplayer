@@ -32,8 +32,9 @@ public:
     void startFlushing();
     void stopFlushing();
 
-    void videoFrameProbed(iVideoFrame frame) ISIGNAL(videoFrameProbed, frame);
-    void flush() ISIGNAL(flush);
+    // signals:
+    void videoFrameProbed(iVideoFrame frame);
+    void flush();
 
 private:
     void frameProbed();

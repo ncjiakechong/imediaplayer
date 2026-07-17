@@ -71,16 +71,16 @@ public:
     /// @param client The newly connected client device
     /// @details Emitted when a new client connection is accepted.
     ///          The client device is a child of this server device.
-    void newConnection(iINCDevice* client) ISIGNAL(newConnection, client);
+    void newConnection(iINCDevice* client);
 
     /// Signal emitted when a complete message is received
-    void messageReceived(iINCMessage msg) ISIGNAL(messageReceived, msg);
+    void messageReceived(iINCMessage msg);
 
-    void connected() ISIGNAL(connected);
-    void disconnected() ISIGNAL(disconnected);
-    void errorOccurred(xint32 errorCode) ISIGNAL(errorOccurred, errorCode);
+    void connected();
+    void disconnected();
+    void errorOccurred(xint32 errorCode);
 
-    void customer(xintptr action) ISIGNAL(customer, action);
+    void customer(xintptr action);
 
 private:
     Role m_role;  ///< Device role (client or server)

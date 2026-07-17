@@ -100,10 +100,10 @@ public:
     /// Emitted when connection state changes
     /// @param previous Previous state before change
     /// @param current New current state
-    void stateChanged(State previous, State current) ISIGNAL(stateChanged, previous, current);
-    void disconnected() ISIGNAL(disconnected);
-    void eventReceived(iString eventName, xuint16 version, iByteArray data) ISIGNAL(eventReceived, eventName, version, data);
-    void reconnecting(xint32 attemptCount) ISIGNAL(reconnecting, attemptCount);
+    void stateChanged(State previous, State current);
+    void disconnected();
+    void eventReceived(iString eventName, xuint16 version, iByteArray data);
+    void reconnecting(xint32 attemptCount);
 
 protected:
     bool event(iEvent* e) IX_OVERRIDE;

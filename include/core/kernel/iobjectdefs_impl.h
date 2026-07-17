@@ -2218,7 +2218,7 @@ private:
     /* Since metaObject for ThisType will be declared later, the pointer to member function will be */                     \
     /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */                       \
 public:                                                                                                                    \
-    virtual const iShell::iMetaObject *metaObject() const IX_OVERRIDE {                                                    \
+    IX_DECL_VISIBLE_INLINE virtual const iShell::iMetaObject *metaObject() const IX_OVERRIDE {                             \
         static iShell::iMetaObject staticMetaObject = iShell::iMetaObject(# TYPE, IX_BaseType::metaObject());              \
         if (!staticMetaObject.isPropertyReady()) {                                                                         \
             iShell::PropertyMap ppt;                                                                                       \

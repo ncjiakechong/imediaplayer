@@ -637,4 +637,12 @@ iString iINCServer::dumpMetrics(bool perConnection) const
     return result;
 }
 
+void iINCServer::clientConnected(iINCConnection* conn) ISIGNAL(clientConnected, conn)
+
+void iINCServer::clientDisconnected(iINCConnection* conn) ISIGNAL(clientDisconnected, conn)
+
+void iINCServer::streamOpened(iINCConnection* conn, xuint32 channelId, xuint32 mode) ISIGNAL(streamOpened, conn, channelId, mode)
+
+void iINCServer::streamClosed(iINCConnection* conn, xuint32 channelId) ISIGNAL(streamClosed, conn, channelId)
+
 } // namespace iShell

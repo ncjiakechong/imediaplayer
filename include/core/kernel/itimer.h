@@ -70,7 +70,7 @@ public: //slot
     void stop();
 
     // SIGNAL
-    void timeout(xintptr userdata) ISIGNAL(timeout, userdata);
+    void timeout(xintptr userdata);
 
 protected:
     virtual bool event(iEvent *) IX_OVERRIDE;

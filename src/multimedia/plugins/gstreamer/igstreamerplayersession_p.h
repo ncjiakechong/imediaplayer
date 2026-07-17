@@ -119,24 +119,24 @@ public:
 
     void showPrerollFrames(bool enabled);
 
-public:
-    void durationChanged(xint64 duration) ISIGNAL(durationChanged, duration);
-    void positionChanged(xint64 position) ISIGNAL(positionChanged, position);
-    void stateChanged(iMediaPlayer::State state) ISIGNAL(stateChanged, state);
-    void volumeChanged(int volume) ISIGNAL(volumeChanged, volume);
-    void mutedStateChanged(bool muted) ISIGNAL(mutedStateChanged, muted);
-    void audioAvailableChanged(bool audioAvailable) ISIGNAL(audioAvailableChanged, audioAvailable);
-    void videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable);
-    void bufferingProgressChanged(int percentFilled) ISIGNAL(bufferingProgressChanged, percentFilled);
-    void playbackFinished() ISIGNAL(playbackFinished);
-    void tagsChanged() ISIGNAL(tagsChanged);
-    void streamsChanged() ISIGNAL(streamsChanged);
-    void seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable);
-    void error(int errorNum, const iString &errorString) ISIGNAL(error, errorNum, errorString);
-    void invalidMedia() ISIGNAL(invalidMedia);
-    void playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate);
-    void rendererChanged() ISIGNAL(rendererChanged);
-    void pipelineChanged() ISIGNAL(pipelineChanged);
+public: // signals
+    void durationChanged(xint64 duration);
+    void positionChanged(xint64 position);
+    void stateChanged(iMediaPlayer::State state);
+    void volumeChanged(int volume);
+    void mutedStateChanged(bool muted);
+    void audioAvailableChanged(bool audioAvailable);
+    void videoAvailableChanged(bool videoAvailable);
+    void bufferingProgressChanged(int percentFilled);
+    void playbackFinished();
+    void tagsChanged();
+    void streamsChanged();
+    void seekableChanged(bool seekable);
+    void error(int errorNum, const iString &errorString);
+    void invalidMedia();
+    void playbackRateChanged(xreal rate);
+    void rendererChanged();
+    void pipelineChanged();
 
 protected:
     bool event(iEvent *e) IX_OVERRIDE;

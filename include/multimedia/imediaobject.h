@@ -44,12 +44,12 @@ public:
     std::list<iString> availableMetaData() const;
 
 public: // signal
-    void notifyIntervalChanged(int milliSeconds) ISIGNAL(notifyIntervalChanged, milliSeconds);
+    void notifyIntervalChanged(int milliSeconds);
 
-    void metaDataAvailableChanged(bool available) ISIGNAL(metaDataAvailableChanged, available);
-    void metaDataChanged(iString key, iVariant value) ISIGNAL(metaDataChanged, key, value);
+    void metaDataAvailableChanged(bool available);
+    void metaDataChanged(iString key, iVariant value);
 
-    void availabilityChanged(iMultimedia::AvailabilityStatus availability) ISIGNAL(availabilityChanged, availability);
+    void availabilityChanged(iMultimedia::AvailabilityStatus availability);
 
 protected:
     iMediaObject(iObject *parent);

@@ -49,7 +49,7 @@ public:
 
     static xint64 applicationPid();
 
-    void aboutToQuit() ISIGNAL(aboutToQuit);
+    void aboutToQuit();
 
 protected:
     virtual bool event(iEvent *) IX_OVERRIDE;

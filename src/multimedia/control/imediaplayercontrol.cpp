@@ -331,4 +331,32 @@ iMediaPlayerControl::iMediaPlayerControl(iObject *parent):
     Signal emitted when playback rate changes to \a rate.
 */
 
+void iMediaPlayerControl::mediaChanged(const iUrl& content) ISIGNAL(mediaChanged, content)
+
+void iMediaPlayerControl::durationChanged(xint64 duration) ISIGNAL(durationChanged, duration)
+
+void iMediaPlayerControl::positionChanged(xint64 position) ISIGNAL(positionChanged, position)
+
+void iMediaPlayerControl::stateChanged(iMediaPlayer::State newState) ISIGNAL(stateChanged, newState)
+
+void iMediaPlayerControl::mediaStatusChanged(iMediaPlayer::MediaStatus status) ISIGNAL(mediaStatusChanged, status)
+
+void iMediaPlayerControl::volumeChanged(int volume) ISIGNAL(volumeChanged, volume)
+
+void iMediaPlayerControl::mutedChanged(bool mute) ISIGNAL(mutedChanged, mute)
+
+void iMediaPlayerControl::audioAvailableChanged(bool audioAvailable) ISIGNAL(audioAvailableChanged, audioAvailable)
+
+void iMediaPlayerControl::videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable)
+
+void iMediaPlayerControl::bufferStatusChanged(int percentFilled) ISIGNAL(bufferStatusChanged, percentFilled)
+
+void iMediaPlayerControl::seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable)
+
+void iMediaPlayerControl::availablePlaybackRangesChanged(const iMediaTimeRange &ranges) ISIGNAL(availablePlaybackRangesChanged, ranges)
+
+void iMediaPlayerControl::playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate)
+
+void iMediaPlayerControl::error(int errorNum, iString errorString) ISIGNAL(error, errorNum, errorString)
+
 } // namespace iShell

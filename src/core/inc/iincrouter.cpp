@@ -513,4 +513,8 @@ void iINCRouter::handleRouterHandshake(iINCConnection* conn, const iINCMessage& 
     }
 }
 
+void iINCRouter::upstreamConnected(iINCConnection* conn, iString targetServer) ISIGNAL(upstreamConnected, conn, targetServer)
+
+void iINCRouter::upstreamFailed(iINCConnection* conn, iString targetServer, xint32 errorCode) ISIGNAL(upstreamFailed, conn, targetServer, errorCode)
+
 } // namespace iShell

@@ -170,4 +170,6 @@ bool iSingleShotTimer::event(iEvent *e)
 void iTimer::singleShotImpl(int msec, xintptr userdata, TimerType timerType, const iObject *receiver, const _iConnection& conn)
 { new iSingleShotTimer(msec, userdata, timerType, receiver, conn); }
 
+void iTimer::timeout(xintptr userdata) ISIGNAL(timeout, userdata)
+
 } // namespace iShell

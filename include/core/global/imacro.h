@@ -170,14 +170,17 @@
 #if defined(_MSC_VER)
 #    define IX_DECL_EXPORT     __declspec(dllexport)
 #    define IX_DECL_IMPORT     __declspec(dllimport)
+#    define IX_DECL_VISIBLE_INLINE
 #    define IX_FUNC_INFO       __FUNCSIG__
 #elif defined(__GNUC__)
 #    define IX_DECL_EXPORT     __attribute__((visibility("default")))
 #    define IX_DECL_IMPORT     __attribute__((visibility("default")))
+#    define IX_DECL_VISIBLE_INLINE __attribute__((visibility("default")))
 #    define IX_FUNC_INFO       __PRETTY_FUNCTION__
 #else
 #    define IX_DECL_EXPORT
 #    define IX_DECL_IMPORT
+#    define IX_DECL_VISIBLE_INLINE
 #endif
 
 #if defined(__GNUC__)

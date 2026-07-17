@@ -1939,4 +1939,38 @@ void iGstreamerPlayerSession::resumeVideoProbes()
         m_videoProbe->stopFlushing();
 }
 
+void iGstreamerPlayerSession::durationChanged(xint64 duration) ISIGNAL(durationChanged, duration)
+
+void iGstreamerPlayerSession::positionChanged(xint64 position) ISIGNAL(positionChanged, position)
+
+void iGstreamerPlayerSession::stateChanged(iMediaPlayer::State state) ISIGNAL(stateChanged, state)
+
+void iGstreamerPlayerSession::volumeChanged(int volume) ISIGNAL(volumeChanged, volume)
+
+void iGstreamerPlayerSession::mutedStateChanged(bool muted) ISIGNAL(mutedStateChanged, muted)
+
+void iGstreamerPlayerSession::audioAvailableChanged(bool audioAvailable) ISIGNAL(audioAvailableChanged, audioAvailable)
+
+void iGstreamerPlayerSession::videoAvailableChanged(bool videoAvailable) ISIGNAL(videoAvailableChanged, videoAvailable)
+
+void iGstreamerPlayerSession::bufferingProgressChanged(int percentFilled) ISIGNAL(bufferingProgressChanged, percentFilled)
+
+void iGstreamerPlayerSession::playbackFinished() ISIGNAL(playbackFinished)
+
+void iGstreamerPlayerSession::tagsChanged() ISIGNAL(tagsChanged)
+
+void iGstreamerPlayerSession::streamsChanged() ISIGNAL(streamsChanged)
+
+void iGstreamerPlayerSession::seekableChanged(bool seekable) ISIGNAL(seekableChanged, seekable)
+
+void iGstreamerPlayerSession::error(int errorNum, const iString &errorString) ISIGNAL(error, errorNum, errorString)
+
+void iGstreamerPlayerSession::invalidMedia() ISIGNAL(invalidMedia)
+
+void iGstreamerPlayerSession::playbackRateChanged(xreal rate) ISIGNAL(playbackRateChanged, rate)
+
+void iGstreamerPlayerSession::rendererChanged() ISIGNAL(rendererChanged)
+
+void iGstreamerPlayerSession::pipelineChanged() ISIGNAL(pipelineChanged)
+
 } // namespace iShell

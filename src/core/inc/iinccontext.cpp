@@ -575,4 +575,12 @@ void iINCContext::ackDataReceived(xuint32 channel, xuint32 seqNum, xint32 size)
     m_connection->sendMessage(msg);
 }
 
+void iINCContext::stateChanged(State previous, State current) ISIGNAL(stateChanged, previous, current)
+
+void iINCContext::disconnected() ISIGNAL(disconnected)
+
+void iINCContext::eventReceived(iString eventName, xuint16 version, iByteArray data) ISIGNAL(eventReceived, eventName, version, data)
+
+void iINCContext::reconnecting(xint32 attemptCount) ISIGNAL(reconnecting, attemptCount)
+
 } // namespace iShell

@@ -60,12 +60,10 @@ public:
 
 // signals:
     /// Emitted when upstream connection to target server is established
-    void upstreamConnected(iINCConnection* conn, iString targetServer)
-        ISIGNAL(upstreamConnected, conn, targetServer);
+    void upstreamConnected(iINCConnection* conn, iString targetServer);
 
     /// Emitted when upstream connection to target server fails
-    void upstreamFailed(iINCConnection* conn, iString targetServer, xint32 errorCode)
-        ISIGNAL(upstreamFailed, conn, targetServer, errorCode);
+    void upstreamFailed(iINCConnection* conn, iString targetServer, xint32 errorCode);
 
 protected:
     /// Override to intercept messages and forward them

@@ -22,4 +22,16 @@ iINCDevice::~iINCDevice()
 {
 }
 
+void iINCDevice::newConnection(iINCDevice* client) ISIGNAL(newConnection, client)
+
+void iINCDevice::messageReceived(iINCMessage msg) ISIGNAL(messageReceived, msg)
+
+void iINCDevice::connected() ISIGNAL(connected)
+
+void iINCDevice::disconnected() ISIGNAL(disconnected)
+
+void iINCDevice::errorOccurred(xint32 errorCode) ISIGNAL(errorOccurred, errorCode)
+
+void iINCDevice::customer(xintptr action) ISIGNAL(customer, action)
+
 } // namespace iShell

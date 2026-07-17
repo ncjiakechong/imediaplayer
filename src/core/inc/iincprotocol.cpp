@@ -503,4 +503,10 @@ bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel,
     return true;
 }
 
+void iINCProtocol::binaryDataReceived(xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data) ISIGNAL(binaryDataReceived, channel, seqNum, pos, data)
+
+void iINCProtocol::messageReceived(iINCMessage msg) ISIGNAL(messageReceived, msg)
+
+void iINCProtocol::errorOccurred(xint32 errorCode) ISIGNAL(errorOccurred, errorCode)
+
 } // namespace iShell

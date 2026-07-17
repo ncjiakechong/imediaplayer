@@ -1732,4 +1732,16 @@ iString iIODevice::errorString() const
     \sa read(), write()
 */
 
+void iIODevice::readyRead() ISIGNAL(readyRead)
+
+void iIODevice::channelReadyRead(int channel) ISIGNAL(channelReadyRead, channel)
+
+void iIODevice::bytesWritten(xint64 bytes) ISIGNAL(bytesWritten, bytes)
+
+void iIODevice::channelBytesWritten(int channel, xint64 bytes) ISIGNAL(channelBytesWritten, channel, bytes)
+
+void iIODevice::aboutToClose() ISIGNAL(aboutToClose)
+
+void iIODevice::readChannelFinished() ISIGNAL(readChannelFinished)
+
 } // namespace iShell

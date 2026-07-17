@@ -72,4 +72,8 @@ void iGstreamerAudioProbeControl::bufferProbed()
     IEMIT audioBufferProbed(audioBuffer);
 }
 
+void iGstreamerAudioProbeControl::audioBufferProbed(iAudioBuffer buffer) ISIGNAL(audioBufferProbed, buffer)
+
+void iGstreamerAudioProbeControl::flush() ISIGNAL(flush)
+
 } // namespace iShell

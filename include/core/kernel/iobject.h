@@ -66,8 +66,8 @@ public:
     const iString& objectName() const { return m_objName; }
 
     /// SIGNALS start
-    void objectNameChanged(iString name) ISIGNAL(objectNameChanged, name);
-    void destroyed(iObject* obj) ISIGNAL(destroyed, obj);
+    void objectNameChanged(iString name);
+    void destroyed(iObject* obj);
     /// SIGNALS end
 
     inline bool signalsBlocked() const { return m_blockSig; }

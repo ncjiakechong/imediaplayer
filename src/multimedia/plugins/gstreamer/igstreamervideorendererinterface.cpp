@@ -21,4 +21,8 @@ iGstreamerVideoRendererInterface::~iGstreamerVideoRendererInterface()
 {
 }
 
+void iGstreamerVideoRendererInterface::sinkChanged() ISIGNAL(sinkChanged)
+
+void iGstreamerVideoRendererInterface::readyChanged(bool ready) ISIGNAL(readyChanged, ready)
+
 };

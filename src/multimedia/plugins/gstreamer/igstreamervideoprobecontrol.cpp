@@ -101,4 +101,8 @@ void iGstreamerVideoProbeControl::frameProbed()
     IEMIT videoFrameProbed(frame);
 }
 
+void iGstreamerVideoProbeControl::videoFrameProbed(iVideoFrame frame) ISIGNAL(videoFrameProbed, frame)
+
+void iGstreamerVideoProbeControl::flush() ISIGNAL(flush)
+
 } // namespace iShell

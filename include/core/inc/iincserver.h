@@ -101,21 +101,21 @@ public:
 
 // signals:
     /// Emitted when new client connects
-    void clientConnected(iINCConnection* conn) ISIGNAL(clientConnected, conn);
+    void clientConnected(iINCConnection* conn);
 
     /// Emitted when client disconnects
-    void clientDisconnected(iINCConnection* conn) ISIGNAL(clientDisconnected, conn);
+    void clientDisconnected(iINCConnection* conn);
 
     /// Emitted when stream/channel is opened by a client
     /// @param conn Client connection that requested the channel
     /// @param channelId Allocated channel identifier
     /// @param mode Channel mode (MODE_READ, MODE_WRITE, or both)
-    void streamOpened(iINCConnection* conn, xuint32 channelId, xuint32 mode) ISIGNAL(streamOpened, conn, channelId, mode);
+    void streamOpened(iINCConnection* conn, xuint32 channelId, xuint32 mode);
 
     /// Emitted when stream/channel is closed by a client
     /// @param conn Client connection that released the channel
     /// @param channelId Channel identifier that was released
-    void streamClosed(iINCConnection* conn, xuint32 channelId) ISIGNAL(streamClosed, conn, channelId);
+    void streamClosed(iINCConnection* conn, xuint32 channelId);
 
 protected:
     /// Override this to handle method calls from clients

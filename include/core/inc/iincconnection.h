@@ -109,13 +109,13 @@ public:
 
 private: // signals
     /// Emitted when connection is closed
-    void disconnected(iINCConnection* conn) ISIGNAL(disconnected, conn);
+    void disconnected(iINCConnection* conn);
 
     /// Emitted when protocol message received (forwarded to server for handling)
-    void messageReceived(iINCConnection* conn, iINCMessage msg) ISIGNAL(messageReceived, conn, msg);
+    void messageReceived(iINCConnection* conn, iINCMessage msg);
 
     /// Emitted when device error occurs (forwarded to server for handling)
-    void errorOccurred(iINCConnection* conn, xint32 errorCode) ISIGNAL(errorOccurred, conn, errorCode);
+    void errorOccurred(iINCConnection* conn, xint32 errorCode);
 
 private:
     iINCConnection(iINCDevice* device, xuint32 connId);

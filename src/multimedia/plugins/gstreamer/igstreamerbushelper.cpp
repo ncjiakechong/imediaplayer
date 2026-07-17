@@ -174,5 +174,7 @@ void iGstreamerBusHelper::doProcessMessage(iGstreamerMessage msg)
     IEMIT message(msg);
 }
 
+void iGstreamerBusHelper::message(iGstreamerMessage msg) ISIGNAL(message, msg)
+
 } // namespace iShell
 
