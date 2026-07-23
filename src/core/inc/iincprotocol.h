@@ -65,10 +65,10 @@ public:
     /// Send binary data with zero-copy optimization via shared memory
     /// @param channel Channel identifier for routing
     /// @param data Binary data to send (uses SHM reference if backed by mempool)
-    /// @return iINCOperation pointer for tracking the request, or nullptr on error
-    /// @note Attempts zero-copy via iMemExport if data is backed by iMemBlock,
-    ///       falls back to data copy if shared memory export fails
-    iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data);
+    /// @return Operation for SHM sends; nullptr for successful NOACK copy sends
+    /// @note Attempts zero-copy via iMemExport if data is backed by iMemBlock.
+    ///       Copy fallback is fire-and-forget and allocates no iINCOperation.
+    iSharedDataPointer<iINCOperation> sendBinaryData(xuint32 channel, bool broadcast, xint64 pos, const iByteArray& data);
 
     /// Flush send queue (write pending messages)
     void flush();
@@ -95,8 +95,9 @@ public:
     /// Emitted when binary data is received (routed by channel ID)
     /// @param channel Channel identifier for routing to appropriate stream
     /// @param seqNum Sequence number from the message
+    /// @param broadcast True for NOACK non-SHM data; no ACK must be sent
     /// @param data Binary data (reference-counted, safe for async processing)
-    void binaryDataReceived(xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data);
+    void binaryDataReceived(xuint32 channel, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data);
     void messageReceived(iINCMessage msg);
     void errorOccurred(xint32 errorCode);
 
@@ -109,8 +110,8 @@ private:
     /// Process received binary data message
     void processBinaryDataMessage(const iINCMessage& msg);
     
-    bool processDirectBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, xint64& pos);
-    bool processSHMBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, xint64& pos);
+    bool processDirectBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, bool broadcast, xint64& pos);
+    bool processSHMBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, bool broadcast, xint64& pos);
 
     static void operationNotifier(iINCOperation* op, bool deleter, void* userData);
 

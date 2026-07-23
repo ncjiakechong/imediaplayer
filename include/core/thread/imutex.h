@@ -66,8 +66,8 @@ private:
     RecursionMode m_recMode;
     union
     {
-        #if defined(IX_OS_DARWIN) || defined(IX_OS_MACOS)
-        char __pad[152]; // macOS pthread_mutex_t is ~136 bytes
+        #if defined(IX_OS_DARWIN) || defined(IX_OS_MACOS) || defined(IX_OS_ANDROID) || defined(__ANDROID__)
+        char __pad[152]; // macOS/Android (libc++) std::timed_mutex is ~96-136 bytes
         #else
         char __pad[64]; // Linux/Windows and other platforms: sufficient for all iMutexImpl variants
         #endif

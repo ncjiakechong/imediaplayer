@@ -38,13 +38,13 @@ class IX_CORE_EXPORT _iINCPStream : public iINCChannel
     IX_OBJECT(_iINCPStream)
 
 public:
-    _iINCPStream(iINCServer* server, xuint32 channelId, Mode mode, iObject* parent = IX_NULLPTR);
+    _iINCPStream(iINCServer* server, xuint32 channelId, const iString& name, Mode mode, iObject* parent = IX_NULLPTR);
 
     xuint32 channelId() const IX_OVERRIDE { return m_channelId; }
     Mode mode() const IX_OVERRIDE { return m_mode; }
 
 protected:
-    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data) IX_OVERRIDE;
+    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data) IX_OVERRIDE;
 
 private:
     Mode m_mode;
@@ -110,7 +110,7 @@ public:
     /// @param conn Client connection that requested the channel
     /// @param channelId Allocated channel identifier
     /// @param mode Channel mode (MODE_READ, MODE_WRITE, or both)
-    void streamOpened(iINCConnection* conn, xuint32 channelId, xuint32 mode);
+    void streamOpened(iINCConnection* conn, xuint32 channelId, const iString& name, xuint32 mode);
 
     /// Emitted when stream/channel is closed by a client
     /// @param conn Client connection that released the channel
@@ -136,13 +136,14 @@ protected:
     /// @param conn Client connection that sent the data
     /// @param channelId Channel identifier
     /// @param seqNum Sequence number from the message
+    /// @param broadcast True for fire-and-forget data; do not reply
     /// @param data Binary data payload
     /// @note For async processing:
     ///       1. Store seqNum and conn for later
-    ///       2. When done, call sendBinaryReply(conn, seqNum, written)
+    ///       2. When done, call sendBinaryReply(conn, channelId, seqNum, broadcast, written)
     iSharedDataPointer<iINCOperation> sendBinaryData(iINCConnection* conn, xuint32 channel, xint64 pos, const iByteArray& data);
-    virtual void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) = 0;
-    void sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint32 written);
+    virtual void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, const iByteArray& data) = 0;
+    void sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint32 written);
 
     /// Called when a message is received from a client connection
     /// @note Override in iINCRouter to intercept and forward messages
@@ -178,7 +179,7 @@ private:
     void handleStreamClose(iINCConnection* conn, const iINCMessage& msg);
     void handleSubscribeRequest(iINCConnection* conn, const iINCMessage& msg);
     void handleUnsubscribeRequest(iINCConnection* conn, const iINCMessage& msg);
-    void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data);
+    void onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data);
     void onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCode);
 
     bool            m_listening;

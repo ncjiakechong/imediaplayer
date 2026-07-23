@@ -220,17 +220,78 @@ TEST_F(INCProtocolUnitTest, ReceiveMessage) {
     EXPECT_EQ(lastMsg.sequenceNumber(), 100);
 }
 
-TEST_F(INCProtocolUnitTest, SendBinaryData) {
+TEST_F(INCProtocolUnitTest, SendBinaryDataCopyIsNoAckAndCreatesNoOperation) {
+    const iINCMetrics::Snapshot before = protocol->metrics().snapshot();
     iByteArray data(100, 'A');
-    auto op = protocol->sendBinaryData(1, 0, data);
-    ASSERT_NE(op, nullptr);
-    
-    // Verify data was written
+    auto op = protocol->sendBinaryData(1, true, 0, data);
+
+    EXPECT_EQ(op, nullptr);
     EXPECT_GT(device->lastWrittenData.size(), sizeof(iINCMessageHeader));
-    
-    // Verify header type is BINARY_DATA
-    const iINCMessageHeader* hdr = reinterpret_cast<const iINCMessageHeader*>(device->lastWrittenData.constData());
+
+    const iINCMessageHeader* hdr = reinterpret_cast<const iINCMessageHeader*>(
+            device->lastWrittenData.constData());
     EXPECT_EQ(hdr->type, INC_MSG_BINARY_DATA);
+    EXPECT_NE(hdr->flags & INC_MSG_FLAG_NOACK, 0);
+    EXPECT_EQ(hdr->flags & INC_MSG_FLAG_SHM_DATA, 0);
+
+    const iINCMetrics::Snapshot after = protocol->metrics().snapshot();
+    EXPECT_EQ(after.operationsCreated, before.operationsCreated);
+}
+
+TEST_F(INCProtocolUnitTest, SendBinaryDataCopyAtLimitIsComplete) {
+    constexpr xsizetype binaryEnvelopeSize = 15;
+    const xsizetype maxDataSize = iINCMessageHeader::MAX_MESSAGE_SIZE - binaryEnvelopeSize;
+    const iByteArray data(maxDataSize, 'L');
+
+    EXPECT_EQ(protocol->sendBinaryData(1, true, 42, data), nullptr);
+    ASSERT_EQ(device->lastWrittenData.size(),
+              sizeof(iINCMessageHeader) + iINCMessageHeader::MAX_MESSAGE_SIZE);
+
+    const iINCMessageHeader* header = reinterpret_cast<const iINCMessageHeader*>(
+            device->lastWrittenData.constData());
+    EXPECT_EQ(header->length, iINCMessageHeader::MAX_MESSAGE_SIZE);
+
+    iINCTagStruct payload;
+    payload.setData(device->lastWrittenData.mid(sizeof(iINCMessageHeader)));
+    xint64 pos = 0;
+    iByteArray received;
+    ASSERT_TRUE(payload.getInt64(pos));
+    ASSERT_TRUE(payload.getBytes(received));
+    EXPECT_TRUE(payload.eof());
+    EXPECT_EQ(pos, 42);
+    EXPECT_EQ(received, data);
+}
+
+TEST_F(INCProtocolUnitTest, SendBinaryDataCopyOverLimitIsRejected) {
+    constexpr xsizetype binaryEnvelopeSize = 15;
+    const xsizetype maxDataSize = iINCMessageHeader::MAX_MESSAGE_SIZE - binaryEnvelopeSize;
+    const iByteArray data(maxDataSize + 1, 'X');
+    bool tooLarge = false;
+
+    iObject::connect(protocol, &iINCProtocol::errorOccurred, protocol,
+        [&](xint32 errorCode) {
+            if (errorCode == INC_ERROR_MESSAGE_TOO_LARGE) {
+                tooLarge = true;
+            }
+        });
+
+    EXPECT_EQ(protocol->sendBinaryData(1, true, 0, data), nullptr);
+    EXPECT_TRUE(tooLarge);
+    EXPECT_TRUE(device->lastWrittenData.isEmpty());
+}
+
+TEST_F(INCProtocolUnitTest, NoAckQueueFullDoesNotCreateOperation) {
+    device->setMode(iIODevice::NotOpen);
+    const iINCMetrics::Snapshot before = protocol->metrics().snapshot();
+    const iByteArray data(16, 'N');
+
+    for (int i = 0; i < 101; ++i) {
+        EXPECT_EQ(protocol->sendBinaryData(1, true, i, data), nullptr);
+    }
+
+    const iINCMetrics::Snapshot after = protocol->metrics().snapshot();
+    EXPECT_EQ(after.operationsCreated, before.operationsCreated);
+    EXPECT_EQ(after.sendQueueDrops - before.sendQueueDrops, 1u);
 }
 
 TEST_F(INCProtocolUnitTest, QueueAndSendOnConnect) {
@@ -312,10 +373,9 @@ TEST_F(INCProtocolUnitTest, Flush) {
     // Should trigger onReadyWrite, which is safe to call
 }
 
-TEST_F(INCProtocolUnitTest, ReceiveBinaryDataCopy) {
-    // Construct a binary data message
+TEST_F(INCProtocolUnitTest, ReceiveBinaryDataNoAckSuppressesReply) {
     iINCMessage msg(INC_MSG_BINARY_DATA, 1, 100);
-    msg.setFlags(INC_MSG_FLAG_NONE);
+    msg.setFlags(INC_MSG_FLAG_NOACK);
     
     // Payload: [int64 pos][bytes data]
     msg.payload().putInt64(0);
@@ -327,10 +387,12 @@ TEST_F(INCProtocolUnitTest, ReceiveBinaryDataCopy) {
     
     bool binaryReceived = false;
     iObject::connect(protocol, &iINCProtocol::binaryDataReceived, protocol, 
-        [&](xuint32 channel, xuint32 seq, xint64 pos, const iByteArray& data) {
+        [&](xuint32 channel, xuint32 seq, bool broadcast,
+            xint64 pos, const iByteArray& data) {
         binaryReceived = true;
         EXPECT_EQ(channel, 1);
         EXPECT_EQ(seq, 100);
+        EXPECT_TRUE(broadcast);
         EXPECT_EQ(pos, 0);
         EXPECT_EQ(data.size(), 10);
     });
@@ -339,6 +401,53 @@ TEST_F(INCProtocolUnitTest, ReceiveBinaryDataCopy) {
     device->simulateDataReceived(payload);
     
     EXPECT_TRUE(binaryReceived);
+
+    EXPECT_EQ(device->lastWrittenData.size(), 0);
+}
+
+TEST_F(INCProtocolUnitTest, ReceiveLegacyBinaryDataAcknowledgesOnce) {
+    iINCMessage msg(INC_MSG_BINARY_DATA, 1, 101);
+    msg.setFlags(INC_MSG_FLAG_NONE);
+    msg.payload().putInt64(0);
+    msg.payload().putBytes(iByteArray(10, 'C'));
+
+    bool received = false;
+    iObject::connect(protocol, &iINCProtocol::binaryDataReceived, protocol,
+        [&](xuint32 channel, xuint32 seq, bool broadcast,
+            xint64, const iByteArray& data) {
+        received = true;
+        EXPECT_FALSE(broadcast);
+        iINCMessage ack(INC_MSG_BINARY_DATA_ACK, channel, seq);
+        ack.payload().putInt32(static_cast<xint32>(data.size()));
+        protocol->sendMessage(ack);
+    });
+
+    iINCMessageHeader hdr = msg.header();
+    device->simulateDataReceived(iByteArray(
+            reinterpret_cast<const char*>(&hdr), sizeof(hdr)));
+    device->simulateDataReceived(msg.payload().data());
+
+    EXPECT_TRUE(received);
+    ASSERT_GT(device->lastWrittenData.size(), sizeof(iINCMessageHeader));
+    const iINCMessageHeader* ack = reinterpret_cast<const iINCMessageHeader*>(
+            device->lastWrittenData.constData());
+    EXPECT_EQ(ack->type, INC_MSG_BINARY_DATA_ACK);
+    EXPECT_EQ(ack->seqNum, 101u);
+}
+
+TEST_F(INCProtocolUnitTest, ReceiveShmDataAlwaysAcknowledges) {
+    iINCMessage msg(INC_MSG_BINARY_DATA, 1, 102);
+    msg.setFlags(INC_MSG_FLAG_SHM_DATA | INC_MSG_FLAG_NOACK);
+
+    iINCMessageHeader hdr = msg.header();
+    device->simulateDataReceived(iByteArray(
+            reinterpret_cast<const char*>(&hdr), sizeof(hdr)));
+
+    ASSERT_GT(device->lastWrittenData.size(), sizeof(iINCMessageHeader));
+    const iINCMessageHeader* ack = reinterpret_cast<const iINCMessageHeader*>(
+            device->lastWrittenData.constData());
+    EXPECT_EQ(ack->type, INC_MSG_BINARY_DATA_ACK);
+    EXPECT_EQ(ack->seqNum, 102u);
 }
 
 TEST_F(INCProtocolUnitTest, PartialWrite_Header) {

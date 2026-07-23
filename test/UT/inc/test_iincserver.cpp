@@ -18,7 +18,9 @@ public:
 
     // --- Implement pure virtual functions from the base class ---
     MOCK_METHOD5(handleMethod, void(iShell::iINCConnection* conn, xuint32 seqNum, const iShell::iString& method, xuint16 version, const iShell::iByteArray& args));
-    MOCK_METHOD5(handleBinaryData, void(iShell::iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iShell::iByteArray& data));
+    MOCK_METHOD6(handleBinaryData, void(iShell::iINCConnection* conn, xuint32 channelId,
+                                        xuint32 seqNum, bool broadcast, xint64 pos,
+                                        const iShell::iByteArray& data));
 
     // --- Mock other virtual functions needed for testing ---
     MOCK_METHOD1(listenOn, int(const iShell::iStringView& url));
@@ -94,9 +96,11 @@ TEST_F(INCServerTest, HandleMethod) {
 
 TEST_F(INCServerTest, HandleBinaryData) {
     // Use a matcher for the binary data (now includes pos parameter)
-    EXPECT_CALL(*server, handleBinaryData(nullptr, 42, 1, 0, testing::Eq(iShell::iByteArray("binary_data"))))
+    EXPECT_CALL(*server, handleBinaryData(nullptr, 42, 1, false, 0,
+                                           testing::Eq(iShell::iByteArray("binary_data"))))
         .Times(1);
-    server->handleBinaryData(nullptr, 42, 1, 0, iShell::iByteArray("binary_data"));
+    server->handleBinaryData(nullptr, 42, 1, false, 0,
+                             iShell::iByteArray("binary_data"));
 }
 
 // Signal emission tests (conceptual - cannot easily verify in UT without mocks)
@@ -148,12 +152,14 @@ protected:
         IX_UNUSED(args);
     }
 
-    void handleBinaryData(iShell::iINCConnection* conn, xuint32 channelId, xuint32 seqNum,
-                         xint64 pos, const iShell::iByteArray& data) override
+    void handleBinaryData(iShell::iINCConnection* conn, xuint32 channelId,
+                         xuint32 seqNum, bool broadcast, xint64 pos,
+                         const iShell::iByteArray& data) override
     {
         IX_UNUSED(conn);
         IX_UNUSED(channelId);
         IX_UNUSED(seqNum);
+        IX_UNUSED(broadcast);
         IX_UNUSED(pos);
         IX_UNUSED(data);
     }

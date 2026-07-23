@@ -70,11 +70,14 @@ protected:
         sendMethodReply(conn, seqNum, INC_OK, args);
     }
 
-    void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) override
+    void handleBinaryData(iINCConnection* conn, xuint32 channelId,
+                          xuint32 seqNum, bool broadcast, xint64 pos,
+                          const iByteArray& data) override
     {
         IX_UNUSED(conn);
         IX_UNUSED(channelId);
         IX_UNUSED(seqNum);
+        IX_UNUSED(broadcast);
         IX_UNUSED(data);
         // No binary data handling needed for these tests
     }
@@ -1180,23 +1183,17 @@ public:
             return;
         }
 
-        // Use the correct write signature: write(position, data)
+        // Copy sends are NOACK and return no operation; SHM sends retain one.
         iSharedDataPointer<iINCOperation> op = helper->testStream->write(0, data);
-        
         if (op) {
-            ilog_info("[Worker] Stream write operation created");
+            ilog_info("[Worker] SHM stream write operation created");
             op->setTimeout(500);
-            iScopedLock<iMutex> lock(helper->mutex);
-            helper->errorCode = 0;
-            helper->testCompleted = true;
-            helper->condition.broadcast();
-        } else {
-            ilog_error("[Worker] Stream write failed");
-            iScopedLock<iMutex> lock(helper->mutex);
-            helper->errorCode = -1;
-            helper->testCompleted = true;
-            helper->condition.broadcast();
         }
+
+        iScopedLock<iMutex> lock(helper->mutex);
+        helper->errorCode = 0;
+        helper->testCompleted = true;
+        helper->condition.broadcast();
     }
 
     void testStreamDetach() {
@@ -1740,19 +1737,19 @@ TEST_P(INCIntegrationTest, PingPong) {
 TEST_P(INCIntegrationTest, DISABLED_LargePayload) {
     // NOTE: This test is disabled because it tests behavior beyond protocol limits.
     //
-    // INC Protocol has MAX_MESSAGE_SIZE = 8KB (defined in iincmessage.cpp).
-    // For very large data transfer, use iINCStream with shared memory.
+    // One INC payload is bounded to the maximum safe UDP datagram minus its header.
+    // For larger logical transfers, use application-level chunking or shared memory.
     //
-    // For large data transfer (>8KB), you MUST use iINCStream with shared memory.
-    // Stream channels support arbitrary data sizes with zero-copy shared memory.
+    // A single tagged payload cannot exceed MAX_MESSAGE_SIZE. Stream channels can carry
+    // arbitrary logical sizes as bounded chunks, with optional zero-copy SHM.
     //
     // Design philosophy:
-    //   - Small messages (<8KB): Use regular INC messages
-    //   - Large data (>8KB): Use iINCStream with shared memory for efficiency
+    //   - Messages within MAX_MESSAGE_SIZE: Use regular INC messages
+    //   - Larger logical data: Use bounded stream chunks or SHM for efficiency
     //
     // To test maximum payload capacity, see MaxPayloadSize test below.
 
-    GTEST_SKIP() << "Large payloads exceed 8KB protocol limit. "
+    GTEST_SKIP() << "Large payloads exceed the single-message protocol limit. "
                  << "Use iINCStream for large data transfer.";
 }
 
@@ -1764,10 +1761,12 @@ TEST_P(INCIntegrationTest, MaxPayloadSize) {
     ASSERT_TRUE(startServer());
     ASSERT_TRUE(connectClient());
 
-    // Calculate maximum payload size
-    // MAX_MESSAGE_SIZE = 8KB applies to entire message (header + payload)
-    // Header is 32 bytes (updated with dts field)
-    const int maxPayload = 8 * 1024 - 32;
+    // MAX_MESSAGE_SIZE limits only the tagged payload, not the 32-byte wire header.
+    iINCTagStruct methodEnvelope;
+    methodEnvelope.putUint16(1);
+    methodEnvelope.putString(iString("echoTest"));
+    const int maxPayload = static_cast<int>(
+            methodEnvelope.remainingBuffer(iINCMessageHeader::MAX_MESSAGE_SIZE));
 
     // Reset test completion flags
     helper->testCompleted = false;

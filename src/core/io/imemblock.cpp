@@ -292,16 +292,11 @@ void iMemBlock::doFree()
 
         case MEMBLOCK_POOL_EXTERNAL:
         case MEMBLOCK_POOL: {
+            iSharedDataPointer<iMemPool> pool = m_pool;
             iMemPool::Slot *slot = m_pool->slotByPtr(m_data.load());
             IX_ASSERT(slot);
 
-            /* The free list dimensions should easily allow all slots
-             * to fit in, hence try harder if pushing this slot into
-             * the free list fails */
-            while (!m_pool->m_freeSlots.push(slot)) {}
-
             if (MEMBLOCK_POOL_EXTERNAL == m_type) {
-                iSharedDataPointer<iMemPool> pool = m_pool;
                 void* ptr = this;
                 this->~iMemBlock();
                 if (!pool || !pool->m_cacheHeads.push(ptr)) {
@@ -310,6 +305,10 @@ void iMemBlock::doFree()
             } else {
                 this->~iMemBlock();
             }
+
+            /* Publish the slot only after its old block header is fully
+             * destroyed, so another thread cannot reuse it concurrently. */
+            while (!pool->m_freeSlots.push(slot)) {}
 
             break;
         }

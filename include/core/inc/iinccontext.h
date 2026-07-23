@@ -138,7 +138,7 @@ private:
     /// @param mode Channel mode (MODE_READ, MODE_WRITE, or both)
     /// @return Operation handle to track async request
     /// @note Returns immediately, set callback to get result
-    iSharedDataPointer<iINCOperation> requestChannel(xuint32 mode);
+    iSharedDataPointer<iINCOperation> requestChannel(const iString& name, xuint32 mode);
 
     /// Request channel release to server (async, non-blocking)
     /// @param channelId Channel ID to release

@@ -239,3 +239,102 @@ TEST_F(INCProtocolTest, DumpOutput) {
     EXPECT_FALSE(output.isEmpty());
     EXPECT_TRUE(output.contains(u"255") || output.contains(u"0xff") || output.length() > 0);
 }
+
+// Error-path coverage for the get* deserialization methods.
+TEST_F(INCProtocolTest, GetWrongTypeReturnsFalse) {
+    iShell::iINCTagStruct t;
+    t.putUint32(42);
+
+    xuint8 u8;   EXPECT_FALSE(t.getUint8(u8));
+    xuint16 u16; EXPECT_FALSE(t.getUint16(u16));
+    xuint64 u64; EXPECT_FALSE(t.getUint64(u64));
+    xint32 i32;  EXPECT_FALSE(t.getInt32(i32));
+    xint64 i64;  EXPECT_FALSE(t.getInt64(i64));
+    bool b;      EXPECT_FALSE(t.getBool(b));
+    iShell::iString s;    EXPECT_FALSE(t.getString(s));
+    iShell::iByteArray ba; EXPECT_FALSE(t.getBytes(ba));
+    double d;    EXPECT_FALSE(t.getDouble(d));
+
+    // the matching type still succeeds
+    xuint32 u32 = 0;
+    EXPECT_TRUE(t.getUint32(u32));
+    EXPECT_EQ(42u, u32);
+}
+
+TEST_F(INCProtocolTest, GetFromEmptyReturnsFalse) {
+    iShell::iINCTagStruct t;
+    xuint32 u32; EXPECT_FALSE(t.getUint32(u32));
+    xuint8 u8;   EXPECT_FALSE(t.getUint8(u8));
+    double d;    EXPECT_FALSE(t.getDouble(d));
+}
+
+TEST_F(INCProtocolTest, GetTruncatedReturnsFalse) {
+    // Tag values: UINT8=1 UINT16=2 UINT32=3 UINT64=4 INT32=5 INT64=6 BOOL=7
+    //             STRING=8 BYTES=9 DOUBLE=10
+    auto only = [](char tag) {
+        iShell::iByteArray b; b.append(tag);
+        iShell::iINCTagStruct t; t.setData(b); return t;
+    };
+    { iShell::iINCTagStruct t = only(1);  xuint8 v;  EXPECT_FALSE(t.getUint8(v)); }
+    { iShell::iINCTagStruct t = only(2);  xuint16 v; EXPECT_FALSE(t.getUint16(v)); }
+    { iShell::iINCTagStruct t = only(3);  xuint32 v; EXPECT_FALSE(t.getUint32(v)); }
+    { iShell::iINCTagStruct t = only(4);  xuint64 v; EXPECT_FALSE(t.getUint64(v)); }
+    { iShell::iINCTagStruct t = only(5);  xint32 v;  EXPECT_FALSE(t.getInt32(v)); }
+    { iShell::iINCTagStruct t = only(6);  xint64 v;  EXPECT_FALSE(t.getInt64(v)); }
+    { iShell::iINCTagStruct t = only(7);  bool v;    EXPECT_FALSE(t.getBool(v)); }
+    { iShell::iINCTagStruct t = only(8);  iShell::iString v;    EXPECT_FALSE(t.getString(v)); }
+    { iShell::iINCTagStruct t = only(9);  iShell::iByteArray v; EXPECT_FALSE(t.getBytes(v)); }
+    { iShell::iINCTagStruct t = only(10); double v;  EXPECT_FALSE(t.getDouble(v)); }
+}
+
+TEST_F(INCProtocolTest, GetStringBytesEdgeCases) {
+    auto put_be32 = [](iShell::iByteArray& b, xuint32 v) {
+        b.append(char((v >> 24) & 0xff));
+        b.append(char((v >> 16) & 0xff));
+        b.append(char((v >> 8) & 0xff));
+        b.append(char(v & 0xff));
+    };
+    // empty string (length 0)
+    { iShell::iByteArray buf; buf.append(char(8)); put_be32(buf, 0);
+      iShell::iINCTagStruct t; t.setData(buf); iShell::iString s;
+      EXPECT_TRUE(t.getString(s)); EXPECT_TRUE(s.isEmpty()); }
+    // string length overflow
+    { iShell::iByteArray buf; buf.append(char(8)); put_be32(buf, 100);
+      iShell::iINCTagStruct t; t.setData(buf); iShell::iString s;
+      EXPECT_FALSE(t.getString(s)); }
+    // empty bytes (length 0)
+    { iShell::iByteArray buf; buf.append(char(9)); put_be32(buf, 0);
+      iShell::iINCTagStruct t; t.setData(buf); iShell::iByteArray ba;
+      EXPECT_TRUE(t.getBytes(ba)); EXPECT_TRUE(ba.isEmpty()); }
+    // bytes length overflow
+    { iShell::iByteArray buf; buf.append(char(9)); put_be32(buf, 100);
+      iShell::iINCTagStruct t; t.setData(buf); iShell::iByteArray ba;
+      EXPECT_FALSE(t.getBytes(ba)); }
+}
+
+TEST_F(INCProtocolTest, DumpAllTypes) {
+    iShell::iINCTagStruct t;
+    t.putUint8(1);
+    t.putUint16(2);
+    t.putUint32(3);
+    t.putInt32(-4);
+    t.putUint64(5);
+    t.putInt64(-6);
+    t.putBool(true);
+    t.putBool(false);
+    t.putString(iShell::iString("hi"));
+    t.putBytes(iShell::iByteArrayView("xy"));
+    t.putDouble(3.14);
+
+    iShell::iString d = t.dump();
+    EXPECT_FALSE(d.isEmpty());
+    EXPECT_TRUE(d.contains(iShell::iString("UINT8")));
+    EXPECT_TRUE(d.contains(iShell::iString("STRING")));
+    EXPECT_TRUE(d.contains(iShell::iString("BYTES")));
+    EXPECT_TRUE(d.contains(iShell::iString("DOUBLE")));
+
+    // an unknown tag byte exercises tagToString's default branch
+    iShell::iByteArray raw; raw.append(char(99));
+    iShell::iINCTagStruct u; u.setData(raw);
+    EXPECT_FALSE(u.dump().isEmpty());
+}

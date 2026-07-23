@@ -92,20 +92,17 @@ public:
 
     /// Write binary data to stream (delegates to protocol for zero-copy)
     /// @param data Data to write (uses zero-copy if backed by mempool)
-    /// @return Operation handle to track write completion (server ACK)
-    /// @note Data is sent via iINCProtocol::sendBinaryData() with automatic SHM optimization
-    ///       Set callback to know when server acknowledges receipt
+    /// @return Operation for SHM writes; nullptr for successful NOACK copy writes
+    /// @note Copy writes are fire-and-forget. SHM writes retain ACK-based block lifetime.
     /// @example
-    ///   auto op = stream->write(data);
-    ///   op->setFinishedCallback([](iINCOperation* op, void* userData) {
-    ///       if (op->errorCode() == 0) {
-    ///           // Server received data successfully
-    ///       }
-    ///   });
+    ///   auto op = stream->write(0, data);
+    ///   if (op) { // SHM path only
+    ///       op->setFinishedCallback(onSharedBlockReleased, userData);
+    ///   }
     iSharedDataPointer<iINCOperation> write(xint64 pos, const iByteArray& data);
 
-    /// feedback server that data chunk has been received
-    void ackDataReceived(xuint32 seqNum, xint32 size);
+    /// Acknowledge data unless broadcast marks it as fire-and-forget.
+    void ackDataReceived(xuint32 seqNum, bool broadcast, xint32 size);
 
     /// Check if stream is ready for writing
     bool canWrite() const { return (m_state == STATE_ATTACHED) && (m_mode & MODE_WRITE); }
@@ -116,15 +113,15 @@ public:
     /// @param current New current state
     void stateChanged(State previous, State current);
 
-    /// Emitted when binary data received
-    void dataReceived(xuint32 seqNum, xint64 pos, iByteArray data);
+    /// Emitted when binary data is received; broadcast=true suppresses ACK.
+    void dataReceived(xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data);
 
     /// Emitted on error
     void error(int errorCode);
 
 private:
     /// Handle binary data received from protocol layer
-    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data) IX_OVERRIDE;
+    void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data) IX_OVERRIDE;
 
     /// Static callback for channel allocation completion
     static void onChannelAllocated(iINCOperation* op, void* userData);

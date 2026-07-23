@@ -302,10 +302,9 @@ void iINCServer::onClientDisconnected(iINCConnection* conn)
     conn->deleteLater();
 }
 
-void iINCServer::onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data)
+void iINCServer::onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
 {
-    // Call virtual function for subclass to handle
-    handleBinaryData(conn, channelId, seqNum, pos, data);
+    handleBinaryData(conn, channelId, seqNum, broadcast, pos, data);
 }
 
 void iINCServer::onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCode)
@@ -314,16 +313,16 @@ void iINCServer::onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCod
     conn->close();
 }
 
-_iINCPStream::_iINCPStream(iINCServer* server, xuint32 channelId, Mode mode, iObject* parent)
-    : iINCChannel(parent)
+_iINCPStream::_iINCPStream(iINCServer* server, xuint32 channelId, const iString& name, Mode mode, iObject* parent)
+    : iINCChannel(name, parent)
     , m_mode(mode)
     , m_channelId(channelId)
     , m_server(server)
 {}
 
-void _iINCPStream::onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data) 
+void _iINCPStream::onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
 {
-    m_server->onConnectionBinaryData(conn, channelId, seqNum, pos, data);
+    m_server->onConnectionBinaryData(conn, channelId, seqNum, broadcast, pos, data);
 }
 
 void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg)
@@ -387,10 +386,12 @@ void iINCServer::handleMethodCall(iINCConnection* conn, const iINCMessage& msg)
 
 void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
 {
+    iString name;
     xuint32 mode = 0;
     bool peerWantsShmNegotiation = false;
 
-    if (!msg.payload().getUint32(mode)
+    if (!msg.payload().getString(name)
+        || !msg.payload().getUint32(mode)
         || !msg.payload().getBool(peerWantsShmNegotiation)) {
         ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                     "] Failed to parse STREAM_OPEN");
@@ -403,8 +404,7 @@ void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
     iByteArray clientShmName;
     if (peerWantsShmNegotiation) {
         if (!msg.payload().getUint16(clientSupportedTypes)
-            || !msg.payload().getBytes(clientShmName)
-            || !msg.payload().eof()) {
+            || !msg.payload().getBytes(clientShmName)) {
             ilog_error("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                     "] Failed to parse STREAM_OPEN SHM info");
             return;
@@ -433,7 +433,7 @@ void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
     }
 
     // Allocate channel
-    xuint32 channelId = conn->registerChannel(new _iINCPStream(this, ++m_nextChannelId, static_cast<iINCChannel::Mode>(mode)));
+    xuint32 channelId = conn->registerChannel(new _iINCPStream(this, ++m_nextChannelId, name, static_cast<iINCChannel::Mode>(mode)));
 
     // Send reply with allocated channel ID using type-safe API
     iINCMessage reply(INC_MSG_STREAM_OPEN_ACK, msg.channelID(), msg.sequenceNumber());
@@ -446,9 +446,9 @@ void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
         reply.setExtFd(conn->mempool() ? conn->mempool()->fd() : -1);
     }
 
-    ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Allocated channel, mode=", mode);
+    ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Allocated stream \"", name, "\", mode=", mode);
     conn->sendMessage(reply);
-    iObject::invokeMethod(this, &iINCServer::streamOpened, conn, channelId, mode);
+    iObject::invokeMethod(this, &iINCServer::streamOpened, conn, channelId, name, mode);
 }
 
 void iINCServer::handleStreamClose(iINCConnection* conn, const iINCMessage& msg)
@@ -549,9 +549,11 @@ void iINCServer::sendMethodReply(iINCConnection* conn, xuint32 seqNum, xint32 er
     conn->sendMessage(msg);
 }
 
-void iINCServer::sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint32 written)
+void iINCServer::sendBinaryReply(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint32 written)
 {
     IX_ASSERT(conn);
+    if (broadcast) return;
+
     iINCMessage msg(INC_MSG_BINARY_DATA_ACK, channelId, seqNum);
     msg.payload().putInt32(written);
     conn->sendMessage(msg);
@@ -641,7 +643,7 @@ void iINCServer::clientConnected(iINCConnection* conn) ISIGNAL(clientConnected, 
 
 void iINCServer::clientDisconnected(iINCConnection* conn) ISIGNAL(clientDisconnected, conn)
 
-void iINCServer::streamOpened(iINCConnection* conn, xuint32 channelId, xuint32 mode) ISIGNAL(streamOpened, conn, channelId, mode)
+void iINCServer::streamOpened(iINCConnection* conn, xuint32 channelId, const iString& name, xuint32 mode) ISIGNAL(streamOpened, conn, channelId, name, mode)
 
 void iINCServer::streamClosed(iINCConnection* conn, xuint32 channelId) ISIGNAL(streamClosed, conn, channelId)
 

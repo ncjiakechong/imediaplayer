@@ -45,7 +45,8 @@ enum iINCMessageType {
 enum iINCMessageFlags {
     INC_MSG_FLAG_NONE       = 0x00,     ///< No special flags
     INC_MSG_FLAG_SHM_DATA   = 0x01,     ///< Payload contains SHM reference instead of data
-    INC_MSG_FLAG_COMPRESSED = 0x02      ///< Payload is compressed (future use)
+    INC_MSG_FLAG_COMPRESSED = 0x02,     ///< Payload is compressed (future use)
+    INC_MSG_FLAG_NOACK      = 0x04      ///< Fire-and-forget message; receiver must not reply
 };
 
 /// @brief Message header structure (32 bytes, fixed size)

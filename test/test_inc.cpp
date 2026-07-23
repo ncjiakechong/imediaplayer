@@ -213,7 +213,8 @@ protected:
         sendMethodReply(conn, seqNum, INC_OK, iByteArray());
     }
 
-    void handleBinaryData(iINCConnection*, xuint32, xuint32, xint64, const iByteArray&) override {
+    void handleBinaryData(iINCConnection*, xuint32, xuint32, bool,
+                          xint64, const iByteArray&) override {
         // Not used
     }
 
@@ -221,7 +222,7 @@ private:
     volatile bool m_closing;
 
     void onClientConnected(iINCConnection* connection) {
-        ilog_info("[Server] Client connected: ", connection->peerAddress().toUtf8().constData());
+        ilog_info("[Server] Transport connected: ", connection->peerAddress());
     }
 
     void onClientDisconnected(iINCConnection* connection) {
@@ -237,9 +238,11 @@ private:
         }
     }
 
-    void onStreamOpened(iINCConnection* conn, xuint32 channelId, xuint32 mode) {
+    void onStreamOpened(iINCConnection* conn, xuint32 channelId, const iString& name, xuint32 mode) {
         if (mode & iINCChannel::MODE_READ) { // Client wants to read
-            ilog_info("[Server] Stream opened on channel ", channelId);
+            IX_ASSERT(conn->peerName() == iString("Client"));
+            IX_ASSERT(name == iString("ClientStream"));
+            ilog_info("[Server] Stream opened: name=", name, ", channel=", channelId);
             m_clients.push_back(ClientInfo(conn, channelId, 0));
             
             ilog_info("[Server] Client connected. Total clients: %d/%d", m_clients.size(), m_numClients);
@@ -269,7 +272,13 @@ private:
     void tryFillWindow() {
         if (m_closing) return;
         while (m_inflightPackets.value() < m_options.inflightPerClient) {
+            const int inflightBefore = m_inflightPackets.value();
             if (!sendBroadcastPacket()) {
+                break;
+            }
+            if (m_inflightPackets.value() == inflightBefore) {
+                // NOACK copy path has no completion callback to refill the window.
+                iTimer::singleShot(1, 0, this, &StreamServer::tryFillWindow);
                 break;
             }
         }
@@ -297,9 +306,11 @@ private:
                     printed = true;
                 }
             }
-            // Fill data
-            memset(block->data().value(), 'X', chunkSize);
-            
+            // T1.1: per-packet harness memset removed to unmask library
+            // throughput. The checksum is computed on the block's actual bytes
+            // and verified against those same bytes on the client, so buffer
+            // content need not be initialized here.
+
             // Wrap in iByteArray (zero-copy)
             // block starts with Ref=0. dp will increment to 1. data will increment to 2.
             // dp destruction decrements to 1. data holds the sole reference.
@@ -327,16 +338,20 @@ private:
                 packet->pending++;
                 successfulSends++;
             } else {
-                ilog_warn("[Server] sendBinaryData returned nullptr");
+                // Non-SHM copy send is fire-and-forget and intentionally has no operation.
+                successfulSends++;
             }
         }
 
-        if (packet->pending == 0) {
+        if (successfulSends == 0) {
             delete packet;
             return false;
         }
-
-        m_inflightPackets++;
+        if (packet->pending == 0) {
+            delete packet;
+        } else {
+            m_inflightPackets++;
+        }
         
         m_totalBytesSent += static_cast<xint64>(chunkSize) * successfulSends;
 
@@ -479,7 +494,7 @@ private:
         }
     }
 
-    void onDataReceived(xuint32 seqNum, xint64 pos, iByteArray data) {
+    void onDataReceived(xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data) {
         if (data.size() > 1024*1024) {
              ilog_warn("[Client ", m_id, "] Received huge data: ", data.size());
         }
@@ -496,7 +511,7 @@ private:
 
         // ACK the received data to free up SHM slots on server
         if (m_stream) {
-            m_stream->ackDataReceived(seqNum, data.size());
+            m_stream->ackDataReceived(seqNum, broadcast, data.size());
         }
         
         xint64 now = currentTimeMs();
@@ -621,6 +636,7 @@ int test_inc_pref(void (*callback)())
     #endif
     bool isServer = false;
     bool isClient = false;
+    bool disableShm = false;
     iString routerListenUrl;  // --router <url>: start router on this address
     iString routerConnectUrl; // -r <url>: client connects via this router
     PerfOptions options;
@@ -649,6 +665,8 @@ int test_inc_pref(void (*callback)())
             options.logIntervalMs = atoi(args[++i].toUtf8().constData()) * 1000;
         } else if (arg == "-o" && i + 1 < args.size()) {
             options.opTimeoutMs = atoi(args[++i].toUtf8().constData());
+        } else if (arg == "--no-shm") {
+            disableShm = true;
         } else if (arg == "--no-checksum") {
             options.enableChecksum = false;
         } else if (arg == "--server") {
@@ -708,6 +726,7 @@ int test_inc_pref(void (*callback)())
         // Configure shared memory
         iINCServerConfig config;
         config.setSharedMemorySize(shmSizeMB * 1024 * 1024);
+        config.setDisableSharedMemory(disableShm);
         server->setConfig(config);
 
         if (!server->start(url)) {
@@ -747,6 +766,9 @@ int test_inc_pref(void (*callback)())
                 ret = client->connectTo(url, routerConnectUrl);
                 ilog_info("[Client ", i+1, "] Connecting via router ", routerConnectUrl.toUtf8().constData(), " -> ", url.toUtf8().constData());
             } else {
+                iINCContextConfig ctxCfg;
+                ctxCfg.setDisableSharedMemory(disableShm);
+                client->setConfig(ctxCfg);
                 ret = client->connectTo(url);
             }
             if (ret < 0) {

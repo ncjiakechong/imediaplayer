@@ -50,7 +50,7 @@ public:
     virtual Mode mode() const = 0;
 
 protected:
-    virtual void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data) = 0;
+    virtual void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data) = 0;
 
     friend class iINCConnection;
     IX_DISABLE_COPY(iINCChannel)
@@ -176,7 +176,7 @@ private:
 
     void onErrorOccurred(xint32 errorCode);
     void onMessageReceived(const iINCMessage& msg);
-    void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data);
+    void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data);
 
     iINCProtocol*           m_protocol;         // Owned protocol instance
     xuint32                 m_connId;           // Unique connection ID

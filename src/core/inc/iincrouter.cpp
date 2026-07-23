@@ -11,22 +11,45 @@
 #include <core/inc/iincconnection.h>
 #include <core/inc/iincmessage.h>
 #include <core/inc/iincerror.h>
+#include <core/inc/iincoperation.h>
 #include <core/kernel/ieventdispatcher.h>
 #include <core/utils/iregularexpression.h>
+
 #include <core/io/ilog.h>
 
 #include "inc/iincengine.h"
 #include "inc/iincdevice.h"
 #include "inc/iincprotocol.h"
 #include "inc/iinchandshake.h"
+#include "thread/icacheallocator.h"
 
 #define ILOG_TAG "ix_inc"
 
 namespace iShell {
 
+// ---- Pending reliable downstream->upstream forward awaiting upstream ACK ----
+// Holds `data` (and thus any SHM-backed block) alive until the upstream
+// confirms delivery, then the downstream client is acknowledged. This keeps
+// reliability end-to-end and paces the client's inflight window to the real
+// forward rate (back-pressure) when bridging local -> external.
+struct iINCRouter::PendingForward
+{
+    iINCRouter*     router;
+    ClientBridge*   bridge;
+    iINCOperation*  op;
+    iByteArray      data;
+    xuint32         channel;
+    xuint32         seqNum;
+};
+
 // ---- Per-client bridge: data + signal receiver (plain struct) ----
 struct iINCRouter::ClientBridge
 {
+    // In-flight reliable forwards stored by value, so the list nodes recycle
+    // through iCacheAllocator's lock-free pool (same pattern as iPostEventList
+    // / TimerContainer) - no manual free list needed.
+    typedef std::list<PendingForward, iCacheAllocator<PendingForward> > PendingForwardList;
+
     iINCRouter*         router;
     iINCConnection*     downstream;
     iINCDevice*         upstreamDevice;
@@ -37,6 +60,7 @@ struct iINCRouter::ClientBridge
     iString             clientTargetServer;
     iString             resolvedUrl;
     bool                shmPassthrough;
+    PendingForwardList  pendingForwards;   ///< in-flight reliable forwards
 
     ClientBridge(iINCRouter* r)
         : router(r)
@@ -52,11 +76,23 @@ struct iINCRouter::ClientBridge
     void onMessage(iINCMessage msg) { router->handleUpstreamRawMessage(this, msg); }
     void onError(xint32 ec)         { router->onUpstreamError(this, ec); }
     void onDisconnected()           { router->onUpstreamDisconnected(this); }
-    void onUpBinaryData(xuint32 ch, xuint32 seq, xint64 pos, iByteArray data)
-                                    { router->onUpstreamBinaryData(this, ch, seq, pos, data); }
-    void onDownBinaryData(xuint32 ch, xuint32 seq, xint64 pos, iByteArray data)
-                                    { router->onDownstreamBinaryData(this, ch, seq, pos, data); }
+    void onUpBinaryData(xuint32 ch, xuint32 seq, bool broadcast, xint64 pos, iByteArray data)
+                                    { router->onUpstreamBinaryData(this, ch, seq, broadcast, pos, data); }
+    void onDownBinaryData(xuint32 ch, xuint32 seq, bool broadcast, xint64 pos, iByteArray data)
+                                    { router->onDownstreamBinaryData(this, ch, seq, broadcast, pos, data); }
 };
+
+void iINCRouter::cancelPendingForwards(ClientBridge* bridge)
+{
+    // Detach the completion callbacks and drop our operation refs; clear()
+    // then destroys each node's iByteArray and recycles it to the pool.
+    for (ClientBridge::PendingForwardList::iterator pit = bridge->pendingForwards.begin();
+         pit != bridge->pendingForwards.end(); ++pit) {
+        pit->op->setFinishedCallback(IX_NULLPTR, IX_NULLPTR);
+        pit->op->deref();
+    }
+    bridge->pendingForwards.clear();
+}
 
 iINCRouter::iINCRouter(const iStringView& name, iObject *parent)
     : iINCServer(name, parent)
@@ -74,6 +110,7 @@ iINCRouter::~iINCRouter()
 {
     for (BridgeMap::iterator it = m_bridges.begin(); it != m_bridges.end(); ++it) {
         ClientBridge* bridge = it->second;
+        cancelPendingForwards(bridge);
         if (bridge->upstreamProto)
             iObject::disconnect(bridge->upstreamProto, IX_NULLPTR, bridge, IX_NULLPTR);
         if (bridge->upstreamDevice)
@@ -133,6 +170,10 @@ void iINCRouter::removeBridge(xuint32 connId)
 
     ClientBridge* bridge = it->second;
     m_bridges.erase(it);
+
+    // Cancel in-flight forwards first so their completion callbacks cannot fire
+    // after the bridge (and its downstream connection) are destroyed.
+    cancelPendingForwards(bridge);
 
     if (bridge->upstreamProto)
         iObject::disconnect(bridge->upstreamProto, IX_NULLPTR, bridge, IX_NULLPTR);
@@ -313,7 +354,7 @@ void iINCRouter::onUpstreamDisconnected(ClientBridge* bridge)
 
 // ---- Binary data forwarding ----
 
-void iINCRouter::onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 /*seqNum*/, xint64 pos, iByteArray data)
+void iINCRouter::onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
 {
     if (!bridge->downstream) return;
 
@@ -321,14 +362,75 @@ void iINCRouter::onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xui
     // Data from upstream SHM may exceed MAX_MESSAGE_SIZE for the downstream copy path,
     // so we split into chunks that fit in a single protocol message
     bridge->downstream->sendBinaryData(channel, pos, data);
+    if (broadcast) return;
+
+    iINCMessage ack(INC_MSG_BINARY_DATA_ACK, channel, seqNum);
+    ack.payload().putInt32(static_cast<xint32>(data.size()));
+    bridge->upstreamProto->sendMessage(ack);
 }
 
-void iINCRouter::onDownstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 /*seqNum*/, xint64 pos, iByteArray data)
+void iINCRouter::onDownstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
 {
     if (!bridge->handshakeComplete || !bridge->upstreamProto) return;
 
-    // Forward data via sendBinaryData
-    bridge->upstreamProto->sendBinaryData(channel, pos, data);
+    // Fire-and-forget from the client stays fire-and-forget end to end.
+    if (broadcast) {
+        bridge->upstreamProto->sendBinaryData(channel, true, pos, data);
+        return;
+    }
+
+    // Reliable client stream: forward with delivery tracking and defer the
+    // client ACK until the upstream confirms. The deferred ACK back-pressures
+    // the client's inflight window to the true end-to-end rate, and keeping
+    // `data` referenced until then preserves any SHM-backed block's lifetime.
+    iSharedDataPointer<iINCOperation> op = bridge->upstreamProto->sendBinaryData(channel, false, pos, data);
+    if (!op) {
+        // No tracking handle (send rejected) -> acknowledge best-effort so the
+        // client is not stalled waiting for an ACK that will never arrive.
+        sendBinaryReply(bridge->downstream, channel, seqNum, false, static_cast<xint32>(data.size()));
+        return;
+    }
+
+    // Track the forward by value inside the bridge's pooled list; a list
+    // node's address is stable for the element's lifetime, so it doubles as
+    // the completion-callback token.
+    bridge->pendingForwards.push_back(PendingForward());
+    PendingForward* pf = &bridge->pendingForwards.back();
+    pf->router  = this;
+    pf->bridge  = bridge;
+    pf->op      = op.data();
+    pf->data    = data;
+    pf->channel = channel;
+    pf->seqNum  = seqNum;
+
+    op->ref();   // hold the operation until the forward completes
+    op->setFinishedCallback(&iINCRouter::onUpstreamForwardComplete, pf);
+}
+
+void iINCRouter::onUpstreamForwardComplete(iINCOperation* op, void* userData)
+{
+    PendingForward* pf     = static_cast<PendingForward*>(userData);
+    iINCRouter*     self   = pf->router;
+    ClientBridge*   bridge = pf->bridge;
+
+    // Relay the upstream delivery result to the downstream client. A non-zero
+    // error code (e.g. queue-full or timeout) is reported as a failed write so
+    // the client can react instead of silently believing the data was delivered.
+    const xint32 written = (0 == op->errorCode())
+            ? static_cast<xint32>(pf->data.size()) : -1;
+    self->sendBinaryReply(bridge->downstream, pf->channel, pf->seqNum, false, written);
+
+    op->deref();
+
+    // Erase the completed forward: this destroys its iByteArray and recycles
+    // the node. Every pf field must be read before here, as pf then dangles.
+    for (ClientBridge::PendingForwardList::iterator pit = bridge->pendingForwards.begin();
+         pit != bridge->pendingForwards.end(); ++pit) {
+        if (&(*pit) == pf) {
+            bridge->pendingForwards.erase(pit);
+            break;
+        }
+    }
 }
 
 // ---- SHM passthrough ----
@@ -343,10 +445,22 @@ void iINCRouter::handleStreamOpen(ClientBridge* bridge, iINCConnection* conn, co
         return;
     }
 
-    // Strip SHM negotiation: rewrite peerWantsShmNegotiation to false
+    // Strip only SHM negotiation. Preserve the optional stream name so the
+    // upstream server sees the same logical channel identity.
+    iString name;
     xuint32 mode = 0;
-    msg.payload().getUint32(mode);
+    bool wantsShm = false;
+    xuint16 shmType = 0;
+    iByteArray shmName;
+    if (!msg.payload().getString(name) || !msg.payload().getUint32(mode) || !msg.payload().getBool(wantsShm)) {
+        return;
+    }
+    if (wantsShm && (!msg.payload().getUint16(shmType) || !msg.payload().getBytes(shmName))) {
+        return;
+    }
+
     iINCMessage stripped(INC_MSG_STREAM_OPEN, msg.channelID(), msg.sequenceNumber());
+    stripped.payload().putString(name);
     stripped.payload().putUint32(mode);
     stripped.payload().putBool(false);
     bridge->upstreamProto->sendMessage(stripped);
@@ -476,9 +590,12 @@ void iINCRouter::handleRouterHandshake(iINCConnection* conn, const iINCMessage& 
     iObject::connect(upProto, &iINCProtocol::errorOccurred, bridge, &ClientBridge::onError, iShell::DirectConnection);
     iObject::connect(upDevice, &iINCDevice::disconnected, bridge, &ClientBridge::onDisconnected, iShell::DirectConnection);
 
-    // Connect downstream protocol's binaryDataReceived so Router can forward
-    // binary data from the client to the upstream server.
+    // Router owns downstream binary delivery after the bridge is established.
+    // Remove the connection's normal channel dispatcher to avoid duplicate
+    // handling (and duplicate ACKs for legacy non-broadcast messages).
     if (conn->m_protocol) {
+        iObject::disconnect(conn->m_protocol, &iINCProtocol::binaryDataReceived,
+                            conn, &iINCConnection::onBinaryDataReceived);
         iObject::connect(conn->m_protocol, &iINCProtocol::binaryDataReceived, bridge, &ClientBridge::onDownBinaryData, iShell::DirectConnection);
     }
 

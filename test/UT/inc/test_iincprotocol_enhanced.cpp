@@ -189,8 +189,7 @@ TEST_F(INCProtocolEnhancedTest, SendBinaryData) {
     xuint32 channelId = 42;
     auto op = m_protocol->sendBinaryData(channelId, binaryData);
 
-    ASSERT_NE(op.data(), nullptr);
-    EXPECT_GT(op->sequence(), 0u);
+    EXPECT_EQ(op.data(), nullptr);  // NOACK copy path
 
     m_protocol->flush();
 
@@ -290,7 +289,7 @@ TEST_F(INCProtocolEnhancedTest, SendLargeBinaryData) {
     xuint32 channelId = 100;
     auto op = m_protocol->sendBinaryData(channelId, 0, largeData);
 
-    ASSERT_NE(op.data(), nullptr);
+    EXPECT_EQ(op.data(), nullptr);  // NOACK copy path
     m_protocol->flush();
 
     // Verify message structure was sent
@@ -494,7 +493,8 @@ TEST_F(INCProtocolEnhancedTest, BinaryDataReceivedSignal) {
     xuint32 receivedSeqNum = 0;
     
     iObject::connect(m_protocol, &iINCProtocol::binaryDataReceived,
-                     [&](xuint32 channel, xuint32 seqNum, xint64 pos, const iByteArray& data) {
+                     [&](xuint32 channel, xuint32 seqNum, bool broadcast,
+                         xint64 pos, const iByteArray& data) {
                          binaryDataReceived = true;
                          receivedChannel = channel;
                          receivedSeqNum = seqNum;

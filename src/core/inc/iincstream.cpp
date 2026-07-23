@@ -109,7 +109,7 @@ bool iINCStream::attach(Mode mode)
     setState(STATE_ATTACHING);
 
     // Request channel from server (async, non-blocking)
-    iSharedDataPointer<iINCOperation> op = m_context->requestChannel(mode);
+    iSharedDataPointer<iINCOperation> op = m_context->requestChannel(objectName(), mode);
     if (!op) {
         ilog_error("[", objectName(), "][", m_channelId, "] Failed to send channel request");
         setState(STATE_DETACHED);
@@ -194,13 +194,15 @@ iSharedDataPointer<iINCOperation> iINCStream::write(xint64 pos, const iByteArray
     return m_context->sendBinaryData(m_channelId, pos, data);
 }
 
-void iINCStream::onBinaryDataReceived(iINCConnection*, xuint32 /*channelId*/, xuint32 seqNum, xint64 pos, iByteArray data)
+void iINCStream::onBinaryDataReceived(iINCConnection*, xuint32 /*channelId*/, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
 {
-    invokeMethod(this, &iINCStream::dataReceived, seqNum, pos, data);
+    invokeMethod(this, &iINCStream::dataReceived, seqNum, broadcast, pos, data);
 }
 
-void iINCStream::ackDataReceived(xuint32 seqNum, xint32 size)
+void iINCStream::ackDataReceived(xuint32 seqNum, bool broadcast, xint32 size)
 {
+    if (broadcast) return;
+
     m_context->ackDataReceived(m_channelId, seqNum, size);
 }
 
@@ -377,7 +379,7 @@ void iINCStream::cleanupPendingOps()
 
 void iINCStream::stateChanged(State previous, State current) ISIGNAL(stateChanged, previous, current)
 
-void iINCStream::dataReceived(xuint32 seqNum, xint64 pos, iByteArray data) ISIGNAL(dataReceived, seqNum, pos, data)
+void iINCStream::dataReceived(xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data) ISIGNAL(dataReceived, seqNum, broadcast, pos, data)
 
 void iINCStream::error(int errorCode) ISIGNAL(error, errorCode)
 

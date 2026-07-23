@@ -124,7 +124,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& m
     // Create operation for tracking this request
     iSharedDataPointer<iINCOperation> op;
     do {
-        if (msg.type() & 0x1) break;
+        if ((msg.type() & 0x1) || (msg.flags() & INC_MSG_FLAG_NOACK)) break;
 
         iINCOperation* tmpOp = m_opPool->m_list.pop(IX_NULLPTR);
         m_opPool->ref();
@@ -141,6 +141,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& m
         ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                     "] Message payload too large: ", msg.payload().size());
         if (op) op->setResult(INC_ERROR_MESSAGE_TOO_LARGE, iByteArray());
+        IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
         return op;
     }
 
@@ -152,16 +153,21 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& m
 void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
 {
     // Check queue size limit
-    if (m_sendQueue.size() >= INC_MAX_SEND_QUEUE) {
+    do {
+        if (m_sendQueue.size() < INC_MAX_SEND_QUEUE) break;
+
         ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                     "] Send queue full, dropping message");
-        IX_ASSERT(op);
         m_metrics.onSendQueueDrop();
-        op->setResult(INC_ERROR_QUEUE_FULL, iByteArray());
-        op->deref();  // Release map reference
+
+        if (op) {
+            op->setResult(INC_ERROR_QUEUE_FULL, iByteArray());
+            op->deref();
+        }
+
         IEMIT errorOccurred(INC_ERROR_QUEUE_FULL);
         return;
-    }
+    } while (false);
 
     if (op) {
         m_operations[msg.sequenceNumber()] = op;
@@ -174,7 +180,7 @@ void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
     onReadyWrite();
 }
 
-iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data)
+iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, bool broadcast, xint64 pos, const iByteArray& data)
 {
     xuint32 seqNum = nextSequence();
     iINCMessage msg(INC_MSG_BINARY_DATA, channel, seqNum);
@@ -188,7 +194,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         iMemBlock* block = typedData ? const_cast<iMemBlock*>(static_cast<const iMemBlock*>(typedData)) : IX_NULLPTR;
 
         if (!m_memExport || !block || !block->isOurs()) {
-            ilog_info("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Current data can not send via SHM");
+            ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Current data can not send via SHM");
             break;
         }
 
@@ -232,11 +238,14 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
     // Fallback to data copy using type-safe API
     m_metrics.onShmMiss();
     m_metrics.onBinaryFrameSent(data.size());
-    msg.setFlags(INC_MSG_FLAG_NONE);
+    // broadcast==true keeps the copy path fire-and-forget (NOACK, no tracking
+    // operation). broadcast==false requests a tracked, ACK-based copy so callers
+    // that need delivery confirmation (e.g. the router forwarding a reliable
+    // client stream to an external upstream) get an iINCOperation that completes
+    // when the peer acknowledges the frame.
+    msg.setFlags(broadcast ? INC_MSG_FLAG_NOACK : INC_MSG_FLAG_NONE);
     msg.payload().putInt64(pos);
-
-    xsizetype availableSize = msg.payload().remainingBuffer(iINCMessageHeader::MAX_MESSAGE_SIZE);
-    msg.payload().putBytes(iByteArrayView(data.constData(), std::min(data.size(), availableSize)));
+    msg.payload().putBytes(data);
     ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via copy: size=", msg.payload().size(), " bytes");
     return sendMessage(msg);
 }
@@ -350,10 +359,11 @@ void iINCProtocol::processBinaryDataMessage(const iINCMessage& msg)
     xuint32 seqNum = msg.sequenceNumber();
     xint64 pos = 0;
 
-    if (processDirectBinaryData(msg, channel, seqNum, pos))
+    const bool broadcast = (msg.flags() & INC_MSG_FLAG_NOACK) && !(msg.flags() & INC_MSG_FLAG_SHM_DATA);
+    if (processDirectBinaryData(msg, channel, seqNum, broadcast, pos))
         return;
 
-    processSHMBinaryData(msg, channel, seqNum, pos);
+    processSHMBinaryData(msg, channel, seqNum, false, pos);
 }
 
 void iINCProtocol::cancelAllOperations(int errorCode)
@@ -426,38 +436,42 @@ void iINCProtocol::onReadyWrite()
     }
 }
 
-bool iINCProtocol::processDirectBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, xint64& pos)
+bool iINCProtocol::processDirectBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, bool broadcast, xint64& pos)
 {
     if (msg.flags() & INC_MSG_FLAG_SHM_DATA)
         return false;
 
     // Direct data - read as bytes
     iByteArray data;
-    if (!msg.payload().getInt64(pos)
-        || !msg.payload().getBytes(data)
-        || !msg.payload().eof()) {
+    do {
+        if (msg.payload().getInt64(pos) && msg.payload().getBytes(data) &&msg.payload().eof())
+            break;
+
         ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
                     "] Failed to read binary data from payload");
 
-        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
+        if (broadcast)
+            return true;
+
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, channel, seqNum);
         reply.payload().putInt32(-1);
         sendMessage(reply);
         return true;
-    }
+    } while (false);
 
     ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum,
                 "] Received binary data via copy: size=", data.size());
-    IEMIT binaryDataReceived(channel, seqNum, pos, data);
+    IEMIT binaryDataReceived(channel, seqNum, broadcast, pos, data);
     m_metrics.onBinaryFrameRecv(data.size());
     return true;
 }
 
-bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, xint64& pos)
+bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, bool broadcast, xint64& pos)
 {
     if (!m_memImport) {
         ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
                     "] Received SHM reference but memory import not configured");
-        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, channel, seqNum);
         reply.payload().putInt32(-1);
         sendMessage(reply);
         return true;
@@ -475,7 +489,7 @@ bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel,
         || !msg.payload().eof()) {
         ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
                     "] Invalid SHM reference payload");
-        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, channel, seqNum);
         reply.payload().putInt32(-1);
         sendMessage(reply);
         return true;
@@ -487,7 +501,7 @@ bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel,
     if (!importedBlock) {
         ilog_error("[", m_device->peerAddress(), "][", channel, "][", seqNum,
                     "] Failed to import memory block: blockId=", blockId, ", shmId=", shmId);
-        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, msg.channelID(), msg.sequenceNumber());
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, channel, seqNum);
         reply.payload().putInt32(-1);
         sendMessage(reply);
         return true;
@@ -498,12 +512,13 @@ bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel,
     iByteArray::DataPointer dp(static_cast<iTypedArrayData<char>*>(importedBlock),
                                 static_cast<char*>(importedBlock->data().value()),
                                 static_cast<xsizetype>(size64));
-    IEMIT binaryDataReceived(channel, seqNum, pos, iByteArray(dp));
+    IEMIT binaryDataReceived(channel, seqNum, broadcast, pos, iByteArray(dp));
     m_metrics.onBinaryFrameRecv(size64);
     return true;
 }
 
-void iINCProtocol::binaryDataReceived(xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data) ISIGNAL(binaryDataReceived, channel, seqNum, pos, data)
+void iINCProtocol::binaryDataReceived(xuint32 channel, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
+    ISIGNAL(binaryDataReceived, channel, seqNum, broadcast, pos, data)
 
 void iINCProtocol::messageReceived(iINCMessage msg) ISIGNAL(messageReceived, msg)
 

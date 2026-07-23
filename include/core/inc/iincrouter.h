@@ -71,11 +71,12 @@ protected:
 
     /// Pure virtual stubs — Router forwards all messages, these are never called
     void handleMethod(iINCConnection*, xuint32, const iString&, xuint16, const iByteArray&) IX_OVERRIDE {}
-    void handleBinaryData(iINCConnection*, xuint32, xuint32, xint64, const iByteArray&) IX_OVERRIDE {}
+    void handleBinaryData(iINCConnection*, xuint32, xuint32, bool, xint64, const iByteArray&) IX_OVERRIDE {}
 
 private:
     /// Per-client bridge: data + signal receiver (plain struct, defined in .cpp)
     struct ClientBridge;
+    struct PendingForward;
 
     /// Handle Router-specific handshake (Phase 1 + Phase 2 + Phase 3)
     void handleRouterHandshake(iINCConnection* conn, const iINCMessage& msg);
@@ -93,10 +94,17 @@ private:
     void onUpstreamMessage(ClientBridge* bridge, const iINCMessage& msg);
 
     /// Called when upstream binary data is received — forward to downstream
-    void onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data);
+    void onUpstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data);
 
     /// Called when downstream binary data is received — forward to upstream
-    void onDownstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, xint64 pos, iByteArray data);
+    void onDownstreamBinaryData(ClientBridge* bridge, xuint32 channel, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data);
+    /// Completes a reliable downstream->upstream forward: the downstream client
+    /// is acknowledged only after the upstream confirms delivery (end-to-end
+    /// reliability + inflight-window back-pressure for local->external bridges).
+    static void onUpstreamForwardComplete(iINCOperation* op, void* userData);
+
+    // Cancel and drop all in-flight reliable forwards for a bridge.
+    void cancelPendingForwards(ClientBridge* bridge);
 
     /// Called when upstream connection has an error
     void onUpstreamError(ClientBridge* bridge, xint32 errorCode);

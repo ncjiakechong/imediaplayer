@@ -56,7 +56,8 @@ protected:
         sendMethodReply(conn, seqNum, INC_OK, args);
     }
 
-    void handleBinaryData(iINCConnection*, xuint32, xuint32, xint64, const iByteArray&) IX_OVERRIDE {}
+    void handleBinaryData(iINCConnection*, xuint32, xuint32, bool,
+                          xint64, const iByteArray&) IX_OVERRIDE {}
 };
 
 // ---- Client wrapper ----
@@ -664,7 +665,7 @@ TEST_P(INCRouterTest, LargePayloadThroughRouter) {
     ASSERT_TRUE(startRouter());
     ASSERT_TRUE(connectViaRouter());
 
-    // Send a payload near protocol limits through router (512 bytes, max is 8KB)
+    // Send a representative nontrivial payload through the router.
     helper->reset();
     iByteArray largePayload(512, 'X');
     iObject::invokeMethod(worker, &RouterTestWorker::sendEchoCallWithPayload, largePayload);

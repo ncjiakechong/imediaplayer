@@ -36,11 +36,14 @@ protected:
         sendMethodReply(conn, seqNum, INC_OK, args);
     }
 
-    void handleBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, xint64 pos, const iByteArray& data) override
+    void handleBinaryData(iINCConnection* conn, xuint32 channelId,
+                          xuint32 seqNum, bool broadcast, xint64 pos,
+                          const iByteArray& data) override
     {
         IX_UNUSED(conn);
         IX_UNUSED(channelId);
         IX_UNUSED(seqNum);
+        IX_UNUSED(broadcast);
         IX_UNUSED(pos);
         IX_UNUSED(data);
     }

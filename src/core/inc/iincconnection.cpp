@@ -139,7 +139,7 @@ iSharedDataPointer<iINCOperation> iINCConnection::sendMessage(const iINCMessage&
 iSharedDataPointer<iINCOperation> iINCConnection::sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data)
 {
     IX_ASSERT(m_protocol);
-    return m_protocol->sendBinaryData(channel, pos, data);
+    return m_protocol->sendBinaryData(channel, true, pos, data);
 }
 
 bool iINCConnection::isSubscribed(const iStringView& eventName) const
@@ -253,15 +253,18 @@ void iINCConnection::clearChannels()
     }
 }
 
-void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, xint64 pos, iByteArray data)
+void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
 {
     ChannelMap::iterator it = m_channels.find(channelId);
-    if (it == m_channels.end()) {
+    if (it == m_channels.end() && !broadcast) {
         ilog_warn("[", m_peerName, "][", channelId, "] invalid channel for binary data received");
+        iINCMessage reply(INC_MSG_BINARY_DATA_ACK, channelId, seqNum);
+        reply.payload().putInt32(-1);
+        m_protocol->sendMessage(reply);
         return;
     }
 
-    it->second->onBinaryDataReceived(this, channelId, seqNum, pos, data);
+    it->second->onBinaryDataReceived(this, channelId, seqNum, broadcast, pos, data);
 }
 
 bool iINCConnection::isChannelAllocated(xuint32 channelId) const

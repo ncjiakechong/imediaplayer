@@ -155,7 +155,7 @@ int iINCContext::doConnect(const iStringView& url)
     iINCHandshakeData localData;
     localData.nodeName = objectName();
     localData.protocolVersion = m_config.protocolVersionCurrent();
-    localData.capabilities = iINCHandshakeData::CAP_STREAM;  // Support streams
+    localData.capabilities = iINCHandshakeData::CAP_STREAM;
     localData.targetServer = (m_connectMode & 0x0A) ? m_serverUrl : iString();  // 0x02|0x08 = router modes
     localData.hopCount = 0;
     handshake->setLocalData(localData);
@@ -488,7 +488,7 @@ bool iINCContext::event(iEvent* e)
     return iObject::event(e);
 }
 
-iSharedDataPointer<iINCOperation> iINCContext::requestChannel(xuint32 mode)
+iSharedDataPointer<iINCOperation> iINCContext::requestChannel(const iString& name, xuint32 mode)
 {
     if (STATE_CONNECTED != m_state || !m_connection) {
         ilog_error("[", objectName(), "] Context not ready for channel request");
@@ -497,6 +497,7 @@ iSharedDataPointer<iINCOperation> iINCContext::requestChannel(xuint32 mode)
 
     // Prepare STREAM_OPEN message with mode in payload using type-safe API
     iINCMessage msg(INC_MSG_STREAM_OPEN, m_connection->connectionId(), m_connection->nextSequence());  // Protocol assigns sequence number
+    msg.payload().putString(name);
     msg.payload().putUint32(mode);
     msg.payload().putBool(!m_config.disableSharedMemory() || m_connection->mempool());
 

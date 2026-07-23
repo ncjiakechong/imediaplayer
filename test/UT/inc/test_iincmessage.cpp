@@ -304,8 +304,13 @@ TEST_F(INCMessageTest, HeaderConstants) {
     // Verify header size (32 bytes with dts field)
     EXPECT_EQ(sizeof(iINCMessageHeader), 32u);
 
-    // Verify max message size (8KB for TCP transport)
-    EXPECT_EQ(iINCMessageHeader::MAX_MESSAGE_SIZE, 8 * 1024);
+    // Payload plus the fixed INC header must fit one maximum UDP datagram.
+    EXPECT_EQ(iINCMessageHeader::MAX_MESSAGE_SIZE,
+              65507 - static_cast<xint32>(sizeof(iINCMessageHeader)));
+    EXPECT_EQ(sizeof(iINCMessageHeader) + iINCMessageHeader::MAX_MESSAGE_SIZE,
+              65507u);
+    EXPECT_EQ(INC_MSG_FLAG_NOACK, 0x04);
+    EXPECT_EQ(INC_MSG_FLAG_NOACK & INC_MSG_FLAG_SHM_DATA, 0);
 }
 
 /**
