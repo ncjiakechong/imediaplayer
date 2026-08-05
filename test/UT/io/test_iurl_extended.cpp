@@ -755,3 +755,67 @@ TEST_F(iUrlParsingTest, SetHostDecodedModeInvalidChar) {
 }
 
 
+
+TEST(iUrlExtended, SettersAndGetters) {
+    iUrl u("http://example.com/path");
+    u.setUserName(iString("alice"), iUrl::TolerantMode);
+    EXPECT_EQ(iString("alice"), u.userName());
+    u.setPassword(iString("secret"), iUrl::TolerantMode);
+    EXPECT_EQ(iString("secret"), u.password());
+    u.setPath(iString("/new/path"), iUrl::TolerantMode);
+    EXPECT_EQ(iString("/new/path"), u.path());
+    u.setHost(iString("other.com"), iUrl::TolerantMode);
+    EXPECT_EQ(iString("other.com"), u.host());
+    u.setPort(8080);
+    EXPECT_EQ(8080, u.port());
+    u.setFragment(iString("frag"));
+    EXPECT_EQ(iString("frag"), u.fragment());
+    EXPECT_TRUE(u.isValid());
+}
+
+TEST(iUrlExtended, AssignFromStringAndDetach) {
+    iUrl u;
+    u = iString("https://test.org:8443/x?y=1#z");
+    EXPECT_EQ(iString("test.org"), u.host());
+    EXPECT_EQ(8443, u.port());
+    EXPECT_TRUE(u.isValid());
+    (void)u.isDetached();
+}
+
+TEST(iUrlExtended, StringListConversions) {
+    std::list<iString> strs;
+    strs.push_back(iString("http://a.com"));
+    strs.push_back(iString("http://b.com"));
+    std::list<iUrl> urls = iUrl::fromStringList(strs);
+    EXPECT_EQ(size_t(2), urls.size());
+    std::list<iString> back = iUrl::toStringList(urls);
+    EXPECT_EQ(size_t(2), back.size());
+}
+
+TEST(iUrlExtended, IsParentOfCov) {
+    iUrl parent("http://example.com/dir/");
+    EXPECT_TRUE(parent.isParentOf(iUrl("http://example.com/dir/file.txt")));
+    EXPECT_TRUE(parent.isParentOf(iUrl("http://example.com/dir/sub/x")));
+    EXPECT_FALSE(parent.isParentOf(iUrl("http://example.com/other/file")));
+    EXPECT_FALSE(parent.isParentOf(iUrl("http://other.com/dir/file")));
+    EXPECT_FALSE(parent.isParentOf(iUrl("https://example.com/dir/file")));
+}
+
+TEST(iUrlExtended, ResolvedCov) {
+    iUrl base("http://example.com/a/b/c");
+    EXPECT_EQ(iString("http://example.com/a/b/d"), base.resolved(iUrl("d")).toString());
+    EXPECT_EQ(iString("http://example.com/x"), base.resolved(iUrl("/x")).toString());
+    EXPECT_EQ(iString("http://other.com/y"), base.resolved(iUrl("http://other.com/y")).toString());
+}
+
+TEST(iUrlExtended, ToStringFullComponents) {
+    iUrl u("http://user:pass@example.com:8080/path?q=1#frag");
+    ASSERT_TRUE(u.isValid());
+    iString s = u.toString();
+    EXPECT_TRUE(s.contains(iString("example.com")));
+    EXPECT_TRUE(s.contains(iString("8080")));
+    EXPECT_TRUE(s.contains(iString("path")));
+    EXPECT_TRUE(s.contains(iString("frag")));
+    // errorString on a valid url is empty-ish; just exercise the accessor
+    (void)u.errorString();
+}

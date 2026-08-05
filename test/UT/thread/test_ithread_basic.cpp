@@ -202,3 +202,10 @@ TEST_F(IThreadBasicTest, DispatcherSwitching) {
 
     setUseGlibDispatcher(false);
 }
+
+TEST_F(IThreadBasicTest, SetPriorityNotRunning) {
+    SimpleWorker worker;
+    // Setting priority before the thread is running just warns and is a no-op
+    worker.setPriority(iThread::HighPriority);
+    EXPECT_FALSE(worker.isRunning());
+}

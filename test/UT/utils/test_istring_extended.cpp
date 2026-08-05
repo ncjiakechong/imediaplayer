@@ -6,6 +6,7 @@
 #include "core/utils/istringconverter.h"
 #include "core/utils/ibytearray.h"
 #include <core/utils/ichar.h>
+#include <core/utils/iregularexpression.h>
 
 #define ILOG_TAG "test_string"
 
@@ -583,4 +584,159 @@ TEST_F(StringConverterTest, Utf32BEEncoding) {
     // 'A' is 0x00000041. BE: 00 00 00 41
     const char expected[] = "\x00\x00\x00\x41";
     EXPECT_EQ(encoded, iByteArray(expected, 4));
+}
+
+// Broad coverage for numeric/encoding/case/compare string operations.
+TEST_F(StringExtendedTest, ToFloatAndSetNum) {
+    bool ok = false;
+    EXPECT_FLOAT_EQ(3.14f, iString("3.14").toFloat(&ok));
+    EXPECT_TRUE(ok);
+    iString("not-a-number").toFloat(&ok);
+    EXPECT_FALSE(ok);
+
+    iString s;
+    s.setNum(static_cast<xlonglong>(123456));       EXPECT_EQ(iString("123456"), s);
+    s.setNum(static_cast<xulonglong>(789));         EXPECT_EQ(iString("789"), s);
+    s.setNum(3.14159, 'f', 2);                       EXPECT_EQ(iString("3.14"), s);
+    s.setNum(static_cast<xlonglong>(255), 16);       EXPECT_EQ(iString("ff"), s);
+
+    EXPECT_EQ(iString("ff"), iString::number(static_cast<uint>(255), 16));
+    EXPECT_EQ(iString("42"), iString::number(static_cast<uint>(42)));
+}
+
+TEST_F(StringExtendedTest, CaseClassificationAndFold) {
+    EXPECT_TRUE(iString("hello").isLower());
+    EXPECT_FALSE(iString("Hello").isLower());
+    EXPECT_TRUE(iString("HELLO").isUpper());
+    EXPECT_FALSE(iString("Hello").isUpper());
+    EXPECT_EQ(iString("hello"), iString("HeLLo").toCaseFolded());
+}
+
+TEST_F(StringExtendedTest, EncodingConversions) {
+    iString s("Hello");
+    EXPECT_EQ(iByteArray("Hello"), s.toLocal8Bit());
+    EXPECT_EQ(size_t(5), s.toUcs4().size());
+    EXPECT_TRUE(iString().toLocal8Bit().isEmpty());
+}
+
+TEST_F(StringExtendedTest, FromUtf16AndSetUnicode) {
+    const xuint16 utf16[] = { 'H', 'i', '!' };
+    EXPECT_EQ(iString("Hi!"), iString::fromUtf16(utf16, 3));
+
+    iChar chars[] = { iChar('A'), iChar('B'), iChar('C') };
+    iString s;
+    s.setUnicode(chars, 3);
+    EXPECT_EQ(iString("ABC"), s);
+}
+
+TEST_F(StringExtendedTest, Latin1ViewCompare) {
+    iString s("hello");
+    EXPECT_TRUE(s.endsWith(iLatin1StringView("llo")));
+    EXPECT_FALSE(s.endsWith(iLatin1StringView("xyz")));
+    EXPECT_EQ(0, s.compare(iLatin1StringView("hello")));
+    EXPECT_LT(s.compare(iLatin1StringView("hemlo")), 0);
+    EXPECT_TRUE(s < iLatin1StringView("hemlo"));
+    EXPECT_TRUE(iString("hemlo") > iLatin1StringView("hello"));
+}
+
+TEST_F(StringExtendedTest, LocaleAwareCompare) {
+    EXPECT_EQ(0, iString("abc").localeAwareCompare(iString("abc")));
+    EXPECT_LT(iString("abc").localeAwareCompare(iString("abd")), 0);
+    EXPECT_GT(iString("abd").localeAwareCompare(iString("abc")), 0);
+}
+
+TEST_F(StringExtendedTest, RegexStringOps) {
+    iString s("abc123def456");
+    iRegularExpression re(iString("[0-9]+"));
+    ASSERT_TRUE(re.isValid());
+
+    EXPECT_EQ(3, s.indexOf(re));
+    EXPECT_EQ(9, s.lastIndexOf(re, -1));
+    EXPECT_TRUE(s.contains(re));
+    EXPECT_GT(s.count(re), 0);
+
+    std::list<iString> parts = s.split(re);
+    EXPECT_GE(parts.size(), size_t(2));
+
+    EXPECT_EQ(iString("abc"), s.section(re, 0, 0));
+
+    iString t("no digits here");
+    EXPECT_EQ(-1, t.indexOf(re));
+    EXPECT_FALSE(t.contains(re));
+    EXPECT_EQ(0, t.count(re));
+}
+
+TEST_F(StringExtendedTest, MiscStringOps) {
+    iString needle("ab");
+    EXPECT_EQ(3, iString("ababab").count(needle));
+
+    EXPECT_FALSE(iString("hello").isRightToLeft());
+
+    iString e("hello world");
+    e.erase(e.cbegin() + 5, e.cbegin() + 11);
+    EXPECT_EQ(iString("hello"), e);
+
+    EXPECT_EQ(iString("&lt;a&gt;&amp;"), iString("<a>&").toHtmlEscaped());
+
+    static const iChar raw[] = { iChar('R'), iChar('a'), iChar('w') };
+    iString r;
+    r.setRawData(raw, 3);
+    EXPECT_EQ(iString("Raw"), r);
+}
+
+TEST_F(StringExtendedTest, AsprintfFormats) {
+    EXPECT_EQ(iString("int=42"), iString::asprintf("int=%d", 42));
+    EXPECT_EQ(iString("hex=ff"), iString::asprintf("hex=%x", 255));
+    EXPECT_EQ(iString("str=hi"), iString::asprintf("str=%s", "hi"));
+    EXPECT_EQ(iString("char=A"), iString::asprintf("char=%c", 'A'));
+    EXPECT_EQ(iString("pct=%"), iString::asprintf("pct=%%"));
+    EXPECT_EQ(iString("  42"), iString::asprintf("%4d", 42));
+    EXPECT_EQ(iString("3.14"), iString::asprintf("%.2f", 3.14159));
+    EXPECT_EQ(iString("+42"), iString::asprintf("%+d", 42));
+    EXPECT_EQ(iString("1234567890123"),
+              iString::asprintf("%lld", static_cast<long long>(1234567890123LL)));
+}
+
+TEST_F(StringExtendedTest, ArgFormattingExtra) {
+    EXPECT_EQ(iString("a=1 b=2"), iString("a=%1 b=%2").arg(1).arg(2));
+    EXPECT_EQ(iString("  5"), iString("%1").arg(5, 3));
+    EXPECT_EQ(iString("005"), iString("%1").arg(5, 3, 10, iChar('0')));
+    EXPECT_EQ(iString("3.14"), iString("%1").arg(3.14159, 0, 'f', 2));
+    EXPECT_EQ(iString("ff"), iString("%1").arg(255, 0, 16));
+    EXPECT_EQ(iString("hello world"),
+              iString("%1 %2").arg(iString("hello")).arg(iString("world")));
+}
+
+TEST_F(StringExtendedTest, CountCharAndLatin1View) {
+    EXPECT_EQ(3, iString("banana").count(iChar('a')));
+    EXPECT_EQ(0, iString("banana").count(iChar('z')));
+    EXPECT_EQ(3, iString("ababab").count(iLatin1StringView("ab")));
+}
+
+TEST_F(StringExtendedTest, JustifyRepeatFillChopSection) {
+    EXPECT_EQ(iString("  abc"), iString("abc").rightJustified(5));
+    EXPECT_EQ(iString("00abc"), iString("abc").rightJustified(5, iChar('0')));
+    EXPECT_EQ(iString("ab"), iString("abcde").leftJustified(2, iChar(' '), true));
+    EXPECT_EQ(iString("ab"), iString("abcde").rightJustified(2, iChar(' '), true));
+
+    EXPECT_EQ(iString("ababab"), iString("ab").repeated(3));
+    EXPECT_TRUE(iString("ab").repeated(0).isEmpty());
+
+    iString f("xyz");
+    f.fill(iChar('*'));
+    EXPECT_EQ(iString("***"), f);
+    iString f2("xyz");
+    f2.fill(iChar('*'), 5);
+    EXPECT_EQ(iString("*****"), f2);
+
+    iString c("hello");
+    c.chop(2);
+    EXPECT_EQ(iString("hel"), c);
+    EXPECT_EQ(iString("hel"), iString("hello").chopped(2));
+
+    iString ins("ac");
+    ins.insert(1, iChar('b'));
+    EXPECT_EQ(iString("abc"), ins);
+
+    EXPECT_EQ(iString("b"), iString("a,b,c").section(iChar(','), 1, 1));
 }

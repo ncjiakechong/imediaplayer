@@ -327,3 +327,20 @@ TEST_F(LoggerTest, EmptyLogMessage) {
 
     SUCCEED();
 }
+
+// Exercise the less-common iLogger streaming operators.
+TEST_F(LoggerTest, StreamMiscTypes) {
+    iLogger logger;
+    logger << 'A';                              // char
+    logger << static_cast<unsigned long long>(123456ULL);
+    logger << 3.14f;                            // float
+    logger << iChar('x');                       // iChar
+    logger << L"wide";                          // const wchar_t*
+    logger << std::string("std");               // std::string
+    logger << std::wstring(L"wstd");            // std::wstring
+    logger << u"u16";                           // const char16_t*
+    logger << U"u32";                           // const char32_t*
+    logger << std::u16string(u"su16");          // std::u16string
+    logger << std::u32string(U"su32");          // std::u32string
+    SUCCEED();
+}

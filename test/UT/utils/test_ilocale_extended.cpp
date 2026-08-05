@@ -836,3 +836,52 @@ TEST_F(ILocaleExtendedTest, SmallFloatFormatting) {
     iString str = locale.toString(num, 'g', 6);
     EXPECT_FALSE(str.isEmpty());
 }
+
+// iStringView overloads of the numeric parsers.
+TEST_F(ILocaleExtendedTest, StringViewNumberParsing) {
+    iLocale locale(iLocale::C);
+    bool ok = false;
+    iString s;
+
+    s = iString("123");         EXPECT_EQ(123,  locale.toShort(iStringView(s), &ok));  EXPECT_TRUE(ok);
+    s = iString("456");         EXPECT_EQ(456,  locale.toUShort(iStringView(s), &ok)); EXPECT_TRUE(ok);
+    s = iString("789");         EXPECT_EQ(789u, locale.toUInt(iStringView(s), &ok));   EXPECT_TRUE(ok);
+    s = iString("123456");      EXPECT_EQ(123456, locale.toLong(iStringView(s), &ok)); EXPECT_TRUE(ok);
+    s = iString("654321");      EXPECT_EQ(654321u, locale.toULong(iStringView(s), &ok)); EXPECT_TRUE(ok);
+    s = iString("9876543210");  EXPECT_EQ(9876543210LL, locale.toLongLong(iStringView(s), &ok)); EXPECT_TRUE(ok);
+    s = iString("12345678901"); EXPECT_EQ(12345678901ULL, locale.toULongLong(iStringView(s), &ok)); EXPECT_TRUE(ok);
+    s = iString("3.14");        EXPECT_FLOAT_EQ(3.14f, locale.toFloat(iStringView(s), &ok)); EXPECT_TRUE(ok);
+    s = iString("2.718");       EXPECT_DOUBLE_EQ(2.718, locale.toDouble(iStringView(s), &ok)); EXPECT_TRUE(ok);
+
+    // invalid input reports failure
+    s = iString("not-a-number");
+    locale.toShort(iStringView(s), &ok);
+    EXPECT_FALSE(ok);
+}
+
+TEST_F(ILocaleExtendedTest, NumberFormatting) {
+    // Exercise the number->string formatting paths. Exact grouping/decimal
+    // characters depend on locale state, so only assert the paths run.
+    iLocale c(iLocale::C);
+    EXPECT_FALSE(c.toString(1234).isEmpty());
+    EXPECT_FALSE(c.toString(1234.5).isEmpty());
+    EXPECT_FALSE(c.toString(static_cast<xlonglong>(-9876543210LL)).isEmpty());
+    EXPECT_FALSE(c.toString(static_cast<xulonglong>(1234567890ULL)).isEmpty());
+    EXPECT_FALSE(c.toString(3.14159, 'f', 2).isEmpty());
+}
+
+TEST_F(ILocaleExtendedTest, LocaleNameParsing) {
+    EXPECT_EQ(iLocale::English, iLocale("en_US").language());
+    EXPECT_EQ(iLocale::Chinese, iLocale("zh_CN").language());
+    EXPECT_EQ(iLocale::French, iLocale("fr_FR").language());
+    EXPECT_EQ(iLocale::Chinese, iLocale("zh_Hans_CN").language());
+}
+
+TEST_F(ILocaleExtendedTest, DoubleParsingVariants) {
+    iLocale c(iLocale::C);
+    bool ok = false;
+    EXPECT_DOUBLE_EQ(1234.5, c.toDouble(iString("1234.5"), &ok)); EXPECT_TRUE(ok);
+    EXPECT_DOUBLE_EQ(-42.0, c.toDouble(iString("-42"), &ok));     EXPECT_TRUE(ok);
+    EXPECT_DOUBLE_EQ(1500.0, c.toDouble(iString("1.5e3"), &ok));  EXPECT_TRUE(ok);
+    c.toDouble(iString("not-a-num"), &ok); EXPECT_FALSE(ok);
+}

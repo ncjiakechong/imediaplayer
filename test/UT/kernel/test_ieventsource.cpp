@@ -553,3 +553,21 @@ TEST_F(EventSourceTest, LongName) {
     TestEventSource source(iLatin1StringView(longName.constData()), 0);
     EXPECT_EQ(source.name().size(), 400u);
 }
+
+// Subclass that does NOT override the virtuals, exercising the base defaults.
+class DefaultEventSource : public iEventSource {
+public:
+    DefaultEventSource() : iEventSource(iLatin1StringView("default"), 0) {}
+    bool callPrepare() { xint64 t = -1; return prepare(&t); }
+    bool callCheck() { return check(); }
+    bool callDispatch() { return dispatch(); }
+    bool callDetectHang() { return detectHang(0); }
+};
+
+TEST_F(EventSourceTest, BaseVirtualDefaults) {
+    DefaultEventSource src;
+    EXPECT_FALSE(src.callPrepare());
+    EXPECT_FALSE(src.callCheck());
+    EXPECT_TRUE(src.callDispatch());
+    EXPECT_TRUE(src.callDetectHang());
+}

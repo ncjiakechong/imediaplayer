@@ -329,3 +329,72 @@ TEST_F(RegExpTest, PhonePattern) {
     EXPECT_FALSE(regex.match("12-345-6789").hasMatch());
     EXPECT_FALSE(regex.match("123-456-789").hasMatch());
 }
+
+TEST_F(RegExpTest, CapturedPositionsAndTexts) {
+    iRegularExpression re("(\\d+)-(\\d+)");
+    iRegularExpressionMatch m = re.match(iString("ab12-34cd"));
+    ASSERT_TRUE(m.hasMatch());
+    EXPECT_EQ(iString("12-34"), m.captured(0));
+    EXPECT_EQ(iString("12"), m.captured(1));
+    EXPECT_EQ(iString("34"), m.captured(2));
+    EXPECT_EQ(2, m.capturedStart(0));
+    EXPECT_EQ(7, m.capturedEnd(0));
+    EXPECT_EQ(5, m.capturedLength(0));
+    EXPECT_EQ(2, m.capturedView(1).size());
+    EXPECT_GE(m.capturedTexts().size(), size_t(3));
+    EXPECT_TRUE(m.regularExpression() == re);
+}
+
+TEST_F(RegExpTest, NamedCaptureGroupsCoverage) {
+    iRegularExpression re("(?<year>\\d{4})-(?<month>\\d{2})");
+    ASSERT_TRUE(re.isValid());
+    EXPECT_GE(re.namedCaptureGroups().size(), size_t(2));
+
+    iRegularExpressionMatch m = re.match(iString("2024-06"));
+    ASSERT_TRUE(m.hasMatch());
+    EXPECT_EQ(iString("2024"), m.captured(iString("year")));
+    EXPECT_EQ(iString("06"), m.captured(iString("month")));
+    EXPECT_EQ(0, m.capturedStart(iString("year")));
+    EXPECT_EQ(4, m.capturedLength(iString("year")));
+    EXPECT_EQ(4, m.capturedEnd(iString("year")));
+    EXPECT_EQ(2, m.capturedView(iString("month")).size());
+}
+
+TEST_F(RegExpTest, GlobalMatchIterator) {
+    iRegularExpression re("\\d+");
+    iRegularExpressionMatchIterator it = re.globalMatch(iString("a1b22c333"));
+    EXPECT_TRUE(it.isValid());
+    int count = 0;
+    while (it.hasNext()) {
+        iRegularExpressionMatch m = it.next();
+        EXPECT_TRUE(m.hasMatch());
+        ++count;
+    }
+    EXPECT_EQ(3, count);
+}
+
+TEST_F(RegExpTest, EscapeWildcardAnchor) {
+    iString esc = iRegularExpression::escape(iString("a.b*c"));
+    EXPECT_TRUE(esc.contains(iString("\\.")));
+
+    iString wild = iRegularExpression::wildcardToRegularExpression(iString("*.txt"));
+    EXPECT_FALSE(wild.isEmpty());
+
+    iRegularExpression fw = iRegularExpression::fromWildcard(iString("file?.log"));
+    EXPECT_TRUE(fw.isValid());
+
+    iString anc = iRegularExpression::anchoredPattern(iString("abc"));
+    EXPECT_TRUE(anc.contains(iString("abc")));
+}
+
+TEST_F(RegExpTest, InvalidPatternOffsetAndOptimizeEquality) {
+    iRegularExpression bad("(unclosed");
+    EXPECT_FALSE(bad.isValid());
+    (void)bad.patternErrorOffset();  // exercise the accessor
+
+    iRegularExpression re1("\\d+");
+    iRegularExpression re2("\\d+");
+    re1.optimize();
+    EXPECT_TRUE(re1 == re2);
+    EXPECT_FALSE(re1 == iRegularExpression("\\w+"));
+}

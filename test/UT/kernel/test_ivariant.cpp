@@ -368,3 +368,14 @@ TEST_F(IVariantTest, SOOMultipleStringSetValue) {
     EXPECT_EQ(v3.value<iString>(), iString("a")); // copy unaffected
     EXPECT_EQ(v2.value<iString>(), iString("b"));
 }
+
+// System numeric<->string converters registered by initSystemConvert().
+TEST_F(IVariantTest, SystemNumericStringConversions) {
+    EXPECT_EQ(iString("123"), iVariant((long)123).value<iString>());
+    EXPECT_EQ(iString("456"), iVariant((long long)456).value<iString>());
+    EXPECT_EQ(iString("789"), iVariant((unsigned long long)789).value<iString>());
+    EXPECT_EQ(iString("2.5"), iVariant((double)2.5).value<iString>());
+
+    iVariant s(iString("3.14"));
+    EXPECT_DOUBLE_EQ(3.14, s.value<double>());
+}

@@ -78,6 +78,9 @@ iINCProtocol::~iINCProtocol()
             op->cancel();
         }
 
+        if (m_memExport && 0 != op->m_blockID)
+            m_memExport->processRelease(op->m_blockID);
+
         op->deref();
     }
 
@@ -230,22 +233,28 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         m_metrics.onShmHit();
         m_metrics.onBinaryFrameSent(data.size());
         iSharedDataPointer<iINCOperation> op = sendMessage(msg);
-        op->m_blockID = blockId;
-        IX_ASSERT(op);
+
+        // The op owns the lease until ACK/teardown; reclaim now if the send failed synchronously.
+        if (op && iINCOperation::STATE_FAILED != op->getState()) op->m_blockID = blockId;
+        else m_memExport->processRelease(blockId);
+
         return op;
     } while (false);
 
     // Fallback to data copy using type-safe API
-    m_metrics.onShmMiss();
-    m_metrics.onBinaryFrameSent(data.size());
     // broadcast==true keeps the copy path fire-and-forget (NOACK, no tracking
     // operation). broadcast==false requests a tracked, ACK-based copy so callers
     // that need delivery confirmation (e.g. the router forwarding a reliable
     // client stream to an external upstream) get an iINCOperation that completes
     // when the peer acknowledges the frame.
-    msg.setFlags(broadcast ? INC_MSG_FLAG_NOACK : INC_MSG_FLAG_NONE);
     msg.payload().putInt64(pos);
     msg.payload().putBytes(data);
+    msg.setFlags(broadcast ? INC_MSG_FLAG_NOACK : INC_MSG_FLAG_NONE);
+    if (msg.isValid()) {
+        m_metrics.onShmMiss();
+        m_metrics.onBinaryFrameSent(data.size());
+    }
+
     ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Sending binary data via copy: size=", msg.payload().size(), " bytes");
     return sendMessage(msg);
 }
@@ -254,19 +263,16 @@ void iINCProtocol::releaseOperation(iINCOperation* op)
 {
     if (!op) return;
 
-    // Find and remove from map
     OperationsMap::iterator it = m_operations.find(op->sequenceNumber());
-    if (it != m_operations.end() && it->second == op) {
-        m_operations.erase(it);
+    if (it == m_operations.end() || it->second != op) return;
 
-        // Release SHM slot if held
-        if (m_memExport && (0 != op->m_blockID)) {
-            m_memExport->processRelease(op->m_blockID);
-            op->m_blockID = 0; // Prevent double release
-        }
+    // A timeout/cancel only ends the application operation. The peer may still
+    // be reading the shared block, so keep the map reference and export lease
+    // until its matching ACK arrives or connection teardown revokes all leases.
+    if (0 != op->m_blockID) return;
 
-        op->deref();
-    }
+    m_operations.erase(it);
+    op->deref();
 }
 
 void iINCProtocol::flush()
@@ -332,10 +338,9 @@ void iINCProtocol::onMessageReceived(const iINCMessage& msg)
             iINCOperation* op = it->second;
             m_operations.erase(it);
 
-            // Special handling for BINARY_DATA_ACK: release shared memory slot
-            if (m_memExport && (msg.type() == INC_MSG_BINARY_DATA_ACK) && (0 != op->m_blockID)) {
+            // A matching ACK ends the peer's shared-memory lease.
+            if (msg.type() == INC_MSG_BINARY_DATA_ACK && m_memExport && 0 != op->m_blockID)
                 m_memExport->processRelease(op->m_blockID);
-            }
 
             // Complete the operation
             op->setResult(INC_OK, msg.payload().data());
@@ -375,10 +380,10 @@ void iINCProtocol::cancelAllOperations(int errorCode)
         iINCOperation* op = it->second;
         m_operations.erase(it);
 
-        if (m_memExport && (0 != op->m_blockID)) {
+        // The connection is closing, so the peer can no longer retain a
+        // valid lease on an exported block.
+        if (m_memExport && 0 != op->m_blockID)
             m_memExport->processRelease(op->m_blockID);
-            op->m_blockID = 0;
-        }
 
         op->setResult(errorCode, iByteArray());
         op->deref();

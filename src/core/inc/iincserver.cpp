@@ -643,7 +643,7 @@ void iINCServer::clientConnected(iINCConnection* conn) ISIGNAL(clientConnected, 
 
 void iINCServer::clientDisconnected(iINCConnection* conn) ISIGNAL(clientDisconnected, conn)
 
-void iINCServer::streamOpened(iINCConnection* conn, xuint32 channelId, const iString& name, xuint32 mode) ISIGNAL(streamOpened, conn, channelId, name, mode)
+void iINCServer::streamOpened(iINCConnection* conn, xuint32 channelId, iString name, xuint32 mode) ISIGNAL(streamOpened, conn, channelId, name, mode)
 
 void iINCServer::streamClosed(iINCConnection* conn, xuint32 channelId) ISIGNAL(streamClosed, conn, channelId)
 

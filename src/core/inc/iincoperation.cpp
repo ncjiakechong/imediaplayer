@@ -105,15 +105,11 @@ void iINCOperation::doDeleter()
 
 void iINCOperation::doFree()
 {
-    if (!m_timer.isActive()) {
-        doDeleter();
-        return;
-    }
-
     iThread* _workThread = m_timer.thread();
     iThread* _curThread = iThread::currentThread();
     if (!_workThread || !_workThread->isRunning() || (_workThread == _curThread)) {
         m_timer.moveToThread(_curThread);
+        m_timer.stop();
         doDeleter();
         return;
     }
@@ -133,6 +129,8 @@ void iINCOperation::setTimeout(xint64 timeout)
     if (STATE_RUNNING != m_state) {
         return;
     }
+
+    if (timeout <= 0) return;
 
     iObject::invokeMethod(&m_timer, &iINCOperationTimer::toggleAlarm, timeout, reinterpret_cast<xintptr>(this));
 }

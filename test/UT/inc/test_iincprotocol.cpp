@@ -280,6 +280,87 @@ TEST_F(INCProtocolUnitTest, SendBinaryDataCopyOverLimitIsRejected) {
     EXPECT_TRUE(device->lastWrittenData.isEmpty());
 }
 
+TEST_F(INCProtocolUnitTest, ShmLeaseSurvivesOperationReleaseUntilOutOfOrderAck) {
+    iSharedDataPointer<iMemPool> pool(iMemPool::create(
+            "inc_protocol_shm_lifetime", "inc_protocol_shm_lifetime",
+            MEMTYPE_SHARED_POSIX, 256 * 1024, false));
+    ASSERT_NE(pool.data(), nullptr);
+    protocol->enableMempool(pool);
+
+    iMemBlock* firstBlock = iMemBlock::new4Pool(pool.data(), 64, 1);
+    iMemBlock* secondBlock = iMemBlock::new4Pool(pool.data(), 64, 1);
+    ASSERT_NE(firstBlock, nullptr);
+    ASSERT_NE(secondBlock, nullptr);
+
+    iByteArray::DataPointer firstPtr(
+            static_cast<iTypedArrayData<char>*>(firstBlock),
+            static_cast<char*>(firstBlock->data().value()), 64);
+    iByteArray::DataPointer secondPtr(
+            static_cast<iTypedArrayData<char>*>(secondBlock),
+            static_cast<char*>(secondBlock->data().value()), 64);
+    iByteArray firstData(firstPtr);
+    iByteArray secondData(secondPtr);
+
+    iSharedDataPointer<iINCOperation> firstOp =
+            protocol->sendBinaryData(1, true, 0, firstData);
+    iSharedDataPointer<iINCOperation> secondOp =
+            protocol->sendBinaryData(1, true, 64, secondData);
+    ASSERT_NE(firstOp.data(), nullptr);
+    ASSERT_NE(secondOp.data(), nullptr);
+    EXPECT_EQ(pool->getStat().nExported, 2);
+
+    // Application-level timeout/cancellation ends the operation, but the peer
+    // may still be reading the shared block until its matching ACK arrives.
+    secondOp->cancel();
+    protocol->releaseOperation(secondOp.data());
+    EXPECT_EQ(pool->getStat().nExported, 2);
+
+    const auto deliverAck = [this](xuint32 sequence) {
+        iINCMessage ack(INC_MSG_BINARY_DATA_ACK, 1, sequence);
+        ack.payload().putInt32(64);
+        const iINCMessageHeader header = ack.header();
+        device->simulateDataReceived(iByteArray(
+                reinterpret_cast<const char*>(&header), sizeof(header)));
+        device->simulateDataReceived(ack.payload().data());
+    };
+
+    deliverAck(secondOp->sequenceNumber());
+    EXPECT_EQ(pool->getStat().nExported, 1);
+    deliverAck(firstOp->sequenceNumber());
+    EXPECT_EQ(pool->getStat().nExported, 0);
+}
+
+TEST_F(INCProtocolUnitTest, ShmLeaseIsReleasedWhenSendQueueRejectsFrame) {
+    iSharedDataPointer<iMemPool> pool(iMemPool::create(
+            "inc_protocol_shm_reject", "inc_protocol_shm_reject",
+            MEMTYPE_SHARED_POSIX, 128 * 1024, false));
+    ASSERT_NE(pool.data(), nullptr);
+    protocol->enableMempool(pool);
+    device->setMode(iIODevice::NotOpen);
+
+    for (int i = 0; i < 100; ++i) {
+        iINCMessage queued(INC_MSG_BINARY_DATA, 1, protocol->nextSequence());
+        queued.setFlags(INC_MSG_FLAG_NOACK);
+        queued.payload().putInt64(i);
+        queued.payload().putBytes(iByteArray(16, 'Q'));
+        EXPECT_EQ(protocol->sendMessage(queued), nullptr);
+    }
+
+    iMemBlock* block = iMemBlock::new4Pool(pool.data(), 64, 1);
+    ASSERT_NE(block, nullptr);
+    iByteArray::DataPointer ptr(
+            static_cast<iTypedArrayData<char>*>(block),
+            static_cast<char*>(block->data().value()), 64);
+    const iByteArray data(ptr);
+
+    iSharedDataPointer<iINCOperation> op =
+            protocol->sendBinaryData(1, true, 0, data);
+    ASSERT_NE(op.data(), nullptr);
+    EXPECT_EQ(op->getState(), iINCOperation::STATE_FAILED);
+    EXPECT_EQ(op->errorCode(), INC_ERROR_QUEUE_FULL);
+    EXPECT_EQ(pool->getStat().nExported, 0);
+}
+
 TEST_F(INCProtocolUnitTest, NoAckQueueFullDoesNotCreateOperation) {
     device->setMode(iIODevice::NotOpen);
     const iINCMetrics::Snapshot before = protocol->metrics().snapshot();

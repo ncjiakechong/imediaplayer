@@ -1119,7 +1119,8 @@ iMemExport::iMemExport(iMemPool* pool, iMemExportRevokeCb cb, void* userdata)
     , _prev(IX_NULLPTR)
 {
     IX_ASSERT(m_pool && cb && m_pool->isShared());
-    static iAtomicCounter<uint> export_baseidx(0);
+    // Start at 1 so an exported blockId (slot + base) is never 0
+    static iAtomicCounter<uint> export_baseidx(1);
 
     for (int idx = 0; idx < IMEMEXPORT_SLOTS_MAX; ++idx) {
         m_slots[idx]._next = IX_NULLPTR;

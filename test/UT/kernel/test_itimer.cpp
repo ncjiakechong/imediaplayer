@@ -588,3 +588,20 @@ TEST_F(ITimerTest, DeleteActiveTimer) {
     // 如果没有崩溃，测试通过
     SUCCEED();
 }
+
+// Probe subclass to reach the protected event() handler.
+class TimerEventProbe : public iShell::iTimer {
+public:
+    bool callEvent(iShell::iEvent* e) { return event(e); }
+};
+
+TEST_F(ITimerTest, EventHandling) {
+    TimerEventProbe t;
+    // a non-timer event is delegated to the base class and not consumed
+    iEvent other(iEvent::User);
+    EXPECT_FALSE(t.callEvent(&other));
+
+    // a timer event whose id does not match is ignored
+    iTimerEvent wrong(999999, 0);
+    EXPECT_FALSE(t.callEvent(&wrong));
+}

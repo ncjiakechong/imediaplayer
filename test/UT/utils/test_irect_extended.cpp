@@ -579,3 +579,159 @@ TEST(iRectExtended, NegativeSizeHandling) {
     iRect normalized = r.normalized();
     EXPECT_TRUE(normalized.isValid());
 }
+
+// Rectangle-vs-rectangle union / intersection / containment (float)
+TEST(iRectFExtended, UnitedFloat) {
+    iRectF r1(0.0, 0.0, 10.0, 10.0);
+    iRectF r2(5.0, 5.0, 10.0, 10.0);
+
+    iRectF u = r1 | r2;                 // exercises operator|
+    EXPECT_DOUBLE_EQ(u.x(), 0.0);
+    EXPECT_DOUBLE_EQ(u.y(), 0.0);
+    EXPECT_DOUBLE_EQ(u.width(), 15.0);
+    EXPECT_DOUBLE_EQ(u.height(), 15.0);
+
+    // united() delegates to operator|
+    EXPECT_EQ(u, r1.united(r2));
+
+    // union with a null rect returns the other operand
+    iRectF nullR;
+    EXPECT_EQ(r1, r1 | nullR);
+    EXPECT_EQ(r1, nullR | r1);
+}
+
+TEST(iRectFExtended, IntersectedFloat) {
+    iRectF r1(0.0, 0.0, 10.0, 10.0);
+    iRectF r2(5.0, 5.0, 10.0, 10.0);
+
+    iRectF i = r1 & r2;                 // exercises operator&
+    EXPECT_DOUBLE_EQ(i.x(), 5.0);
+    EXPECT_DOUBLE_EQ(i.y(), 5.0);
+    EXPECT_DOUBLE_EQ(i.width(), 5.0);
+    EXPECT_DOUBLE_EQ(i.height(), 5.0);
+
+    // intersected() delegates to operator&
+    EXPECT_EQ(i, r1.intersected(r2));
+
+    // non-overlapping rectangles produce a null intersection
+    iRectF far(100.0, 100.0, 5.0, 5.0);
+    EXPECT_TRUE((r1 & far).isNull());
+}
+
+TEST(iRectFExtended, ContainsRectFloat) {
+    iRectF outer(0.0, 0.0, 100.0, 100.0);
+    iRectF inner(10.0, 10.0, 20.0, 20.0);
+
+    EXPECT_TRUE(outer.contains(inner));
+    EXPECT_FALSE(inner.contains(outer));
+
+    // partial overlap is not containment
+    iRectF overlap(50.0, 50.0, 100.0, 100.0);
+    EXPECT_FALSE(outer.contains(overlap));
+
+    // a null argument is never contained
+    iRectF nullR;
+    EXPECT_FALSE(outer.contains(nullR));
+}
+
+// Branch coverage: normalization, reversed rects, proper containment (int)
+TEST(iRectExtended, NormalizedAlreadyNormal) {
+    iRect r(10, 20, 30, 40);
+    EXPECT_EQ(r, r.normalized());
+}
+
+TEST(iRectExtended, ContainsPointProperAndReversed) {
+    iRect r(0, 0, 100, 100);
+    EXPECT_TRUE(r.contains(iPoint(50, 50), true));
+    EXPECT_FALSE(r.contains(iPoint(0, 0), true));    // on x edge, not proper
+    EXPECT_FALSE(r.contains(iPoint(50, 0), true));   // on y edge, not proper
+
+    // reversed rect (internally negative coords)
+    iRect rev(100, 100, -100, -100);
+    EXPECT_TRUE(rev.contains(iPoint(50, 50)));
+    EXPECT_FALSE(rev.contains(iPoint(200, 50)));
+    EXPECT_FALSE(rev.contains(iPoint(50, 200)));
+}
+
+TEST(iRectExtended, ContainsRectProperAndReversed) {
+    iRect outer(0, 0, 100, 100);
+    iRect inner(10, 10, 20, 20);
+    EXPECT_TRUE(outer.contains(inner, true));
+    EXPECT_FALSE(outer.contains(iRect(10, 0, 20, 100), true));  // y not proper
+    EXPECT_FALSE(outer.contains(iRect()));                      // null argument
+
+    iRect rev(100, 100, -100, -100);
+    EXPECT_TRUE(rev.contains(iRect(10, 10, 20, 20)));
+    EXPECT_TRUE(rev.contains(iRect(30, 30, -20, -20)));         // reversed argument
+}
+
+TEST(iRectExtended, UnionAndIntersectReversed) {
+    iRect nullR;
+    iRect r(0, 0, 10, 10);
+    EXPECT_EQ(r, nullR | r);   // null left
+    EXPECT_EQ(r, r | nullR);   // null right
+
+    iRect rev(20, 20, -20, -20);
+    EXPECT_FALSE((rev | iRect(0, 0, 5, 5)).isNull());
+
+    iRect a(0, 0, 10, 10);
+    EXPECT_TRUE((a & iRect(100, 100, 10, 10)).isNull());  // x disjoint
+    EXPECT_TRUE((a & iRect(0, 100, 10, 10)).isNull());    // y disjoint
+    EXPECT_FALSE((rev & iRect(0, 0, 30, 30)).isNull());   // reversed intersect
+    EXPECT_FALSE((rev & iRect(5, 5, -3, -3)).isNull());   // both reversed
+}
+
+// Branch coverage: iRectF normalization, negative dims, null rects
+TEST(iRectFExtended, NormalizedNegative) {
+    iRectF r(10.0, 20.0, -5.0, -8.0);
+    iRectF n = r.normalized();
+    EXPECT_DOUBLE_EQ(n.x(), 5.0);
+    EXPECT_DOUBLE_EQ(n.y(), 12.0);
+    EXPECT_DOUBLE_EQ(n.width(), 5.0);
+    EXPECT_DOUBLE_EQ(n.height(), 8.0);
+}
+
+TEST(iRectFExtended, ContainsPointNegativeAndNull) {
+    iRectF rev(10.0, 10.0, -10.0, -10.0);
+    EXPECT_TRUE(rev.contains(iPointF(5.0, 5.0)));
+    EXPECT_FALSE(rev.contains(iPointF(50.0, 5.0)));
+    EXPECT_FALSE(rev.contains(iPointF(5.0, 50.0)));
+
+    iRectF nullW(0.0, 0.0, 0.0, 10.0);
+    EXPECT_FALSE(nullW.contains(iPointF(0.0, 5.0)));
+    iRectF nullH(0.0, 0.0, 10.0, 0.0);
+    EXPECT_FALSE(nullH.contains(iPointF(5.0, 0.0)));
+}
+
+TEST(iRectFExtended, ContainsRectNegativeAndNull) {
+    iRectF rev(20.0, 20.0, -20.0, -20.0);
+    EXPECT_TRUE(rev.contains(iRectF(5.0, 5.0, 5.0, 5.0)));
+    EXPECT_TRUE(rev.contains(iRectF(10.0, 10.0, -5.0, -5.0)));
+
+    iRectF nullSelf(0.0, 0.0, 0.0, 10.0);
+    EXPECT_FALSE(nullSelf.contains(iRectF(0.0, 0.0, 1.0, 1.0)));
+    iRectF outer(0.0, 0.0, 100.0, 100.0);
+    EXPECT_FALSE(outer.contains(iRectF(0.0, 0.0, 0.0, 5.0)));
+    EXPECT_FALSE(outer.contains(iRectF(0.0, 0.0, 5.0, 0.0)));
+    EXPECT_FALSE(outer.contains(iRectF(-5.0, 0.0, 10.0, 10.0)));
+    EXPECT_FALSE(outer.contains(iRectF(0.0, -5.0, 10.0, 10.0)));
+}
+
+TEST(iRectFExtended, UnionIntersectNegative) {
+    iRectF rev(20.0, 20.0, -20.0, -20.0);
+    EXPECT_FALSE((rev | iRectF(10.0, 10.0, -5.0, -5.0)).isNull());
+
+    iRectF nullW(0.0, 0.0, 0.0, 10.0);
+    iRectF a(0.0, 0.0, 10.0, 10.0);
+    EXPECT_TRUE((nullW & iRectF(0.0, 0.0, 5.0, 5.0)).isNull());
+    EXPECT_TRUE((a & iRectF(5.0, 5.0, 0.0, 5.0)).isNull());
+    EXPECT_FALSE((rev & iRectF(5.0, 5.0, -3.0, -3.0)).isNull());
+    EXPECT_TRUE((a & iRectF(100.0, 0.0, 10.0, 10.0)).isNull());
+    EXPECT_TRUE((a & iRectF(0.0, 100.0, 10.0, 10.0)).isNull());
+
+    EXPECT_TRUE(rev.intersects(iRectF(5.0, 5.0, -3.0, -3.0)));
+    EXPECT_FALSE(nullW.intersects(a));
+    EXPECT_FALSE(a.intersects(iRectF(5.0, 5.0, 0.0, 5.0)));
+    EXPECT_FALSE(a.intersects(iRectF(100.0, 0.0, 5.0, 5.0)));
+    EXPECT_FALSE(a.intersects(iRectF(0.0, 100.0, 5.0, 5.0)));
+}

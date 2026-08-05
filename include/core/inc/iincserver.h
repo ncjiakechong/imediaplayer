@@ -110,7 +110,7 @@ public:
     /// @param conn Client connection that requested the channel
     /// @param channelId Allocated channel identifier
     /// @param mode Channel mode (MODE_READ, MODE_WRITE, or both)
-    void streamOpened(iINCConnection* conn, xuint32 channelId, const iString& name, xuint32 mode);
+    void streamOpened(iINCConnection* conn, xuint32 channelId, iString name, xuint32 mode);
 
     /// Emitted when stream/channel is closed by a client
     /// @param conn Client connection that released the channel

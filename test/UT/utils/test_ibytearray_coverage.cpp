@@ -405,3 +405,401 @@ TEST_F(ByteArrayCoverageTest, IsValidUtf8) {
     iByteArray bad(invalid);
     EXPECT_FALSE(bad.isValidUtf8());
 }
+
+// ============================================================
+// Coverage additions: free functions & member edge cases
+// ============================================================
+
+TEST_F(ByteArrayCoverageTest, IStrdupAndIStrcpy) {
+    const char *src = "hello world";
+    char *dup = istrdup(src);
+    ASSERT_NE(nullptr, dup);
+    EXPECT_STREQ(src, dup);
+    delete[] dup;
+
+    // null source returns null
+    EXPECT_EQ(nullptr, istrdup(nullptr));
+
+    // istrcpy copies and returns the destination pointer
+    char buf[32];
+    char *ret = istrcpy(buf, "abc");
+    ASSERT_EQ(buf, ret);
+    EXPECT_STREQ("abc", buf);
+
+    // istrcpy with null source returns null
+    EXPECT_EQ(nullptr, istrcpy(buf, nullptr));
+}
+
+TEST_F(ByteArrayCoverageTest, IStrncpy) {
+    char dst[16];
+
+    // Copies up to len bytes and always NUL-terminates at index len-1
+    char *ret = istrncpy(dst, "abcdef", 4);
+    ASSERT_EQ(dst, ret);
+    EXPECT_EQ('a', dst[0]);
+    EXPECT_EQ('c', dst[2]);
+    EXPECT_EQ('\0', dst[3]);
+
+    // null source or destination returns null
+    EXPECT_EQ(nullptr, istrncpy(dst, nullptr, 4));
+    EXPECT_EQ(nullptr, istrncpy(nullptr, "abc", 4));
+
+    // len == 0 leaves the buffer untouched but returns destination
+    dst[0] = 'Z';
+    ret = istrncpy(dst, "abc", 0);
+    ASSERT_EQ(dst, ret);
+    EXPECT_EQ('Z', dst[0]);
+}
+
+TEST_F(ByteArrayCoverageTest, IStricmp) {
+    EXPECT_EQ(0, istricmp("Hello", "hello"));
+    EXPECT_EQ(0, istricmp("ABC", "abc"));
+    EXPECT_LT(istricmp("abc", "abd"), 0);
+    EXPECT_GT(istricmp("abd", "abc"), 0);
+
+    // prefix compares as less than the longer string
+    EXPECT_LT(istricmp("abc", "abcd"), 0);
+
+    // null handling
+    EXPECT_EQ(0, istricmp(nullptr, nullptr));
+    EXPECT_EQ(-1, istricmp(nullptr, "abc"));
+    EXPECT_EQ(1, istricmp("abc", nullptr));
+}
+
+TEST_F(ByteArrayCoverageTest, IStrnicmp) {
+    // case-insensitive comparison limited to len bytes
+    EXPECT_EQ(0, istrnicmp("HELLO", "hello", 5));
+    EXPECT_EQ(0, istrnicmp("abcXX", "abcYY", 3));  // only first 3 compared
+    EXPECT_NE(0, istrnicmp("abcXX", "abcYY", 4));
+
+    // null handling
+    EXPECT_EQ(0, istrnicmp(nullptr, nullptr, 3));
+    EXPECT_EQ(-1, istrnicmp(nullptr, "abc", 3));
+    EXPECT_EQ(1, istrnicmp("abc", nullptr, 3));
+}
+
+TEST_F(ByteArrayCoverageTest, IMemrchr) {
+    const char *s = "abcabc";
+
+    // finds the LAST occurrence within the given size
+    const void *p = imemrchr(s, 'a', 6);
+    ASSERT_NE(nullptr, p);
+    EXPECT_EQ(s + 3, static_cast<const char*>(p));
+
+    const void *p2 = imemrchr(s, 'c', 6);
+    ASSERT_NE(nullptr, p2);
+    EXPECT_EQ(s + 5, static_cast<const char*>(p2));
+
+    // not found
+    EXPECT_EQ(nullptr, imemrchr(s, 'z', 6));
+
+    // a shorter size excludes later matches
+    const void *p3 = imemrchr(s, 'a', 3);
+    ASSERT_NE(nullptr, p3);
+    EXPECT_EQ(s + 0, static_cast<const char*>(p3));
+}
+
+TEST_F(ByteArrayCoverageTest, IChecksumStandards) {
+    const char data[] = "123456789";
+
+    // The same input and standard are deterministic
+    xuint16 c1 = iChecksum(data, 9, ChecksumIso3309);
+    xuint16 c2 = iChecksum(data, 9, ChecksumIso3309);
+    EXPECT_EQ(c1, c2);
+
+    // A different standard produces a different checksum
+    xuint16 c3 = iChecksum(data, 9, ChecksumItuV41);
+    EXPECT_NE(c1, c3);
+}
+
+TEST_F(ByteArrayCoverageTest, InsertCountChar) {
+    // Insert `count` copies of a char at position i
+    iByteArray ba("Hello");
+    ba.insert(2, 3, 'x');
+    EXPECT_EQ("Hexxxllo", ba);
+
+    // Insert at the beginning (grows-backwards path)
+    iByteArray ba2("world");
+    ba2.insert(0, 2, '>');
+    EXPECT_EQ(">>world", ba2);
+
+    // Insert past the end pads with spaces then appends the chars
+    iByteArray ba3("ab");
+    ba3.insert(5, 2, 'Z');
+    EXPECT_EQ("ab   ZZ", ba3);
+    EXPECT_EQ(7, ba3.size());
+
+    // count <= 0 is a no-op
+    iByteArray ba4("keep");
+    ba4.insert(1, 0, 'q');
+    EXPECT_EQ("keep", ba4);
+
+    // negative position is a no-op
+    ba4.insert(-1, 3, 'q');
+    EXPECT_EQ("keep", ba4);
+}
+
+TEST_F(ByteArrayCoverageTest, NumberUnsignedInt) {
+    EXPECT_EQ("42", iByteArray::number(static_cast<uint>(42)));
+    EXPECT_EQ("0", iByteArray::number(static_cast<uint>(0)));
+    EXPECT_EQ("4294967295", iByteArray::number(static_cast<uint>(4294967295U)));
+
+    // non-decimal bases
+    EXPECT_EQ("ff", iByteArray::number(static_cast<uint>(255), 16));
+    EXPECT_EQ("100", iByteArray::number(static_cast<uint>(4), 2));
+}
+
+TEST_F(ByteArrayCoverageTest, ToUIntConversion) {
+    bool ok = false;
+
+    EXPECT_EQ(4294967295U, iByteArray("4294967295").toUInt(&ok));
+    EXPECT_TRUE(ok);
+
+    EXPECT_EQ(255U, iByteArray("ff").toUInt(&ok, 16));
+    EXPECT_TRUE(ok);
+
+    // invalid input reports failure
+    iByteArray("nope").toUInt(&ok);
+    EXPECT_FALSE(ok);
+}
+
+TEST_F(ByteArrayCoverageTest, SetRawData) {
+    static const char raw[] = "raw-bytes";
+
+    iByteArray ba;
+    ba.setRawData(raw, 9);
+    EXPECT_EQ(9, ba.size());
+    EXPECT_EQ("raw-bytes", ba);
+    // Raw data is referenced, not copied
+    EXPECT_EQ(raw, ba.constData());
+
+    // null data clears
+    ba.setRawData(nullptr, 5);
+    EXPECT_TRUE(ba.isEmpty());
+
+    // zero length clears
+    iByteArray ba2("x");
+    ba2.setRawData(raw, 0);
+    EXPECT_TRUE(ba2.isEmpty());
+}
+
+TEST_F(ByteArrayCoverageTest, ByteArrayViewTrimmed) {
+    iByteArrayView v("   hello world   ");
+    iByteArrayView t = v.trimmed();
+    EXPECT_EQ(11, t.size());
+    EXPECT_EQ(iByteArray("hello world"), iByteArray(t.data(), t.size()));
+
+    // all-whitespace view trims to empty
+    iByteArrayView ws("     ");
+    EXPECT_TRUE(ws.trimmed().isEmpty());
+
+    // no surrounding whitespace leaves the view unchanged
+    iByteArrayView none("abc");
+    EXPECT_EQ(3, none.trimmed().size());
+}
+
+// ============================================================
+// Coverage additions: replace / base64 / hex / number / percent
+// ============================================================
+
+TEST_F(ByteArrayCoverageTest, ReplaceRange) {
+    // same-size in-place replacement
+    iByteArray a("Hello World");
+    a.replace(6, 5, iByteArrayView("Earth"));
+    EXPECT_EQ("Hello Earth", a);
+
+    // growing replacement (after longer than len)
+    iByteArray g("abcXYZ");
+    g.replace(3, 3, iByteArrayView("123456789"));
+    EXPECT_EQ("abc123456789", g);
+
+    // shrinking replacement (after shorter than len)
+    iByteArray s("abcdefgh");
+    s.replace(2, 4, iByteArrayView("X"));
+    EXPECT_EQ("abXgh", s);
+
+    // pos beyond size is a no-op
+    iByteArray n("keep");
+    n.replace(100, 2, iByteArrayView("!!"));
+    EXPECT_EQ("keep", n);
+
+    // len is clamped to the remaining bytes
+    iByteArray c("abcdef");
+    c.replace(4, 100, iByteArrayView("ZZ"));
+    EXPECT_EQ("abcdZZ", c);
+}
+
+TEST_F(ByteArrayCoverageTest, ReplaceSubstringVariants) {
+    // single-char fast path (bsize == asize == 1)
+    iByteArray a("a-b-c-d");
+    a.replace(iByteArrayView("-"), iByteArrayView("+"));
+    EXPECT_EQ("a+b+c+d", a);
+
+    // equal length, multi-char
+    iByteArray e("xyxyxy");
+    e.replace(iByteArrayView("xy"), iByteArrayView("AB"));
+    EXPECT_EQ("ABABAB", e);
+
+    // shrinking (asize < bsize), multiple occurrences
+    iByteArray sh("aXXbXXcXX");
+    sh.replace(iByteArrayView("XX"), iByteArrayView("_"));
+    EXPECT_EQ("a_b_c_", sh);
+
+    // growing (asize > bsize), multiple occurrences
+    iByteArray gr("a.b.c.d");
+    gr.replace(iByteArrayView("."), iByteArrayView("<->"));
+    EXPECT_EQ("a<->b<->c<->d", gr);
+
+    // no occurrence -> unchanged
+    iByteArray no("hello");
+    no.replace(iByteArrayView("z"), iByteArrayView("ZZZ"));
+    EXPECT_EQ("hello", no);
+}
+
+TEST_F(ByteArrayCoverageTest, Base64Options) {
+    iByteArray man("Man");
+    EXPECT_EQ("TWFu", man.toBase64(iByteArray::Base64Encoding));
+
+    iByteArray two("Ma");
+    EXPECT_EQ("TWE=", two.toBase64(iByteArray::Base64Encoding));
+    EXPECT_EQ("TWE", two.toBase64(iByteArray::Base64Encoding | iByteArray::OmitTrailingEquals));
+
+    // full-byte-range round trips through both alphabets
+    iByteArray bin;
+    for (int i = 0; i < 256; ++i)
+        bin.append(static_cast<char>(i));
+
+    iByteArray enc = bin.toBase64(iByteArray::Base64Encoding);
+    EXPECT_EQ(bin, iByteArray::fromBase64(enc, iByteArray::Base64Encoding));
+
+    iByteArray uenc = bin.toBase64(iByteArray::Base64UrlEncoding);
+    EXPECT_EQ(bin, iByteArray::fromBase64(uenc, iByteArray::Base64UrlEncoding));
+}
+
+TEST_F(ByteArrayCoverageTest, HexWithSeparator) {
+    iByteArray data("AB");  // 0x41 0x42
+    EXPECT_EQ("4142", data.toHex('\0'));
+    EXPECT_EQ("41:42", data.toHex(':'));
+    EXPECT_EQ("41-42", data.toHex('-'));
+
+    // fromHex ignores non-hex characters (e.g. separators)
+    EXPECT_EQ(iByteArray("AB"), iByteArray::fromHex("4142"));
+    EXPECT_EQ(iByteArray("AB"), iByteArray::fromHex("41:42"));
+
+    // a single hex digit decodes to one byte
+    iByteArray odd = iByteArray::fromHex("F");
+    EXPECT_EQ(1, odd.size());
+    EXPECT_EQ('\x0f', odd.at(0));
+
+    // empty input
+    EXPECT_TRUE(iByteArray().toHex(':').isEmpty());
+}
+
+TEST_F(ByteArrayCoverageTest, NumberFormatsAndBases) {
+    // integer bases
+    EXPECT_EQ("ff", iByteArray::number(255, 16));
+    EXPECT_EQ("777", iByteArray::number(511, 8));
+    EXPECT_EQ("101", iByteArray::number(5, 2));
+    EXPECT_EQ("-255", iByteArray::number(-255));
+
+    // 64-bit
+    EXPECT_EQ("-1234567890123", iByteArray::number(static_cast<xint64>(-1234567890123LL)));
+    EXPECT_EQ("ffffffffffffffff",
+              iByteArray::number(static_cast<xuint64>(0xFFFFFFFFFFFFFFFFULL), 16));
+
+    // floating point formats
+    EXPECT_EQ("3.14", iByteArray::number(3.14159, 'f', 2));
+    EXPECT_EQ("0.5", iByteArray::number(0.5, 'g', 6));
+    iByteArray e = iByteArray::number(12345.678, 'e', 3);
+    EXPECT_TRUE(e.contains('e'));
+
+    // setNum returns *this and mutates in place
+    iByteArray s;
+    s.setNum(static_cast<xint64>(42));
+    EXPECT_EQ("42", s);
+}
+
+TEST_F(ByteArrayCoverageTest, PercentEncodingRoundTrip) {
+    iByteArray src("Hello World!/?&=");
+    iByteArray enc = src.toPercentEncoding();
+    EXPECT_EQ(src, iByteArray::fromPercentEncoding(enc));
+
+    // excluded characters are left verbatim
+    iByteArray enc2 = src.toPercentEncoding("/");
+    EXPECT_TRUE(enc2.contains('/'));
+
+    // included characters are encoded even if normally unreserved
+    iByteArray enc3 = iByteArray("abc").toPercentEncoding(iByteArray(), "b");
+    EXPECT_FALSE(enc3.contains('b'));
+    EXPECT_EQ(iByteArray("abc"), iByteArray::fromPercentEncoding(enc3));
+
+    // custom percent character
+    iByteArray enc4 = src.toPercentEncoding(iByteArray(), iByteArray(), '!');
+    EXPECT_EQ(src, iByteArray::fromPercentEncoding(enc4, '!'));
+}
+
+TEST_F(ByteArrayCoverageTest, IndexOfCharFromAndCount) {
+    iByteArray ba("abcabcabc");
+
+    // indexOf(char, from)
+    EXPECT_EQ(0, ba.indexOf('a'));
+    EXPECT_EQ(3, ba.indexOf('a', 1));
+    EXPECT_EQ(6, ba.indexOf('a', 4));
+    EXPECT_EQ(-1, ba.indexOf('a', 7));
+    EXPECT_EQ(-1, ba.indexOf('z'));
+
+    // lastIndexOf(char, from)
+    EXPECT_EQ(6, ba.lastIndexOf('a'));
+    EXPECT_EQ(3, ba.lastIndexOf('a', 5));
+    EXPECT_EQ(-1, ba.lastIndexOf('z'));
+
+    // count(char)
+    EXPECT_EQ(3, ba.count('a'));
+    EXPECT_EQ(3, ba.count('b'));
+    EXPECT_EQ(0, ba.count('z'));
+}
+
+TEST_F(ByteArrayCoverageTest, AssignCharPointer) {
+    iByteArray ba("initial");
+    ba = "replaced";
+    EXPECT_EQ("replaced", ba);
+
+    // assigning empty
+    ba = "";
+    EXPECT_TRUE(ba.isEmpty());
+
+    // assigning null
+    const char *np = IX_NULLPTR;
+    ba = np;
+    EXPECT_TRUE(ba.isEmpty());
+}
+
+TEST_F(ByteArrayCoverageTest, ByteArraySearchInternals) {
+    // Single-char needle view -> findChar path
+    iByteArray ba("hello world");
+    EXPECT_EQ(4, ba.indexOf(iByteArrayView("o")));
+    EXPECT_EQ(7, ba.indexOf(iByteArrayView("o"), 5));
+    EXPECT_EQ(-1, ba.indexOf(iByteArrayView("z")));
+    // negative from counts back from the end
+    EXPECT_EQ(4, ba.indexOf(iByteArrayView("o"), -8));
+    // from beyond length -> not found
+    EXPECT_EQ(-1, ba.indexOf(iByteArrayView("o"), 100));
+
+    // Large haystack + long needle -> Boyer-Moore path (len>500 && needleLen>5)
+    iByteArray big(600, 'a');
+    big.append("NEEDLE_STRING");
+    EXPECT_EQ(600, big.indexOf(iByteArrayView("NEEDLE_STRING")));
+    EXPECT_EQ(-1, big.indexOf(iByteArrayView("ABSENT_LONG")));
+}
+
+TEST_F(ByteArrayCoverageTest, ByteArrayViewSearch) {
+    iByteArrayView v("abcabc");
+    EXPECT_EQ(0, v.indexOf('a'));
+    EXPECT_EQ(3, v.indexOf('a', 1));
+    EXPECT_EQ(-1, v.indexOf('z'));
+    EXPECT_EQ(3, v.lastIndexOf('a'));
+    EXPECT_EQ(0, v.lastIndexOf('a', 2));
+    EXPECT_EQ(-1, v.lastIndexOf('z'));
+    EXPECT_EQ(2, v.count(iByteArrayView("a")));   // single-char count helper
+    EXPECT_EQ(2, v.count(iByteArrayView("bc")));  // multi-char count
+}

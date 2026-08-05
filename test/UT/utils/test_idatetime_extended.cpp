@@ -591,3 +591,121 @@ TEST(iDateTimeExtended, InvalidDateTime) {
     iDateTime dt(invalidDate, validTime);
     EXPECT_FALSE(dt.isValid());
 }
+
+///////////////////////////////////////////////////////////////////
+// iDateTime spec / timezone / current coverage
+///////////////////////////////////////////////////////////////////
+
+TEST(iTimeExtended, Restart) {
+    iTime t = iTime::currentTime();
+    int elapsed = t.restart();
+    EXPECT_GE(elapsed, 0);
+    EXPECT_TRUE(t.isValid());
+}
+
+TEST(iDateTimeExtended, UtcSpecAbbreviation) {
+    iDateTime local(iDate(2024, 6, 15), iTime(12, 30, 0), iShell::LocalTime);
+    iDateTime utc = local.toUTC();
+    EXPECT_EQ(iShell::UTC, utc.timeSpec());
+    EXPECT_EQ(iString("UTC"), utc.timeZoneAbbreviation());
+    EXPECT_FALSE(utc.isDaylightTime());
+}
+
+TEST(iDateTimeExtended, OffsetFromUtcSpec) {
+    iDateTime off = iDateTime(iDate(2024, 6, 15), iTime(12, 30, 0),
+                              iShell::OffsetFromUTC, 3600);
+    EXPECT_EQ(iShell::OffsetFromUTC, off.timeSpec());
+    EXPECT_EQ(3600, off.offsetFromUtc());
+    EXPECT_TRUE(off.timeZoneAbbreviation().startsWith(iString("UTC")));
+    EXPECT_FALSE(off.isDaylightTime());
+
+    // negative offset exercises the '-' branch of toOffsetString
+    iDateTime neg = iDateTime(iDate(2024, 6, 15), iTime(12, 30, 0),
+                              iShell::OffsetFromUTC, -5400);
+    EXPECT_EQ(-5400, neg.offsetFromUtc());
+    EXPECT_TRUE(neg.timeZoneAbbreviation().startsWith(iString("UTC")));
+}
+
+TEST(iDateTimeExtended, LocalDaylightQuery) {
+    iDateTime local(iDate(2024, 7, 1), iTime(12, 0, 0), iShell::LocalTime);
+    (void)local.isDaylightTime();  // exercise the LocalTime path
+    EXPECT_TRUE(local.isValid());
+}
+
+TEST(iDateTimeExtended, CurrentUtc) {
+    iDateTime now = iDateTime::currentDateTimeUtc();
+    EXPECT_TRUE(now.isValid());
+    EXPECT_EQ(iShell::UTC, now.timeSpec());
+}
+
+TEST(iDateTimeExtended, CopyOffsetPrivate) {
+    iDateTime a(iDate(2020, 2, 29), iTime(1, 2, 3), iShell::OffsetFromUTC, 1800);
+    iDateTime b(a);   // copies a heap-allocated private
+    EXPECT_EQ(a, b);
+    EXPECT_EQ(1800, b.offsetFromUtc());
+}
+
+///////////////////////////////////////////////////////////////////
+// iDate / iTime arithmetic edge-branch coverage
+///////////////////////////////////////////////////////////////////
+
+TEST(iDateExtended, WeekNumberBoundaries) {
+    int yearNum = 0;
+    // Jan 1 2000 (Saturday) belongs to week 52 of 1999
+    EXPECT_EQ(52, iDate(2000, 1, 1).weekNumber(&yearNum));
+    EXPECT_EQ(1999, yearNum);
+    // Dec 31 2002 belongs to week 1 of 2003
+    EXPECT_EQ(1, iDate(2002, 12, 31).weekNumber(&yearNum));
+    EXPECT_EQ(2003, yearNum);
+    // mid-year, no year rollover
+    EXPECT_GT(iDate(2020, 6, 15).weekNumber(), 0);
+    // invalid date -> 0
+    EXPECT_EQ(0, iDate().weekNumber());
+}
+
+TEST(iDateExtended, AddMonthsBoundaries) {
+    EXPECT_EQ(iDate(2018, 6, 15),  iDate(2020, 6, 15).addMonths(-24));
+    EXPECT_EQ(iDate(2019, 7, 15),  iDate(2020, 3, 15).addMonths(-8));
+    EXPECT_EQ(iDate(2021, 1, 15),  iDate(2020, 12, 15).addMonths(1));
+    EXPECT_EQ(iDate(2022, 6, 15),  iDate(2020, 6, 15).addMonths(24));
+    // Jan 31 + 1 month clamps to Feb 28
+    iDate r = iDate(2021, 1, 31).addMonths(1);
+    EXPECT_EQ(2, r.month());
+    EXPECT_EQ(28, r.day());
+    // invalid input
+    EXPECT_FALSE(iDate().addMonths(1).isValid());
+}
+
+TEST(iDateExtended, AddYearsAndDaysTo) {
+    // Feb 29 leap -> non-leap clamps to Feb 28
+    iDate y = iDate(2020, 2, 29).addYears(1);
+    EXPECT_EQ(2, y.month());
+    EXPECT_EQ(28, y.day());
+
+    EXPECT_EQ(365, iDate(2021, 1, 1).daysTo(iDate(2022, 1, 1)));
+    EXPECT_EQ(-365, iDate(2022, 1, 1).daysTo(iDate(2021, 1, 1)));
+    EXPECT_EQ(0, iDate().daysTo(iDate(2021, 1, 1)));  // invalid -> 0
+
+    EXPECT_FALSE(iDate().addYears(1).isValid());
+}
+
+TEST(iTimeExtended, AddMSecsWrapAndMsecsTo) {
+    // negative wrap before midnight
+    iTime a = iTime(0, 0, 1).addMSecs(-2000);
+    EXPECT_EQ(23, a.hour());
+    EXPECT_EQ(59, a.minute());
+    EXPECT_EQ(59, a.second());
+
+    // positive wrap past midnight
+    iTime b = iTime(23, 59, 59).addMSecs(2000);
+    EXPECT_EQ(0, b.hour());
+    EXPECT_EQ(0, b.minute());
+    EXPECT_EQ(1, b.second());
+
+    // msecsTo / secsTo
+    EXPECT_EQ(1000, iTime(1, 0, 0).msecsTo(iTime(1, 0, 1)));
+    EXPECT_EQ(-1, iTime(1, 0, 1).secsTo(iTime(1, 0, 0)));
+
+    // invalid -> 0
+    EXPECT_EQ(0, iTime().msecsTo(iTime(1, 0, 0)));
+}

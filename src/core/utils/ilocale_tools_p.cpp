@@ -210,7 +210,7 @@ void ix_doubleToAscii(double d, iLocaleData::DoubleForm form, int precision, cha
     format[2] = char((precision / 100) % 10) + '0';
     format[3] = char((precision / 10) % 10)  + '0';
     format[4] = char(precision % 10)  + '0';
-    int extraChars;
+    int extraChars = 0;
     switch (form) {
     case iLocaleData::DFDecimal:
         format[formatLength - 2] = 'f';

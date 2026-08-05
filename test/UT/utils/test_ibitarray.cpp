@@ -572,3 +572,106 @@ TEST_F(IBitArrayTest, ResizeShrink) {
     EXPECT_EQ(arr.size(), 5);
 }
 
+
+TEST_F(IBitArrayTest, CountLargeArray) {
+    iBitArray bits(100);
+    bits.fill(false);
+    for (int i = 0; i < 100; i += 2)
+        bits.setBit(i);
+    EXPECT_EQ(50, bits.count(true));
+    EXPECT_EQ(50, bits.count(false));
+
+    iBitArray all(80);
+    all.fill(true);
+    EXPECT_EQ(80, all.count(true));
+    EXPECT_EQ(0, all.count(false));
+}
+
+TEST_F(IBitArrayTest, FromBitsRoundTrip) {
+    iBitArray empty = iBitArray::fromBits(IX_NULLPTR, 0);
+    EXPECT_TRUE(empty.isEmpty());
+
+    iBitArray src(20);
+    src.fill(false);
+    src.setBit(0);
+    src.setBit(5);
+    src.setBit(19);
+    iBitArray copy = iBitArray::fromBits(src.bits(), src.size());
+    EXPECT_EQ(src.size(), copy.size());
+    EXPECT_TRUE(copy.testBit(0));
+    EXPECT_TRUE(copy.testBit(5));
+    EXPECT_TRUE(copy.testBit(19));
+    EXPECT_FALSE(copy.testBit(1));
+}
+
+TEST_F(IBitArrayTest, FillTrueOddSize) {
+    iBitArray bits(100);
+    bits.fill(true);
+    EXPECT_EQ(100, bits.count(true));
+    EXPECT_TRUE(bits.testBit(99));
+}
+
+TEST_F(IBitArrayTest, AndAssignDifferentSizes) {
+    iBitArray a(16);
+    a.fill(true);
+    iBitArray b(8);
+    b.fill(true);
+    a &= b;
+    EXPECT_TRUE(a.testBit(0));
+    EXPECT_FALSE(a.testBit(8));
+    EXPECT_EQ(16, a.size());
+}
+
+TEST_F(IBitArrayTest, NotOddSize) {
+    iBitArray a(12);
+    a.fill(false);
+    a.setBit(0);
+    iBitArray n = ~a;
+    EXPECT_FALSE(n.testBit(0));
+    EXPECT_TRUE(n.testBit(1));
+    EXPECT_TRUE(n.testBit(11));
+    EXPECT_EQ(12, n.size());
+}
+
+TEST_F(IBitArrayTest, FreeBitwiseOperators) {
+    iBitArray a(8);
+    a.fill(false);
+    a.setBit(0);
+    a.setBit(1);
+    iBitArray b(8);
+    b.fill(false);
+    b.setBit(1);
+    b.setBit(2);
+
+    iBitArray andR = a & b;
+    EXPECT_FALSE(andR.testBit(0));
+    EXPECT_TRUE(andR.testBit(1));
+    EXPECT_FALSE(andR.testBit(2));
+
+    iBitArray orR = a | b;
+    EXPECT_TRUE(orR.testBit(0));
+    EXPECT_TRUE(orR.testBit(1));
+    EXPECT_TRUE(orR.testBit(2));
+
+    iBitArray xorR = a ^ b;
+    EXPECT_TRUE(xorR.testBit(0));
+    EXPECT_FALSE(xorR.testBit(1));
+    EXPECT_TRUE(xorR.testBit(2));
+}
+
+TEST_F(IBitArrayTest, ResizeToZero) {
+    iBitArray bits(20);
+    bits.fill(true);
+    bits.resize(0);
+    EXPECT_TRUE(bits.isEmpty());
+}
+
+TEST_F(IBitArrayTest, FillRangeMultiByte) {
+    iBitArray bits(80);
+    bits.fill(false);
+    bits.fill(true, 0, 64);   // aligned multi-byte range -> memset path
+    EXPECT_TRUE(bits.testBit(0));
+    EXPECT_TRUE(bits.testBit(63));
+    EXPECT_FALSE(bits.testBit(64));
+    EXPECT_EQ(64, bits.count(true));
+}
