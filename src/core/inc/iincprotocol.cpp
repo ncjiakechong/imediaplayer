@@ -15,8 +15,6 @@
 #include <core/io/ilog.h>
 #include <core/inc/iincmessage.h>
 #include <core/inc/iincerror.h>
-#include <core/thread/imutex.h>
-#include <core/thread/iscopedlock.h>
 #include <core/kernel/imath.h>
 #include <core/utils/iarraydata.h>
 
@@ -32,8 +30,9 @@ namespace iShell {
 
 class iINCOperationPool : public iSharedData {
 public:
+    iINCProtocol* m_protocol;
     iFreeList<iINCOperation*> m_list;
-    iINCOperationPool(xuint32 size) : m_list(size) {}
+    iINCOperationPool(xuint32 size, iINCProtocol* protocol) : m_protocol(protocol), m_list(size) {}
     virtual ~iINCOperationPool() {
         iINCOperation* cachedOp = IX_NULLPTR;
         while( (cachedOp = m_list.pop(IX_NULLPTR)) != IX_NULLPTR ) {
@@ -52,7 +51,7 @@ iINCProtocol::iINCProtocol(iINCDevice* device, bool passthrough, iObject* parent
     , m_partialSendOffset(0)
     , m_memExport(IX_NULLPTR)
     , m_memImport(IX_NULLPTR)
-    , m_opPool(new iINCOperationPool(128))
+    , m_opPool(new iINCOperationPool(128, this))
 {
     IX_ASSERT(device != IX_NULLPTR);
 
@@ -78,13 +77,11 @@ iINCProtocol::~iINCProtocol()
             op->cancel();
         }
 
-        if (m_memExport && 0 != op->m_blockID)
-            m_memExport->processRelease(op->m_blockID);
-
         op->deref();
     }
 
     // Clean up shared memory resources
+    m_opPool->m_protocol = IX_NULLPTR;
     if (m_memExport) {
         delete m_memExport;
         m_memExport = IX_NULLPTR;
@@ -109,20 +106,29 @@ xuint32 iINCProtocol::nextSequence()
 void iINCProtocol::operationNotifier(iINCOperation* op, bool deleter, void* userData)
 {
     iINCOperationPool* pool = static_cast<iINCOperationPool*>(userData);
-    if (!deleter) {
-        // TODO: timeout handling can be added here
-        return;
+
+    // Free the SHM lease when the op first reaches a terminal state or is deleted.
+    if (op->m_blockID != 0 && pool->m_protocol && pool->m_protocol->m_memExport) {
+        pool->m_protocol->m_memExport->processRelease(op->m_blockID);
+        op->m_blockID = 0;
     }
+
+    if (!deleter) return; // timeout or cancel, but not deletion
 
     op->~iINCOperation();
 
     if(!pool->m_list.push(op))
         ::operator delete(op);
-    
+
     pool->deref();
 }
 
 iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& msg)
+{
+    return sendMessageWithBlock(msg, 0);
+}
+
+iSharedDataPointer<iINCOperation> iINCProtocol::sendMessageWithBlock(const iINCMessage& msg, xuint32 blockId)
 {
     // Create operation for tracking this request
     iSharedDataPointer<iINCOperation> op;
@@ -139,6 +145,12 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& m
 
         op = new (tmpOp) iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, m_opPool.data());
     } while(false);
+
+    if (op) {
+        op->m_blockID = blockId;
+    } else if (blockId != 0 && m_memExport) {
+        m_memExport->processRelease(blockId);
+    }
 
     if (!msg.isValid()) {
         ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
@@ -232,13 +244,8 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         msg.setFlags(INC_MSG_FLAG_SHM_DATA);
         m_metrics.onShmHit();
         m_metrics.onBinaryFrameSent(data.size());
-        iSharedDataPointer<iINCOperation> op = sendMessage(msg);
-
-        // The op owns the lease until ACK/teardown; reclaim now if the send failed synchronously.
-        if (op && iINCOperation::STATE_FAILED != op->getState()) op->m_blockID = blockId;
-        else m_memExport->processRelease(blockId);
-
-        return op;
+        // Lease freed when the op reaches a terminal state; SHM sends must not be given a timeout.
+        return sendMessageWithBlock(msg, blockId);
     } while (false);
 
     // Fallback to data copy using type-safe API
@@ -266,11 +273,8 @@ void iINCProtocol::releaseOperation(iINCOperation* op)
     OperationsMap::iterator it = m_operations.find(op->sequenceNumber());
     if (it == m_operations.end() || it->second != op) return;
 
-    // A timeout/cancel only ends the application operation. The peer may still
-    // be reading the shared block, so keep the map reference and export lease
-    // until its matching ACK arrives or connection teardown revokes all leases.
-    if (0 != op->m_blockID) return;
-
+    // Terminal operations have already released their SHM lease from
+    // operationNotifier(), so only the protocol's tracking reference remains.
     m_operations.erase(it);
     op->deref();
 }
@@ -338,10 +342,6 @@ void iINCProtocol::onMessageReceived(const iINCMessage& msg)
             iINCOperation* op = it->second;
             m_operations.erase(it);
 
-            // A matching ACK ends the peer's shared-memory lease.
-            if (msg.type() == INC_MSG_BINARY_DATA_ACK && m_memExport && 0 != op->m_blockID)
-                m_memExport->processRelease(op->m_blockID);
-
             // Complete the operation
             op->setResult(INC_OK, msg.payload().data());
             m_metrics.onOperationCompleted();
@@ -379,11 +379,6 @@ void iINCProtocol::cancelAllOperations(int errorCode)
         OperationsMap::iterator it = m_operations.begin();
         iINCOperation* op = it->second;
         m_operations.erase(it);
-
-        // The connection is closing, so the peer can no longer retain a
-        // valid lease on an exported block.
-        if (m_memExport && 0 != op->m_blockID)
-            m_memExport->processRelease(op->m_blockID);
 
         op->setResult(errorCode, iByteArray());
         op->deref();

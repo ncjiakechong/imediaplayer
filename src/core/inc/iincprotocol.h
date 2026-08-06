@@ -105,6 +105,7 @@ private:
     void onMessageReceived(const iINCMessage& msg);
     void onReadyWrite();
     void onDeviceConnected();  // Handle device connected signal
+    iSharedDataPointer<iINCOperation> sendMessageWithBlock(const iINCMessage& msg, xuint32 blockId);
     void sendMessageImpl(iINCMessage msg, iINCOperation* op);
 
     /// Process received binary data message
