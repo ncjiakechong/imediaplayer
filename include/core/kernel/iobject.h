@@ -315,6 +315,8 @@ public:
     virtual const iMetaObject *metaObject() const;
 
 protected:
+    static iMetaObject* registerMetaObject(xuint64 typeHash, const char* className, const iMetaObject* super);
+    static void unregisterMetaObject(xuint64 typeHash);
     void initProperty(iMetaObject* mobj) const;
     virtual bool event(iEvent *e);
 

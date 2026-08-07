@@ -2211,23 +2211,31 @@ private:
 
 } // namespace iShell
 
-#define IX_OBJECT(TYPE)                                                                                                    \
-    inline void _getThisTypeHelper() const;                                                                                \
-    typedef iShell::FunctionPointer< IX_TYPEOF(&TYPE::_getThisTypeHelper) >::Object IX_ThisType;                           \
-    typedef iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::metaObject) >::Object IX_BaseType;                            \
-    /* Since metaObject for ThisType will be declared later, the pointer to member function will be */                     \
-    /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */                       \
-public:                                                                                                                    \
-    virtual const iShell::iMetaObject *metaObject() const IX_OVERRIDE {                                                    \
-        static iShell::iMetaObject staticMetaObject = iShell::iMetaObject(# TYPE, IX_BaseType::metaObject());              \
-        if (!staticMetaObject.isPropertyReady()) {                                                                         \
-            iShell::PropertyMap ppt;                                                                                       \
-            staticMetaObject.setProperty(ppt);                                                                             \
-            IX_ThisType::initProperty(&staticMetaObject);                                                                  \
-            staticMetaObject.setProperty(ppt);                                                                             \
-        }                                                                                                                  \
-        return &staticMetaObject;                                                                                          \
-    }                                                                                                                      \
+#define IX_OBJECT(TYPE)                                                                                          \
+    inline void _getThisTypeHelper() const;                                                                      \
+    typedef iShell::FunctionPointer< IX_TYPEOF(&TYPE::_getThisTypeHelper) >::Object IX_ThisType;                 \
+    typedef iShell::FunctionPointer< IX_TYPEOF(&IX_ThisType::metaObject) >::Object IX_BaseType;                  \
+    /* Since metaObject for ThisType will be declared later, the pointer to member function will be */           \
+    /* pointing to the metaObject of the base class, so T will be deduced to the base class type. */             \
+public:                                                                                                          \
+    virtual const iShell::iMetaObject* metaObject() const IX_OVERRIDE {                                          \
+        struct Holder {                                                                                          \
+            Holder(xuint64 h, const char* n, const iShell::iMetaObject* s)                                       \
+                : hash(h), mo(iShell::iObject::registerMetaObject(h, n, s)) {}                                   \
+            ~Holder() { iShell::iObject::unregisterMetaObject(hash); }                                           \
+            xuint64 hash;                                                                                        \
+            iShell::iMetaObject* mo;                                                                             \
+        };                                                                                                       \
+        static Holder staticHolder(iShell::ix_type_hash<IX_ThisType>(), # TYPE, IX_BaseType::metaObject());      \
+        iShell::iMetaObject* mo = staticHolder.mo;                                                               \
+        if (!mo->isPropertyReady()) {                                                                            \
+            iShell::PropertyMap ppt;                                                                             \
+            mo->setProperty(ppt);                                                                                \
+            IX_ThisType::initProperty(mo);                                                                       \
+            mo->setProperty(ppt);                                                                                \
+        }                                                                                                        \
+        return mo;                                                                                               \
+    }                                                                                                            \
 private:
 
 #define IREAD iShell::_iProperty::E_READ, &IX_ThisType::

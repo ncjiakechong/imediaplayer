@@ -22,6 +22,7 @@
 #include "core/kernel/ieventdispatcher.h"
 #include "thread/iorderedmutexlocker_p.h"
 #include "core/utils/ivarlengtharray.h"
+#include "core/global/iglobalstatic.h"
 #include "thread/ithread_p.h"
 #include "core/io/ilog.h"
 
@@ -916,18 +917,82 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         drainOrphaned(connectionLists);
 }
 
+struct iMetaObjectNode
+{
+    iMetaObjectNode(const char* className, const iMetaObject* super)
+        : mo(className, super), ref(0) {}
+    iMetaObject mo;
+    int ref; // live registrants (one per translation unit / library referencing the type)
+};
+
+#if __cplusplus >= 201103L
+typedef std::unordered_map<xuint64, iMetaObjectNode*> iMetaObjectMap;
+#else
+typedef std::map<xuint64, iMetaObjectNode*> iMetaObjectMap;
+#endif
+
+struct iMetaObjectRegistry
+{
+    iMutex         lock;
+    iMetaObjectMap map;
+
+    ~iMetaObjectRegistry() {
+        for (iMetaObjectMap::iterator it = map.begin(); it != map.end(); ++it)
+            delete it->second;
+    }
+};
+
+IX_GLOBAL_STATIC(iMetaObjectRegistry, _metaObjectRegistry)
+
+iMetaObject* iObject::registerMetaObject(xuint64 typeHash, const char* className, const iMetaObject* super)
+{
+    iScopedLock<iMutex> locker(_metaObjectRegistry->lock);
+    iMetaObjectNode*& node = _metaObjectRegistry->map[typeHash];
+    if (IX_NULLPTR == node)
+        node = new iMetaObjectNode(className, super);
+
+    ++node->ref;
+    return &node->mo;
+}
+
+void iObject::unregisterMetaObject(xuint64 typeHash)
+{
+    // The registry itself may already be gone during static teardown (order is unspecified).
+    if (_metaObjectRegistry.isDestroyed())
+        return;
+
+    iScopedLock<iMutex> locker(_metaObjectRegistry->lock);
+    iMetaObjectMap::iterator it = _metaObjectRegistry->map.find(typeHash);
+    if (it == _metaObjectRegistry->map.end())
+        return;
+
+    iMetaObjectNode* node = it->second;
+    if (0 == --node->ref) {
+        _metaObjectRegistry->map.erase(it);
+        delete node;
+    }
+}
+
 const iMetaObject* iObject::metaObject() const
 {
-    static iMetaObject staticMetaObject = iMetaObject("iObject", IX_NULLPTR);
-    if (!staticMetaObject.isPropertyReady()) {
+    // Register on first use; release when the last referencing TU/library is torn down.
+    struct Holder {
+        Holder(xuint64 h, const char* n, const iMetaObject* s) : hash(h), mo(registerMetaObject(h, n, s)) {}
+        ~Holder() { unregisterMetaObject(hash); }
+        xuint64 hash;
+        iMetaObject* mo;
+    };
+    static Holder staticHolder(ix_type_hash<iObject>(), "iObject", IX_NULLPTR);
+    iMetaObject* mo = staticHolder.mo;
+    if (!mo->isPropertyReady()) {
         PropertyMap ppt;
-        staticMetaObject.setProperty(ppt);
-        iObject::initProperty(&staticMetaObject);
+        mo->setProperty(ppt);
+        iObject::initProperty(mo);
         // protected for non-initProperty object
-        staticMetaObject.setProperty(ppt);
+        mo->setProperty(ppt);
     }
 
-    return &staticMetaObject;
+    return mo;
 }
 
 iVariant iObject::property(const char *name) const

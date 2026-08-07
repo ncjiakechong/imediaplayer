@@ -26,11 +26,11 @@ namespace iShell {
 typedef iBasicAtomicBitField<4096> iTypeIdContainer;
 #if __cplusplus >= 201103L
 typedef std::unordered_map< int, iVariant::iTypeHandler> iMetaTypeHandler;
-typedef std::unordered_map< iLatin1StringView, int, iKeyHashFunc > iTypeIdRegister;
+typedef std::unordered_map< xuint64, int > iTypeIdRegister;
 typedef std::unordered_map< std::pair<int, int>, const iAbstractConverterFunction*, iKeyHashFunc > iMetaTypeConverter;
 #else
 typedef std::map< int, iVariant::iTypeHandler> iMetaTypeHandler;
-typedef std::map< iLatin1StringView, int > iTypeIdRegister;
+typedef std::map< xuint64, int > iTypeIdRegister;
 typedef std::map< std::pair<int, int>, const iAbstractConverterFunction* > iMetaTypeConverter;
 #endif
 
@@ -65,13 +65,13 @@ iAbstractConverterFunction::~iAbstractConverterFunction()
 bool iAbstractConverterFunction::registerTo() const
 { return iVariant::registerConverterFunction(this, fromTypeId, toTypeId); }
 
-int iVariant::iRegisterMetaType(const char *type, const iTypeHandler& handler, int hint)
+int iVariant::iRegisterMetaType(xuint64 type, const iTypeHandler& handler, int hint)
 {
     bool needInitSystemConvert = !_iMetaTypeDef.exists();
 
     do {
         iScopedLock<iMutex> _lock(_iMetaTypeDef->_lock);
-        iTypeIdRegister::iterator it = _iMetaTypeDef->_typeIdRegister.find(iLatin1StringView(type));
+        iTypeIdRegister::iterator it = _iMetaTypeDef->_typeIdRegister.find(type);
         if (it != _iMetaTypeDef->_typeIdRegister.end())
             return it->second;
 
@@ -79,13 +79,13 @@ int iVariant::iRegisterMetaType(const char *type, const iTypeHandler& handler, i
             && (hint < iTypeIdContainer::NumBits)
             && _iMetaTypeDef->_typeIdContainer.allocateSpecific(hint)) {
             _iMetaTypeDef->_metaTypeHandler.insert(std::pair<int, iVariant::iTypeHandler>(hint, handler));
-            _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1StringView, int >(iLatin1StringView(type), hint));
+            _iMetaTypeDef->_typeIdRegister.insert(std::pair< xuint64, int >(type, hint));
             break;
         }
 
         hint = _iMetaTypeDef->_typeIdContainer.allocateNext();
         _iMetaTypeDef->_metaTypeHandler.insert(std::pair<int, iVariant::iTypeHandler>(hint, handler));
-        _iMetaTypeDef->_typeIdRegister.insert(std::pair< iLatin1StringView, int >(iLatin1StringView(type), hint));
+        _iMetaTypeDef->_typeIdRegister.insert(std::pair< xuint64, int >(type, hint));
     } while(false);
 
     if (needInitSystemConvert)

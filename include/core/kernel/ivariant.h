@@ -20,6 +20,16 @@
 
 namespace iShell {
 
+// 64-bit FNV-1a of the compiler's per-type function signature: a stable,
+// cross-shared-library, RTTI-free type key.
+IX_ALWAYS_INLINE xuint64 ix_fnv1a(const char* s) {
+    xuint64 h = 14695981039346656037ULL;
+    for (; *s; ++s) { h ^= static_cast<unsigned char>(*s); h *= 1099511628211ULL; }
+    return h;
+}
+template <typename T>
+IX_ALWAYS_INLINE xuint64 ix_type_hash() { return ix_fnv1a(IX_FUNC_INFO); }
+
 class iVariantComparisonHelper;
 
 struct IX_CORE_EXPORT iAbstractConverterFunction
@@ -138,7 +148,7 @@ public:
         handler.copyConstruct    = &_HandleHelper::copyConstruct;
         handler.defaultConstruct = &_HandleHelper::defaultConstruct;
         handler.destroy          = &_HandleHelper::destroy;
-        typeId = iRegisterMetaType(typeid(T).name(), handler, hint);
+        typeId = iRegisterMetaType(ix_type_hash<T>(), handler, hint);
         return typeId;
     }
 
@@ -229,7 +239,7 @@ private:
     // Destroy the SOO object currently in m_rawStore._buf (requires m_typeId < 0).
     void destroySooAt();
 
-    static int iRegisterMetaType(const char* type, const iTypeHandler& handler, int hint);
+    static int iRegisterMetaType(xuint64 type, const iTypeHandler& handler, int hint);
     static bool registerConverterFunction(const iAbstractConverterFunction *f, int from, int to);
     static void unregisterConverterFunction(int from, int to);
 
