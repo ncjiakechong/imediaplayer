@@ -315,8 +315,17 @@ public:
     virtual const iMetaObject *metaObject() const;
 
 protected:
-    static iMetaObject* registerMetaObject(xuint64 typeHash, const char* className, const iMetaObject* super);
-    static void unregisterMetaObject(xuint64 typeHash);
+    struct iMetaObjectHolder
+    {
+        iMetaObjectHolder(xuint64 typeHash, const char* className, const iMetaObject* super)
+            : hash(typeHash), mo(registerMetaObject(typeHash, className, super)) {}
+        ~iMetaObjectHolder() { unregisterMetaObject(hash); }
+
+        xuint64 hash;
+        iMetaObject* mo;
+        IX_DISABLE_COPY(iMetaObjectHolder)
+    };
+
     void initProperty(iMetaObject* mobj) const;
     virtual bool event(iEvent *e);
 
@@ -390,6 +399,9 @@ private:
     void reregisterTimers(void*);
 
     static bool invokeMethodImpl(const _iConnection& c, void* args);
+
+    static iMetaObject* registerMetaObject(xuint64 typeHash, const char* className, const iMetaObject* super);
+    static void unregisterMetaObject(xuint64 typeHash);
 
     uint m_wasDeleted : 1;
     uint m_isDeletingChildren : 1;

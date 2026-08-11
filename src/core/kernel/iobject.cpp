@@ -975,14 +975,7 @@ void iObject::unregisterMetaObject(xuint64 typeHash)
 
 const iMetaObject* iObject::metaObject() const
 {
-    // Register on first use; release when the last referencing TU/library is torn down.
-    struct Holder {
-        Holder(xuint64 h, const char* n, const iMetaObject* s) : hash(h), mo(registerMetaObject(h, n, s)) {}
-        ~Holder() { unregisterMetaObject(hash); }
-        xuint64 hash;
-        iMetaObject* mo;
-    };
-    static Holder staticHolder(ix_type_hash<iObject>(), "iObject", IX_NULLPTR);
+    static iMetaObjectHolder staticHolder(ix_type_hash<iObject>(), "iObject", IX_NULLPTR);
     iMetaObject* mo = staticHolder.mo;
     if (!mo->isPropertyReady()) {
         PropertyMap ppt;

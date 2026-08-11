@@ -12,7 +12,6 @@
 #ifndef IVARIANT_H
 #define IVARIANT_H
 
-#include <typeinfo>
 #include <core/global/imetaprogramming.h>
 #include <core/thread/iatomiccounter.h>
 #include <core/utils/ihashfunctions.h>
@@ -20,8 +19,7 @@
 
 namespace iShell {
 
-// 64-bit FNV-1a of the compiler's per-type function signature: a stable,
-// cross-shared-library, RTTI-free type key.
+// 64-bit FNV-1a of the compiler's per-type function signature: a stable, cross-shared-library, RTTI-free type key.
 IX_ALWAYS_INLINE xuint64 ix_fnv1a(const char* s) {
     xuint64 h = 14695981039346656037ULL;
     for (; *s; ++s) { h ^= static_cast<unsigned char>(*s); h *= 1099511628211ULL; }

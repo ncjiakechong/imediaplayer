@@ -84,7 +84,7 @@ public:
     explicit TestConnectionListener(UdpTestReceiver* r) : m_receiver(r) {}
     
     void onNewConnection(iINCDevice* device) {
-        m_device = dynamic_cast<iUDPClientDevice*>(device);
+        m_device = iobject_cast<iUDPClientDevice*>(device);
         m_connected = true;
         if (m_device && m_receiver) {
              iObject::connect(m_device, &iINCDevice::messageReceived, m_receiver, &UdpTestReceiver::onMessage);

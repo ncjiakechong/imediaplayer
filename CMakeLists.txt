@@ -7,6 +7,17 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# ---- RTTI ------------------------------------------------------------------
+# The framework is RTTI-free: iVariant / iMetaObject key on the compiler
+# function signature (IX_FUNC_INFO) instead of typeid, and iobject_cast replaces
+# dynamic_cast. Disable RTTI project-wide so it stays that way (RTTI must be
+# consistent across the whole cross-library inheritance hierarchy).
+if(MSVC)
+    add_compile_options(/GR-)
+else()
+    add_compile_options(-fno-rtti)
+endif()
+
 # Default to a Release build when no build type / multi-config generator is set.
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
