@@ -6,12 +6,15 @@
 
 #include <gtest/gtest.h>
 #include <core/kernel/iobject.h>
+#include <core/kernel/ievent.h>
 #include <core/kernel/ivariant.h>
 #include <core/kernel/icoreapplication.h>
 #include <core/thread/ithread.h>
 #include <core/utils/istring.h>
+#include <atomic>
 #include <thread>
 #include <chrono>
+#include <memory>
 
 using namespace iShell;
 
@@ -60,6 +63,30 @@ private:
     int m_value;
 };
 
+#define TEST_SPLIT_SIGNAL_LIST(X) \
+    X(0) X(1) X(2) X(3) X(4) X(5) X(6) X(7) X(8) X(9) \
+    X(10) X(11) X(12) X(13) X(14) X(15) X(16) X(17) X(18) X(19) \
+    X(20) X(21) X(22) X(23) X(24) X(25) X(26) X(27) X(28) X(29) \
+    X(30) X(31) X(32) X(33) X(34) X(35) X(36) X(37) X(38) X(39)
+#define TEST_SPLIT_SIGNAL(N) void signal##N() ISIGNAL(signal##N);
+#define TEST_SPLIT_SIGNAL_POINTER(N) &SplitOrderedEmitter::signal##N,
+class SplitOrderedEmitter : public iObject {
+    IX_OBJECT(SplitOrderedEmitter)
+public:
+    typedef void (SplitOrderedEmitter::*Signal)();
+    TEST_SPLIT_SIGNAL_LIST(TEST_SPLIT_SIGNAL)
+
+    static const Signal* allSignals(int& count)
+    {
+        static const Signal signals[] = { TEST_SPLIT_SIGNAL_LIST(TEST_SPLIT_SIGNAL_POINTER) };
+        count = static_cast<int>(sizeof(signals) / sizeof(signals[0]));
+        return signals;
+    }
+};
+#undef TEST_SPLIT_SIGNAL_POINTER
+#undef TEST_SPLIT_SIGNAL
+#undef TEST_SPLIT_SIGNAL_LIST
+
 // Helper class with slots
 class TestReceiver : public iObject {
     IX_OBJECT(TestReceiver)
@@ -94,6 +121,372 @@ public:
         propertyCallCount++;
     }
 };
+
+class AtomicReceiver : public iObject
+{
+public:
+    AtomicReceiver() : calls(0) {}
+    void onValue(int) { calls.fetch_add(1, std::memory_order_relaxed); }
+    void onNoParam() { calls.fetch_add(1, std::memory_order_relaxed); }
+    // Invoked on whichever thread currently owns this object, which is the only
+    // thread allowed to hand it back.
+    void moveBackTo(iThread* target) { moveToThread(target); }
+    std::atomic<int> calls;
+};
+
+struct ReconnectOnDestroy
+{
+    ReconnectOnDestroy(TestEmitter* emitter, TestReceiver* receiver, bool* reconnected)
+        : emitter(emitter), receiver(receiver), reconnected(reconnected) {}
+
+    ~ReconnectOnDestroy()
+    {
+        *reconnected = iObject::connect(emitter, &TestEmitter::valueChanged,
+                                        receiver, &TestReceiver::onValueChanged,
+                                        DirectConnection);
+    }
+
+    TestEmitter* emitter;
+    TestReceiver* receiver;
+    bool* reconnected;
+};
+
+class DestructionTrackedEvent : public iEvent
+{
+public:
+    explicit DestructionTrackedEvent(int* destroyed)
+        : iEvent(iEvent::User), destroyed(destroyed) {}
+    ~DestructionTrackedEvent() override { ++*destroyed; }
+
+private:
+    int* destroyed;
+};
+
+class ConstructorConnectedBase : public iObject
+{
+    IX_OBJECT(ConstructorConnectedBase)
+public:
+    ConstructorConnectedBase() : calls(0)
+    {
+        iObject::connect(this, &ConstructorConnectedBase::baseSignal,
+                         this, &ConstructorConnectedBase::onBaseSignal,
+                         DirectConnection);
+    }
+
+    void baseSignal() ISIGNAL(baseSignal);
+    void emitBaseSignal() { IEMIT baseSignal(); }
+    void onBaseSignal() { ++calls; }
+
+    int calls;
+};
+
+class ConstructorConnectedDerived : public ConstructorConnectedBase
+{
+    IX_OBJECT(ConstructorConnectedDerived)
+public:
+    void derivedSignal() ISIGNAL(derivedSignal);
+    void emitDerivedSignal() { IEMIT derivedSignal(); }
+};
+
+struct NonObjectBase
+{
+    virtual ~NonObjectBase() {}
+    int padding = 0;
+};
+
+class MultipleInheritanceEmitter : public NonObjectBase, public iObject
+{
+    IX_OBJECT(MultipleInheritanceEmitter)
+public:
+    void adjustedSignal(int value) ISIGNAL(adjustedSignal, value);
+    void emitAdjusted(int value) { IEMIT adjustedSignal(value); }
+};
+
+TEST_F(ObjectExtendedTest, ResolvesBaseSignalConnectedDuringConstruction)
+{
+    ConstructorConnectedDerived emitter;
+
+    emitter.emitBaseSignal();
+
+    EXPECT_EQ(emitter.calls, 1);
+}
+
+TEST_F(ObjectExtendedTest, ConcurrentConnectSameSignal)
+{
+    TestEmitter emitter;
+    enum { ThreadCount = 16 };
+    std::vector<TestReceiver*> receivers;
+    std::vector<int> connected(ThreadCount, 0);
+    std::vector<std::thread> threads;
+    std::atomic<int> ready(0);
+    std::atomic<bool> start(false);
+
+    for (int i = 0; i < ThreadCount; ++i)
+        receivers.push_back(new TestReceiver);
+
+    emitter.metaObject();
+    receivers[0]->metaObject();
+
+    for (int i = 0; i < ThreadCount; ++i) {
+        threads.push_back(std::thread([&, i]() {
+            ++ready;
+            while (!start.load())
+                std::this_thread::yield();
+            connected[i] = iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                             receivers[i], &TestReceiver::onValueChanged);
+        }));
+    }
+
+    while (ready.load() != ThreadCount)
+        std::this_thread::yield();
+    start.store(true);
+    for (size_t i = 0; i < threads.size(); ++i)
+        threads[i].join();
+
+    emitter.emitValue(73);
+    for (int i = 0; i < ThreadCount; ++i) {
+        EXPECT_TRUE(connected[i]);
+        EXPECT_EQ(receivers[i]->callCount, 1);
+        EXPECT_EQ(receivers[i]->lastValue, 73);
+        delete receivers[i];
+    }
+}
+
+TEST_F(ObjectExtendedTest, ConcurrentSignalTableGrowth)
+{
+    SplitOrderedEmitter emitter;
+    int signalCount = 0;
+    const SplitOrderedEmitter::Signal* signals = SplitOrderedEmitter::allSignals(signalCount);
+    std::vector<TestReceiver*> receivers;
+    std::vector<int> connected(signalCount, 0);
+    std::vector<std::thread> threads;
+    std::atomic<int> ready(0);
+    std::atomic<bool> start(false);
+
+    for (int i = 0; i < signalCount; ++i)
+        receivers.push_back(new TestReceiver);
+
+    emitter.metaObject();
+    receivers[0]->metaObject();
+
+    for (int i = 0; i < signalCount; ++i) {
+        threads.push_back(std::thread([&, i]() {
+            ++ready;
+            while (!start.load())
+                std::this_thread::yield();
+            connected[i] = iObject::connect(&emitter, signals[i], receivers[i],
+                                             &TestReceiver::onNoParam);
+        }));
+    }
+
+    while (ready.load() != signalCount)
+        std::this_thread::yield();
+    start.store(true);
+    for (size_t i = 0; i < threads.size(); ++i)
+        threads[i].join();
+
+    for (int i = 0; i < signalCount; ++i) {
+        EXPECT_TRUE(connected[i]);
+        (emitter.*signals[i])();
+        EXPECT_EQ(receivers[i]->callCount, 1);
+    }
+
+    for (int i = 0; i < signalCount; ++i)
+        delete receivers[i];
+}
+
+TEST_F(ObjectExtendedTest, ConcurrentDisconnectAllDuringSignalTableGrowth)
+{
+    SplitOrderedEmitter emitter;
+    int signalCount = 0;
+    const SplitOrderedEmitter::Signal* signals = SplitOrderedEmitter::allSignals(signalCount);
+    std::vector<TestReceiver*> receivers;
+    std::atomic<bool> start(false);
+
+    for (int i = 0; i < signalCount; ++i)
+        receivers.push_back(new TestReceiver);
+
+    std::thread connector([&]() {
+        while (!start.load())
+            std::this_thread::yield();
+        for (int i = 0; i < signalCount; ++i)
+            iObject::connect(&emitter, signals[i], receivers[i], &TestReceiver::onNoParam);
+    });
+
+    start.store(true);
+    for (int i = 0; i < signalCount; ++i)
+        iObject::disconnect(&emitter, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
+    connector.join();
+
+    iObject::disconnect(&emitter, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
+    for (int i = 0; i < signalCount; ++i) {
+        (emitter.*signals[i])();
+        EXPECT_EQ(receivers[i]->callCount, 0);
+        delete receivers[i];
+    }
+}
+
+TEST_F(ObjectExtendedTest, BaseAndDerivedSignalsRemainDistinct)
+{
+    TestEmitter emitter;
+    TestReceiver valueReceiver;
+    int objectNameNotifications = 0;
+
+    EXPECT_TRUE(iObject::connect(&emitter, &iObject::objectNameChanged,
+                                 &valueReceiver, [&](iString) { ++objectNameNotifications; }));
+    EXPECT_TRUE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                 &valueReceiver, &TestReceiver::onValueChanged));
+
+    emitter.setObjectName(iString("index-scope"));
+    emitter.emitValue(91);
+
+    EXPECT_EQ(objectNameNotifications, 1);
+    EXPECT_EQ(valueReceiver.callCount, 1);
+    EXPECT_EQ(valueReceiver.lastValue, 91);
+}
+
+TEST_F(ObjectExtendedTest, MultipleInheritanceSignalUsesFullPmfIdentity)
+{
+    MultipleInheritanceEmitter emitter;
+    TestReceiver receiver;
+
+    ASSERT_TRUE(iObject::connect(&emitter, &MultipleInheritanceEmitter::adjustedSignal,
+                                 &receiver, &TestReceiver::onValueChanged,
+                                 DirectConnection));
+    emitter.emitAdjusted(73);
+    EXPECT_EQ(receiver.lastValue, 73);
+    EXPECT_EQ(receiver.callCount, 1);
+
+    EXPECT_TRUE(iObject::disconnect(&emitter, &MultipleInheritanceEmitter::adjustedSignal,
+                                    &receiver, &TestReceiver::onValueChanged));
+    emitter.emitAdjusted(74);
+    EXPECT_EQ(receiver.callCount, 1);
+}
+
+TEST_F(ObjectExtendedTest, DeleteReceiverConnectedToBaseAndDerivedSignals)
+{
+    ConstructorConnectedDerived emitter;
+    AtomicReceiver* receiver = new AtomicReceiver;
+
+    ASSERT_TRUE(iObject::connect(&emitter, &ConstructorConnectedBase::baseSignal,
+                                 receiver, &AtomicReceiver::onNoParam, DirectConnection));
+    ASSERT_TRUE(iObject::connect(&emitter, &ConstructorConnectedDerived::derivedSignal,
+                                 receiver, &AtomicReceiver::onNoParam, DirectConnection));
+
+    delete receiver;
+
+    emitter.emitBaseSignal();
+    emitter.emitDerivedSignal();
+    EXPECT_EQ(emitter.calls, 1);
+}
+
+TEST_F(ObjectExtendedTest, ConcurrentEmitSameSender)
+{
+    TestEmitter emitter;
+    AtomicReceiver receiver;
+    enum { ThreadCount = 8, EmitsPerThread = 8 };
+    std::vector<std::thread> threads;
+    std::atomic<int> ready(0);
+    std::atomic<bool> start(false);
+
+    emitter.metaObject();
+    receiver.metaObject();
+
+    ASSERT_TRUE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                 &receiver, &AtomicReceiver::onValue, DirectConnection));
+
+    for (int i = 0; i < ThreadCount; ++i) {
+        threads.push_back(std::thread([&]() {
+            ++ready;
+            while (!start.load())
+                std::this_thread::yield();
+            for (int emit = 0; emit < EmitsPerThread; ++emit)
+                emitter.emitValue(emit);
+        }));
+    }
+
+    while (ready.load() != ThreadCount)
+        std::this_thread::yield();
+    start.store(true);
+    for (size_t i = 0; i < threads.size(); ++i)
+        threads[i].join();
+
+    EXPECT_EQ(receiver.calls.load(), ThreadCount * EmitsPerThread);
+}
+
+TEST_F(ObjectExtendedTest, ConcurrentEmitConnectDisconnect)
+{
+    TestEmitter emitter;
+    AtomicReceiver stableReceiver;
+    AtomicReceiver changingReceiver;
+    enum { EmitCount = 20000, MutationCount = 200 };
+    std::atomic<bool> start(false);
+
+    emitter.metaObject();
+    stableReceiver.metaObject();
+
+    ASSERT_TRUE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                 &stableReceiver, &AtomicReceiver::onValue, DirectConnection));
+
+    std::thread mutator([&]() {
+        while (!start.load())
+            std::this_thread::yield();
+        for (int i = 0; i < MutationCount; ++i) {
+            iObject::connect(&emitter, &TestEmitter::valueChanged,
+                             &changingReceiver, &AtomicReceiver::onValue, DirectConnection);
+            iObject::disconnect(&emitter, &TestEmitter::valueChanged,
+                                &changingReceiver, &AtomicReceiver::onValue);
+        }
+    });
+
+    start.store(true);
+    for (int i = 0; i < EmitCount; ++i)
+        emitter.emitValue(i);
+    mutator.join();
+
+    EXPECT_EQ(stableReceiver.calls.load(), EmitCount);
+    EXPECT_LE(changingReceiver.calls.load(), EmitCount);
+}
+
+TEST_F(ObjectExtendedTest, ConcurrentEmitPublishesSignalSnapshots)
+{
+    SplitOrderedEmitter emitter;
+    AtomicReceiver primaryReceiver;
+    int signalCount = 0;
+    const SplitOrderedEmitter::Signal* signals = SplitOrderedEmitter::allSignals(signalCount);
+    enum { EmitCount = 20000 };
+    std::vector<AtomicReceiver*> receivers;
+    std::atomic<bool> start(false);
+
+    emitter.metaObject();
+    primaryReceiver.metaObject();
+
+    ASSERT_TRUE(iObject::connect(&emitter, signals[0],
+                                 &primaryReceiver, &AtomicReceiver::onNoParam, DirectConnection));
+    for (int i = 1; i < signalCount; ++i)
+        receivers.push_back(new AtomicReceiver);
+
+    std::thread publisher([&]() {
+        while (!start.load())
+            std::this_thread::yield();
+        for (int i = 1; i < signalCount; ++i) {
+            iObject::connect(&emitter, signals[i], receivers[i - 1],
+                             &AtomicReceiver::onNoParam, DirectConnection);
+        }
+    });
+
+    start.store(true);
+    for (int i = 0; i < EmitCount; ++i)
+        (emitter.*signals[0])();
+    publisher.join();
+
+    EXPECT_EQ(primaryReceiver.calls.load(), EmitCount);
+    for (int i = 1; i < signalCount; ++i) {
+        (emitter.*signals[i])();
+        EXPECT_EQ(receivers[i - 1]->calls.load(), 1);
+        delete receivers[i - 1];
+    }
+}
 
 /**
  * Test: Basic signal-slot connection
@@ -399,6 +792,21 @@ TEST_F(ObjectExtendedTest, DeleteSenderWhileConnected) {
     EXPECT_EQ(receiver.lastValue, 50);
 }
 
+TEST_F(ObjectExtendedTest, DeleteSenderDuringEmission) {
+    TestEmitter* emitter = new TestEmitter();
+    TestReceiver receiver;
+    int trailingCalls = 0;
+
+    iObject::connect(emitter, &TestEmitter::valueChanged, &receiver,
+                     [emitter](int) { delete emitter; }, DirectConnection);
+    iObject::connect(emitter, &TestEmitter::valueChanged, &receiver,
+                     [&](int) { ++trailingCalls; }, DirectConnection);
+
+    emitter->emitValue(50);
+
+    EXPECT_EQ(trailingCalls, 0);
+}
+
 /**
  * Test: Delete receiver while connected
  */
@@ -526,6 +934,18 @@ TEST_F(ObjectExtendedTest, QueuedConnectionType) {
     EXPECT_TRUE(receivedValue == 0 || receivedValue == 999);
 }
 
+TEST_F(ObjectExtendedTest, InvokeMethodRejectsInvalidConnectionType) {
+    TestReceiver receiver;
+
+    EXPECT_FALSE(iObject::invokeMethod(&receiver, &TestReceiver::onNoParam,
+                                       ConnectionType(DirectConnection | QueuedConnection)));
+    EXPECT_FALSE(iObject::invokeMethod(&receiver, &TestReceiver::onNoParam,
+                                       ConnectionType(AutoConnection | QueuedConnection)));
+    EXPECT_FALSE(iObject::invokeMethod(&receiver, &TestReceiver::onNoParam,
+                                       ConnectionType(DirectConnection | UniqueConnection)));
+    EXPECT_EQ(receiver.callCount, 0);
+}
+
 /**
  * Test: Object className
  */
@@ -590,6 +1010,108 @@ TEST_F(ObjectExtendedTest, MoveToThread) {
 
     // Note: Actually moving to different thread requires thread creation
     // Just test the API exists
+}
+
+TEST_F(ObjectExtendedTest, AutoConnectionTracksReceiverThreadAfterMove) {
+    TestEmitter emitter;
+    AtomicReceiver* receiver = new AtomicReceiver;
+    ASSERT_TRUE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                 receiver, &AtomicReceiver::onValue,
+                                 AutoConnection));
+
+    iThread worker;
+    worker.start();
+    const bool moved = receiver->moveToThread(&worker);
+    EXPECT_TRUE(moved);
+
+    if (moved) {
+        emitter.emitValue(42);
+        for (int i = 0; i < 1000 && receiver->calls.load(std::memory_order_relaxed) == 0; ++i)
+            iThread::msleep(1);
+        EXPECT_EQ(receiver->calls.load(std::memory_order_relaxed), 1);
+
+        EXPECT_TRUE(iObject::invokeMethod(receiver, &AtomicReceiver::onValue, 43,
+                                          AutoConnection));
+        for (int i = 0; i < 1000 && receiver->calls.load(std::memory_order_relaxed) == 1; ++i)
+            iThread::msleep(1);
+        EXPECT_EQ(receiver->calls.load(std::memory_order_relaxed), 2);
+    }
+
+    worker.exit();
+    worker.wait();
+    if (moved)
+        EXPECT_TRUE(receiver->moveToThread(iThread::currentThread()));
+    delete receiver;
+}
+
+/**
+ * Test: emit concurrently with moveToThread migrating the receiver's subtree
+ */
+TEST_F(ObjectExtendedTest, ConcurrentEmitDuringMoveToThread) {
+    AtomicReceiver* receiver = new AtomicReceiver;
+    receiver->metaObject();
+    new iObject(receiver);  // give the migration a subtree to walk
+
+    iThread worker;
+    worker.start();
+    iThread* const mainThread = iThread::currentThread();
+
+    std::atomic<bool> stop(false);
+    std::atomic<bool> connected(false);
+    std::atomic<int> emitted(0);
+
+    // The sender is built on the emitting thread so only the receiver side is
+    // cross-thread; that is the affinity moveToThread has to stay consistent with.
+    std::thread emitterThread([&]() {
+        TestEmitter emitter;
+        emitter.metaObject();
+        if (!iObject::connect(&emitter, &TestEmitter::valueChanged,
+                              receiver, &AtomicReceiver::onValue, AutoConnection))
+            return;
+        connected.store(true);
+        while (!stop.load(std::memory_order_relaxed)) {
+            for (int i = 0; i < 32; ++i)
+                emitter.emitValue(i);
+            emitted.fetch_add(32, std::memory_order_relaxed);
+            iThread::msleep(1);
+        }
+    });
+
+    for (int spin = 0; spin < 2000 && !connected.load(); ++spin)
+        iThread::msleep(1);
+
+    bool migrationOk = connected.load();
+    for (int round = 0; round < 16 && migrationOk; ++round) {
+        migrationOk = receiver->moveToThread(&worker);
+        if (!migrationOk)
+            break;
+
+        iThread::msleep(2);
+        migrationOk = iObject::invokeMethod(receiver, &AtomicReceiver::moveBackTo,
+                                           mainThread, QueuedConnection);
+        if (!migrationOk)
+            break;
+
+        for (int spin = 0; spin < 2000 && receiver->thread() != mainThread; ++spin)
+            iThread::msleep(1);
+        migrationOk = (receiver->thread() == mainThread);
+        if (migrationOk)
+            iCoreApplication::sendPostedEvents(receiver);
+    }
+
+    stop.store(true);
+    emitterThread.join();
+    worker.exit();
+    worker.wait();
+    if (receiver->thread() == mainThread)
+        iCoreApplication::sendPostedEvents(receiver);
+
+    EXPECT_TRUE(migrationOk);
+    EXPECT_GT(emitted.load(), 0);
+    EXPECT_GT(receiver->calls.load(), 0);
+    EXPECT_LE(receiver->calls.load(), emitted.load());
+
+    delete receiver;
 }
 
 /**
@@ -675,6 +1197,10 @@ TEST_F(ObjectExtendedTest, ConnectionTypes) {
     TestEmitter emitter;
     TestReceiver receiver;
 
+    EXPECT_FALSE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                  &receiver, &TestReceiver::onValueChanged,
+                                  ConnectionType(AutoConnection | QueuedConnection)));
+
     // Test DirectConnection (explicit)
     bool connected = iObject::connect(&emitter, &TestEmitter::valueChanged,
                                      &receiver, &TestReceiver::onValueChanged,
@@ -720,6 +1246,11 @@ TEST_F(ObjectExtendedTest, UniqueConnection) {
     emitter.emitValue(77);
     EXPECT_EQ(receiver.lastValue, 77);
     EXPECT_EQ(receiver.callCount, 1);  // Should only be called once
+
+    auto lambda = [](int) {};
+    EXPECT_FALSE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                  &receiver, lambda,
+                                  ConnectionType(DirectConnection | UniqueConnection)));
 }
 
 /**
@@ -951,16 +1482,19 @@ TEST_F(ObjectExtendedTest, SignalDuringDestruction) {
     TestEmitter* emitter = new TestEmitter();
     TestReceiver receiver;
     int destroyedCount = 0;
+    int eventDestroyedCount = 0;
 
     // Connect to destroyed signal
     iObject::connect(emitter, &iObject::destroyed,
                     &receiver, [&](iObject* obj) {
         destroyedCount++;
         EXPECT_EQ(obj, emitter);
+        iCoreApplication::postEvent(obj, new DestructionTrackedEvent(&eventDestroyedCount));
     });
 
     delete emitter;
     EXPECT_EQ(destroyedCount, 1);
+    EXPECT_EQ(eventDestroyedCount, 1);
 }
 
 /**
@@ -1374,6 +1908,58 @@ TEST_F(ObjectExtendedTest, CleanOrphanedConnections) {
     EXPECT_EQ(receiver2->callCount, 2);  // receiver2 still works
 
     delete receiver2;
+}
+
+TEST_F(ObjectExtendedTest, ReceiverDestructionReclaimsOrphanImmediately) {
+    TestEmitter emitter;
+    TestReceiver* receiver = new TestReceiver;
+    int captureDestroyed = 0;
+    std::shared_ptr<int> capture(new int(1), [&](int* value) {
+        ++captureDestroyed;
+        delete value;
+    });
+
+    ASSERT_TRUE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                 receiver, [capture](int) {}, DirectConnection));
+    capture.reset();
+
+    delete receiver;
+    EXPECT_EQ(captureDestroyed, 1);
+}
+
+TEST_F(ObjectExtendedTest, OrphanDestructionCanReconnectToSender) {
+    TestEmitter emitter;
+    TestReceiver receiver;
+    bool reconnected = false;
+    std::shared_ptr<ReconnectOnDestroy> reconnect(
+            new ReconnectOnDestroy(&emitter, &receiver, &reconnected));
+
+    ASSERT_TRUE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                 &receiver, [reconnect](int) {}, DirectConnection));
+    reconnect.reset();
+
+    EXPECT_TRUE(iObject::disconnect(&emitter, &TestEmitter::valueChanged,
+                                    &receiver, IX_NULLPTR));
+    EXPECT_TRUE(reconnected);
+
+    emitter.emitValue(17);
+    EXPECT_EQ(receiver.lastValue, 17);
+    EXPECT_EQ(receiver.callCount, 1);
+}
+
+TEST_F(ObjectExtendedTest, SenderDestructionRejectsReconnectFromFunctor) {
+    TestEmitter* emitter = new TestEmitter;
+    TestReceiver receiver;
+    bool reconnected = true;
+    std::shared_ptr<ReconnectOnDestroy> reconnect(
+            new ReconnectOnDestroy(emitter, &receiver, &reconnected));
+
+    ASSERT_TRUE(iObject::connect(emitter, &TestEmitter::valueChanged,
+                                 &receiver, [reconnect](int) {}, DirectConnection));
+    reconnect.reset();
+
+    delete emitter;
+    EXPECT_FALSE(reconnected);
 }
 
 /**

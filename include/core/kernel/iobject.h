@@ -116,6 +116,9 @@ public:
         // Return type of the slot is not compatible with the return type of the signal.
         IX_COMPILER_VERIFY(IsFunctor || (is_convertible<typename SlotType::ReturnType, typename SignalType::ReturnType>::value) || (is_convertible<void, typename SlotType::ReturnType>::value));
 
+        if (IsFunctor && (type & UniqueConnection))
+            return false;
+
         _iConnectionHelper<Func1, Func2, IsFunctor> conn(sender, signal, true, receiver, slot, true, type);
         return connectImpl(conn);
     }
@@ -356,42 +359,26 @@ private:
         iObject *_sender;
     };
 
-    struct _iConnectionList
-    {
-        _iConnectionList() : first(IX_NULLPTR), last(IX_NULLPTR) {}
-        _iConnection *first;
-        _iConnection *last;
-    };
-
-    #if __cplusplus >= 201103L
-    typedef std::unordered_map<_iMemberFunction, _iConnectionList, iConKeyHashFunc> sender_map;
-    #else
-    typedef std::map<_iMemberFunction, _iConnectionList, iConKeyCompFunc> sender_map;
-    #endif
-
-    struct _iObjectConnectionList
-    {
-        iAtomicCounter<xint32> ref; //lifetime: owner baseline (1) + one per in-flight activation; the list is freed at 0
-        iAtomicCounter<xuint32> currentConnectionId; //monotonic id source; set to 0 by the destructor to stop emission
-        iAtomicPointer<_iConnection> orphaned; //head of the deferred-reclaim list: disconnected connections not yet freed
-        sender_map allsignals;
-
-        _iObjectConnectionList() : ref(1), currentConnectionId(0), orphaned(IX_NULLPTR) {}
-    };
+    struct _iObjectConnectionList;
 
     bool observePropertyImp(const char* name, _iConnection &conn);
     void emitImpl(const char* name, _iMemberFunction signal, void* args, void* ret);
     static bool connectImpl(const _iConnection& conn);
     static bool disconnectImpl(const _iConnection& conn);
 
-    void cleanConnectionLists();
-    bool disconnectHelper(const _iConnection& conn);
+    bool disconnectHelper(_iConnectionList* connectionList, const _iConnection& conn);
 
     // Splice c out of both its lists and move it onto connectionLists->orphaned for
     // deferred reclaim; drainOrphaned frees everything parked there once no
     // activation is walking the list.
-    static void removeConnectionFromLists(_iObjectConnectionList* connectionLists, _iConnection* c);
+    static void removeConnectionFromLists(_iObjectConnectionList* connectionLists, _iConnectionList* connectionList, _iConnection* c);
+    static void addOrphaned(_iObjectConnectionList* connectionLists, _iConnection* c);
+    static void deleteOrphaned(_iConnection* orphaned);
     static void drainOrphaned(_iObjectConnectionList* connectionLists);
+    static _iConnection* takeOrphaned(_iObjectConnectionList* connectionLists);
+    static void releaseConnectionData(_iObjectConnectionList* connectionLists);
+    static _iConnectionList* findConnectionList(_iObjectConnectionList* connectionLists, _iMemberFunction signal);
+    static _iConnectionList* ensureConnectionList(_iObjectConnectionList* connectionLists, _iMemberFunction signal);
 
     void setThreadData_helper(iThreadData *currentData, iThreadData *targetData);
     void moveToThread_helper();
@@ -420,7 +407,7 @@ private:
     iObjectList m_children;
 
     // linked list of connections connected to this object
-    _iObjectConnectionList* m_connectionLists;
+    iAtomicPointer<_iObjectConnectionList> m_connectionLists;
     _iConnection* m_senders;
     _iSender*  m_currentSender;
     iMutex     m_signalSlotLock;

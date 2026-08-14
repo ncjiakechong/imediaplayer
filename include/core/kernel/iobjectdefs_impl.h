@@ -888,6 +888,7 @@ struct FunctionPointer<Ret (Obj::*) (Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, A
 
 // template for NonMember function
 class iObject;
+struct _iConnectionList;
 template<typename Ret> struct FunctionPointer<Ret (*) (), false>
 {
     typedef iObject Object;
@@ -1806,20 +1807,20 @@ protected:
     // snapshots the highest id so connections made *during* the emission are
     // skipped this round, without depending on a mutable last-pointer. This is
     // the groundwork for releasing the signal/slot lock around slot dispatch.
-    xuint32 _id;
+    xuint64 _id;
     iAtomicCounter<xint32> _ref;
 
     // The next/prev pointers for the doubly-linked per-signal ConnectionList.
-    // _nextConnectionList is read without the lock by a lock-free emit, so it is
+    // _nextConnectionList is read without the lock during signal traversal, so it is
     // atomic; a disconnected node keeps it intact so an emit that is mid-traversal
     // can still advance past the node before it is reclaimed.
     iAtomicPointer<_iConnection> _nextConnectionList;
     _iConnection* _prevConnectionList;
-    // Intrusive singly-linked list of orphaned (disconnected but not yet freed)
-    // connections, rooted at _iObjectConnectionList::orphaned.
-    _iConnection* _nextInOrphanList;
-    // senders linked list
-    _iConnection* _next;
+    union {
+        // senders list while connected; orphan list after unlinking.
+        _iConnection* _next;
+        _iConnection* _nextInOrphanList;
+    };
     _iConnection** _prev;
 
     const iObject* _sender;
@@ -1837,16 +1838,6 @@ protected:
     _iConnection(const _iConnection&);
     _iConnection& operator=(const _iConnection&);
     friend class iObject;
-};
-
-struct iConKeyHashFunc
-{
-    size_t operator()(const _iMemberFunction& key) const;
-};
-
-struct iConKeyCompFunc
-{
-    bool operator()(const _iMemberFunction& a, const _iMemberFunction& b) const;
 };
 
 template <typename T, bool IsFunctor>
@@ -1914,7 +1905,9 @@ class _iConnectionHelper : public _iConnection
             {
             const _iConnectionHelper* _thisObj = static_cast<const _iConnectionHelper*>(_this);
             const int cap = (IX_NULLPTR != ret) ? *static_cast<int*>(ret) : 0;
-            if ((IX_NULLPTR != args) && (cap >= static_cast<int>(sizeof(_iConnectionHelper)))) {
+            if ((IX_NULLPTR != args)
+                && (cap >= static_cast<int>(sizeof(_iConnectionHelper)))
+                && ((reinterpret_cast<xuintptr>(args) % IX_ALIGNOF(_iConnectionHelper)) == 0)) {
                 _iConnectionHelper* r = new (args) _iConnectionHelper(*_thisObj);
                 r->_placementNew = true;
                 return r;
@@ -2207,6 +2200,8 @@ private:
     const char* m_className;
     const iMetaObject* m_superdata;
     PropertyMap m_property;
+
+    IX_DISABLE_COPY(iMetaObject)
 };
 
 } // namespace iShell
