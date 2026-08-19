@@ -60,11 +60,12 @@ public:
 
     // callable from any thread
     void push(iObject* receiver, iEvent* event, int priority);
+    void push(iEvent* events);
 
     // owner thread only
     void drain();
     void enqueue(iEvent* event);
-    void moveTo(iPostEventList* target);
+    iEvent* take(iObject* receiver);
 
     iterator begin() { return m_queued.begin(); }
     iterator end() { return m_queued.end(); }

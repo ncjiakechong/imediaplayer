@@ -498,13 +498,10 @@ bool iObject::moveToThread(iThread *targetThread)
     // keep currentData alive across the handover
     currentData->ref();
 
-    // Order matters. Draining first freezes everything already posted into the queued
-    // tier while the affinity is still ours, which is what keeps the hand-over in
-    // posting order. Republishing the whole subtree next means the target thread - woken
-    // by the very first push() below - never observes a half migrated tree.
+    // draining first freezes everything already posted into the queued tier while the
+    // affinity is still ours, so the per-object hand-over below keeps posting order
     currentData->postEventList.drain();
-    setThreadData_helper(targetData);
-    currentData->postEventList.moveTo(&targetData->postEventList);
+    setThreadData_helper(currentData, targetData);
 
     // now currentData can commit suicide if it wants to
     currentData->deref();
@@ -512,8 +509,15 @@ bool iObject::moveToThread(iThread *targetThread)
     return true;
 }
 
-void iObject::setThreadData_helper(iThreadData *targetData)
+void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *targetData)
 {
+    // this object's posted events leave the old queue before its affinity changes, and
+    // are republished after it: drain() routes by receiver affinity, so handing them
+    // over any earlier would bounce them straight back
+    iEvent* pending = IX_NULLPTR;
+    if (m_postedEvents)
+        pending = currentData->postEventList.take(this);
+
     if (IX_NULLPTR != m_currentSender) {
         m_currentSender->receiverDeleted();
         m_currentSender = IX_NULLPTR;
@@ -524,9 +528,11 @@ void iObject::setThreadData_helper(iThreadData *targetData)
     m_threadData->deref();
     m_threadData = targetData;
 
+    targetData->postEventList.push(pending);
+
     for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
         iObject *child = *it;
-        child->setThreadData_helper(targetData);
+        child->setThreadData_helper(currentData, targetData);
     }
 }
 

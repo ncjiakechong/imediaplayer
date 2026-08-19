@@ -382,7 +382,7 @@ private:
     static _iConnectionList* findConnectionList(_iObjectConnectionList* connectionLists, _iMemberFunction signal);
     static _iConnectionList* ensureConnectionList(_iObjectConnectionList* connectionLists, _iMemberFunction signal);
 
-    void setThreadData_helper(iThreadData *targetData);
+    void setThreadData_helper(iThreadData *currentData, iThreadData *targetData);
     void moveToThread_helper();
 
     void reregisterTimers(void*);

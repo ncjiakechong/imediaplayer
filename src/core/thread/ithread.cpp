@@ -92,6 +92,15 @@ void iPostEventList::push(iObject* receiver, iEvent* event, int priority)
     if (d) d->wakeUp();
 }
 
+void iPostEventList::push(iEvent* events)
+{
+    while (IX_NULLPTR != events) {
+        iEvent* et = events;
+        events = et->m_next;
+        push(et->m_receiver, et, et->m_priority);
+    }
+}
+
 void iPostEventList::drain()
 {
     iEvent* head = m_intake.load();
@@ -157,20 +166,24 @@ void iPostEventList::enqueue(iEvent* event)
     m_queued.insert(it, event);
 }
 
-void iPostEventList::moveTo(iPostEventList* target)
+iEvent* iPostEventList::take(iObject* receiver)
 {
-    // affinity is republished before this runs, so one pass catches the whole migrated
-    // subtree plus anything a stale producer already left behind for the target
+    iEvent* head = IX_NULLPTR;
+    iEvent** tail = &head;
+
     iterator it = m_queued.begin();
     while (it != m_queued.end()) {
         iEvent* event = *it;
-        iObject* receiver = event ? event->m_receiver : IX_NULLPTR;
-        if (IX_NULLPTR == receiver || receiver->m_threadData.load() != target->m_owner) {
+        if (IX_NULLPTR == event || event->m_receiver != receiver) {
             ++it;
             continue;
         }
 
-        target->push(receiver, event, event->m_priority);
+        // chained in queue order, so push() republishes them in posting order
+        event->m_next = IX_NULLPTR;
+        *tail = event;
+        tail = &event->m_next;
+
         if (recursion) {
             // an outer sendPostedEvents() still holds iterators into this list
             *it = IX_NULLPTR;
@@ -180,6 +193,8 @@ void iPostEventList::moveTo(iPostEventList* target)
 
         it = m_queued.erase(it);
     }
+
+    return head;
 }
 
 bool iThreadData::deref()
