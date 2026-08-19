@@ -34,12 +34,12 @@ namespace iShell {
 struct _iConnectionList
 {
     _iConnectionList(xuint64 signalHash, _iMemberFunction member)
-        : hash(signalHash), signal(member), first(IX_NULLPTR), last(IX_NULLPTR) {}
+        : hash(signalHash), last(IX_NULLPTR), signal(member), first(IX_NULLPTR) {}
 
     xuint64 hash;
+    _iConnection* last;
     _iMemberFunction signal;
     iAtomicPointer<_iConnection> first;
-    _iConnection* last;
 
     IX_DISABLE_COPY(_iConnectionList)
 };
@@ -47,14 +47,12 @@ struct _iConnectionList
 struct _iSignalBucketTable
 {
     // Slots live in the same allocation, right behind the header.
-    static _iSignalBucketTable* create(int bucketCount, _iSignalBucketTable* previousTable)
-    {
+    static _iSignalBucketTable* create(int bucketCount, _iSignalBucketTable* previousTable) {
         void* mem = ::operator new(sizeof(_iSignalBucketTable) + bucketCount * sizeof(_iConnectionList*));
         return new (mem) _iSignalBucketTable(bucketCount, previousTable);
     }
 
-    static void destroyChain(_iSignalBucketTable* table)
-    {
+    static void destroyChain(_iSignalBucketTable* table) {
         while (IX_NULLPTR != table) {
             _iSignalBucketTable* previousTable = table->previous;
             ::operator delete(table);
@@ -70,8 +68,7 @@ struct _iSignalBucketTable
 
 private:
     _iSignalBucketTable(int bucketCount, _iSignalBucketTable* previousTable)
-        : size(bucketCount), previous(previousTable)
-    {
+        : size(bucketCount), previous(previousTable) {
         _iConnectionList** slots = buckets();
         for (int bucket = 0; bucket < bucketCount; ++bucket)
             slots[bucket] = IX_NULLPTR;
@@ -87,8 +84,8 @@ struct iObject::_iObjectConnectionList
 
     xuint32 signalCount;
     iAtomicCounter<xint32> ref;
-    iAtomicCounter<xuint64> currentConnectionId;
     iAtomicPointer<_iConnection> orphaned;
+    iAtomicCounter<xuint64> currentConnectionId;
     iAtomicPointer<_iSignalBucketTable> signalBuckets;
 
     IX_DISABLE_COPY(_iObjectConnectionList)
@@ -101,6 +98,7 @@ public:
     ~iMetaCallEvent();
 
     void* arg(_iConnection* conn, void* arg, _iConnection::ArgumentWrapper wrapper, _iConnection::ArgumentDeleter deleter, bool userWrapper = true);
+
     iSemaphore* semaphore;
     _iConnection* connection;
     _iConnection::ArgumentWrapper argWrapper;
@@ -151,12 +149,12 @@ void* iMetaCallEvent::arg(_iConnection* conn, void* arg, _iConnection::ArgumentW
 
 static xuint64 hashSignal(_iMemberFunction signal)
 {
-    xuint64 words[2] = { 0, 0 };
-    IX_COMPILER_VERIFY(sizeof(signal) <= sizeof(words));
-    std::memcpy(words, &signal, sizeof(signal));
+    xuint64 _words[2] = { 0, 0 };
+    IX_COMPILER_VERIFY(sizeof(signal) <= sizeof(_words));
+    std::memcpy(_words, &signal, sizeof(signal));
 
-    xuint64 hash = words[0];
-    if (words[1]) hash ^= words[1] + 0x9e3779b97f4a7c15ULL + (hash << 6) + (hash >> 2);
+    xuint64 hash = _words[0];
+    if (_words[1]) hash ^= _words[1] + 0x9e3779b97f4a7c15ULL + (hash << 6) + (hash >> 2);
 
     hash ^= hash >> 33;
     hash *= 0xff51afd7ed558ccdULL;
@@ -170,15 +168,13 @@ iMetaObject::iMetaObject(const char* className, const iMetaObject* super)
     , m_propertyInited(false)
     , m_className(className)
     , m_superdata(super)
-{
-}
+{}
 
 bool iMetaObject::inherits(const iMetaObject *metaObject) const
 {
     const iMetaObject *m = this;
     do {
-        if (metaObject == m)
-            return true;
+        if (metaObject == m) return true;
     } while ((m = m->m_superdata));
     return false;
 }
@@ -216,9 +212,10 @@ const _iProperty* iMetaObject::property(const iLatin1StringView& name) const
 }
 
 iObject::iObject(iObject *parent)
-    :m_wasDeleted(false)
+    : m_wasDeleted(false)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
+    , m_quitCalled(false)
     , m_blockSig(false)
     , m_unused(0)
     , m_postedEvents(0)
@@ -238,6 +235,7 @@ iObject::iObject(const iString& name, iObject* parent)
     : m_wasDeleted(false)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
+    , m_quitCalled(false)
     , m_blockSig(false)
     , m_unused(0)
     , m_postedEvents(0)
@@ -497,15 +495,16 @@ bool iObject::moveToThread(iThread *targetThread)
     // make sure nobody adds/removes connections to this object while we're moving it
     iScopedLock<iMutex> l(m_signalSlotLock);
 
-    iOrderedMutexLocker locker(&currentData->postEventList.mutex, &targetData->postEventList.mutex);
-
-    // keep currentData alive (since we've got it locked)
+    // keep currentData alive across the handover
     currentData->ref();
 
-    // move the object
-    setThreadData_helper(currentData, targetData);
-
-    locker.unlock();
+    // Order matters. Draining first freezes everything already posted into the queued
+    // tier while the affinity is still ours, which is what keeps the hand-over in
+    // posting order. Republishing the whole subtree next means the target thread - woken
+    // by the very first push() below - never observes a half migrated tree.
+    currentData->postEventList.drain();
+    setThreadData_helper(targetData);
+    currentData->postEventList.moveTo(&targetData->postEventList);
 
     // now currentData can commit suicide if it wants to
     currentData->deref();
@@ -513,35 +512,8 @@ bool iObject::moveToThread(iThread *targetThread)
     return true;
 }
 
-void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *targetData)
+void iObject::setThreadData_helper(iThreadData *targetData)
 {
-    // move posted events
-    int eventsMoved = 0;
-    std::list<iPostEvent>::iterator it = currentData->postEventList.begin();
-    while (it != currentData->postEventList.end()) {
-        const iPostEvent& pe = *it;
-        if (IX_NULLPTR == pe.event) {
-            ++it;
-            continue;
-        }
-        if (pe.receiver == this) {
-            targetData->postEventList.addEvent(pe);
-            ++eventsMoved;
-            it = currentData->postEventList.erase(it);
-            continue;
-        }
-
-        ++it;
-    }
-
-    // need weak target
-    // Cache dispatcher pointer to avoid race condition with double load()
-    iEventDispatcher* dispatcher = targetData->dispatcher.load();
-    if (eventsMoved > 0 && dispatcher) {
-        targetData->canWait = 0;
-        dispatcher->wakeUp();
-    }
-
     if (IX_NULLPTR != m_currentSender) {
         m_currentSender->receiverDeleted();
         m_currentSender = IX_NULLPTR;
@@ -554,7 +526,7 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
 
     for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
         iObject *child = *it;
-        child->setThreadData_helper(currentData, targetData);
+        child->setThreadData_helper(targetData);
     }
 }
 
@@ -716,7 +688,7 @@ void iObject::addOrphaned(_iObjectConnectionList* connectionLists, _iConnection*
 }
 
 iObject::_iObjectConnectionList::_iObjectConnectionList()
-    : signalCount(0), ref(1), currentConnectionId(0), orphaned(IX_NULLPTR), signalBuckets(IX_NULLPTR)
+    : signalCount(0), ref(1), orphaned(IX_NULLPTR), currentConnectionId(0), signalBuckets(IX_NULLPTR)
 {}
 
 iObject::_iObjectConnectionList::~_iObjectConnectionList()

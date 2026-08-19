@@ -184,7 +184,7 @@ void iINCServer::broadcastEvent(const iStringView& eventName, xuint16 version, c
 
     // Dispatch to IO thread via any listen device (all share the same IO thread).
     // handleCustomer runs via DirectConnection on the device's thread.
-    invokeMethod(m_listenDevices[0], &iINCDevice::customer, reinterpret_cast<xintptr>(action));
+    IEMIT invokeMethod(m_listenDevices[0], &iINCDevice::customer, reinterpret_cast<xintptr>(action));
 }
 
 void iINCServer::handleCustomer(xintptr action)
@@ -257,7 +257,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     // Store connection
     m_connections[connId] = conn;
 
-    IEMIT clientConnected(conn);
+    IEMIT invokeMethod(this, &iINCServer::clientConnected, conn);
     ilog_info("[", objectName(), "] New client connected, ID:", connId, " from [", incDevice->peerAddress(), "]");
 }
 
@@ -294,7 +294,7 @@ void iINCServer::onClientDisconnected(iINCConnection* conn)
     ConnectionMap::iterator it = m_connections.find(conn->connectionId());
     if (it != m_connections.end()) {
         m_connections.erase(it);
-        iObject::invokeMethod(this, &iINCServer::clientDisconnected, conn);
+        IEMIT iObject::invokeMethod(this, &iINCServer::clientDisconnected, conn);
     }
 
     ilog_info("[", conn->peerName(), "] Client disconnected, ID:", conn->connectionId());
@@ -448,7 +448,7 @@ void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
 
     ilog_info("[", conn->peerName(), "][", channelId, "][", msg.sequenceNumber(), "] Allocated stream \"", name, "\", mode=", mode);
     conn->sendMessage(reply);
-    iObject::invokeMethod(this, &iINCServer::streamOpened, conn, channelId, name, mode);
+    IEMIT iObject::invokeMethod(this, &iINCServer::streamOpened, conn, channelId, name, mode);
 }
 
 void iINCServer::handleStreamClose(iINCConnection* conn, const iINCMessage& msg)

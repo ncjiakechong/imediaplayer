@@ -11,6 +11,8 @@
 #include "core/thread/ithread.h"
 #include "core/kernel/ieventloop.h"
 #include "core/kernel/ievent.h"
+#include "core/kernel/iobject.h"
+#include "core/kernel/ieventdispatcher.h"
 #include "core/io/ilog.h"
 #include "thread/ithread_p.h"
 
@@ -24,6 +26,7 @@ iThreadData::iThreadData(int initialRefCount)
     , requiresCoreApplication(true)
     , loopLevel(0)
     , scopeLevel(0)
+    , postEventList(this)
     , canWait(1)
     , m_ref(initialRefCount)
 {}
@@ -37,14 +40,145 @@ iThreadData::~iThreadData()
     thread = IX_NULLPTR;
     delete t;
 
-    for (std::list<iPostEvent>::iterator it = postEventList.begin();
-         it != postEventList.end();
-         ++it) {
-        iPostEvent& pe = *it;
-        iEvent* event = pe.event;
-        pe.event = IX_NULLPTR;
-        if (event && pe.receiver) --pe.receiver->m_postedEvents;
+    // whatever is still queued is disposed of by ~iPostEventList
+}
+
+iPostEventList::iPostEventList(iThreadData* owner)
+    : recursion(0)
+    , startOffset(0)
+    , insertionOffset(0)
+    , m_owner(owner)
+{}
+
+iPostEventList::~iPostEventList()
+{
+    drain();
+    for (iterator it = m_queued.begin(); it != m_queued.end(); ++it) {
+        iEvent* event = *it;
+        *it = IX_NULLPTR;
+        if (IX_NULLPTR == event)
+            continue;
+
+        // the receiver may have moved on before this queue died; hand the event over
+        iObject* receiver = event->m_receiver;
+        iThreadData* target = receiver ? receiver->m_threadData.load() : IX_NULLPTR;
+        if (IX_NULLPTR != target && &target->postEventList != this) {
+            target->postEventList.push(receiver, event, event->m_priority);
+            continue;
+        }
+
+        if (receiver) --receiver->m_postedEvents;
         delete event;
+    }
+}
+
+void iPostEventList::push(iObject* receiver, iEvent* event, int priority)
+{
+    event->m_receiver = receiver;
+    event->m_priority = priority;
+
+    iEvent* head = IX_NULLPTR;
+    do {
+        head = m_intake.load();
+        event->m_next = head;
+    } while (!m_intake.testAndSet(head, event));
+
+    while (!m_owner->canWait.testAndSet(1, 0)) {
+        if (0 == m_owner->canWait.value())
+            return;
+    }
+
+    iEventDispatcher* d = m_owner->dispatcher.load();
+    if (d) d->wakeUp();
+}
+
+void iPostEventList::drain()
+{
+    iEvent* head = m_intake.load();
+    while (IX_NULLPTR != head && !m_intake.testAndSet(head, IX_NULLPTR))
+        head = m_intake.load();
+
+    if (IX_NULLPTR == head)
+        return;
+
+    // producers prepend, so reverse the batch in place to restore posting order
+    iEvent* ordered = IX_NULLPTR;
+    while (IX_NULLPTR != head) {
+        iEvent* next = head->m_next;
+        head->m_next = ordered;
+        ordered = head;
+        head = next;
+    }
+
+    while (IX_NULLPTR != ordered) {
+        iEvent* event = ordered;
+        ordered = event->m_next;
+        event->m_next = IX_NULLPTR;
+
+        iObject* receiver = event->m_receiver;
+        iThreadData* target = receiver ? receiver->m_threadData.load() : IX_NULLPTR;
+
+        if (IX_NULLPTR == target) {
+            // defensive: no current code path clears m_threadData while events are queued
+            event->m_posted = false;
+            delete event;
+            continue;
+        }
+
+        if (&target->postEventList != this) {
+            // the producer picked this queue just before the receiver moved threads
+            target->postEventList.push(receiver, event, event->m_priority);
+            continue;
+        }
+
+        enqueue(event);
+    }
+}
+
+void iPostEventList::enqueue(iEvent* event)
+{
+    const int priority = event->m_priority;
+    if (m_queued.empty() || (insertionOffset >= size())
+        || (IX_NULLPTR != m_queued.back() && m_queued.back()->m_priority >= priority)) {
+        // optimization: we can simply append if the last event in
+        // the queue has higher or equal priority
+        m_queued.push_back(event);
+        return;
+    }
+
+    // insert event in descending priority order, after every entry of equal or higher
+    // priority, never before insertionOffset. Tombstones carry no priority, so they are
+    // simply skipped.
+    iterator it = m_queued.begin();
+    std::advance(it, insertionOffset);
+    while (it != m_queued.end() && (IX_NULLPTR == *it || (*it)->m_priority >= priority))
+        ++it;
+
+    m_queued.insert(it, event);
+}
+
+void iPostEventList::moveTo(iPostEventList* target)
+{
+    // affinity is republished before this runs, so one pass catches the whole migrated
+    // subtree plus anything a stale producer already left behind for the target
+    iterator it = m_queued.begin();
+    while (it != m_queued.end()) {
+        iEvent* event = *it;
+        iObject* receiver = event ? event->m_receiver : IX_NULLPTR;
+        if (IX_NULLPTR == receiver || receiver->m_threadData.load() != target->m_owner) {
+            ++it;
+            continue;
+        }
+
+        target->push(receiver, event, event->m_priority);
+        if (recursion) {
+            // an outer sendPostedEvents() still holds iterators into this list
+            *it = IX_NULLPTR;
+            ++it;
+            continue;
+        }
+
+        it = m_queued.erase(it);
     }
 }
 
@@ -215,7 +349,7 @@ void iThread::exit(int retCode)
     m_returnCode = retCode;
     m_data->quitNow = true;
 
-    iMutex::ScopedLock  _lockData(m_data->postEventList.mutex);
+    iMutex::ScopedLock  _lockData(m_data->loopLock);
     for (std::list<iEventLoop *>::iterator it = m_data->eventLoops.begin(); it != m_data->eventLoops.end(); ++it) {
         iEventLoop* eventLoop = *it;
         eventLoop->exit(retCode);

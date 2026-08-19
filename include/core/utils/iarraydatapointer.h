@@ -385,12 +385,13 @@ public:
         IX_ASSERT(where >= this->begin() && where <= this->end());
         IX_ASSERT(size_t(this->freeSpaceAtEnd()) >= n);
 
+        const size_t count = n;
         ::memmove(static_cast<void *>(where + n), static_cast<void *>(where),
                   (static_cast<const T*>(this->end()) - where) * sizeof(T));
         this->size += xsizetype(n); // PODs can't throw on copy
         while (n--)
             *where++ = t;
-        return where - n;
+        return where - count;
     }
 
     iterator erase(T *b, T *e) {

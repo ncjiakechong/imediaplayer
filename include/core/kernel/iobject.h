@@ -58,6 +58,8 @@ public:
     iObject(iObject* parent = IX_NULLPTR);
     iObject(const iString& name, iObject* parent = IX_NULLPTR);
 
+    /// Destroy in the object's affinity thread; use deleteLater() from other threads.
+    /// Wrong-thread destruction cannot safely remove queued events and leaves them pending.
     virtual ~iObject();
 
     void deleteLater();
@@ -380,7 +382,7 @@ private:
     static _iConnectionList* findConnectionList(_iObjectConnectionList* connectionLists, _iMemberFunction signal);
     static _iConnectionList* ensureConnectionList(_iObjectConnectionList* connectionLists, _iMemberFunction signal);
 
-    void setThreadData_helper(iThreadData *currentData, iThreadData *targetData);
+    void setThreadData_helper(iThreadData *targetData);
     void moveToThread_helper();
 
     void reregisterTimers(void*);
@@ -393,9 +395,11 @@ private:
     uint m_wasDeleted : 1;
     uint m_isDeletingChildren : 1;
     uint m_deleteLaterCalled : 1;
+    uint m_quitCalled : 1;
     uint m_blockSig : 1;
-    uint m_unused : 28;
-    int  m_postedEvents;
+    uint m_unused : 27;
+
+    iAtomicCounter<int> m_postedEvents;
 
     iString     m_objName;
 
@@ -415,7 +419,7 @@ private:
     iVarLengthArray<int, 2> m_runningTimers;
 
     IX_DISABLE_COPY(iObject)
-    friend class iThreadData;
+    friend class iPostEventList;
     friend class iCoreApplication;
     friend struct isharedpointer::ExternalRefCountData;
 };

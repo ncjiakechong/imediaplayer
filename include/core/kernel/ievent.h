@@ -14,6 +14,8 @@
 
 namespace iShell {
 
+class iObject;
+
 class IX_CORE_EXPORT iEvent
 {
 public:
@@ -52,6 +54,11 @@ protected:
     unsigned short m_accept : 1;
     unsigned short m_reserved : 14;
 
+    int      m_priority;
+    iObject* m_receiver;
+    iEvent*  m_next;
+
+    friend class iPostEventList;
     friend class iCoreApplication;
 };
 

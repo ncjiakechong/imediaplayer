@@ -200,6 +200,8 @@ void iCoreApplication::exit(int retCode)
 
     iThreadData *data = s_self->m_threadData;
     data->quitNow = true;
+
+    iMutex::ScopedLock _lock(data->loopLock);
     for (std::list<iEventLoop *>::iterator it = data->eventLoops.begin();
          it != data->eventLoops.end(); ++it) {
         iEventLoop* eventLoop = *it;
@@ -255,32 +257,16 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
         return;
     }
 
-    // lock the post event mutex
-    data->postEventList.mutex.lock();
-
-    // if object has moved to another thread, follow it
-    while (data != receiver->m_threadData.load()) {
-        data->postEventList.mutex.unlock();
-
-        data = receiver->m_threadData.load();
-        if (!data) {
-            // posting during destruction? just delete the event to prevent a leak
-            delete event;
-            return;
-        }
-
-        data->postEventList.mutex.lock();
-    }
-
-    // if this is one of the compressible events, do compression
-    if (receiver->m_postedEvents
-        && s_self && s_self->compressEvent(event, receiver, &data->postEventList)) {
-        data->postEventList.mutex.unlock();
+    // Screen as early as possible, but compressEvent() has to scan the queued tier and
+    // only the owner thread may read it, so a cross-thread post is screened by drain()
+    // instead. Catching it here is what keeps an update()-style flood out of the queue.
+    // The cheap tests come first: the thread lookup is not worth paying for a receiver
+    // that has nothing pending.
+    if ((IX_NULLPTR != s_self)
+        && (receiver->m_postedEvents.value() > 0)
+        && s_self->compressEvent(event, receiver)) {
         return;
     }
-
-    if (event->type() == iEvent::DeferredDelete)
-        receiver->m_deleteLaterCalled = true;
 
     if (event->type() == iEvent::DeferredDelete && data == iThreadData::current()) {
         // remember the current running eventloop for DeferredDelete
@@ -307,22 +293,20 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
         deleteEvent->sl = scopeLevel;
     }
 
-    iPostEvent pe(receiver, event, priority);
-    bool needWake = data->postEventList.empty();
-    data->postEventList.addEvent(pe);
     event->m_posted = true;
     ++receiver->m_postedEvents;
-    data->canWait = 0;
-    data->postEventList.mutex.unlock();
-
-    if (needWake && data->dispatcher.load())
-        data->dispatcher.load()->wakeUp();
+    data->postEventList.push(receiver, event, priority);
 }
 
 void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
 {
     iThreadData *data = receiver ? receiver->m_threadData : iThreadData::current();
-    iScopedLock<iMutex> locker(data->postEventList.mutex);
+    if (data != iThreadData::current()) {
+        ilog_warn("Cannot remove posted events for objects in another thread");
+        return;
+    }
+
+    data->postEventList.drain();
 
     // the iObject destructor calls this function directly. this can
     // happen while the event loop is in the middle of posting events,
@@ -331,17 +315,17 @@ void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
     if (receiver && !receiver->m_postedEvents)
         return;
 
-    std::list<iPostEvent> events;
-    std::list<iPostEvent>::iterator it = data->postEventList.begin();
+    std::list<iEvent*> events;
+    iPostEventList::iterator it = data->postEventList.begin();
     while (it != data->postEventList.end()) {
-        const iPostEvent &pe = *it;
-        if ((!receiver || pe.receiver == receiver)
-            && (pe.event && (iEvent::None == eventType || pe.event->type() == eventType))) {
-            // Check receiver is not null before dereferencing
-            if (pe.receiver) --pe.receiver->m_postedEvents;
-            pe.event->m_posted = false;
-            events.push_back(*it);
-            const_cast<iPostEvent &>(pe).event = IX_NULLPTR;
+        iEvent* event = *it;
+        if (event
+            && (!receiver || event->m_receiver == receiver)
+            && (iEvent::None == eventType || event->type() == eventType)) {
+            if (event->m_receiver) --event->m_receiver->m_postedEvents;
+            event->m_posted = false;
+            events.push_back(event);
+            *it = IX_NULLPTR;
             if (!data->postEventList.recursion) {
                 it = data->postEventList.erase(it);
                 continue;
@@ -351,10 +335,8 @@ void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
         ++it;
     }
 
-    locker.unlock();
-
-    for (std::list<iPostEvent>::const_iterator it = events.begin(); it != events.end(); ++it) {
-        delete it->event;
+    for (std::list<iEvent*>::const_iterator dead = events.begin(); dead != events.end(); ++dead) {
+        delete *dead;
     }
 }
 
@@ -374,19 +356,19 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
     iThreadData *threadData = receiver ? receiver->m_threadData : iThreadData::current();
 
     ++threadData->postEventList.recursion;
-    iScopedLock<iMutex> locker(threadData->postEventList.mutex);
+    threadData->postEventList.drain();
 
-    // by default, we assume that the event dispatcher can go to sleep after
-    // processing all events. if any new events are posted while we send
-    // events, canWait will be set to false.
-    threadData->canWait = (threadData->postEventList.size() == 0) ? 1 : 0;
+    const bool queueEmpty = (threadData->postEventList.size() == 0);
+    const bool nothingToSend = queueEmpty || (receiver && !receiver->m_postedEvents);
 
-    if (threadData->postEventList.size() == 0 || (receiver && !receiver->m_postedEvents)) {
+    if (nothingToSend) {
         --threadData->postEventList.recursion;
+        threadData->canWait = queueEmpty ? 1 : 0;
+        if (!threadData->postEventList.empty())
+            threadData->canWait = 0;
+
         return;
     }
-
-    threadData->canWait = 1;
 
     // okay. here is the tricky loop. be careful about optimizing
     // this, it looks the way it does for good reasons.
@@ -400,20 +382,15 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
         int event_type;
         iThreadData *data;
         bool exceptionCaught;
+        bool deferred;
+        int reposted;
 
         inline CleanUp(iObject *receiver, int event_type, iThreadData *data) :
-            receiver(receiver), event_type(event_type), data(data), exceptionCaught(true)
+            receiver(receiver), event_type(event_type), data(data), exceptionCaught(true), deferred(false), reposted(0)
         {}
         inline ~CleanUp()
         {
-            if (exceptionCaught) {
-                // since we were interrupted, we need another pass to make sure we clean everything up
-                data->canWait = 0;
-            }
-
             --data->postEventList.recursion;
-            if (!data->postEventList.recursion && !data->canWait && (IX_NULLPTR != data->dispatcher.load()))
-                data->dispatcher.load()->wakeUp();
 
             // clear the global list, i.e. remove everything that was
             // delivered.
@@ -426,36 +403,51 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
                 IX_ASSERT(data->postEventList.insertionOffset >= 0);
                 data->postEventList.startOffset = 0;
             }
+
+            // What is still queued is no reason to stay awake: it may be a deferred
+            // delete this loop level cannot run. Only a pass that skipped deliverable
+            // events, or was interrupted, owes the dispatcher another round.
+            const int pending = data->postEventList.size() - data->postEventList.startOffset - reposted;
+            if (exceptionCaught || deferred || pending > 0) {
+                data->canWait = 0;
+                return;
+            }
+
+            data->canWait = 1;
+            if (!data->postEventList.intakeEmpty())
+                data->canWait = 0;
         }
     };
     CleanUp cleanup(receiver, event_type, threadData);
 
     iPostEventList::iterator it = threadData->postEventList.begin();
     std::advance(it, idx);
-    while ((idx < int(threadData->postEventList.size())) && (it != threadData->postEventList.end())) {
+    // No drain inside this loop: insertionOffset already defers anything newly posted
+    // to the next pass, and every re-entrant path drains for itself.
+    while ((idx < threadData->postEventList.size()) && (it != threadData->postEventList.end())) {
         // avoid live-lock
         if (idx >= threadData->postEventList.insertionOffset)
             break;
 
-        const iPostEvent &pe = *it;
+        iEvent*& slot = *it;
         ++idx; ++it;
 
-        if (!pe.event)
+        if (!slot)
             continue;
-        if ((receiver && receiver != pe.receiver) || (event_type && event_type != pe.event->type())) {
-            threadData->canWait = 0;
+        if ((receiver && receiver != slot->m_receiver) || (event_type && event_type != slot->type())) {
+            cleanup.deferred = true;
             continue;
         }
 
-        if (pe.event->type() == iEvent::DeferredDelete) {
+        if (slot->type() == iEvent::DeferredDelete) {
             // DeferredDelete events are sent either
             // 1) when the event loop that posted the event has returned; or
             // 2) if explicitly requested (with QEvent::DeferredDelete) for
             //    events posted by the current event loop; or
             // 3) if the event was posted before the outermost event loop.
 
-            const int eventLoopLevel = static_cast<iDeferredDeleteEvent *>(pe.event)->loopLevel();
-            const int eventScopeLevel = static_cast<iDeferredDeleteEvent *>(pe.event)->scopeLevel();
+            const int eventLoopLevel = static_cast<iDeferredDeleteEvent *>(slot)->loopLevel();
+            const int eventScopeLevel = static_cast<iDeferredDeleteEvent *>(slot)->scopeLevel();
 
             const bool postedBeforeOutermostLoop = eventLoopLevel == 0;
             const bool allowDeferredDelete =
@@ -466,18 +458,12 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
             if (!allowDeferredDelete) {
                 // cannot send deferred delete
                 if (!event_type && !receiver) {
-                    // we must copy it first; we want to re-post the event
-                    // with the event pointer intact, but we can't delay
-                    // nulling the event ptr until after re-posting, as
-                    // addEvent may invalidate pe.
-                    iPostEvent pe_copy = pe;
-
-                    // null out the event so if sendPostedEvents recurses, it
-                    // will ignore this one, as it's been re-posted.
-                    const_cast<iPostEvent &>(pe).event = IX_NULLPTR;
-
-                    // re-post the copied event so it isn't lost
-                    threadData->postEventList.addEvent(pe_copy);
+                    // re-post the event so it isn't lost, then tombstone this slot so a
+                    // recursing sendPostedEvents() ignores it. Inserting into a std::list
+                    // keeps the slot valid, so the order is free to be the readable one.
+                    threadData->postEventList.enqueue(slot);
+                    slot = IX_NULLPTR;
+                    ++cleanup.reposted;
                 }
                 continue;
             }
@@ -485,24 +471,19 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
 
         // first, we diddle the event so that we can deliver
         // it, and that no one will try to touch it later.
-        pe.event->m_posted = false;
-        iEvent *e = pe.event;
-        iObject * r = pe.receiver;
+        slot->m_posted = false;
+        iEvent *e = slot;
+        iObject * r = slot->m_receiver;
 
         --r->m_postedEvents;
         IX_ASSERT(r->m_postedEvents >= 0);
+        if (e->type() == iEvent::Quit)
+            r->m_quitCalled = false;
 
         // next, update the data structure so that we're ready
         // for the next event.
-        const_cast<iPostEvent &>(pe).event = IX_NULLPTR;
+        slot = IX_NULLPTR;
 
-        struct MutexUnlocker
-        {
-            iScopedLock<iMutex> &m;
-            MutexUnlocker(iScopedLock<iMutex> &m) : m(m) { m.unlock(); }
-            ~MutexUnlocker() { m.relock(); }
-        };
-        MutexUnlocker unlocker(locker);
         // after all that work, it's time to deliver the event.
         sendEvent(r, e);
 
@@ -515,7 +496,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
     cleanup.exceptionCaught = false;
 }
 
-bool iCoreApplication::compressEvent(iEvent * event, iObject *receiver, iPostEventList* postedEvents)
+bool iCoreApplication::compressEvent(iEvent * event, iObject *receiver)
 {
     if (event->type() == iEvent::DeferredDelete) {
         if (receiver->m_deleteLaterCalled) {
@@ -523,24 +504,21 @@ bool iCoreApplication::compressEvent(iEvent * event, iObject *receiver, iPostEve
             delete event;
             return true;
         }
-        // deleteLaterCalled is set to true in postedEvents when queueing the very first
-        // deferred deletion event.
+
+        // armed by the queue's own thread and never cleared, so only the very first
+        // deferred deletion is ever queued
+        receiver->m_deleteLaterCalled = true;
         return false;
     }
 
-    if (event->type() == iEvent::Quit && receiver->m_postedEvents > 0) {
-        for (std::list<iPostEvent>::const_iterator it = postedEvents->begin();
-             it != postedEvents->end(); ++it) {
-             const iPostEvent &cur = *it;
-             if (cur.receiver != receiver
-                     || cur.event == IX_NULLPTR
-                     || cur.event->type() != event->type())
-                 continue;
+    if (event->type() == iEvent::Quit) {
+        if (receiver->m_quitCalled) {
+            delete event;
+            return true;
+        }
 
-             // found an event for this receiver
-             delete event;
-             return true;
-         }
+        receiver->m_quitCalled = true;
+        return false;
     }
 
     return false;

@@ -46,7 +46,7 @@ int iEventLoop::exec(ProcessEventsFlags flags, int maxPriority)
 {
     //we need to protect from race condition with iThread::exit
     iThreadData *threadData = iThread::get2(thread());
-    iMutex::ScopedLock  _lock(threadData->postEventList.mutex);
+    iMutex::ScopedLock  _lock(threadData->loopLock);
     if (threadData->quitNow)
         return -1;
 

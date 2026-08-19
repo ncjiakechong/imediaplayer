@@ -498,14 +498,14 @@ void iMemBlock::statAdd()
     IX_ASSERT(m_pool);
 
     m_pool->m_stat.nAllocated++;
-    m_pool->m_stat.allocatedSize += (int)m_length;
+    m_pool->m_stat.allocatedSize += static_cast<xint64>(m_length);
 
     m_pool->m_stat.nAccumulated++;
-    m_pool->m_stat.accumulatedSize += (int)m_length;
+    m_pool->m_stat.accumulatedSize += static_cast<xint64>(m_length);
 
     if (m_type == MEMBLOCK_IMPORTED) {
         m_pool->m_stat.nImported++;
-        m_pool->m_stat.importedSize += (int) m_length;
+        m_pool->m_stat.importedSize += static_cast<xint64>(m_length);
     }
 
     m_pool->m_stat.nAllocatedByType[m_type] ++;
@@ -523,12 +523,12 @@ void iMemBlock::statRemove()
     IX_ASSERT(m_pool);
 
     m_pool->m_stat.nAllocated--;
-    m_pool->m_stat.allocatedSize -= (int) m_length;
+    m_pool->m_stat.allocatedSize -= static_cast<xint64>(m_length);
 
     if (m_type == MEMBLOCK_IMPORTED) {
 
         m_pool->m_stat.nImported--;
-        m_pool->m_stat.importedSize -= (int) m_length;
+        m_pool->m_stat.importedSize -= static_cast<xint64>(m_length);
     }
 
     m_pool->m_stat.nAllocatedByType[m_type]--;
@@ -649,7 +649,7 @@ void iMemBlock::replaceImport()
     }
 
     --m_pool->m_stat.nImported;
-    m_pool->m_stat.importedSize -= (int) m_length;
+    m_pool->m_stat.importedSize -= static_cast<xint64>(m_length);
 
     iMemImport* import = segment->import;
 
@@ -1167,7 +1167,7 @@ int iMemExport::processRelease(uint id)
     _lock.unlock();
 
     --m_pool->m_stat.nExported;
-    m_pool->m_stat.exportedSize -= (int) b->m_length;
+    m_pool->m_stat.exportedSize -= static_cast<xint64>(b->m_length);
     b->deref();
 
     return 0;
@@ -1264,7 +1264,7 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
     *size = block->m_length;
 
     ++m_pool->m_stat.nExported;
-    m_pool->m_stat.exportedSize += (int) block->m_length;
+    m_pool->m_stat.exportedSize += static_cast<xint64>(block->m_length);
 
     return 0;
 }

@@ -59,7 +59,8 @@ TEST_F(ICoreApplicationTest, InstanceExists) {
 // Test: Send event to object
 TEST_F(ICoreApplicationTest, SendEvent) {
     EventReceiver receiver;
-    iEvent event(iEvent::Timer);
+    // must be a real iTimerEvent: the handler downcasts on iEvent::Timer
+    iTimerEvent event(1, 0);
 
     bool result = iCoreApplication::sendEvent(&receiver, &event);
     EXPECT_TRUE(result || !result);  // Just verify it doesn't crash

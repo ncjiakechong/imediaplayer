@@ -17,8 +17,6 @@
 
 namespace iShell {
 
-class iPostEvent;
-class iPostEventList;
 class iEventDispatcher;
 class iCoreApplication;
 
@@ -55,7 +53,7 @@ protected:
     virtual bool event(iEvent *) IX_OVERRIDE;
     virtual bool notify(iObject *, iEvent *);
 
-    virtual bool compressEvent(iEvent *, iObject *receiver, iPostEventList *);
+    virtual bool compressEvent(iEvent *, iObject *receiver);
     virtual iEventDispatcher* doCreateEventDispatcher() const;
 
     static bool threadRequiresCoreApplication();

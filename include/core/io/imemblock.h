@@ -198,10 +198,10 @@ public:
         int nAccumulated;
         int nImported;
         int nExported;
-        int allocatedSize;
-        int accumulatedSize;
-        int importedSize;
-        int exportedSize;
+        xint64 allocatedSize;
+        xint64 accumulatedSize;
+        xint64 importedSize;
+        xint64 exportedSize;
 
         int nTooLargeForPool;
         int nPoolFull;

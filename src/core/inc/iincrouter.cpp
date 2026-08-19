@@ -46,8 +46,8 @@ struct iINCRouter::PendingForward
 struct iINCRouter::ClientBridge
 {
     // In-flight reliable forwards stored by value, so the list nodes recycle
-    // through iCacheAllocator's lock-free pool (same pattern as iPostEventList
-    // / TimerContainer) - no manual free list needed.
+    // through iCacheAllocator's lock-free pool (same pattern as TimerContainer)
+    // - no manual free list needed.
     typedef std::list<PendingForward, iCacheAllocator<PendingForward> > PendingForwardList;
 
     iINCRouter*         router;

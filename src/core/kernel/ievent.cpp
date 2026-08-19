@@ -39,11 +39,11 @@ int iEvent::registerEventType(int hint)
 }
 
 iEvent::iEvent(unsigned short type)
-    : m_type(type), m_posted(false), m_accept(true)
+    : m_type(type), m_posted(false), m_accept(true), m_priority(0), m_receiver(IX_NULLPTR), m_next(IX_NULLPTR)
 {}
 
 iEvent::iEvent(const iEvent &other)
-    : m_type(other.m_type), m_posted(other.m_posted), m_accept(other.m_accept)
+    : m_type(other.m_type), m_posted(other.m_posted), m_accept(other.m_accept), m_priority(0), m_receiver(IX_NULLPTR), m_next(IX_NULLPTR)
 {}
 
 iEvent& iEvent::operator=(const iEvent &other)
