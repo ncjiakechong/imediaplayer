@@ -185,7 +185,7 @@ void iCoreApplication::execCleanup()
     if (!m_aboutToQuitEmitted)
         IEMIT aboutToQuit();
     m_aboutToQuitEmitted = true;
-    sendPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
+    dispatchPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
 }
 
 void iCoreApplication::quit()
@@ -250,21 +250,21 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
         return;
     }
 
-    iThreadData *data = receiver->m_threadData.load();
-    if (!data) {
-        // posting during destruction? just delete the event to prevent a leak
-        delete event;
-        return;
-    }
-
     // Screen as early as possible, but compressEvent() has to scan the queued tier and
     // only the owner thread may read it, so a cross-thread post is screened by drain()
     // instead. Catching it here is what keeps an update()-style flood out of the queue.
     // The cheap tests come first: the thread lookup is not worth paying for a receiver
     // that has nothing pending.
     if ((IX_NULLPTR != s_self)
-        && (receiver->m_postedEvents.value() > 0)
+        && (receiver->m_postedEvents > 0)
         && s_self->compressEvent(event, receiver)) {
+        return;
+    }
+
+    iThreadData *data = receiver->m_threadData.load();
+    if (!data) {
+        // posting during destruction? just delete the event to prevent a leak
+        delete event;
         return;
     }
 
@@ -294,53 +294,14 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
     }
 
     event->m_posted = true;
+    event->m_receiver = receiver;
+    event->m_priority = priority;
+    event->m_next = IX_NULLPTR;
     ++receiver->m_postedEvents;
-    data->postEventList.push(receiver, event, priority);
+    data->postEventList.push(event);
 }
 
-void iCoreApplication::removePostedEvents(iObject *receiver, int eventType)
-{
-    iThreadData *data = receiver ? receiver->m_threadData : iThreadData::current();
-    if (data != iThreadData::current()) {
-        ilog_warn("Cannot remove posted events for objects in another thread");
-        return;
-    }
-
-    data->postEventList.drain();
-
-    // the iObject destructor calls this function directly. this can
-    // happen while the event loop is in the middle of posting events,
-    // and when we get here, we may not have any more posted events
-    // for this object.
-    if (receiver && !receiver->m_postedEvents)
-        return;
-
-    std::list<iEvent*> events;
-    iPostEventList::iterator it = data->postEventList.begin();
-    while (it != data->postEventList.end()) {
-        iEvent* event = *it;
-        if (event
-            && (!receiver || event->m_receiver == receiver)
-            && (iEvent::None == eventType || event->type() == eventType)) {
-            if (event->m_receiver) --event->m_receiver->m_postedEvents;
-            event->m_posted = false;
-            events.push_back(event);
-            *it = IX_NULLPTR;
-            if (!data->postEventList.recursion) {
-                it = data->postEventList.erase(it);
-                continue;
-            }
-        }
-
-        ++it;
-    }
-
-    for (std::list<iEvent*>::const_iterator dead = events.begin(); dead != events.end(); ++dead) {
-        delete *dead;
-    }
-}
-
-void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
+void iCoreApplication::dispatchPostedEvents(iObject *receiver, int event_type)
 {
     if (event_type == -1) {
         // we were called by an obsolete event dispatcher.
@@ -348,8 +309,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
     }
 
     if (receiver && receiver->m_threadData != iThreadData::current()) {
-        ilog_warn("iCoreApplication::sendPostedEvents: Cannot send "
-                 "posted events for objects in another thread");
+        ilog_warn("Cannot send posted events for objects in another thread");
         return;
     }
 
@@ -459,7 +419,7 @@ void iCoreApplication::sendPostedEvents(iObject *receiver, int event_type)
                 // cannot send deferred delete
                 if (!event_type && !receiver) {
                     // re-post the event so it isn't lost, then tombstone this slot so a
-                    // recursing sendPostedEvents() ignores it. Inserting into a std::list
+                    // recursing dispatchPostedEvents() ignores it. Inserting into a std::list
                     // keeps the slot valid, so the order is free to be the readable one.
                     threadData->postEventList.enqueue(slot);
                     slot = IX_NULLPTR;

@@ -260,8 +260,7 @@ iObject::~iObject()
     // Remove all posted events ASAP to prevent them from being delivered
     // to a partially destructed object. This must be done before emitting
     // destroyed() signal as the signal handlers might post new events.
-    if (m_postedEvents)
-        iCoreApplication::removePostedEvents(this, iEvent::None);
+    removeEvents(iEvent::None);
 
     isharedpointer::ExternalRefCountData *refcount = m_refCount.load();
     if (refcount) {
@@ -432,10 +431,31 @@ iObject::~iObject()
         }
     }
 
-    if (m_postedEvents)
-        iCoreApplication::removePostedEvents(this, iEvent::None);
-
+    removeEvents(iEvent::None);
     m_threadData->deref();
+}
+
+void iObject::removeEvents(int eventType)
+{
+    if (m_postedEvents <= 0)
+        return;
+
+    if (m_threadData != iThreadData::current()) {
+        ilog_warn("Cannot remove posted events for objects in another thread");
+        return;
+    }
+
+    m_threadData->postEventList.drain();
+    iEvent* pendings = m_threadData->postEventList.take(this, eventType);
+
+    while (IX_NULLPTR != pendings) {
+        iEvent* et = pendings;
+        pendings = et->m_next;
+
+        et->m_posted = false;
+        --m_postedEvents;
+        delete et;
+    }
 }
 
 void iObject::deleteLater()
@@ -498,9 +518,6 @@ bool iObject::moveToThread(iThread *targetThread)
     // keep currentData alive across the handover
     currentData->ref();
 
-    // draining first freezes everything already posted into the queued tier while the
-    // affinity is still ours, so the per-object hand-over below keeps posting order
-    currentData->postEventList.drain();
     setThreadData_helper(currentData, targetData);
 
     // now currentData can commit suicide if it wants to
@@ -511,13 +528,6 @@ bool iObject::moveToThread(iThread *targetThread)
 
 void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *targetData)
 {
-    // this object's posted events leave the old queue before its affinity changes, and
-    // are republished after it: drain() routes by receiver affinity, so handing them
-    // over any earlier would bounce them straight back
-    iEvent* pending = IX_NULLPTR;
-    if (m_postedEvents)
-        pending = currentData->postEventList.take(this);
-
     if (IX_NULLPTR != m_currentSender) {
         m_currentSender->receiverDeleted();
         m_currentSender = IX_NULLPTR;
@@ -528,7 +538,11 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
     m_threadData->deref();
     m_threadData = targetData;
 
-    targetData->postEventList.push(pending);
+    if (m_postedEvents > 0) {
+        iEvent* pendings = currentData->postEventList.take(this, iEvent::None);
+        targetData->postEventList.push(pendings);
+        currentData->postEventList.drain();
+    }
 
     for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
         iObject *child = *it;

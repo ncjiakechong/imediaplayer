@@ -384,6 +384,7 @@ private:
 
     void setThreadData_helper(iThreadData *currentData, iThreadData *targetData);
     void moveToThread_helper();
+    void removeEvents(int eventType);
 
     void reregisterTimers(void*);
 

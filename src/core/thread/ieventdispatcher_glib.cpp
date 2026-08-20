@@ -164,7 +164,7 @@ static gboolean postEventSourceDispatch(GSource *s, GSourceFunc, gpointer)
 {
     GPostEventSource *source = reinterpret_cast<GPostEventSource *>(s);
     source->lastSerialNumber = source->serialNumber.value();
-    iCoreApplication::sendPostedEvents(IX_NULLPTR, 0);
+    iCoreApplication::dispatchPostedEvents(IX_NULLPTR, 0);
     source->dispatcher->runTimersOnceWithNormalPriority();
     return true; // i dunno, george...
 }

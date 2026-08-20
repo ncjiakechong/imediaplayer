@@ -233,7 +233,7 @@ void iThreadImpl::internalThreadFunc()
         thread->m_mutex.lock();
         thread->m_isInFinish = true;
 
-        iCoreApplication::sendPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
+        iCoreApplication::dispatchPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
 
         iThreadStorageData::finish((void**)&data->tls);
 

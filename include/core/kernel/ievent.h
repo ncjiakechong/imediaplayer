@@ -58,6 +58,7 @@ protected:
     iObject* m_receiver;
     iEvent*  m_next;
 
+    friend class iObject;
     friend class iPostEventList;
     friend class iCoreApplication;
 };

@@ -52,53 +52,57 @@ iPostEventList::iPostEventList(iThreadData* owner)
 
 iPostEventList::~iPostEventList()
 {
-    drain();
+    iEvent* head = m_intake.load();
+    while (IX_NULLPTR != head && !m_intake.testAndSet(head, IX_NULLPTR))
+        head = m_intake.load();
+
+    while (IX_NULLPTR != head) {
+        iEvent* event = head;
+        head = event->m_next;
+
+        iObject* receiver = event->m_receiver;
+        if (receiver) --receiver->m_postedEvents;
+        delete event;
+    }
+    
     for (iterator it = m_queued.begin(); it != m_queued.end(); ++it) {
         iEvent* event = *it;
         *it = IX_NULLPTR;
         if (IX_NULLPTR == event)
             continue;
 
-        // the receiver may have moved on before this queue died; hand the event over
         iObject* receiver = event->m_receiver;
-        iThreadData* target = receiver ? receiver->m_threadData.load() : IX_NULLPTR;
-        if (IX_NULLPTR != target && &target->postEventList != this) {
-            target->postEventList.push(receiver, event, event->m_priority);
-            continue;
-        }
-
         if (receiver) --receiver->m_postedEvents;
         delete event;
     }
 }
 
-void iPostEventList::push(iObject* receiver, iEvent* event, int priority)
+void iPostEventList::pushOne(iEvent* event)
 {
-    event->m_receiver = receiver;
-    event->m_priority = priority;
-
     iEvent* head = IX_NULLPTR;
     do {
         head = m_intake.load();
         event->m_next = head;
     } while (!m_intake.testAndSet(head, event));
-
-    while (!m_owner->canWait.testAndSet(1, 0)) {
-        if (0 == m_owner->canWait.value())
-            return;
-    }
-
-    iEventDispatcher* d = m_owner->dispatcher.load();
-    if (d) d->wakeUp();
 }
 
 void iPostEventList::push(iEvent* events)
 {
+    if (events == IX_NULLPTR)
+        return;
+
     while (IX_NULLPTR != events) {
         iEvent* et = events;
         events = et->m_next;
-        push(et->m_receiver, et, et->m_priority);
+        pushOne(et);
     }
+
+    while (!m_owner->canWait.testAndSet(1, 0)) {
+        if (0 == m_owner->canWait.value()) return;
+    }
+
+    iEventDispatcher* d = m_owner->dispatcher.load();
+    if (d) d->wakeUp();
 }
 
 void iPostEventList::drain()
@@ -106,9 +110,6 @@ void iPostEventList::drain()
     iEvent* head = m_intake.load();
     while (IX_NULLPTR != head && !m_intake.testAndSet(head, IX_NULLPTR))
         head = m_intake.load();
-
-    if (IX_NULLPTR == head)
-        return;
 
     // producers prepend, so reverse the batch in place to restore posting order
     iEvent* ordered = IX_NULLPTR;
@@ -126,17 +127,9 @@ void iPostEventList::drain()
 
         iObject* receiver = event->m_receiver;
         iThreadData* target = receiver ? receiver->m_threadData.load() : IX_NULLPTR;
-
-        if (IX_NULLPTR == target) {
-            // defensive: no current code path clears m_threadData while events are queued
-            event->m_posted = false;
-            delete event;
-            continue;
-        }
-
-        if (&target->postEventList != this) {
+        if (IX_NULLPTR != target && &target->postEventList != this) {
             // the producer picked this queue just before the receiver moved threads
-            target->postEventList.push(receiver, event, event->m_priority);
+            target->postEventList.push(event);
             continue;
         }
 
@@ -166,7 +159,7 @@ void iPostEventList::enqueue(iEvent* event)
     m_queued.insert(it, event);
 }
 
-iEvent* iPostEventList::take(iObject* receiver)
+iEvent* iPostEventList::take(iObject* receiver, int eventType)
 {
     iEvent* head = IX_NULLPTR;
     iEvent** tail = &head;
@@ -179,13 +172,18 @@ iEvent* iPostEventList::take(iObject* receiver)
             continue;
         }
 
+        if (iEvent::None != eventType && event->type() != eventType) {
+            ++it;
+            continue;
+        }
+
         // chained in queue order, so push() republishes them in posting order
         event->m_next = IX_NULLPTR;
         *tail = event;
         tail = &event->m_next;
 
         if (recursion) {
-            // an outer sendPostedEvents() still holds iterators into this list
+            // an outer dispatchPostedEvents() still holds iterators into this list
             *it = IX_NULLPTR;
             ++it;
             continue;

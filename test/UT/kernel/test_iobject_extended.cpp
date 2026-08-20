@@ -1096,7 +1096,7 @@ TEST_F(ObjectExtendedTest, ConcurrentEmitDuringMoveToThread) {
             iThread::msleep(1);
         migrationOk = (receiver->thread() == mainThread);
         if (migrationOk)
-            iCoreApplication::sendPostedEvents(receiver);
+            iCoreApplication::dispatchPostedEvents(receiver);
     }
 
     stop.store(true);
@@ -1104,7 +1104,7 @@ TEST_F(ObjectExtendedTest, ConcurrentEmitDuringMoveToThread) {
     worker.exit();
     worker.wait();
     if (receiver->thread() == mainThread)
-        iCoreApplication::sendPostedEvents(receiver);
+        iCoreApplication::dispatchPostedEvents(receiver);
 
     EXPECT_TRUE(migrationOk);
     EXPECT_GT(emitted.load(), 0);

@@ -40,11 +40,11 @@ class iThreadData;
 // Threading contract (there is no lock; breaking any of these is a data race):
 //  1. push() is the only entry point other threads may use. Everything else,
 //     iteration included, belongs to the thread that owns the enclosing iThreadData.
-//  2. enqueue() must never insert before insertionOffset. sendPostedEvents()
+//  2. enqueue() must never insert before insertionOffset. dispatchPostedEvents()
 //     snapshots insertionOffset and stops at it, so this is what makes draining
 //     in the middle of the delivery loop safe and live-lock free.
 //  3. Entries are tombstoned (set to null) rather than erased while recursion > 0,
-//     because an outer sendPostedEvents() still holds iterators into the list.
+//     because an outer dispatchPostedEvents() still holds iterators into the list.
 class iPostEventList
 {
     // plain allocator: since the intake took over cross-thread posting, list nodes are
@@ -59,13 +59,12 @@ public:
     ~iPostEventList();
 
     // callable from any thread
-    void push(iObject* receiver, iEvent* event, int priority);
     void push(iEvent* events);
 
     // owner thread only
     void drain();
     void enqueue(iEvent* event);
-    iEvent* take(iObject* receiver);
+    iEvent* take(iObject* receiver, int eventType);
 
     iterator begin() { return m_queued.begin(); }
     iterator end() { return m_queued.end(); }
@@ -81,15 +80,17 @@ public:
     bool empty() const { return m_queued.empty() && intakeEmpty(); }
 
 public:
-    // recursion == recursion count for sendPostedEvents()
+    // recursion == recursion count for dispatchPostedEvents()
     int recursion;
 
     // sendOffset == the current event to start sending
     int startOffset;
-    // insertionOffset == set by sendPostedEvents to tell enqueue() where to start insertions
+    // insertionOffset == set by dispatchPostedEvents to tell enqueue() where to start insertions
     int insertionOffset;
 
 private:
+    void pushOne(iEvent* event);
+
     iThreadData* const     m_owner;
     List                   m_queued;
     iAtomicPointer<iEvent> m_intake;

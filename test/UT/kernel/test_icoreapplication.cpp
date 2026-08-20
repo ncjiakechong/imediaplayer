@@ -75,7 +75,7 @@ TEST_F(ICoreApplicationTest, PostEvent) {
     iCoreApplication::postEvent(&receiver, event);
 
     // Process posted events
-    iCoreApplication::sendPostedEvents(&receiver);
+    iCoreApplication::dispatchPostedEvents(&receiver);
 
     EXPECT_EQ(receiver.customEventCount, 1);
     EXPECT_EQ(receiver.lastEventType, iEvent::User + 1);
@@ -89,7 +89,7 @@ TEST_F(ICoreApplicationTest, PostMultipleEvents) {
     iCoreApplication::postEvent(&receiver, new iEvent(iEvent::User + 2));
     iCoreApplication::postEvent(&receiver, new iEvent(iEvent::User + 3));
 
-    iCoreApplication::sendPostedEvents(&receiver);
+    iCoreApplication::dispatchPostedEvents(&receiver);
 
     EXPECT_EQ(receiver.customEventCount, 3);
 }
@@ -102,40 +102,9 @@ TEST_F(ICoreApplicationTest, PostEventWithPriority) {
     iCoreApplication::postEvent(&receiver, new iEvent(iEvent::User + 1),
                                 HighEventPriority);
 
-    iCoreApplication::sendPostedEvents(&receiver);
+    iCoreApplication::dispatchPostedEvents(&receiver);
 
     EXPECT_EQ(receiver.customEventCount, 1);
-}
-
-// Test: Remove posted events
-TEST_F(ICoreApplicationTest, RemovePostedEvents) {
-    EventReceiver receiver;
-
-    unsigned short eventType = iEvent::User + 10;
-    iCoreApplication::postEvent(&receiver, new iEvent(eventType));
-
-    // Remove before processing
-    iCoreApplication::removePostedEvents(&receiver, eventType);
-
-    iCoreApplication::sendPostedEvents(&receiver);
-
-    // Event should not be received
-    EXPECT_EQ(receiver.customEventCount, 0);
-}
-
-// Test: Remove all posted events for receiver
-TEST_F(ICoreApplicationTest, RemoveAllPostedEvents) {
-    EventReceiver receiver;
-
-    iCoreApplication::postEvent(&receiver, new iEvent(iEvent::User + 1));
-    iCoreApplication::postEvent(&receiver, new iEvent(iEvent::User + 2));
-
-    // Remove all events (type 0 means all)
-    iCoreApplication::removePostedEvents(&receiver, 0);
-
-    iCoreApplication::sendPostedEvents(&receiver);
-
-    EXPECT_EQ(receiver.customEventCount, 0);
 }
 
 // Test: Send posted events with specific type
@@ -149,7 +118,7 @@ TEST_F(ICoreApplicationTest, SendPostedEventsSpecificType) {
     iCoreApplication::postEvent(&receiver, new iEvent(type2));
 
     // Process only type1 events
-    iCoreApplication::sendPostedEvents(&receiver, type1);
+    iCoreApplication::dispatchPostedEvents(&receiver, type1);
 
     EXPECT_GE(receiver.customEventCount, 1);
 }
@@ -194,7 +163,7 @@ TEST_F(ICoreApplicationTest, PostTimerEvent) {
     iTimerEvent* event = new iTimerEvent(42, 0);
     iCoreApplication::postEvent(&receiver, event);
 
-    iCoreApplication::sendPostedEvents(&receiver);
+    iCoreApplication::dispatchPostedEvents(&receiver);
 
     EXPECT_EQ(receiver.timerEventCount, 1);
     EXPECT_EQ(receiver.lastTimerId, 42);
@@ -208,30 +177,11 @@ TEST_F(ICoreApplicationTest, PostToDifferentReceivers) {
     iCoreApplication::postEvent(&receiver1, new iEvent(iEvent::User + 1));
     iCoreApplication::postEvent(&receiver2, new iEvent(iEvent::User + 2));
 
-    iCoreApplication::sendPostedEvents(&receiver1);
-    iCoreApplication::sendPostedEvents(&receiver2);
+    iCoreApplication::dispatchPostedEvents(&receiver1);
+    iCoreApplication::dispatchPostedEvents(&receiver2);
 
     EXPECT_EQ(receiver1.customEventCount, 1);
     EXPECT_EQ(receiver2.customEventCount, 1);
-}
-
-// Test: Remove posted events doesn't affect other types
-TEST_F(ICoreApplicationTest, RemovePostedEventsSelective) {
-    EventReceiver receiver;
-
-    unsigned short type1 = iEvent::User + 1;
-    unsigned short type2 = iEvent::User + 2;
-
-    iCoreApplication::postEvent(&receiver, new iEvent(type1));
-    iCoreApplication::postEvent(&receiver, new iEvent(type2));
-
-    // Remove only type1
-    iCoreApplication::removePostedEvents(&receiver, type1);
-
-    iCoreApplication::sendPostedEvents(&receiver);
-
-    // Should still receive type2
-    EXPECT_GE(receiver.customEventCount, 1);
 }
 
 // Test: Post event with different priorities
@@ -245,7 +195,7 @@ TEST_F(ICoreApplicationTest, PostEventPriorities) {
     iCoreApplication::postEvent(&receiver, new iEvent(iEvent::User + 3),
                                 HighEventPriority);
 
-    iCoreApplication::sendPostedEvents(&receiver);
+    iCoreApplication::dispatchPostedEvents(&receiver);
 
     EXPECT_EQ(receiver.customEventCount, 3);
 }
@@ -272,7 +222,7 @@ TEST_F(ICoreApplicationTest, PostToDeletedObject) {
     delete receiver;
 
     // This should not crash - events for deleted objects are discarded
-    // Note: We can't call sendPostedEvents on deleted object
+    // Note: We can't call dispatchPostedEvents on deleted object
 }
 
 // Test: Multiple send posted events calls
@@ -281,11 +231,11 @@ TEST_F(ICoreApplicationTest, MultipleSendPostedEventsCalls) {
 
     iCoreApplication::postEvent(&receiver, new iEvent(iEvent::User + 1));
 
-    iCoreApplication::sendPostedEvents(&receiver);
+    iCoreApplication::dispatchPostedEvents(&receiver);
     EXPECT_EQ(receiver.customEventCount, 1);
 
     // Second call should have no effect
-    iCoreApplication::sendPostedEvents(&receiver);
+    iCoreApplication::dispatchPostedEvents(&receiver);
     EXPECT_EQ(receiver.customEventCount, 1);
 }
 

@@ -50,7 +50,7 @@ public:
     virtual bool dispatch() IX_OVERRIDE
     {
         lastSerialNumber = serialNumber.value();
-        iCoreApplication::sendPostedEvents(IX_NULLPTR, 0);
+        iCoreApplication::dispatchPostedEvents(IX_NULLPTR, 0);
         return true;
     }
 
