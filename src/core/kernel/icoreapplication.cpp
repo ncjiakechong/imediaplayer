@@ -60,11 +60,8 @@ iCoreApplication::iCoreApplication(int argc, char** argv)
 iCoreApplication::~iCoreApplication()
 {
     iEventDispatcher* dispatcher = m_threadData->dispatcher.load();
-    m_threadData->dispatcher = IX_NULLPTR;
-    if (IX_NULLPTR != dispatcher) {
+    if (IX_NULLPTR != dispatcher)
         dispatcher->closingDown();
-        delete dispatcher;
-    }
 
     s_self = IX_NULLPTR;
 }
@@ -250,6 +247,12 @@ void iCoreApplication::postEvent(iObject *receiver, iEvent *event, int priority)
         return;
     }
 
+    struct InFlight {
+        explicit InFlight(iObject* o) : obj(o) { ++obj->m_inFlight; }
+        ~InFlight() { --obj->m_inFlight; }
+        iObject* obj;
+    } _inFlight(receiver);
+
     // Screen as early as possible, but compressEvent() has to scan the queued tier and
     // only the owner thread may read it, so a cross-thread post is screened by drain()
     // instead. Catching it here is what keeps an update()-style flood out of the queue.
@@ -308,12 +311,11 @@ void iCoreApplication::dispatchPostedEvents(iObject *receiver, int event_type)
         event_type = 0;
     }
 
-    if (receiver && receiver->m_threadData != iThreadData::current()) {
+    iThreadData *threadData = receiver ? receiver->m_threadData.load() : iThreadData::current();
+    if (receiver && threadData != iThreadData::current()) {
         ilog_warn("Cannot send posted events for objects in another thread");
         return;
     }
-
-    iThreadData *threadData = receiver ? receiver->m_threadData : iThreadData::current();
 
     ++threadData->postEventList.recursion;
     threadData->postEventList.drain();

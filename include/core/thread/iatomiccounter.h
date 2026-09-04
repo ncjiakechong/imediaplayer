@@ -17,6 +17,26 @@
 #include <atomic>
 #endif
 
+#if defined(IX_HAVE_ATOMIC_BUILTIN)
+#  define IX_ATOMIC_LOAD(p)         __atomic_load_n((p), __ATOMIC_SEQ_CST)
+#  define IX_ATOMIC_STORE(p, v)     __atomic_store_n((p), (v), __ATOMIC_SEQ_CST)
+#  define IX_ATOMIC_ADD_FETCH(p, n) __atomic_add_fetch((p), (n), __ATOMIC_SEQ_CST)
+#  define IX_ATOMIC_FETCH_ADD(p, n) __atomic_fetch_add((p), (n), __ATOMIC_SEQ_CST)
+#  define IX_ATOMIC_SUB_FETCH(p, n) __atomic_sub_fetch((p), (n), __ATOMIC_SEQ_CST)
+#  define IX_ATOMIC_FETCH_SUB(p, n) __atomic_fetch_sub((p), (n), __ATOMIC_SEQ_CST)
+#elif defined(IX_HAVE_SYNC_BUILTIN)
+#  define IX_ATOMIC_LOAD(p)         __sync_fetch_and_add((p), 0)
+#  define IX_ATOMIC_STORE(p, v)     do { __sync_synchronize(); *(p) = (v); __sync_synchronize(); } while (0)
+#  define IX_ATOMIC_ADD_FETCH(p, n) __sync_add_and_fetch((p), (n))
+#  define IX_ATOMIC_FETCH_ADD(p, n) __sync_fetch_and_add((p), (n))
+#  define IX_ATOMIC_SUB_FETCH(p, n) __sync_sub_and_fetch((p), (n))
+#  define IX_ATOMIC_FETCH_SUB(p, n) __sync_fetch_and_sub((p), (n))
+#endif
+
+#if defined(IX_HAVE_ATOMIC_BUILTIN) || defined(IX_HAVE_SYNC_BUILTIN)
+#  define IX_ATOMIC_BUILTIN
+#endif
+
 namespace iShell {
 
 template <typename T>
@@ -85,9 +105,14 @@ public:
         /// On failure, currentValue is updated to the actual value.
 
 private:
-#ifdef IX_HAVE_CXX11
+#if defined(IX_HAVE_CXX11)
     typedef std::atomic<ValueType> ImplType;
-#else // generic implementation based on iMutex
+#elif defined(IX_ATOMIC_BUILTIN)
+    struct ImplType
+    {
+        ValueType value;
+    };
+#else // last resort: generic implementation based on iMutex
     struct ImplType
     {
         mutable iMutex mutex;
@@ -188,6 +213,108 @@ inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
 template <typename T>
 inline bool iAtomicCounter<T>::operator ! () const
 { return m_counter.load() == 0; }
+
+#elif defined(IX_ATOMIC_BUILTIN)
+//
+// Real atomics from compiler builtins, for toolchains without <atomic>
+//
+template <typename T>
+iAtomicCounter<T>::iAtomicCounter()
+{ m_counter.value = 0; }
+
+template <typename T>
+iAtomicCounter<T>::iAtomicCounter(iAtomicCounter::ValueType initialValue)
+{ m_counter.value = initialValue; }
+
+template <typename T>
+iAtomicCounter<T>::iAtomicCounter(const iAtomicCounter& counter)
+{ m_counter.value = counter.value(); }
+
+template <typename T>
+iAtomicCounter<T>::~iAtomicCounter()
+{}
+
+template <typename T>
+iAtomicCounter<T>& iAtomicCounter<T>::operator = (const iAtomicCounter& counter)
+{
+    ValueType newValue = counter.value();
+    IX_ATOMIC_STORE(&m_counter.value, newValue);
+    return *this;
+}
+
+template <typename T>
+iAtomicCounter<T>& iAtomicCounter<T>::operator = (iAtomicCounter::ValueType value)
+{
+    IX_ATOMIC_STORE(&m_counter.value, value);
+    return *this;
+}
+
+template <typename T>
+bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue)
+{
+#if defined(IX_HAVE_ATOMIC_BUILTIN)
+    return __atomic_compare_exchange_n(&m_counter.value, &expectedValue, newValue,
+                                       true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#else
+    return __sync_bool_compare_and_swap(&m_counter.value, expectedValue, newValue);
+#endif
+}
+
+template <typename T>
+bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue, ValueType &currentValue)
+{
+#if defined(IX_HAVE_ATOMIC_BUILTIN)
+    currentValue = expectedValue;
+    return __atomic_compare_exchange_n(&m_counter.value, &currentValue, newValue,
+                                       true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+#else
+    ValueType previous = __sync_val_compare_and_swap(&m_counter.value, expectedValue, newValue);
+    currentValue = previous;
+    return previous == expectedValue;
+#endif
+}
+
+template <typename T>
+inline iAtomicCounter<T>::operator T() const
+{ return IX_ATOMIC_LOAD(const_cast<ValueType*>(&m_counter.value)); }
+
+template <typename T>
+inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::value() const
+{ return IX_ATOMIC_LOAD(const_cast<ValueType*>(&m_counter.value)); }
+
+template <typename T>
+inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ () // prefix
+{ return IX_ATOMIC_ADD_FETCH(&m_counter.value, 1); }
+
+template <typename T>
+inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ (int) // postfix
+{ return IX_ATOMIC_FETCH_ADD(&m_counter.value, 1); }
+
+template <typename T>
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (int count)
+{
+    IX_ATOMIC_ADD_FETCH(&m_counter.value, count);
+    return *this;
+}
+
+template <typename T>
+inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- () // prefix
+{ return IX_ATOMIC_SUB_FETCH(&m_counter.value, 1); }
+
+template <typename T>
+inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- (int) // postfix
+{ return IX_ATOMIC_FETCH_SUB(&m_counter.value, 1); }
+
+template <typename T>
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
+{
+    IX_ATOMIC_SUB_FETCH(&m_counter.value, count);
+    return *this;
+}
+
+template <typename T>
+inline bool iAtomicCounter<T>::operator ! () const
+{ return IX_ATOMIC_LOAD(const_cast<ValueType*>(&m_counter.value)) == 0; }
 
 #else
 //

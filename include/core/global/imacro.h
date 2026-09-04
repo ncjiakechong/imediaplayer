@@ -163,8 +163,19 @@
 #define IX_OS_OSX
 #endif
 
-#if (__cplusplus >= 201103L)
+// MSVC keeps __cplusplus at 199711L unless /Zc:__cplusplus is passed, so the language
+// level has to be read from _MSVC_LANG there or every MSVC build silently falls back to
+// the mutex-based atomics.
+#if (__cplusplus >= 201103L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201103L))
 #define IX_HAVE_CXX11
+#endif
+
+#ifndef IX_HAVE_CXX11
+#  if defined(__ATOMIC_SEQ_CST)          // gcc >= 4.7, clang >= 3.1
+#    define IX_HAVE_ATOMIC_BUILTIN
+#  elif defined(__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 1)))
+#    define IX_HAVE_SYNC_BUILTIN
+#  endif
 #endif
 
 #if defined(_MSC_VER)

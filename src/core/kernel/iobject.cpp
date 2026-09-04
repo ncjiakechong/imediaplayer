@@ -216,8 +216,8 @@ iObject::iObject(iObject *parent)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
     , m_quitCalled(false)
-    , m_blockSig(false)
-    , m_unused(0)
+    , m_blockSig(0)
+    , m_inFlight(0)
     , m_postedEvents(0)
     , m_threadData(iThreadData::current())
     , m_parent(IX_NULLPTR)
@@ -236,8 +236,8 @@ iObject::iObject(const iString& name, iObject* parent)
     , m_isDeletingChildren(false)
     , m_deleteLaterCalled(false)
     , m_quitCalled(false)
-    , m_blockSig(false)
-    , m_unused(0)
+    , m_blockSig(0)
+    , m_inFlight(0)
     , m_postedEvents(0)
     , m_objName(name)
     , m_threadData(iThreadData::current())
@@ -254,12 +254,17 @@ iObject::iObject(const iString& name, iObject* parent)
 
 iObject::~iObject()
 {
-    m_wasDeleted = true;
-    m_blockSig = false; // unblock signals so we always emit destroyed()
+    {
+        iScopedLock<iMutex> locker(m_signalSlotLock);
+        m_wasDeleted = true;
+    }
+
+    m_blockSig = 0; // unblock signals so we always emit destroyed()
 
     // Remove all posted events ASAP to prevent them from being delivered
     // to a partially destructed object. This must be done before emitting
     // destroyed() signal as the signal handlers might post new events.
+    while (m_inFlight.value() > 0) { iThread::yieldCurrentThread(); }
     removeEvents(iEvent::None);
 
     isharedpointer::ExternalRefCountData *refcount = m_refCount.load();
@@ -411,8 +416,8 @@ iObject::~iObject()
         }
 
         locker.unlock();
-        if (connectionListsToRelease)
-            releaseConnectionData(connectionListsToRelease);
+        while (m_inFlight.value() > 0) { iThread::yieldCurrentThread(); }
+        if (connectionListsToRelease) { releaseConnectionData(connectionListsToRelease); }
         deleteOrphaned(orphanedToDelete);
     }
 
@@ -431,6 +436,7 @@ iObject::~iObject()
         }
     }
 
+    while (m_inFlight.value() > 0) { iThread::yieldCurrentThread(); }
     removeEvents(iEvent::None);
     m_threadData->deref();
 }
@@ -465,8 +471,8 @@ void iObject::deleteLater()
 
 bool iObject::blockSignals(bool block)
 {
-    bool previous = m_blockSig;
-    m_blockSig = block;
+    bool previous = (0 != m_blockSig.value());
+    m_blockSig = block ? 1 : 0;
     return previous;
 }
 
@@ -496,7 +502,11 @@ bool iObject::moveToThread(iThread *targetThread)
     iThreadData *targetData = targetThread ? iThread::get2(targetThread) : IX_NULLPTR;
     if ((IX_NULLPTR == m_threadData->thread || !m_threadData->thread.load()->isRunning()) 
         && (currentData == targetData)) {
-        // one exception to the rule: we allow moving objects with no thread affinity to the current thread
+        // One exception to the rule: an object whose thread never started or already
+        // finished may be adopted by the current one. The handover below then walks a
+        // queued tier this thread does not own, which is only sound because that thread
+        // has no event loop to walk it concurrently. Starting it in parallel with this
+        // call breaks that, and the caller is responsible for not doing so.
         currentData = m_threadData;
     } else if (m_threadData != currentData) {
         ilog_warn("Current thread (", currentData->thread.load(), ")"
@@ -518,6 +528,7 @@ bool iObject::moveToThread(iThread *targetThread)
     // keep currentData alive across the handover
     currentData->ref();
 
+    // each object carries its own queued events over as its affinity flips
     setThreadData_helper(currentData, targetData);
 
     // now currentData can commit suicide if it wants to
@@ -538,10 +549,12 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
     m_threadData->deref();
     m_threadData = targetData;
 
+    while (m_inFlight.value() > 0) { iThread::yieldCurrentThread(); }
+
     if (m_postedEvents > 0) {
-        iEvent* pendings = currentData->postEventList.take(this, iEvent::None);
-        targetData->postEventList.push(pendings);
         currentData->postEventList.drain();
+        iEvent* posted = currentData->postEventList.take(this, iEvent::None);
+        targetData->postEventList.push(posted);
     }
 
     for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
@@ -1032,16 +1045,30 @@ bool iObject::disconnectImpl(const _iConnection& conn)
 
 void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, void* ret)
 {
-    if (m_blockSig)
+    if (0 != m_blockSig.value())
         return;
 
-    _iObjectConnectionList* connectionLists = m_connectionLists.load();
-    if (IX_NULLPTR == connectionLists)
-        return;
+    iThreadData* currentThreadData = iThreadData::current();
+    const bool inSenderThread = (currentThreadData == this->m_threadData.load());
+
+    // ~iObject() runs on the object's own thread by contract, so only a cross-thread emit
+    // can race it. Announce before loading the list: the destructor publishes the null and
+    // only then reads the count, so either it waits for us or we see the null and bail.
+    if (!inSenderThread)
+        ++m_inFlight;
 
     // Reference the data before resolving the signal: reclaiming orphaned connections and
     // retired bucket tables is gated on this count.
-    ++connectionLists->ref;
+    _iObjectConnectionList* connectionLists = m_connectionLists.load();
+    if (IX_NULLPTR != connectionLists)
+        ++connectionLists->ref;
+
+    if (!inSenderThread)
+        --m_inFlight;
+
+    if (IX_NULLPTR == connectionLists)
+        return;
+
     const xuint64 highestId = connectionLists->currentConnectionId;
     if (0 == highestId) {
         releaseConnectionData(connectionLists);
@@ -1057,8 +1084,6 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         return;
     }
 
-    iThreadData* currentThreadData = iThreadData::current();
-    bool inSenderThread = (currentThreadData == this->m_threadData);
     if (!inSenderThread) {
         ilog_info("obj[", this, " ", objectName(), "@", metaObject()->className(), "::", name, "] signal not emit at sender thread");
     }
@@ -1086,6 +1111,10 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
             || (DirectConnection == _type)) {
             // No per-connection pin needed: orphan reclaim is gated on the connection data
             // reference this emission already holds, and that is the only path that frees c.
+            // The receiver is deliberately not pinned. On its own thread nothing can be
+            // destroying it while we run; across threads DirectConnection runs the slot in
+            // the emitting thread, so keeping the receiver alive is the caller's contract -
+            // pinning it here would instead hang any slot that deletes its own receiver.
             iMetaCallEvent propertyArg;
             _iSender sender(receiver, this, receiverInSameThread);
             conn->emits(propertyArg.arg(IX_NULLPTR, args, conn->_argWrapper, conn->_argDeleter, conn->_isArgAdapter), ret);

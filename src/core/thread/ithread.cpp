@@ -40,9 +40,14 @@ iThreadData::~iThreadData()
     thread = IX_NULLPTR;
     delete t;
 
+    // the dispatcher outlives its thread so that push() can wake it without racing the
+    // teardown; nobody can reach it once this refcount is gone
+    iEventDispatcher *eventDispatcher = dispatcher.load();
+    dispatcher = IX_NULLPTR;
+    delete eventDispatcher;
+
     // whatever is still queued is disposed of by ~iPostEventList
 }
-
 iPostEventList::iPostEventList(iThreadData* owner)
     : recursion(0)
     , startOffset(0)
@@ -124,14 +129,6 @@ void iPostEventList::drain()
         iEvent* event = ordered;
         ordered = event->m_next;
         event->m_next = IX_NULLPTR;
-
-        iObject* receiver = event->m_receiver;
-        iThreadData* target = receiver ? receiver->m_threadData.load() : IX_NULLPTR;
-        if (IX_NULLPTR != target && &target->postEventList != this) {
-            // the producer picked this queue just before the receiver moved threads
-            target->postEventList.push(event);
-            continue;
-        }
 
         enqueue(event);
     }

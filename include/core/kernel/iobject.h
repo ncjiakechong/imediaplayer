@@ -37,15 +37,39 @@ struct ExternalRefCountData;
 }
 
 /**
- * @brief object base
- * iObject support metaObject/Property/Signal->Slot/invoke method and so on,
- * more detail info for Signal->Slot:
+ * @brief Base of the object model: meta object, properties, signal/slot, cross-thread
+ * method invocation, object trees and timers.
+ *
+ * Signal -> Slot:
  * - Args number is adapted from Signal to Slot, E.g signal(A, B) -> slot(A)
  * - Args type is adapted from Signal to Slot, E.g signal(float) -> slot(int)
  * - Return value from Slot to Signal
  * - Slot support override function
  * - Support lambda and unary function as slot
  * - Signal transmission
+ *
+ * Connection types:
+ * - AutoConnection: direct when the receiver shares the emitting thread, queued otherwise
+ * - DirectConnection: always invoked immediately, in the emitting thread
+ * - QueuedConnection: posted as an event, invoked in the receiver's affinity thread
+ * - BlockingQueuedConnection: queued, and the emitter blocks until the slot returns;
+ *   a same-thread receiver would deadlock, so that case only warns
+ * - UniqueConnection: flag OR'd onto the above; rejected for lambdas and functors,
+ *   which carry no identity to compare a duplicate against
+ *
+ * Object tree:
+ * - A parent owns its children and destroys them from its own destructor
+ * - Children follow their parent across moveToThread()
+ *
+ * Threading and lifetime contract:
+ * - An iObject is destroyed in its affinity thread; from any other thread use
+ *   deleteLater(), which posts a deferred-delete event to that thread
+ * - Callers keep an object alive for the duration of cross-thread postEvent(), signal,
+ *   and invokeMethod calls that reference it
+ * - A cross-thread DirectConnection runs in the emitting thread, so its receiver must
+ *   remain alive until the direct call returns
+ * - blockSignals() suppresses emission, but the destructor clears it so that
+ *   destroyed() is always delivered
  */
 class IX_CORE_EXPORT iObject
 {
@@ -72,7 +96,7 @@ public:
     void destroyed(iObject* obj);
     /// SIGNALS end
 
-    inline bool signalsBlocked() const { return m_blockSig; }
+    inline bool signalsBlocked() const { return 0 != m_blockSig.value(); }
     bool blockSignals(bool block);
 
     void setParent(iObject *parent);
@@ -393,13 +417,13 @@ private:
     static iMetaObject* registerMetaObject(xuint64 typeHash, const char* className, const iMetaObject* super);
     static void unregisterMetaObject(xuint64 typeHash);
 
-    uint m_wasDeleted : 1;
-    uint m_isDeletingChildren : 1;
-    uint m_deleteLaterCalled : 1;
-    uint m_quitCalled : 1;
-    uint m_blockSig : 1;
-    uint m_unused : 27;
+    bool m_wasDeleted;
+    bool m_isDeletingChildren;
+    bool m_deleteLaterCalled;
+    bool m_quitCalled;
 
+    iAtomicCounter<int> m_blockSig;
+    iAtomicCounter<int> m_inFlight;
     iAtomicCounter<int> m_postedEvents;
 
     iString     m_objName;

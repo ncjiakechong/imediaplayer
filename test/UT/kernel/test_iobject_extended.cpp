@@ -2160,3 +2160,219 @@ TEST_F(ObjectExtendedTest, BlockSignalsDuringEmit) {
     emitter.emitValue(99);
     EXPECT_EQ(receiver.callCount, 1);  // Should not be called
 }
+
+/**
+ * Test: moveToThread hands both queue tiers over in posting order
+ *
+ * The queued tier is older than the intake tier, so the migration has to drain before it
+ * takes and hand the whole thing over as one chain. Getting that inverted delivers the
+ * newer events first without any test noticing, hence this regression guard.
+ */
+TEST_F(ObjectExtendedTest, MoveToThreadPreservesPostingOrder) {
+    class OrderEvent : public iEvent {
+    public:
+        explicit OrderEvent(int n) : iEvent(iEvent::User + 77), seq(n) {}
+        int seq;
+    };
+
+    class Sink : public iObject {
+    public:
+        std::vector<int> order;
+        std::atomic<int> delivered;
+        Sink() : delivered(0) {}
+        bool event(iEvent* e) override {
+            if (e->type() == iEvent::User + 77) {
+                order.push_back(static_cast<OrderEvent*>(e)->seq);
+                delivered.fetch_add(1);
+                return true;
+            }
+            return iObject::event(e);
+        }
+    };
+
+    class Target : public iThread {
+    protected:
+        void run() override { exec(); }
+    };
+
+    Target target;
+    target.start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    Sink* sink = new Sink;
+
+    // 1 and 2 end up in the queued tier
+    iCoreApplication::postEvent(sink, new OrderEvent(1));
+    iCoreApplication::postEvent(sink, new OrderEvent(2));
+    iCoreApplication::dispatchPostedEvents(sink, iEvent::User + 999);
+
+    // 3 and 4 are still sitting in the intake
+    iCoreApplication::postEvent(sink, new OrderEvent(3));
+    iCoreApplication::postEvent(sink, new OrderEvent(4));
+
+    ASSERT_TRUE(sink->moveToThread(&target));
+
+    for (int i = 0; i < 200 && sink->delivered.load() < 4; ++i)
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+    // join before reading order: that is what orders the target's writes against us
+    target.exit();
+    target.wait();
+
+    ASSERT_EQ(sink->order.size(), 4u);
+    EXPECT_EQ(sink->order[0], 1);
+    EXPECT_EQ(sink->order[1], 2);
+    EXPECT_EQ(sink->order[2], 3);
+    EXPECT_EQ(sink->order[3], 4);
+
+    sink->moveToThread(iThread::currentThread());
+    delete sink;
+}
+
+/**
+ * Test: a subtree migration carries every member's own queue, each still in order
+ *
+ * moveToThread walks the tree object by object, so a child whose events are left behind
+ * still leaves the parent looking correct. Only checking the children catches that, and
+ * ordering is per receiver: events aimed at different objects are never sequenced.
+ */
+TEST_F(ObjectExtendedTest, MoveToThreadCarriesChildQueues) {
+    class OrderEvent : public iEvent {
+    public:
+        explicit OrderEvent(int n) : iEvent(iEvent::User + 78), seq(n) {}
+        int seq;
+    };
+
+    class Sink : public iObject {
+    public:
+        explicit Sink(iObject* parent) : iObject(parent), delivered(0) {}
+        bool event(iEvent* e) override {
+            if (e->type() == iEvent::User + 78) {
+                order.push_back(static_cast<OrderEvent*>(e)->seq);
+                delivered.fetch_add(1);
+                return true;
+            }
+            return iObject::event(e);
+        }
+        std::vector<int> order;
+        std::atomic<int> delivered;
+    };
+
+    class Target : public iThread {
+    protected:
+        void run() override { exec(); }
+    };
+
+    Target target;
+    target.start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    Sink* root = new Sink(IX_NULLPTR);
+    Sink* childA = new Sink(root);
+    Sink* childB = new Sink(root);
+    Sink* rota[3] = { root, childA, childB };
+
+    // interleave, then force the batch into the queued tier so the migration has to move
+    // three separate chains rather than just whatever is still in the intake
+    for (int i = 0; i < 12; ++i)
+        iCoreApplication::postEvent(rota[i % 3], new OrderEvent(i));
+    iCoreApplication::dispatchPostedEvents(root, iEvent::User + 999);
+
+    ASSERT_TRUE(root->moveToThread(&target));
+
+    for (int i = 0; i < 200; ++i) {
+        if (root->delivered.load() + childA->delivered.load() + childB->delivered.load() >= 12)
+            break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    target.exit();
+    target.wait();
+
+    for (int r = 0; r < 3; ++r) {
+        ASSERT_EQ(rota[r]->order.size(), 4u) << "receiver " << r;
+        for (int i = 0; i < 4; ++i)
+            EXPECT_EQ(rota[r]->order[i], i * 3 + r) << "receiver " << r << " index " << i;
+    }
+
+    root->moveToThread(iThread::currentThread());
+    delete root;
+}
+
+/**
+ * Test: concurrent deleteLater() queues exactly one deferred deletion
+ *
+ * compressEvent() arms a per-object flag from whichever thread posts. A plain
+ * test-then-set lets two posters both queue one and double-delete the receiver.
+ */
+TEST_F(ObjectExtendedTest, ConcurrentDeleteLaterQueuesOnce) {
+    static std::atomic<int> s_deleted(0);
+
+    class Counted : public iObject {
+    public:
+        ~Counted() { s_deleted.fetch_add(1); }
+    };
+
+    for (int round = 0; round < 20; ++round) {
+        s_deleted.store(0);
+        Counted* obj = new Counted;
+
+        std::atomic<bool> go(false);
+        std::vector<std::thread> posters;
+        for (int i = 0; i < 6; ++i) {
+            posters.push_back(std::thread([&go, obj]() {
+                while (!go.load()) std::this_thread::yield();
+                obj->deleteLater();
+            }));
+        }
+
+        go.store(true);
+        for (size_t i = 0; i < posters.size(); ++i)
+            posters[i].join();
+
+        iCoreApplication::dispatchPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
+        EXPECT_EQ(s_deleted.load(), 1) << "round " << round;
+    }
+}
+
+/**
+ * Test: posting into a thread that is shutting down
+ *
+ * push() reads iThreadData::dispatcher and then wakes it, so the dispatcher has to
+ * outlive the thread it belonged to.
+ */
+TEST_F(ObjectExtendedTest, PostEventWhileTargetThreadExits) {
+    class Worker : public iThread {
+    protected:
+        void run() override { exec(); }
+    };
+
+    for (int round = 0; round < 10; ++round) {
+        Worker worker;
+        worker.start();
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+        iObject* obj = new iObject;
+        ASSERT_TRUE(obj->moveToThread(&worker));
+
+        std::atomic<bool> stop(false);
+        std::thread poster([&stop, obj]() {
+            while (!stop.load()) {
+                iCoreApplication::postEvent(obj, new iEvent(iEvent::User + 78));
+                std::this_thread::sleep_for(std::chrono::microseconds(50));
+            }
+        });
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        worker.exit();
+        worker.wait();
+
+        stop.store(true);
+        poster.join();
+
+        obj->moveToThread(iThread::currentThread());
+        delete obj;
+    }
+
+    SUCCEED();
+}

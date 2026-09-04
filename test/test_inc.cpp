@@ -79,12 +79,10 @@ class StreamServer : public iINCServer
     IX_OBJECT(StreamServer)
 public:
     struct ClientInfo {
-        ClientInfo(iINCConnection* c = IX_NULLPTR, xuint32 id = 0, xint32 p = 0)
-            : conn(c), connId(c ? c->connectionId() : 0), channelId(id), pendingOps(p) {}
+        ClientInfo(iINCConnection* c = IX_NULLPTR, xuint32 id = 0)
+            : conn(c), channelId(id) {}
         iINCConnection* conn;
-        xuint64 connId;
         xuint32 channelId;
-        xint32 pendingOps;  // Track pending operations
     };
 
     struct SharedPacket {
@@ -130,12 +128,10 @@ public:
     };
 
     struct CallbackContext {
-        CallbackContext(StreamServer* s, iINCConnection* c, xuint32 id, SharedPacket* p)
-            : server(s), conn(c), connId(c ? c->connectionId() : 0), channelId(id), packet(p) {}
+        CallbackContext(StreamServer* s, iINCConnection* c, SharedPacket* p)
+            : server(s), conn(c), packet(p) {}
         StreamServer* server;
         iINCConnection* conn;
-        xuint64 connId;
-        xuint32 channelId;
         SharedPacket* packet;
     };
 
@@ -146,7 +142,7 @@ public:
         , m_totalBytesSent(0)
         , m_startTime(0)
         , m_lastLogTime(0)
-        , m_closing(false)
+        , m_closing(0)
         , m_bytesAtLastLog(0)
         , m_inflightPackets(0)
     {
@@ -161,31 +157,11 @@ public:
 
     ~StreamServer() {}
 
+    // No drain here: iINCServer::close() is not virtual, and in combined mode the clients
+    // ACK on this very thread, so blocking it would stall the completions we would wait for.
+    // Teardown instead relies on the library cancelling every pending operation.
     void beginShutdown() {
-        m_closing = true;
-    }
-
-    void close() {
-        m_closing = true;
-        
-        // Wait for all pending operations to complete (max 5000ms)
-        int waitCount = 0;
-        while (waitCount < 500) {
-            xint32 totalPending = 0;
-            for (std::list<ClientInfo>::const_iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
-                totalPending += it->pendingOps;
-            }
-            if (totalPending == 0) {
-                break;
-            }
-            if (waitCount % 50 == 0) {
-                 ilog_info("[Server] Waiting for ", totalPending, " pending operations to complete...");
-            }
-            iThread::msleep(10);
-            waitCount++;
-        }
-        
-        iINCServer::close();
+        m_closing = 1;
     }
 
     bool start(const iString& url) {
@@ -219,8 +195,6 @@ protected:
     }
 
 private:
-    volatile bool m_closing;
-
     void onClientConnected(iINCConnection* connection) {
         ilog_info("[Server] Transport connected: ", connection->peerAddress());
     }
@@ -243,11 +217,12 @@ private:
             IX_ASSERT(conn->peerName() == iString("Client"));
             IX_ASSERT(name == iString("ClientStream"));
             ilog_info("[Server] Stream opened: name=", name, ", channel=", channelId);
-            m_clients.push_back(ClientInfo(conn, channelId, 0));
-            
-            ilog_info("[Server] Client connected. Total clients: %d/%d", m_clients.size(), m_numClients);
+            m_clients.push_back(ClientInfo(conn, channelId));
+            const size_t clientCount = m_clients.size();
 
-            if (m_clients.size() == m_numClients) {
+            ilog_info("[Server] Client connected. Total clients: ", clientCount, "/", m_numClients);
+
+            if (clientCount == (size_t)m_numClients) {
                 ilog_info("[Server] All clients connected. Starting transmission...");
                 startSending();
             }
@@ -270,7 +245,7 @@ private:
     }
 
     void tryFillWindow() {
-        if (m_closing) return;
+        if (0 != m_closing.value()) return;
         while (m_inflightPackets.value() < m_options.inflightPerClient) {
             const int inflightBefore = m_inflightPackets.value();
             if (!sendBroadcastPacket()) {
@@ -285,7 +260,7 @@ private:
     }
 
     bool sendBroadcastPacket() {
-        if (m_closing) return false;
+        if (0 != m_closing.value()) return false;
         if (m_clients.empty()) return false;
         xint32 chunkSize = m_options.payloadBytes;
         iByteArray data;
@@ -326,16 +301,19 @@ private:
 
         // Send to all clients with checksum in pos parameter
         SharedPacket* packet = new SharedPacket(data, checksum);
+        // Producer reference held across the loop: the I/O thread may complete - and would
+        // otherwise free - the packet between two iterations, and setFinishedCallback()
+        // even fires inline when the operation has already finished.
+        packet->pending++;
         int successfulSends = 0;
         for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
             ClientInfo& client = *it;
             iSharedDataPointer<iINCOperation> op = sendBinaryData(client.conn, client.channelId, checksum, data);
             if (op) {
                 op->setTimeout(m_options.opTimeoutMs);
-                CallbackContext* ctx = new CallbackContext(this, client.conn, client.channelId, packet);
-                op->setFinishedCallback(&StreamServer::onPacketSent, ctx);
-                client.pendingOps++;
+                CallbackContext* ctx = new CallbackContext(this, client.conn, packet);
                 packet->pending++;
+                op->setFinishedCallback(&StreamServer::onPacketSent, ctx);
                 successfulSends++;
             } else {
                 // Non-SHM copy send is fire-and-forget and intentionally has no operation.
@@ -347,7 +325,7 @@ private:
             delete packet;
             return false;
         }
-        if (packet->pending == 0) {
+        if (--packet->pending == 0) {
             delete packet;
         } else {
             m_inflightPackets++;
@@ -374,6 +352,8 @@ private:
         return true;
     }
 
+    // Runs on the INC I/O thread - iINCOperation::setState() calls it inline - so nothing
+    // here may touch m_clients; the continuation is bounced to the server's own thread.
     static void onPacketSent(iINCOperation* op, void* userData) {
         CallbackContext* ctx = static_cast<CallbackContext*>(userData);
         if (!ctx) {
@@ -409,30 +389,15 @@ private:
             }
         }
         
-        if (ctx->server) {
-            ctx->server->handlePacketSent(ctx->connId, ctx->channelId);
-        }
-
         if (ctx->packet) {
             if (--ctx->packet->pending == 0) {
                 if (ctx->server) {
-                    ctx->server->onPacketCompleted();
+                    iObject::invokeMethod(ctx->server, &StreamServer::onPacketCompleted);
                 }
                 delete ctx->packet;
             }
         }
         delete ctx;
-    }
-
-    void handlePacketSent(xuint64 connId, xuint32 channelId) {
-        // Find client by cached connId — never dereference conn pointers here
-        // because the connection object may have been freed during shutdown.
-        for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
-            if (it->connId == connId && it->channelId == channelId) {
-                it->pendingOps--;
-                return;
-            }
-        }
     }
 
     void onPacketCompleted() {
@@ -447,6 +412,9 @@ private:
     xint64 m_totalBytesSent;
     xint64 m_startTime;
     xint64 m_lastLogTime;
+    iAtomicCounter<int> m_closing;
+    // Owned by the server's thread alone: every signal reaches it through invokeMethod or a
+    // queued AutoConnection, and the I/O-thread send completion hops back the same way.
     std::list<ClientInfo> m_clients;
     xint64 m_bytesAtLastLog;
     iAtomicCounter<int> m_inflightPackets;

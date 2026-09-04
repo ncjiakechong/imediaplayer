@@ -239,10 +239,8 @@ void iThreadImpl::internalThreadFunc()
 
         iEventDispatcher *eventDispatcher = data->dispatcher.load();
         if (eventDispatcher) {
-            data->dispatcher = IX_NULLPTR;
             thread->m_mutex.unlock();
             eventDispatcher->closingDown();
-            delete eventDispatcher;
             thread->m_mutex.lock();
         }
 
