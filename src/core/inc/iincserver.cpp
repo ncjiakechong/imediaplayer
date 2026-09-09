@@ -76,7 +76,7 @@ int iINCServer::listenOn(const iStringView& url)
             poolType = MEMTYPE_SHARED_POSIX;
         }
 
-        m_globalPool = iMemPool::create(objectName().toUtf8().constData(), m_config.sharedMemoryName().constData(), poolType, m_config.sharedMemorySize(), false);
+        m_globalPool = iMemPool::create(objectName().toUtf8().constData(), m_config.sharedMemoryName().constData(), poolType, m_config.sharedMemorySize(), false, m_config.sharedMemoryBlockSize());
         ilog_info("[", objectName(), "] Created global memory pool with type:", m_globalPool->type(), " name:", m_config.sharedMemoryName().constData());
     }
 
@@ -422,7 +422,7 @@ void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
             // Select the highest priority bit (lowest bit position) using iCountTrailingZeroBits
             // MEMFD (0x02, bit 1) has higher priority than POSIX (0x04, bit 2)
             negotiontedShmType = static_cast<xuint16>(1) << iCountTrailingZeroBits(negotiontedShmType);
-            iMemPool* memPool = iMemPool::create(conn->peerName().toUtf8().constData(), clientShmName.constData(), static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize(), true);
+            iMemPool* memPool = iMemPool::create(conn->peerName().toUtf8().constData(), clientShmName.constData(), static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize(), true, m_config.sharedMemoryBlockSize());
             conn->enableMempool(iSharedDataPointer<iMemPool>(memPool));
         } else {
             negotiontedShmType = 0;

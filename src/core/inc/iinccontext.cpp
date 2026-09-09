@@ -549,7 +549,7 @@ xuint32 iINCContext::registerChannel(iINCChannel* channel, MemType type, const i
         xint32 useSize = (shmSize <= 0)  ? m_config.sharedMemorySize() : shmSize;
 
         ilog_info("[", objectName(), "] Create mempool with name:", useName, " size:", useSize);
-        iMemPool* memPool = iMemPool::create((const char*)objectName().toUtf8().constData(), useName.constData(), type, useSize, true);
+        iMemPool* memPool = iMemPool::create((const char*)objectName().toUtf8().constData(), useName.constData(), type, useSize, true, m_config.sharedMemoryBlockSize());
         m_connection->enableMempool(iSharedDataPointer<iMemPool>(memPool));
     }
 

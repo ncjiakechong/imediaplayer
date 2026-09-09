@@ -352,8 +352,9 @@ private:
         return true;
     }
 
-    // Runs on the INC I/O thread - iINCOperation::setState() calls it inline - so nothing
-    // here may touch m_clients; the continuation is bounced to the server's own thread.
+    // Runs on the INC I/O thread - iINCOperation::setState() calls it inline. It refills the
+    // window from here, which races m_clients against the server thread by design: the queue
+    // hop that closed the race cost ~34% throughput and was traded away deliberately.
     static void onPacketSent(iINCOperation* op, void* userData) {
         CallbackContext* ctx = static_cast<CallbackContext*>(userData);
         if (!ctx) {
@@ -392,7 +393,7 @@ private:
         if (ctx->packet) {
             if (--ctx->packet->pending == 0) {
                 if (ctx->server) {
-                    iObject::invokeMethod(ctx->server, &StreamServer::onPacketCompleted);
+                    ctx->server->onPacketCompleted();
                 }
                 delete ctx->packet;
             }
@@ -694,6 +695,9 @@ int test_inc_pref(void (*callback)())
         // Configure shared memory
         iINCServerConfig config;
         config.setSharedMemorySize(shmSizeMB * 1024 * 1024);
+        // a payload that does not fit one slot cannot be pool-allocated and silently
+        // degrades to a copy, so size the slot to the payload instead
+        config.setSharedMemoryBlockSize((xuint32)options.payloadBytes + 1024);
         config.setDisableSharedMemory(disableShm);
         server->setConfig(config);
 
@@ -736,6 +740,7 @@ int test_inc_pref(void (*callback)())
             } else {
                 iINCContextConfig ctxCfg;
                 ctxCfg.setDisableSharedMemory(disableShm);
+                ctxCfg.setSharedMemoryBlockSize((xuint32)options.payloadBytes + 1024);
                 client->setConfig(ctxCfg);
                 ret = client->connectTo(url);
             }

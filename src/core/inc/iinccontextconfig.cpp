@@ -26,6 +26,7 @@ iINCContextConfig::iINCContextConfig()
     , m_sharedMemoryType(MEMTYPE_SHARED_POSIX)
     #endif
     , m_sharedMemorySize(4 * 1024 * 1024)
+    , m_sharedMemoryBlockSize(0)
     , m_sharedMemoryName("ix-shm")
     , m_encryptionMethod(NoEncryption)
     , m_autoReconnect(true)

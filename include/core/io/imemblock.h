@@ -20,6 +20,7 @@
 
 #include <core/thread/imutex.h>
 #include <core/thread/isemaphore.h>
+#include <core/thread/iatomiccounter.h>
 #include <core/utils/ifreelist.h>
 #include <core/utils/ishareddata.h>
 #include <core/global/inamespace.h>
@@ -188,29 +189,29 @@ class IX_CORE_EXPORT iMemPool : public iSharedData
 {
 public:
     /**
-     * Please note that updates to this structure are not locked,
+     * Each counter is atomic, but they are not updated as a group,
      * i.e. nAllocated might be updated at a point in time where
      * nAccumulated is not yet. Take these values with a grain of salt,
      * they are here for purely statistical reasons.
      */
     struct Stat {
-        int nAllocated;
-        int nAccumulated;
-        int nImported;
-        int nExported;
-        xint64 allocatedSize;
-        xint64 accumulatedSize;
-        xint64 importedSize;
-        xint64 exportedSize;
+        iAtomicCounter<int> nAllocated;
+        iAtomicCounter<int> nAccumulated;
+        iAtomicCounter<int> nImported;
+        iAtomicCounter<int> nExported;
+        iAtomicCounter<xint64> allocatedSize;
+        iAtomicCounter<xint64> accumulatedSize;
+        iAtomicCounter<xint64> importedSize;
+        iAtomicCounter<xint64> exportedSize;
 
-        int nTooLargeForPool;
-        int nPoolFull;
+        iAtomicCounter<int> nTooLargeForPool;
+        iAtomicCounter<int> nPoolFull;
 
-        int nAllocatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
-        int nAccumulatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
+        iAtomicCounter<int> nAllocatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
+        iAtomicCounter<int> nAccumulatedByType[iMemBlock::MEMBLOCK_TYPE_MAX];
     };
 
-    static iMemPool* create(const char* name, const char* prefix, MemType type, size_t size, bool perClient);
+    static iMemPool* create(const char* name, const char* prefix, MemType type, size_t size, bool perClient, size_t slotSize = 0);
 
     inline const Stat& getStat() const { return m_stat; }
     void vacuum();

@@ -694,10 +694,10 @@ void iMemBlock::replaceImport()
  *
  * TODO-1: Transform the global core mempool to a per-client one
  * TODO-2: Remove global mempools support */
-iMemPool* iMemPool::create(const char* name, const char* prefix, MemType type, size_t size, bool perClient)
+iMemPool* iMemPool::create(const char* name, const char* prefix, MemType type, size_t size, bool perClient, size_t slotSize)
 {
     const size_t page_size = ix_page_size();
-    size_t block_size = ix_page_align(IX_MEMPOOL_SLOT_SIZE);
+    size_t block_size = ix_page_align(0 == slotSize ? IX_MEMPOOL_SLOT_SIZE : slotSize);
     if (block_size < page_size)
         block_size = page_size;
 
@@ -807,7 +807,7 @@ iMemPool::~iMemPool()
         }
 
         iLogger::asprintf(ILOG_TAG, iShell::ILOG_ERROR, __FILE__, __FUNCTION__, __LINE__,
-                        "%s pool destroyed but not all memory blocks freed! remain %d", m_name, m_stat.nAllocated);
+                        "%s pool destroyed but not all memory blocks freed! remain %d", m_name, m_stat.nAllocated.value());
     }
 
     while(m_freeSlots.pop(IX_NULLPTR)) {}

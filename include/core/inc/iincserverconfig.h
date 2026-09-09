@@ -72,6 +72,9 @@ public:
     xuint32 sharedMemorySize() const { return m_sharedMemorySize; }
     void setSharedMemorySize(xuint32 size) { m_sharedMemorySize = size; }
 
+    xuint32 sharedMemoryBlockSize() const { return m_sharedMemoryBlockSize; }
+    void setSharedMemoryBlockSize(xuint32 size) { m_sharedMemoryBlockSize = size; }
+
     bool disableSharedMemory() const { return m_disableSharedMemory; }
     void setDisableSharedMemory(bool disable) { m_disableSharedMemory = disable; }
 
@@ -128,6 +131,7 @@ private:
     bool m_disableSharedMemory;
     xuint16 m_sharedMemoryType;
     xuint32 m_sharedMemorySize;  // 4 MB
+    xuint32 m_sharedMemoryBlockSize;
     iByteArray m_sharedMemoryName;  // Default shared memory name
 
     // Security

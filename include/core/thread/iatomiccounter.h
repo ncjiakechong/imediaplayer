@@ -82,7 +82,7 @@ public:
     ValueType operator ++ (int); // postfix
         /// Increments the counter and returns the previous value.
 
-    iAtomicCounter& operator += (int); // postfix
+    iAtomicCounter& operator += (ValueType); // postfix
         /// Increments the counter and returns the previous value.
 
     ValueType operator -- (); // prefix
@@ -91,7 +91,7 @@ public:
     ValueType operator -- (int); // postfix
         /// Decrements the counter and returns the previous value.
 
-    iAtomicCounter& operator -= (int); // postfix
+    iAtomicCounter& operator -= (ValueType); // postfix
         /// Decrements the counter and returns the previous value.
 
     bool operator ! () const;
@@ -189,7 +189,7 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ (int
 { return m_counter++; }
 
 template <typename T>
-inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (int count)
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (typename iAtomicCounter<T>::ValueType count)
 {
     m_counter += count;
     return *this;
@@ -204,7 +204,7 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- (int
 { return m_counter--; }
 
 template <typename T>
-inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (typename iAtomicCounter<T>::ValueType count)
 {
     m_counter -= count;
     return *this;
@@ -291,7 +291,7 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ (int
 { return IX_ATOMIC_FETCH_ADD(&m_counter.value, 1); }
 
 template <typename T>
-inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (int count)
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (typename iAtomicCounter<T>::ValueType count)
 {
     IX_ATOMIC_ADD_FETCH(&m_counter.value, count);
     return *this;
@@ -306,7 +306,7 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- (int
 { return IX_ATOMIC_FETCH_SUB(&m_counter.value, 1); }
 
 template <typename T>
-inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (typename iAtomicCounter<T>::ValueType count)
 {
     IX_ATOMIC_SUB_FETCH(&m_counter.value, count);
     return *this;
@@ -423,7 +423,7 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator ++ (int
 }
 
 template <typename T>
-inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (int count)
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator += (typename iAtomicCounter<T>::ValueType count)
 {
     {
         iMutex::ScopedLock lock(m_counter.mutex);
@@ -457,7 +457,7 @@ inline typename iAtomicCounter<T>::ValueType iAtomicCounter<T>::operator -- (int
 }
 
 template <typename T>
-inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (int count)
+inline iAtomicCounter<T>& iAtomicCounter<T>::operator -= (typename iAtomicCounter<T>::ValueType count)
 {
     {
         iMutex::ScopedLock lock(m_counter.mutex);
