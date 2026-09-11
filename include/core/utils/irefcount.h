@@ -23,12 +23,16 @@ public:
 
     inline bool ref(bool force = false) {
         int count = atomic.value();
-        if (count == 0 && !force) // !isSharable
-            return false;
-
-        if (count != -1) // !isStatic
-            ++atomic;
-        return true;
+        do {
+            if (count == -1)
+                return true;
+            if (count == 0 && !force)
+                return false;
+            if (atomic.testAndSet(count, count + 1, count))
+                return true;
+        } while (true);
+		
+		return false;
     }
 
     inline bool deref() {

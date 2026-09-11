@@ -75,7 +75,6 @@ protected:
     xintptr userdata;
 };
 
-class iObject;
 class IX_CORE_EXPORT iChildEvent : public iEvent
 {
 public:
@@ -84,7 +83,6 @@ public:
     iObject *child() const { return c; }
     bool added() const { return type() == ChildAdded; }
     bool removed() const { return type() == ChildRemoved; }
-
 protected:
     iObject *c;
 };

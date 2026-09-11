@@ -9,6 +9,7 @@
 #ifndef IRTPCLIENTDEVICE_H
 #define IRTPCLIENTDEVICE_H
 
+#include <vector>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
@@ -67,6 +68,10 @@ private:
     xuint32  m_ssrc;
     xuint16  m_txSeq;
     xuint32  m_txTimestamp;
+
+    size_t   m_txPacketIndex;
+    xint64   m_txMessageSize;
+    std::vector<iByteArray> m_txPackets;
 
     // RTP receive reassembly state (this peer -> server)
     iByteArray m_rxAccum;

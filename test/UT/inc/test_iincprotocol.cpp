@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 #include <algorithm>
+#include <atomic>
+#include <future>
+#include <thread>
 #include <core/inc/iincprotocol.h>
 #include <core/inc/iincdevice.h>
 #include <core/utils/ibytearray.h>
@@ -7,6 +10,16 @@
 #include <core/inc/iincmessage.h>
 #include <core/inc/iincerror.h>
 #include <core/inc/iincoperation.h>
+#include <core/inc/iincconnection.h>
+#include <core/inc/iincserver.h>
+#include <core/inc/iinccontext.h>
+#include <core/inc/iinchandshake.h>
+#include <core/kernel/icoreapplication.h>
+#include <core/kernel/ievent.h>
+#include <chrono>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 #include <core/io/imemblock.h>
 #include <core/utils/iarraydata.h>
 #include <core/kernel/ieventdispatcher.h>
@@ -160,9 +173,503 @@ protected:
 };
 
 class ProtocolEventLoopThread : public iThread {
+public:
+    void sendOperation(iINCProtocol* protocol, iINCMessage message,
+                       iSharedDataPointer<iINCOperation>* operation) {
+        *operation = protocol->sendMessage(message);
+    }
 protected:
     void run() override { exec(); }
 };
+
+using OperationRegression = INCProtocolUnitTest;
+
+TEST_F(OperationRegression, LateCallbackRunsInlineOnRegisteringThread)
+{
+    ProtocolEventLoopThread worker;
+    ASSERT_TRUE(device->moveToThread(&worker));
+    ASSERT_TRUE(protocol->moveToThread(&worker));
+    worker.start();
+    iINCMessage message(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(message);
+    EXPECT_TRUE(iObject::invokeMethod(protocol, &iINCProtocol::cancelAllOperations,
+                                     static_cast<int>(INC_OK), BlockingQueuedConnection));
+    std::promise<xintptr> invoked;
+    std::future<xintptr> callbackThread = invoked.get_future();
+    operation->setFinishedCallback([](iINCOperation*, void* data) {
+        static_cast<std::promise<xintptr>*>(data)->set_value(iThread::currentThreadHd());
+    }, &invoked);
+    const std::future_status result = callbackThread.wait_for(std::chrono::milliseconds(0));
+    EXPECT_EQ(std::future_status::ready, result);
+    if (result == std::future_status::ready)
+        EXPECT_EQ(iThread::currentThreadHd(), callbackThread.get());
+    operation->setFinishedCallback(nullptr);
+    worker.exit();
+    EXPECT_TRUE(worker.wait(3000));
+    EXPECT_TRUE(device->moveToThread(iThread::currentThread()));
+    EXPECT_TRUE(protocol->moveToThread(iThread::currentThread()));
+}
+
+TEST_F(OperationRegression, OneWayEventsDoNotAccumulateOperations)
+{
+    const xuint64 before = protocol->metrics().snapshot().operationsCreated;
+    for (int index = 0; index < 1000; ++index) {
+        iINCMessage message(INC_MSG_EVENT, 1, protocol->nextSequence());
+        EXPECT_FALSE(protocol->sendMessage(message));
+    }
+    EXPECT_EQ(before, protocol->metrics().snapshot().operationsCreated);
+}
+
+TEST_F(OperationRegression, CallbackRegistrationAfterReplyIsDelivered)
+{
+    int calls = 0;
+    iINCMessage request(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(request);
+    ASSERT_TRUE(operation);
+    operation->setTimeout(1000);
+    iINCMessage reply(INC_MSG_METHOD_REPLY, 1, request.sequenceNumber());
+    device->messageReceived(reply);
+    operation->setFinishedCallback(
+        [](iINCOperation* completed, void* data) {
+            EXPECT_EQ(iINCOperation::STATE_DONE, completed->getState());
+            ++*static_cast<int*>(data);
+        }, &calls);
+    EXPECT_EQ(1, calls);
+    operation->setFinishedCallback(nullptr);
+}
+
+TEST_F(OperationRegression, CompletedStatePublishesResultToAnotherThread)
+{
+    ProtocolEventLoopThread worker;
+    ASSERT_TRUE(device->moveToThread(&worker));
+    ASSERT_TRUE(protocol->moveToThread(&worker));
+    worker.start();
+    for (xuint32 value = 1; value <= 256; ++value) {
+        iINCMessage request(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+        iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(request);
+        iINCMessage reply(INC_MSG_METHOD_REPLY, 1, request.sequenceNumber());
+        reply.payload().putUint32(value);
+        EXPECT_TRUE(iObject::invokeMethod(device, &iINCDevice::messageReceived, reply, QueuedConnection));
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (operation->getState() == iINCOperation::STATE_RUNNING
+               && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::yield();
+        EXPECT_EQ(iINCOperation::STATE_DONE, operation->getState());
+        if (operation->getState() != iINCOperation::STATE_DONE)
+            break;
+        iINCTagStruct result = operation->resultData();
+        xuint32 received = 0;
+        EXPECT_TRUE(result.getUint32(received));
+        EXPECT_EQ(value, received);
+        EXPECT_EQ(INC_OK, operation->errorCode());
+    }
+    EXPECT_TRUE(iObject::invokeMethod(device, &iObject::thread, BlockingQueuedConnection));
+    worker.exit();
+    EXPECT_TRUE(worker.wait(3000));
+    EXPECT_TRUE(device->moveToThread(iThread::currentThread()));
+    EXPECT_TRUE(protocol->moveToThread(iThread::currentThread()));
+}
+
+TEST_F(OperationRegression, RejectedOperationsInvokeInlineAndReuseStorage)
+{
+    ProtocolEventLoopThread worker;
+    ASSERT_TRUE(device->moveToThread(&worker));
+    ASSERT_TRUE(protocol->moveToThread(&worker));
+    worker.start();
+    iINCOperation* previous = nullptr;
+    for (int round = 0; round < 2; ++round) {
+        SCOPED_TRACE(round);
+        iINCMessage message(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+        message.payload().setData(iByteArray(iINCMessageHeader::MAX_MESSAGE_SIZE + 1, 'x'));
+        std::promise<xintptr> invoked;
+        std::future<xintptr> callbackThread = invoked.get_future();
+        iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(message);
+        EXPECT_TRUE(operation);
+        if (!operation)
+            break;
+        operation->setFinishedCallback(
+            [](iINCOperation* completed, void* data) {
+                EXPECT_EQ(iINCOperation::STATE_FAILED, completed->getState());
+                EXPECT_EQ(INC_ERROR_MESSAGE_TOO_LARGE, completed->errorCode());
+                static_cast<std::promise<xintptr>*>(data)->set_value(iThread::currentThreadHd());
+            }, &invoked);
+        if (previous)
+            EXPECT_EQ(previous, operation.data());
+        previous = operation.data();
+        const std::future_status result = callbackThread.wait_for(std::chrono::milliseconds(0));
+        EXPECT_EQ(std::future_status::ready, result);
+        if (result == std::future_status::ready)
+            EXPECT_EQ(iThread::currentThreadHd(), callbackThread.get());
+        operation->setFinishedCallback(nullptr);
+        operation.reset();
+        EXPECT_TRUE(iObject::invokeMethod(device, &iObject::thread, BlockingQueuedConnection));
+    }
+    worker.exit();
+    EXPECT_TRUE(worker.wait(3000));
+    EXPECT_TRUE(device->moveToThread(iThread::currentThread()));
+    EXPECT_TRUE(protocol->moveToThread(iThread::currentThread()));
+    EXPECT_TRUE(device->lastWrittenData.isEmpty());
+}
+
+TEST_F(OperationRegression, ShutdownCancellationPreservesCallbackCleanup)
+{
+    ProtocolEventLoopThread worker;
+    ASSERT_TRUE(device->moveToThread(&worker));
+    ASSERT_TRUE(protocol->moveToThread(&worker));
+    worker.start();
+    int calls = 0;
+    iINCMessage request(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(request);
+    operation->setFinishedCallback(
+        [](iINCOperation*, void* data) { ++*static_cast<int*>(data); }, &calls);
+    EXPECT_TRUE(iObject::invokeMethod(device, &iObject::thread, BlockingQueuedConnection));
+    worker.exit();
+    EXPECT_TRUE(worker.wait(3000));
+    EXPECT_TRUE(device->moveToThread(iThread::currentThread()));
+    EXPECT_TRUE(protocol->moveToThread(iThread::currentThread()));
+    protocol->cancelAllOperations(INC_ERROR_DISCONNECTED);
+    EXPECT_EQ(1, calls);
+    operation->setFinishedCallback([](iINCOperation*, void* data) {
+        ++*static_cast<int*>(data);
+    }, &calls);
+    EXPECT_EQ(2, calls);
+    operation->setFinishedCallback(nullptr);
+}
+
+TEST_F(OperationRegression, HelperSurvivesThreadObjectDestruction)
+{
+    iSharedDataPointer<iINCOperation> operation;
+    int calls = 0;
+    {
+        ProtocolEventLoopThread worker;
+        ASSERT_TRUE(device->moveToThread(&worker));
+        ASSERT_TRUE(protocol->moveToThread(&worker));
+        worker.start();
+        iINCMessage request(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+        EXPECT_TRUE(iObject::invokeMethod(&worker, &ProtocolEventLoopThread::sendOperation,
+                                         protocol, request, &operation, BlockingQueuedConnection));
+        operation->setFinishedCallback([](iINCOperation* completed, void* data) {
+            EXPECT_EQ(iINCOperation::STATE_FAILED, completed->getState());
+            EXPECT_EQ(INC_ERROR_DISCONNECTED, completed->errorCode());
+            ++*static_cast<int*>(data);
+        }, &calls);
+        EXPECT_TRUE(iObject::invokeMethod(device, &iObject::thread, BlockingQueuedConnection));
+        worker.exit();
+        EXPECT_TRUE(worker.wait(3000));
+        EXPECT_TRUE(device->moveToThread(iThread::currentThread()));
+        EXPECT_TRUE(protocol->moveToThread(iThread::currentThread()));
+    }
+    protocol->cancelAllOperations(INC_ERROR_DISCONNECTED);
+    EXPECT_EQ(1, calls);
+    operation->setFinishedCallback(nullptr);
+    operation.reset();
+}
+
+TEST_F(OperationRegression, ClearAfterOwnerExitSuppressesShutdownCallback)
+{
+    ProtocolEventLoopThread worker;
+    ASSERT_TRUE(device->moveToThread(&worker));
+    ASSERT_TRUE(protocol->moveToThread(&worker));
+    worker.start();
+    int calls = 0;
+    iINCMessage request(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(request);
+    operation->setFinishedCallback(
+        [](iINCOperation*, void* data) { ++*static_cast<int*>(data); }, &calls);
+    EXPECT_TRUE(iObject::invokeMethod(device, &iObject::thread, BlockingQueuedConnection));
+    worker.exit();
+    EXPECT_TRUE(worker.wait(3000));
+    operation->setFinishedCallback(nullptr);
+    EXPECT_TRUE(device->moveToThread(iThread::currentThread()));
+    EXPECT_TRUE(protocol->moveToThread(iThread::currentThread()));
+    protocol->cancelAllOperations(INC_ERROR_DISCONNECTED);
+    EXPECT_EQ(0, calls);
+}
+
+class FrameTestServer : public iINCServer
+{
+public:
+    FrameTestServer() : iINCServer(iString("FrameTest")), accepted(nullptr), closed(0), notified(0), destroyed(0), notifiedId(0) {
+        connect(this, &iINCServer::clientConnected, this, &FrameTestServer::onConnected);
+        connect(this, &iINCServer::clientDisconnected, this, &FrameTestServer::onDisconnected);
+    }
+    void onConnected(iINCConnection* connection) {
+        accepted = connection;
+        connect(connection, &iObject::destroyed, this, &FrameTestServer::onDestroyed, DirectConnection);
+    }
+    void onDisconnected(iINCConnection* connection) { notifiedId = connection->connectionId(); ++notified; }
+    void onDestroyed(iObject*) { ++destroyed; }
+    iThread* worker() const { return ioThread(); }
+    iINCConnection* accepted;
+    std::atomic<int> closed, notified, destroyed;
+    xuint32 notifiedId;
+protected:
+    void onConnectionClosed(iINCConnection*) override { ++closed; }
+    void handleMethod(iINCConnection*, xuint32, const iString&, xuint16, const iByteArray&) override {}
+    void handleBinaryData(iINCConnection*, xuint32, xuint32, bool, xint64, const iByteArray&) override {}
+};
+
+class ConnectionRegression : public ::testing::Test {
+protected:
+    FrameTestServer server;
+    int descriptor = -1;
+    iByteArray socketName;
+    virtual bool threaded() const { return false; }
+    virtual void configureServer(iINCServerConfig&) {}
+    void SetUp() override {
+        static int serial = 0;
+        socketName = iString::asprintf("/tmp/ix-frame-%d-%d.sock", static_cast<int>(getpid()), ++serial).toUtf8();
+        iINCServerConfig config;
+        config.setEnableIOThread(threaded());
+        config.setDisableSharedMemory(true);
+        configureServer(config);
+        server.setConfig(config);
+        ASSERT_EQ(0, server.listenOn(iString("unix://") + iString::fromUtf8(socketName)));
+        descriptor = ::socket(AF_UNIX, SOCK_STREAM, 0);
+        ASSERT_GE(descriptor, 0);
+        sockaddr_un address = {};
+        address.sun_family = AF_UNIX;
+        std::strncpy(address.sun_path, socketName.constData(), sizeof(address.sun_path) - 1);
+        ASSERT_EQ(0, ::connect(descriptor, reinterpret_cast<sockaddr*>(&address), sizeof(address)));
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!server.accepted && std::chrono::steady_clock::now() < deadline)
+            iEventDispatcher::instance()->processEvents(iEventLoop::AllEvents);
+        ASSERT_NE(nullptr, server.accepted);
+    }
+    void TearDown() override {
+        if (descriptor >= 0) ::close(descriptor);
+        server.close();
+        iCoreApplication::dispatchPostedEvents(nullptr, iEvent::DeferredDelete);
+        ::unlink(socketName.constData());
+    }
+    void sendFrame(const iINCMessage& message) {
+        const iINCMessageHeader header = message.header();
+        iByteArray wire(reinterpret_cast<const char*>(&header), sizeof(header));
+        wire.append(message.payload().data());
+        ASSERT_EQ(wire.size(), ::send(descriptor, wire.constData(), wire.size(), 0));
+    }
+    iByteArray receiveFrame() {
+        char buffer[1024];
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (std::chrono::steady_clock::now() < deadline) {
+            iEventDispatcher::instance()->processEvents(iEventLoop::AllEvents);
+            const ssize_t size = ::recv(descriptor, buffer, sizeof(buffer), MSG_DONTWAIT);
+            if (size > 0) return iByteArray(buffer, size);
+        }
+        return iByteArray();
+    }
+};
+
+class ThreadedConnectionRegression : public ConnectionRegression {
+protected:
+    bool threaded() const override { return true; }
+};
+
+class HandshakeRegression : public ConnectionRegression {
+protected:
+    void configureServer(iINCServerConfig& config) override {
+        config.setVersionPolicy(iINCServerConfig::Strict);
+        config.setProtocolVersionRange(2, 1, 3);
+    }
+};
+
+TEST_F(HandshakeRegression, RealServerRejectsDifferentVersionUnderStrictPolicy)
+{
+    iINCHandshake client(iINCHandshake::ROLE_CLIENT);
+    iINCHandshakeData data;
+    data.nodeName = "Client";
+    data.protocolVersion = 1;
+    client.setLocalData(data);
+    iINCMessage message(INC_MSG_HANDSHAKE, 0, 1);
+    message.payload().setData(client.start());
+    sendFrame(message);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (server.closed.load() == 0 && std::chrono::steady_clock::now() < deadline)
+        iEventDispatcher::instance()->processEvents(iEventLoop::AllEvents);
+    EXPECT_EQ(1, server.closed.load());
+}
+
+TEST_F(HandshakeRegression, RealClientAppliesRemoteVersionRange)
+{
+    iINCContext client(iString("Client"));
+    iINCContextConfig config;
+    config.setEnableIOThread(false);
+    config.setDisableSharedMemory(true);
+    config.setProtocolVersionRange(2, 3, 3);
+    config.setMaxReconnectAttempts(0);
+    client.setConfig(config);
+    ASSERT_EQ(0, client.connectTo(iString("unix://") + iString::fromUtf8(socketName)));
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (client.state() != iINCContext::STATE_FAILED && client.state() != iINCContext::STATE_CONNECTED
+            && std::chrono::steady_clock::now() < deadline)
+        iEventDispatcher::instance()->processEvents(iEventLoop::AllEvents);
+    EXPECT_EQ(iINCContext::STATE_FAILED, client.state());
+    client.close();
+}
+
+TEST_F(ThreadedConnectionRegression, NotificationPinsConnectionWhileOwnerLoopIsStopped)
+{
+    const xuint32 connectionId = server.accepted->connectionId();
+    ::close(descriptor);
+    descriptor = -1;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    while (server.closed.load() == 0 && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::yield();
+    ASSERT_EQ(1, server.closed.load());
+    ASSERT_TRUE(iObject::invokeMethod(server.worker(), &iObject::thread, BlockingQueuedConnection));
+    EXPECT_EQ(0, server.destroyed.load());
+    EXPECT_EQ(0, server.notified.load());
+    iCoreApplication::dispatchPostedEvents(nullptr, 0);
+    EXPECT_EQ(1, server.notified.load());
+    EXPECT_EQ(connectionId, server.notifiedId);
+}
+
+TEST_F(ConnectionRegression, UnknownChannelHandlesAckAndNoAckFrames)
+{
+    iINCMessage message(INC_MSG_BINARY_DATA, 77, 12);
+    message.setFlags(INC_MSG_FLAG_NOACK);
+    message.payload().putInt64(0);
+    message.payload().putBytes(iByteArray("payload"));
+    sendFrame(message);
+    message.setFlags(INC_MSG_FLAG_NONE);
+    sendFrame(message);
+    iByteArray wire = receiveFrame();
+    ASSERT_GE(wire.size(), static_cast<xsizetype>(sizeof(iINCMessageHeader)));
+    iINCMessage reply(INC_MSG_INVALID, 0, 0);
+    const int length = reply.parseHeader(iByteArrayView(wire.constData(), sizeof(iINCMessageHeader)));
+    ASSERT_GE(length, 0);
+    EXPECT_EQ(static_cast<xsizetype>(sizeof(iINCMessageHeader)) + length, wire.size());
+    EXPECT_EQ(INC_MSG_BINARY_DATA_ACK, reply.type());
+    EXPECT_EQ(77u, reply.channelID());
+}
+
+TEST_F(ConnectionRegression, EventNotificationIsMarkedNoAck)
+{
+    server.accepted->sendEvent(iString("test.event"), 1, iByteArray("payload"));
+    iByteArray wire = receiveFrame();
+    ASSERT_GE(wire.size(), static_cast<xsizetype>(sizeof(iINCMessageHeader)));
+    iINCMessage message(INC_MSG_INVALID, 0, 0);
+    ASSERT_GE(message.parseHeader(iByteArrayView(wire.constData(), sizeof(iINCMessageHeader))), 0);
+    EXPECT_EQ(INC_MSG_EVENT, message.type());
+    EXPECT_NE(0, message.flags() & INC_MSG_FLAG_NOACK);
+}
+
+TEST_F(OperationRegression, ConcurrentCancellationCallsOnce)
+{
+    for (int round = 0; round < 200; ++round) {
+        iINCMessage message(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+        iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(message);
+        ASSERT_TRUE(operation);
+        std::atomic<int> calls(0);
+        std::atomic<bool> start(false);
+        operation->setFinishedCallback([](iINCOperation* completed, void* data) {
+            ++*static_cast<std::atomic<int>*>(data);
+            EXPECT_EQ(iINCOperation::STATE_CANCELLED, completed->getState());
+        }, &calls);
+        std::thread firstCanceller([&]() {
+            while (!start.load()) std::this_thread::yield();
+            operation->cancel();
+        });
+        std::thread secondCanceller([&]() {
+            while (!start.load()) std::this_thread::yield();
+            operation->cancel();
+        });
+        start.store(true);
+        firstCanceller.join();
+        secondCanceller.join();
+        EXPECT_EQ(1, calls.load());
+        protocol->releaseOperation(operation.data());
+    }
+}
+
+TEST_F(OperationRegression, LateCallbackCanClearItself)
+{
+    iINCMessage message(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(message);
+    ASSERT_TRUE(operation);
+    operation->cancel();
+    int calls = 0;
+    operation->setFinishedCallback([](iINCOperation* completed, void* data) {
+        ++*static_cast<int*>(data);
+        completed->setFinishedCallback(nullptr);
+        completed->cancel();
+    }, &calls);
+    EXPECT_EQ(1, calls);
+    protocol->releaseOperation(operation.data());
+}
+
+TEST_F(OperationRegression, CancellationRunsInlineOnCallingThread)
+{
+    ProtocolEventLoopThread worker;
+    ASSERT_TRUE(device->moveToThread(&worker));
+    ASSERT_TRUE(protocol->moveToThread(&worker));
+    worker.start();
+    iINCMessage message(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(message);
+    ASSERT_TRUE(operation);
+    xintptr callbackThread = 0;
+    operation->setFinishedCallback([](iINCOperation*, void* data) {
+        *static_cast<xintptr*>(data) = iThread::currentThreadHd();
+    }, &callbackThread);
+    operation->cancel();
+    EXPECT_EQ(iINCOperation::STATE_CANCELLED, operation->getState());
+    EXPECT_EQ(iThread::currentThreadHd(), callbackThread);
+    operation->setFinishedCallback(nullptr);
+    EXPECT_TRUE(iObject::invokeMethod(protocol, &iINCProtocol::releaseOperation,
+                                     operation.data(), BlockingQueuedConnection));
+    operation.reset();
+    worker.exit();
+    EXPECT_TRUE(worker.wait(3000));
+    EXPECT_TRUE(device->moveToThread(iThread::currentThread()));
+    EXPECT_TRUE(protocol->moveToThread(iThread::currentThread()));
+}
+
+TEST_F(OperationRegression, ReplacementCancelsPreviousRegistration)
+{
+    iINCMessage message(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(message);
+    ASSERT_TRUE(operation);
+    int previous = 0, current = 0;
+    auto callback = [](iINCOperation*, void* data) { ++*static_cast<int*>(data); };
+    operation->setFinishedCallback(callback, &previous);
+    operation->setFinishedCallback(callback, &current);
+    operation->cancel();
+    EXPECT_EQ(0, previous);
+    EXPECT_EQ(1, current);
+    protocol->releaseOperation(operation.data());
+}
+
+TEST_F(OperationRegression, ClearBeforeCompletionSuppressesCallback)
+{
+    iINCMessage message(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(message);
+    int calls = 0;
+    operation->setFinishedCallback([](iINCOperation*, void* data) {
+        ++*static_cast<int*>(data);
+    }, &calls);
+    operation->setFinishedCallback(nullptr);
+    operation->cancel();
+    EXPECT_EQ(0, calls);
+    protocol->releaseOperation(operation.data());
+}
+
+TEST_F(OperationRegression, CallbackCanClearAndRegisterAgain)
+{
+    iINCMessage message(INC_MSG_METHOD_CALL, 1, protocol->nextSequence());
+    iSharedDataPointer<iINCOperation> operation = protocol->sendMessage(message);
+    operation->cancel();
+    int calls = 0;
+    operation->setFinishedCallback([](iINCOperation* completed, void* data) {
+        ++*static_cast<int*>(data);
+        completed->setFinishedCallback(nullptr);
+        completed->setFinishedCallback([](iINCOperation*, void* data) {
+            ++*static_cast<int*>(data);
+        }, data);
+    }, &calls);
+    EXPECT_EQ(2, calls);
+    operation->setFinishedCallback(nullptr);
+    protocol->releaseOperation(operation.data());
+}
 
 TEST_F(INCProtocolUnitTest, Constructor) {
     EXPECT_NE(protocol, nullptr);

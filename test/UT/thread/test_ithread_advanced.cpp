@@ -7,8 +7,176 @@
 #include <gtest/gtest.h>
 #include <core/thread/ithread.h>
 #include <core/thread/imutex.h>
+#include <core/kernel/ieventdispatcher.h>
+#include <core/thread/isemaphore.h>
+#include <thread/ithread_p.h>
+#include <thread/ieventdispatcher_generic.h>
+#include <atomic>
+#include <chrono>
+#include <future>
+#include <thread>
 
 using namespace iShell;
+
+class DispatcherObserver : public iObject {
+public:
+    std::atomic<int> observed;
+    std::atomic<int> destroyed;
+    DispatcherObserver() : observed(0), destroyed(0) {}
+    void onDestroyed(iObject*) { ++destroyed; }
+};
+
+class DispatcherLifetimeWorker : public iThread {
+public:
+    explicit DispatcherLifetimeWorker(DispatcherObserver* observer) : observer(observer) {}
+    void run() override {
+        if (eventDispatcher() && iObject::connect(eventDispatcher(), &iObject::destroyed,
+                observer, &DispatcherObserver::onDestroyed, DirectConnection))
+            ++observer->observed;
+    }
+private:
+    DispatcherObserver* observer;
+};
+
+TEST(ThreadLifetimeRegression, DispatcherIsDestroyedAndRecreatedAcrossRestarts)
+{
+    DispatcherObserver observer;
+    DispatcherLifetimeWorker worker(&observer);
+    for (int round = 1; round <= 3; ++round) {
+        worker.start();
+        ASSERT_TRUE(worker.wait(3000));
+        EXPECT_EQ(round, observer.observed.load());
+        EXPECT_EQ(round, observer.destroyed.load());
+        EXPECT_EQ(nullptr, worker.eventDispatcher());
+    }
+}
+
+struct DispatcherGate {
+    iSemaphore ready, leaveRun, interrupted, leaveInterrupt, closing, leaveClosing;
+    std::atomic<int> destroyed{0};
+    std::atomic<bool> closingFinished{false};
+    bool blockInterrupt = false;
+    bool blockClosing = false;
+};
+
+class GatedDispatcher : public iEventDispatcher_generic {
+public:
+    explicit GatedDispatcher(DispatcherGate* gate) : gate(gate) {}
+    ~GatedDispatcher() override { ++gate->destroyed; }
+    void interrupt() override {
+        gate->interrupted.release();
+        if (gate->blockInterrupt) gate->leaveInterrupt.acquire();
+        iEventDispatcher_generic::interrupt();
+    }
+    void closingDown() override {
+        gate->closing.release();
+        if (gate->blockClosing) gate->leaveClosing.acquire();
+        iEventDispatcher_generic::closingDown();
+        gate->closingFinished.store(true);
+    }
+private:
+    DispatcherGate* gate;
+};
+
+class GatedDispatcherWorker : public iThread {
+public:
+    explicit GatedDispatcherWorker(DispatcherGate* gate) : gate(gate) {}
+    void run() override {
+        iThreadData* data = iThread::get2(this);
+        data->destroyDispatcher();
+        data->dispatcher = new GatedDispatcher(gate);
+        gate->ready.release();
+        gate->leaveRun.acquire();
+    }
+private:
+    DispatcherGate* gate;
+};
+
+TEST(ThreadLifetimeRegression, ExitPinsDispatcherUntilInterruptReturns)
+{
+    DispatcherGate gate;
+    gate.blockInterrupt = true;
+    GatedDispatcherWorker worker(&gate);
+    iEventLoop loop;
+    ASSERT_TRUE(loop.moveToThread(&worker));
+    worker.start();
+    gate.ready.acquire();
+    std::thread interrupter([&]() { loop.exit(); });
+    gate.interrupted.acquire();
+    gate.leaveRun.release();
+    EXPECT_FALSE(worker.wait(20));
+    EXPECT_EQ(0, gate.destroyed.load());
+    gate.leaveInterrupt.release();
+    interrupter.join();
+    EXPECT_TRUE(worker.wait(3000));
+    EXPECT_EQ(1, gate.destroyed.load());
+    EXPECT_TRUE(loop.moveToThread(iThread::currentThread()));
+}
+
+class RetirementObservedObject : public iObject {
+public:
+    RetirementObservedObject(DispatcherGate* gate, std::atomic<bool>* safe) : gate(gate), safe(safe) {}
+    ~RetirementObservedObject() override { safe->store(gate->closingFinished.load()); }
+private:
+    DispatcherGate* gate;
+    std::atomic<bool>* safe;
+};
+
+TEST(ThreadLifetimeRegression, WaitFinishesBeforeStoppedThreadDeletion)
+{
+    DispatcherGate gate;
+    gate.blockClosing = true;
+    GatedDispatcherWorker worker(&gate);
+    std::atomic<bool> safe(false);
+    RetirementObservedObject* object = new RetirementObservedObject(&gate, &safe);
+    ASSERT_TRUE(object->moveToThread(&worker));
+    worker.start();
+    gate.ready.acquire();
+    gate.leaveRun.release();
+    gate.closing.acquire();
+    EXPECT_FALSE(worker.isRunning());
+    iSemaphore started;
+    std::promise<void> disposed;
+    std::future<void> completion = disposed.get_future();
+    std::thread disposer([&]() {
+        started.release();
+        EXPECT_TRUE(worker.wait());
+        EXPECT_TRUE(object->moveToThread(iThread::currentThread()));
+        delete object;
+        disposed.set_value();
+    });
+    started.acquire();
+    EXPECT_EQ(std::future_status::timeout, completion.wait_for(std::chrono::milliseconds(20)));
+    gate.leaveClosing.release();
+    disposer.join();
+    EXPECT_TRUE(worker.wait(3000));
+    EXPECT_TRUE(safe.load());
+}
+
+class ThreadDeletionObservedObject : public iObject {
+public:
+    explicit ThreadDeletionObservedObject(std::atomic<xintptr>* deletedThread) : deletedThread(deletedThread) {}
+    ~ThreadDeletionObservedObject() override { deletedThread->store(iThread::currentThreadHd()); }
+private:
+    std::atomic<xintptr>* deletedThread;
+};
+
+TEST(ThreadLifetimeRegression, DeferredDeleteRunsOnOwnerBeforeExit)
+{
+    DispatcherGate gate;
+    GatedDispatcherWorker worker(&gate);
+    std::atomic<xintptr> deletedThread(0);
+    ThreadDeletionObservedObject* object = new ThreadDeletionObservedObject(&deletedThread);
+    ASSERT_TRUE(object->moveToThread(&worker));
+    worker.start();
+    gate.ready.acquire();
+    const xintptr ownerThread = worker.threadHd();
+    object->deleteLater();
+    EXPECT_EQ(0, deletedThread.load());
+    gate.leaveRun.release();
+    EXPECT_TRUE(worker.wait(3000));
+    EXPECT_EQ(ownerThread, deletedThread.load());
+}
 
 class IThreadAdvancedTest : public ::testing::Test {
 protected:

@@ -114,7 +114,7 @@ public:
             rtp->processRx();
         }
         if (writeReady) {
-            IEMIT rtp->bytesWritten(0);
+            rtp->processTx();
         }
         if (hasError) {
             ilog_warn("[", rtp->peerAddress(), "] RTP socket error fd:", m_pollFd.fd);
@@ -142,6 +142,8 @@ iRtpDevice::iRtpDevice(Role role, iObject* parent)
     , m_txSeq(static_cast<xuint16>(iRtpRandom32()))
     , m_txTimestamp(iRtpRandom32())
     , m_maxPayload(1200)
+    , m_txPacketIndex(0)
+    , m_txMessageSize(0)
     , m_rxTimestamp(0)
     , m_rxExpectSeq(0)
     , m_rxHave(false)
@@ -255,8 +257,7 @@ int iRtpDevice::bindOn(const iString& address, xuint16 port)
     ::freeaddrinfo(addrResult);
 
     setNonBlocking(true);
-    m_localAddr = address.isEmpty() ? "0.0.0.0" : address;
-    m_localPort = port;
+    updateLocalInfo();
 
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 
@@ -359,12 +360,15 @@ xint64 iRtpDevice::sendToClient(const void* clientSockaddr, const iByteArray& da
 
 void iRtpDevice::removeClient(iRtpClientDevice* client)
 {
+    if (m_pendingClient == client)
+        m_pendingClient = IX_NULLPTR;
     for (ClientMap::iterator it = m_addrToChannel.begin(); it != m_addrToChannel.end(); ++it) {
         if (it->second == client) {
             m_addrToChannel.erase(it);
             break;
         }
     }
+    eventAbilityUpdate();
 }
 
 void iRtpDevice::buildPackets(const iINCMessage& msg, xuint32 ssrc, xuint16& seq,
@@ -403,14 +407,45 @@ void iRtpDevice::buildPackets(const iINCMessage& msg, xuint32 ssrc, xuint16& seq
 
 xint64 iRtpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 {
-    if (offset > 0) return 0;
-
-    std::vector<iByteArray> pkts;
-    buildPackets(msg, m_ssrc, m_txSeq, m_txTimestamp++, m_maxPayload, pkts);
-    for (size_t i = 0; i < pkts.size(); ++i) {
-        if (sendDatagram(pkts[i]) < 0) return -1;
+    if (offset != 0) return -1;
+    if (m_txPackets.empty()) {
+        buildPackets(msg, m_ssrc, m_txSeq, m_txTimestamp++, m_maxPayload, m_txPackets);
+        m_txPacketIndex = 0;
+        m_txMessageSize = static_cast<xint64>(sizeof(iINCMessageHeader)) + msg.payload().data().size();
     }
-    return static_cast<xint64>(sizeof(iINCMessageHeader)) + msg.payload().data().size();
+    while (m_txPacketIndex < m_txPackets.size()) {
+        const iByteArray& packet = m_txPackets[m_txPacketIndex];
+        const xint64 sent = sendDatagram(packet);
+        if (sent == 0)
+            return 0;
+        if (sent != packet.size()) {
+            m_txPackets.clear();
+            m_txPacketIndex = 0;
+            return -1;
+        }
+        ++m_txPacketIndex;
+    }
+    m_txPackets.clear();
+    m_txPacketIndex = 0;
+    return m_txMessageSize;
+}
+
+void iRtpDevice::processTx()
+{
+    if (role() != ROLE_SERVER) {
+        IEMIT bytesWritten(0);
+        return;
+    }
+    std::vector<xuint64> ready;
+    for (ClientMap::const_iterator it = m_addrToChannel.begin(); it != m_addrToChannel.end(); ++it) {
+        if (it->second->eventAbility() & IX_IO_OUT)
+            ready.push_back(it->first);
+    }
+    for (size_t index = 0; index < ready.size(); ++index) {
+        ClientMap::iterator it = m_addrToChannel.find(ready[index]);
+        if (it != m_addrToChannel.end() && (it->second->eventAbility() & IX_IO_OUT))
+            IEMIT it->second->bytesWritten(0);
+    }
 }
 
 void iRtpDevice::updatePeerFromRaw(const void* srcAddr)
@@ -545,6 +580,9 @@ void iRtpDevice::close()
     m_addrToChannel.clear();
 
     m_isConnected = false;
+    m_txPackets.clear();
+    m_txPacketIndex = 0;
+    m_txMessageSize = 0;
     m_peerAddr.clear();
     m_peerPort = 0;
     m_rxAccum = iByteArray();

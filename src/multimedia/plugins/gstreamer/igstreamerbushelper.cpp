@@ -131,11 +131,16 @@ void iGstreamerBusHelper::removeMessageFilter(iObject *filter)
 {
     if (filter) {
         iScopedLock<iMutex> lock(m_filterMutex);
-        m_syncFilters.erase(std::find(m_syncFilters.begin(), m_syncFilters.end(), filter));
+        std::list<iObject*>::iterator it = std::find(m_syncFilters.begin(), m_syncFilters.end(), filter);
+        if (it != m_syncFilters.end())
+            m_syncFilters.erase(it);
     }
 
-    if (filter)
-        m_busFilters.erase(std::find(m_busFilters.begin(), m_busFilters.end(), filter));
+    if (filter) {
+        std::list<iObject*>::iterator it = std::find(m_busFilters.begin(), m_busFilters.end(), filter);
+        if (it != m_busFilters.end())
+            m_busFilters.erase(it);
+    }
 }
 
 void iGstreamerBusHelper::interval()

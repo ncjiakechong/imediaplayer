@@ -8,11 +8,14 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include <limits>
+
 #include "global/inumeric_p.h"
 #include "core/kernel/imath.h"
 #include "core/io/isharemem.h"
 #include "core/io/imemtrap.h"
 #include "core/io/imemblock.h"
+#include "core/thread/ithread.h"
 #include "utils/itools_p.h"
 #include "core/io/ilog.h"
 #include "io/imemchunk.h"
@@ -73,9 +76,10 @@ struct iMemImportSegment {
     iMemTrap* trap;
     iAtomicCounter<int> n_blocks;
     bool writable;
+    iMemImportSegment* nextRetired;
 
     iMemImportSegment(const char* prefix)
-        : import(IX_NULLPTR), memory(prefix), trap(IX_NULLPTR), n_blocks(0), writable(false)
+        : import(IX_NULLPTR), memory(prefix), trap(IX_NULLPTR), n_blocks(0), writable(false), nextRetired(IX_NULLPTR)
     {}
 
     bool isPermanent() const { return memory.type() == MEMTYPE_SHARED_MEMFD || memory.type() == MEMTYPE_SHARED_POSIX; }
@@ -262,31 +266,7 @@ void iMemBlock::doFree()
 
         case MEMBLOCK_IMPORTED: {
             IX_ASSERT(m_imported.segment && m_imported.segment->import);
-
-            iMemImportSegment* segment = m_imported.segment;
-            iMemImport* import = segment->import;
-
-            // Lock-free fast path: push blockId for deferred erase,
-            // atomically decrement the segment block count.
-            import->m_pendingReleases.push(m_imported.id);
-            int remaining = --segment->n_blocks;
-            IX_ASSERT(remaining >= 0);
-
-            if (remaining <= 0 && !segment->isPermanent()) {
-                // Rare case: last block in non-permanent segment — need lock for segment detach
-                iScopedLock<iMutex> _importLock(import->m_mutex);
-                import->drainPendingReleases();
-                iMemImport::segmentDetach(segment);
-            }
-
-            import->m_releaseCb(import, m_imported.id, import->m_userdata);
-
-            iSharedDataPointer<iMemPool> pool = m_pool;
-            void* ptr = this;
-            this->~iMemBlock();
-            if (!pool || !pool->m_cacheHeads.push(ptr)) {
-                ::free(ptr);
-            }
+            m_imported.segment->import->retire(this);
             break;
         }
 
@@ -653,8 +633,7 @@ void iMemBlock::replaceImport()
 
     iMemImport* import = segment->import;
 
-    iScopedLock<iMutex> _importLock(import->m_mutex);
-    import->drainPendingReleases();
+    iMemImport::Access _importLock(import);
     import->m_blocks.erase(m_imported.id);
 
     makeLocal();
@@ -665,6 +644,7 @@ void iMemBlock::replaceImport()
     }
     if (--segment->n_blocks <= 0)
         iMemImport::segmentDetach(segment);
+    --import->m_liveBlocks;
 }
 
 /*@perClient: This is a security measure. By default this should
@@ -913,15 +893,105 @@ bool iMemPool::isMemfdBacked() const
     return (m_memory->type() == MEMTYPE_SHARED_MEMFD);
 }
 
+iMemImport::Access::Access(iMemImport* import) : m_import(import), m_locked(false)
+{
+    relock();
+}
+
+iMemImport::Access::~Access()
+{
+    unlock();
+}
+
+void iMemImport::Access::relock()
+{
+    IX_ASSERT(!m_locked);
+    m_import->m_mutex.lock();
+    ++m_import->m_lockDepth;
+    m_locked = true;
+}
+
+void iMemImport::Access::unlock()
+{
+    if (!m_locked)
+        return;
+
+    const bool outermost = --m_import->m_lockDepth == 0;
+    m_locked = false;
+    m_import->m_mutex.unlock();
+    if (outermost)
+        m_import->collectRetired();
+}
+
+void iMemImport::retire(iMemBlock* block)
+{
+    ++m_releaseUsers;
+    do {
+        block->m_user.nextRetired = m_retired.load();
+    } while (!m_retired.testAndSet(block->m_user.nextRetired, block));
+    collectRetired();
+    --m_releaseUsers;
+}
+
+void iMemImport::collectRetired()
+{
+    while (m_retired.load()) {
+        if (m_mutex.tryLock() < 0)
+            return;
+        if (m_lockDepth != 0) {
+            m_mutex.unlock();
+            return;
+        }
+        iMemBlock* retired;
+        do {
+            retired = m_retired.load();
+        } while (!m_retired.testAndSet(retired, IX_NULLPTR));
+
+        iMemImportSegment* segments = IX_NULLPTR;
+        for (iMemBlock* block = retired; block; block = block->m_user.nextRetired) {
+            BlockMap::iterator entry = m_blocks.find(block->m_imported.id);
+            if (entry != m_blocks.end() && entry->second == block)
+                m_blocks.erase(entry);
+            iMemImportSegment* segment = block->m_imported.segment;
+            const int remaining = --segment->n_blocks;
+            IX_ASSERT(remaining >= 0);
+            if (remaining == 0 && !segment->isPermanent()) {
+                m_segments.erase(segment->memory.id());
+                segment->nextRetired = segments;
+                segments = segment;
+            }
+        }
+        m_mutex.unlock();
+
+        while (retired) {
+            iMemBlock* next = retired->m_user.nextRetired;
+            m_releaseCb(this, retired->m_imported.id, m_userdata);
+            iSharedDataPointer<iMemPool> pool = retired->m_pool;
+            retired->~iMemBlock();
+            if (!pool->m_cacheHeads.push(retired))
+                ::free(retired);
+            --m_liveBlocks;
+            retired = next;
+        }
+        while (segments) {
+            iMemImportSegment* next = segments->nextRetired;
+            segmentFree(segments);
+            segments = next;
+        }
+    }
+}
+
 /* For receiving blocks from other nodes */
 iMemImport::iMemImport(iMemPool* pool, iMemImportReleaseCb cb, void* userdata)
     : m_mutex(iMutex::Recursive)
+    , m_lockDepth(0)
+    , m_liveBlocks(0)
+    , m_releaseUsers(0)
     , m_pool(pool)
     , m_releaseCb(cb)
     , m_userdata(userdata)
     , _next(IX_NULLPTR)
     , _prev(IX_NULLPTR)
-    , m_pendingReleases(IX_MEMIMPORT_SLOTS_MAX)
 {
     IX_ASSERT(m_pool && cb);
     iScopedLock<iMutex> _poolLock(m_pool->m_mutex);
@@ -959,6 +1029,11 @@ void iMemImport::segmentDetach(iMemImportSegment* seg)
     IX_ASSERT(seg && (seg->n_blocks.value() <= (seg->isPermanent() ? 1 : 0)));
 
     seg->import->m_segments.erase(seg->memory.id());
+    segmentFree(seg);
+}
+
+void iMemImport::segmentFree(iMemImportSegment* seg)
+{
     seg->memory.detach();
 
     if (seg->trap)
@@ -967,25 +1042,28 @@ void iMemImport::segmentDetach(iMemImportSegment* seg)
     delete seg;
 }
 
-/* Should be called with m_mutex held.
- * Drains block IDs that were pushed lock-free during release(). */
-void iMemImport::drainPendingReleases()
-{
-    uint blockId;
-    while ((blockId = m_pendingReleases.pop(static_cast<uint>(-1))) != static_cast<uint>(-1)) {
-        m_blocks.erase(blockId);
-    }
-}
-
 /* Self-locked. Not multiple-caller safe */
 iMemImport::~iMemImport()
 {
-    iScopedLock<iMutex> _lock(m_mutex);
-    drainPendingReleases();
+    Access _lock(this);
     while (!m_blocks.empty()) {
         iMemBlock* b = m_blocks.begin()->second;
+        if (!b->ref()) {
+            _lock.unlock();
+            iThread::yieldCurrentThread();
+            _lock.relock();
+            continue;
+        }
         b->replaceImport();
+        b->deref();
     }
+
+    _lock.unlock();
+    while (m_liveBlocks.value() != 0 || m_releaseUsers.value() != 0) {
+        collectRetired();
+        iThread::yieldCurrentThread();
+    }
+    _lock.relock();
 
     /* Permanent segments exist for the lifetime of the memimport. Now
      * that we're freeing the memimport itself, clear them all up.
@@ -1020,7 +1098,7 @@ int iMemImport::attachMemfd(uint shmId, int memfd_fd, bool writable)
 {
     IX_ASSERT(memfd_fd != -1);
 
-    iScopedLock<iMutex> _lock(m_mutex);
+    Access _lock(this);
     iMemImportSegment* seg = segmentAttach(MEMTYPE_SHARED_MEMFD, shmId, memfd_fd, writable);
     if (IX_NULLPTR == seg)
         return -1;
@@ -1037,17 +1115,25 @@ int iMemImport::attachMemfd(uint shmId, int memfd_fd, bool writable)
 /* Self-locked */
 iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, int memfd_fd, size_t offset, size_t size, bool writable)
 {
-    IX_ASSERT((type == MEMTYPE_SHARED_POSIX) || (type == MEMTYPE_SHARED_MEMFD));
+    if ((type != MEMTYPE_SHARED_POSIX && type != MEMTYPE_SHARED_MEMFD)
+        || size == 0 || size > static_cast<size_t>((std::numeric_limits<xsizetype>::max)()))
+        return IX_NULLPTR;
 
-    iScopedLock<iMutex> _lock(m_mutex);
-    drainPendingReleases();
+    Access _lock(this);
     BlockMap::iterator bit = m_blocks.find(blockId);
     if (bit != m_blocks.end()) {
-        if (bit->second->ref()) return bit->second;
-
-        // Block is being freed concurrently (ref count reached 0 between
-        // drainPendingReleases and here). Remove the stale map entry and
-        // fall through to allocate a fresh block for this blockId.
+        iMemBlock* block = bit->second;
+        if (block->ref()) {
+            iMemImportSegment* segment = block->m_imported.segment;
+            const size_t storedOffset = static_cast<xuint8*>(block->m_data.load())
+                - static_cast<xuint8*>(segment->memory.data());
+            if (segment->memory.id() == shmId && segment->memory.type() == type
+                && storedOffset == offset && block->m_length == size
+                && (!writable || segment->writable))
+                return block;
+            block->deref();
+            return IX_NULLPTR;
+        }
         m_blocks.erase(bit);
     }
 
@@ -1075,13 +1161,16 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, int memfd_fd,
         return IX_NULLPTR;
     }
 
-    if ((offset+size) > seg->memory.size())
+    if (offset > seg->memory.size() || size > seg->memory.size() - offset)
         return IX_NULLPTR;
 
     void* buffer = m_pool->m_cacheHeads.pop(IX_NULLPTR);
     if (IX_NULLPTR == buffer) {
         buffer = ::malloc(sizeof(iMemBlock));
     }
+    if (IX_NULLPTR == buffer)
+        return IX_NULLPTR;
+
     iMemBlock* block = new (buffer) iMemBlock(m_pool.data(), iMemBlock::MEMBLOCK_IMPORTED, iMemBlock::DefaultAllocationFlags, (xuint8*)seg->memory.data() + offset, size, size);
     block->m_readOnly = !writable;
     block->m_imported.id = blockId;
@@ -1089,19 +1178,22 @@ iMemBlock* iMemImport::get(MemType type, uint blockId, uint shmId, int memfd_fd,
 
     m_blocks.insert(std::pair<uint, iMemBlock*>(blockId, block));
     ++seg->n_blocks;
+    ++m_liveBlocks;
+    block->ref(true);
 
     return block;
 }
 
 int iMemImport::processRevoke(uint blockId)
 {
-    iScopedLock<iMutex> _lock(m_mutex);
-    drainPendingReleases();
+    Access _lock(this);
     BlockMap::iterator bit = m_blocks.find(blockId);
-    if (bit == m_blocks.end())
+    if (bit == m_blocks.end() || !bit->second->ref())
         return -1;
 
-    bit->second->replaceImport();
+    iMemBlock* block = bit->second;
+    block->replaceImport();
+    block->deref();
     return 0;
 }
 

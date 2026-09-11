@@ -152,6 +152,9 @@ private:
     void updateDuration();
 
 private:
+    #if GST_CHECK_VERSION(1,0,0)
+    static GstPadProbeReturn blockPadCallback(GstPad* pad, GstPadProbeInfo* info, gpointer userData);
+    #endif
     static void playbinNotifySource(GObject *o, GParamSpec *p, gpointer d);
     static void handleVolumeChange(GObject *o, GParamSpec *p, gpointer d);
     static void handleMutedChange(GObject *o, GParamSpec *p, gpointer d);

@@ -8,6 +8,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #include <multimedia/imediaobject.h>
+#include <core/utils/isharedptr.h>
 
 namespace iShell {
 
@@ -125,7 +126,11 @@ iMediaObject::iMediaObject(iObject *parent)
 
 void iMediaObject::timeoutNotify()
 {
-    for (PropertySet::const_iterator it = m_notifyProperties.begin(); it != m_notifyProperties.end(); ++it) {
+    const PropertySet properties = m_notifyProperties;
+    iWeakPtr<iMediaObject> guard(this);
+    for (PropertySet::const_iterator it = properties.begin(); it != properties.end(); ++it) {
+        if (m_notifyProperties.find(*it) == m_notifyProperties.end())
+            continue;
         const iMetaObject* mo = metaObject();
 
         do {
@@ -134,7 +139,11 @@ void iMediaObject::timeoutNotify()
                 continue;
 
             iVariant value = tProperty->_get(tProperty, this);
+            if (guard.isNull())
+                return;
             IEMIT tProperty->_signal(tProperty, this, value);
+            if (guard.isNull())
+                return;
             break;
         } while ((mo = mo->superClass()));
     }

@@ -151,6 +151,34 @@ struct ReconnectOnDestroy
     bool* reconnected;
 };
 
+TEST(ObjectReclamationRegression, ConcurrentEmitAndRetirement)
+{
+    TestEmitter emitter;
+    AtomicReceiver receiver;
+    emitter.metaObject();
+    receiver.metaObject();
+    std::atomic<bool> start(false);
+    std::thread first([&]() {
+        while (!start.load()) std::this_thread::yield();
+        for (int round = 0; round < 10000; ++round) emitter.emitValue(round);
+    });
+    std::thread second([&]() {
+        while (!start.load()) std::this_thread::yield();
+        for (int round = 0; round < 10000; ++round) emitter.emitValue(round);
+    });
+    start.store(true);
+    for (int round = 0; round < 1500; ++round) {
+        EXPECT_TRUE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                     &receiver, &AtomicReceiver::onValue, DirectConnection));
+        emitter.emitValue(round);
+        EXPECT_TRUE(iObject::disconnect(&emitter, &TestEmitter::valueChanged,
+                                        &receiver, &AtomicReceiver::onValue));
+    }
+    first.join();
+    second.join();
+    EXPECT_GE(receiver.calls.load(), 1500);
+}
+
 class DestructionTrackedEvent : public iEvent
 {
 public:

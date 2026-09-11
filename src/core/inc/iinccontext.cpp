@@ -143,7 +143,7 @@ int iINCContext::doConnect(const iStringView& url)
 
         m_ioThread->start();
         m_connection->moveToThread(m_ioThread);
-        invokeMethod(device, &iINCDevice::startEventMonitoring, IX_NULLPTR);
+        invokeMethod(device, &iINCDevice::startEventMonitoring, static_cast<iEventDispatcher*>(IX_NULLPTR));
     } else {
         // Run in main thread (single-threaded mode)
         device->startEventMonitoring(iEventDispatcher::instance());
@@ -151,11 +151,10 @@ int iINCContext::doConnect(const iStringView& url)
 
     // Start handshake
     iINCHandshake* handshake = new iINCHandshake(iINCHandshake::ROLE_CLIENT);
+    handshake->setContextConfig(&m_config);
 
-    iINCHandshakeData localData;
+    iINCHandshakeData localData = handshake->localData();
     localData.nodeName = objectName();
-    localData.protocolVersion = m_config.protocolVersionCurrent();
-    localData.capabilities = iINCHandshakeData::CAP_STREAM;
     localData.targetServer = (m_connectMode & 0x0A) ? m_serverUrl : iString();  // 0x02|0x08 = router modes
     localData.hopCount = 0;
     handshake->setLocalData(localData);
@@ -206,6 +205,7 @@ void iINCContext::doClose(State state)
     while (!m_pendingOps.empty()) {
         iINCOperation* op = m_pendingOps.back();
         m_pendingOps.pop_back();
+        op->setFinishedCallback(IX_NULLPTR);
         op->cancel();
         op->deref();
     }
@@ -336,12 +336,20 @@ void iINCContext::onErrorOccurred(iINCConnection*, xint32 errorCode)
 void iINCContext::onHandshakeTimeout(iINCOperation* operation, void* userData)
 {
     iINCContext* self = static_cast<iINCContext*>(userData);
+    iObject::invokeMethod(self, &iINCContext::handshakeOperationFinished, iSharedDataPointer<iINCOperation>(operation));
+}
+
+void iINCContext::handshakeOperationFinished(iSharedDataPointer<iINCOperation> completed)
+{
+    iINCContext* self = this;
+    iINCOperation* operation = completed.data();
     // Remove from pending operations list and release reference
     std::list<iINCOperation*>::iterator it = std::find(self->m_pendingOps.begin(), self->m_pendingOps.end(), operation);
-    if (it != self->m_pendingOps.end()) {
-        self->m_pendingOps.erase(it);
-        operation->deref();
-    }
+    if (it == self->m_pendingOps.end())
+        return;
+
+    self->m_pendingOps.erase(it);
+    operation->deref();
 
     if (iINCOperation::STATE_TIMEOUT != operation->getState()) return;
 
@@ -368,7 +376,7 @@ void iINCContext::onHandshakeTimeout(iINCOperation* operation, void* userData)
     retryOp->ref();
     self->m_pendingOps.push_back(retryOp.data());
     retryOp->setTimeout(self->m_config.protocolTimeoutMs());
-    retryOp->setFinishedCallback(&iINCContext::onHandshakeTimeout, userData);
+    retryOp->setFinishedCallback(&iINCContext::onHandshakeTimeout, self);
 }
 
 void iINCContext::handleHandshakeAck(iINCConnection* conn, const iINCMessage& msg)

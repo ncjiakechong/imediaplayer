@@ -29,6 +29,7 @@ iThreadData::iThreadData(int initialRefCount)
     , postEventList(this)
     , canWait(1)
     , m_ref(initialRefCount)
+    , m_dispatcherUsers(0)
 {}
 
 iThreadData::~iThreadData()
@@ -40,14 +41,44 @@ iThreadData::~iThreadData()
     thread = IX_NULLPTR;
     delete t;
 
-    // the dispatcher outlives its thread so that push() can wake it without racing the
-    // teardown; nobody can reach it once this refcount is gone
-    iEventDispatcher *eventDispatcher = dispatcher.load();
-    dispatcher = IX_NULLPTR;
-    delete eventDispatcher;
+    destroyDispatcher();
 
     // whatever is still queued is disposed of by ~iPostEventList
 }
+
+void iThreadData::wakeUpDispatcher()
+{
+    ++m_dispatcherUsers;
+    iEventDispatcher* eventDispatcher = dispatcher.load();
+    if (eventDispatcher)
+        eventDispatcher->wakeUp();
+    --m_dispatcherUsers;
+}
+
+void iThreadData::interruptDispatcher()
+{
+    ++m_dispatcherUsers;
+    iEventDispatcher* eventDispatcher = dispatcher.load();
+    if (eventDispatcher)
+        eventDispatcher->interrupt();
+    --m_dispatcherUsers;
+}
+
+void iThreadData::destroyDispatcher()
+{
+    iEventDispatcher* eventDispatcher = dispatcher.load();
+    while (eventDispatcher && !dispatcher.testAndSet(eventDispatcher, IX_NULLPTR))
+        eventDispatcher = dispatcher.load();
+    if (!eventDispatcher)
+        return;
+
+    // Unpublish before waiting so new producers cannot acquire the retiring dispatcher.
+    while (m_dispatcherUsers.value() != 0)
+        iThread::yieldCurrentThread();
+    eventDispatcher->closingDown();
+    delete eventDispatcher;
+}
+
 iPostEventList::iPostEventList(iThreadData* owner)
     : recursion(0)
     , startOffset(0)
@@ -106,8 +137,7 @@ void iPostEventList::push(iEvent* events)
         if (0 == m_owner->canWait.value()) return;
     }
 
-    iEventDispatcher* d = m_owner->dispatcher.load();
-    if (d) d->wakeUp();
+    m_owner->wakeUpDispatcher();
 }
 
 void iPostEventList::drain()

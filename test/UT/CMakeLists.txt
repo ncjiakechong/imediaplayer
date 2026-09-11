@@ -61,6 +61,7 @@ set(INC_TEST_SOURCES
     inc/test_iinccontext.cpp
     inc/test_inc_reconnection.cpp
     inc/test_iincprotocol.cpp
+    inc/test_irtpdevice.cpp
     inc/test_iudpclientdevice.cpp
     inc/test_iincrouter.cpp
 )
@@ -73,6 +74,7 @@ set(IO_TEST_SOURCES
     io/test_ilog.cpp
     io/test_ilog_extended.cpp
     io/test_imemblock.cpp
+    io/test_imemimport.cpp
     io/test_imemblock_extended.cpp
     io/test_isharemem.cpp
     io/test_imcalign.cpp
@@ -81,6 +83,7 @@ set(IO_TEST_SOURCES
 )
 
 set(UTILS_TEST_SOURCES
+    utils/test_ifreelist.cpp
     utils/test_istring.cpp
     utils/test_istring_extended.cpp
     utils/test_ibytearray.cpp
@@ -123,6 +126,8 @@ if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LDFLAGS)
     set(MULTIMEDIA_TEST_SOURCES
         multimedia/test_iaudioformat.cpp
         multimedia/test_imediatimerange.cpp
+        multimedia/test_imediaobject.cpp
+        multimedia/test_gstreamer_regressions.cpp
     )
 endif()
 
@@ -169,12 +174,26 @@ endif()
 # Link multimedia library if available (depends on GStreamer)
 pkg_check_modules(GST_PKG gstreamer-1.0)
 if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LDFLAGS)
-    target_link_libraries(${UT_TARGET} imultimedia)
+    pkg_check_modules(GST_TEST REQUIRED IMPORTED_TARGET gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0 gstreamer-audio-1.0)
+    target_link_libraries(${UT_TARGET} imultimedia PkgConfig::GST_TEST)
 endif()
 
 # Enable testing
 enable_testing()
 add_test(NAME ${UT_TARGET} COMMAND ${UT_TARGET})
+add_test(NAME regression_tests COMMAND ${UT_TARGET} --gtest_filter=*Regression.*)
+add_test(NAME memimport_regression_tests COMMAND ${UT_TARGET} --gtest_filter=MemImportRegression.*)
+set_tests_properties(memimport_regression_tests PROPERTIES TIMEOUT 30)
+set_tests_properties(regression_tests PROPERTIES TIMEOUT 60)
+add_test(NAME inc_lifecycle_tests COMMAND ${UT_TARGET} --gtest_filter=*Disconnect*:*Reconnect*:*Router*)
+set_tests_properties(${UT_TARGET} PROPERTIES TIMEOUT 180)
+set_tests_properties(inc_lifecycle_tests PROPERTIES TIMEOUT 120)
+add_test(NAME external_consumer_test COMMAND ${CMAKE_COMMAND}
+    -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+    -DBINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}/external_consumer
+    -DCXX_COMPILER=${CMAKE_CXX_COMPILER}
+    -P ${CMAKE_SOURCE_DIR}/test/external_consumer/run.cmake)
+set_tests_properties(external_consumer_test PROPERTIES TIMEOUT 600)
 
 # Install target
 install(TARGETS ${UT_TARGET} DESTINATION bin)

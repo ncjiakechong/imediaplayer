@@ -33,3 +33,17 @@ add_test(NAME ${PROJECT_NAME} COMMAND ${PROJECT_NAME})
 
 # Add Unit Test subdirectory
 add_subdirectory(UT)
+
+if(IX_BUILD_STRESS_TESTS)
+    add_subdirectory(stress)
+    if(UNIX AND NOT ANDROID)
+        add_test(NAME inc_helper_runtime COMMAND ${PROJECT_NAME} --inc
+            -t 30 -n 3 -p 63 -i 32 -s 64 --no-checksum
+            -u unix://${CMAKE_CURRENT_BINARY_DIR}/inc-helper.sock)
+        set_tests_properties(inc_helper_runtime PROPERTIES
+            LABELS integration
+            TIMEOUT 75
+            RUN_SERIAL TRUE
+            FAIL_REGULAR_EXPRESSION "Send operation timeout;Send operation failed;Failed to start server")
+    endif()
+endif()

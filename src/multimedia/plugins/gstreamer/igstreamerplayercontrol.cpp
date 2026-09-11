@@ -418,9 +418,6 @@ void iGstreamerPlayerControl::updateMediaStatus()
         break;
     }
 
-    if (m_currentState == iMediaPlayer::PlayingState)
-        m_mediaStatus = iMediaPlayer::StalledMedia;
-
     popAndNotifyState();
 }
 

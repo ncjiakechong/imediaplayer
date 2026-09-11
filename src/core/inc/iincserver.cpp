@@ -107,7 +107,7 @@ int iINCServer::listenOn(const iStringView& url)
         ilog_info("[", objectName(), "] Listening on ", singleUrl);
         if (m_ioThread && m_config.enableIOThread()) {
             device->moveToThread(m_ioThread);
-            invokeMethod(device, &iINCDevice::startEventMonitoring, IX_NULLPTR);
+            invokeMethod(device, &iINCDevice::startEventMonitoring, static_cast<iEventDispatcher*>(IX_NULLPTR));
         } else {
             device->startEventMonitoring(iEventDispatcher::instance());
         }
@@ -144,6 +144,7 @@ void iINCServer::close()
         iINCConnection* conn = it->second;
         m_connections.erase(it);
 
+        onConnectionClosed(conn);
         iObject::disconnect(conn, IX_NULLPTR, this, IX_NULLPTR);
         conn->moveToThread(iThread::currentThread());
         conn->close();
@@ -229,10 +230,9 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
 
     // Create handshake handler for this connection
     iINCHandshake* handshake = new iINCHandshake(iINCHandshake::ROLE_SERVER);
-    iINCHandshakeData localData;
+    handshake->setServerConfig(&m_config);
+    iINCHandshakeData localData = handshake->localData();
     localData.nodeName = objectName();
-    localData.protocolVersion = m_config.protocolVersionCurrent();
-    localData.capabilities = iINCHandshakeData::CAP_STREAM;
     handshake->setLocalData(localData);
     conn->setHandshakeHandler(handshake);
 
@@ -289,17 +289,42 @@ iINCConnection* iINCServer::connection(xuint32 connId) const
     return (it != m_connections.end()) ? it->second : IX_NULLPTR;
 }
 
+static void disposeDisconnectedConnection(iObject* connection)
+{
+    iThread* owner = connection->thread();
+    iThread* current = iThread::currentThread();
+    if (owner && (owner == current || owner->isRunning())) {
+        connection->deleteLater();
+        return;
+    }
+    if (owner)
+        owner->wait();
+    if (connection->moveToThread(current))
+        delete connection;
+}
+
+void iINCServer::onConnectionClosed(iINCConnection* conn)
+{
+    IX_UNUSED(conn);
+}
+
+void iINCServer::notifyClientDisconnected(iSharedPtr<iObject> connection)
+{
+    IEMIT clientDisconnected(static_cast<iINCConnection*>(connection.data()));
+}
+
 void iINCServer::onClientDisconnected(iINCConnection* conn)
 {
     ConnectionMap::iterator it = m_connections.find(conn->connectionId());
-    if (it != m_connections.end()) {
-        m_connections.erase(it);
-        IEMIT iObject::invokeMethod(this, &iINCServer::clientDisconnected, conn);
-    }
+    if (it == m_connections.end())
+        return;
+    m_connections.erase(it);
 
     ilog_info("[", conn->peerName(), "] Client disconnected, ID:", conn->connectionId());
+    onConnectionClosed(conn);
     conn->clearChannels();
-    conn->deleteLater();
+    iSharedPtr<iObject> notification(conn, &disposeDisconnectedConnection);
+    iObject::invokeMethod(this, &iINCServer::notifyClientDisconnected, notification);
 }
 
 void iINCServer::onConnectionBinaryData(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)

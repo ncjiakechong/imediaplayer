@@ -59,9 +59,9 @@ iCoreApplication::iCoreApplication(int argc, char** argv)
 
 iCoreApplication::~iCoreApplication()
 {
-    iEventDispatcher* dispatcher = m_threadData->dispatcher.load();
-    if (IX_NULLPTR != dispatcher)
-        dispatcher->closingDown();
+    dispatchPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
+    m_threadData->destroyDispatcher();
+    dispatchPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
 
     s_self = IX_NULLPTR;
 }

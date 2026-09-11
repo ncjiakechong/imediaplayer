@@ -89,6 +89,7 @@ public:
     iByteArray receivedEventData;
     bool routerSignalFired = false;
     iString routedTarget;
+    bool upstreamDisconnected = false;
 
     iMutex mutex;
     iCondition condition;
@@ -126,6 +127,12 @@ public:
         routedTarget = target;
     }
 
+    void onBackendDisconnected(iINCConnection*) {
+        iScopedLock<iMutex> lock(mutex);
+        upstreamDisconnected = true;
+        condition.broadcast();
+    }
+
     static void operationFinished(iINCOperation* op, void* userData) {
         RouterTestHelper* h = static_cast<RouterTestHelper*>(userData);
         iScopedLock<iMutex> lock(h->mutex);
@@ -159,6 +166,7 @@ public:
         receivedEventData.clear();
         routerSignalFired = false;
         routedTarget.clear();
+        upstreamDisconnected = false;
     }
 };
 
@@ -217,6 +225,8 @@ public:
         iScopedLock<iMutex> lock(helper->mutex);
 
         server = new RouterTestServer(IX_NULLPTR);
+        iObject::connect(server, &iINCServer::clientDisconnected,
+                helper, &RouterTestHelper::onBackendDisconnected);
         iINCServerConfig cfg;
         cfg.setEnableIOThread(enableIOThread);
         server->setConfig(cfg);
@@ -405,6 +415,11 @@ public:
             ilog_info("[RouterWorker] Backend server shut down");
         }
     }
+
+    void shutdownRouter() {
+        if (router)
+            router->close();
+    }
 };
 
 } // namespace
@@ -496,6 +511,18 @@ TEST_P(INCRouterTest, BasicRouting) {
     iScopedLock<iMutex> lock(helper->mutex);
     EXPECT_TRUE(helper->routerSignalFired);
     EXPECT_FALSE(helper->routedTarget.isEmpty());
+}
+
+TEST_P(INCRouterTest, ClosingRouterDisconnectsActiveUpstream) {
+    ASSERT_TRUE(startServer());
+    ASSERT_TRUE(startRouter());
+    ASSERT_TRUE(connectViaRouter());
+
+    ASSERT_TRUE(iObject::invokeMethod(worker, &RouterTestWorker::shutdownRouter));
+    iScopedLock<iMutex> lock(helper->mutex);
+    for (int attempt = 0; attempt < 50 && !helper->upstreamDisconnected; ++attempt)
+        helper->condition.wait(helper->mutex, 100);
+    EXPECT_TRUE(helper->upstreamDisconnected);
 }
 
 // ===========================================================================

@@ -209,13 +209,21 @@ void iINCStream::ackDataReceived(xuint32 seqNum, bool broadcast, xint32 size)
 void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
 {
     iINCStream* stream = static_cast<iINCStream*>(userData);
+    iObject::invokeMethod(stream, &iINCStream::channelAllocationFinished, iSharedDataPointer<iINCOperation>(op));
+}
+
+void iINCStream::channelAllocationFinished(iSharedDataPointer<iINCOperation> operation)
+{
+    iINCStream* stream = this;
+    iINCOperation* op = operation.data();
 
     // Remove from pending operations list and release reference
     std::list<iINCOperation*>::iterator it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
-    if (it != stream->m_pendingOps.end()) {
-        stream->m_pendingOps.erase(it);
-        op->deref();  // Release our reference
-    }
+    if (it == stream->m_pendingOps.end())
+        return;
+
+    stream->m_pendingOps.erase(it);
+    op->deref();
 
     // Check operation failed or timeout
     if (iINCOperation::STATE_FAILED == op->getState() || iINCOperation::STATE_TIMEOUT == op->getState()) {
@@ -281,13 +289,21 @@ void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
 void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
 {
     iINCStream* stream = static_cast<iINCStream*>(userData);
+    iObject::invokeMethod(stream, &iINCStream::channelReleaseFinished, iSharedDataPointer<iINCOperation>(op));
+}
+
+void iINCStream::channelReleaseFinished(iSharedDataPointer<iINCOperation> operation)
+{
+    iINCStream* stream = this;
+    iINCOperation* op = operation.data();
 
     // Remove from pending operations list and release reference
     std::list<iINCOperation*>::iterator it = std::find(stream->m_pendingOps.begin(), stream->m_pendingOps.end(), op);
-    if (it != stream->m_pendingOps.end()) {
-        stream->m_pendingOps.erase(it);
-        op->deref();  // Release our reference
-    }
+    if (it == stream->m_pendingOps.end())
+        return;
+
+    stream->m_pendingOps.erase(it);
+    op->deref();
 
     // Operation cancelled
     if (iINCOperation::STATE_CANCELLED == op->getState()) {

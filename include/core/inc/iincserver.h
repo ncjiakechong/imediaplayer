@@ -24,6 +24,7 @@
 #include <core/inc/iincconnection.h>
 #include <core/thread/ithread.h>
 #include <core/utils/ibytearray.h>
+#include <core/utils/isharedptr.h>
 #include <core/utils/istring.h>
 #include <core/io/imemblock.h>
 
@@ -148,6 +149,7 @@ protected:
     /// Called when a message is received from a client connection
     /// @note Override in iINCRouter to intercept and forward messages
     virtual void onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg);
+    virtual void onConnectionClosed(iINCConnection* conn);
 
     /// Override this to handle subscription requests
     /// @param conn Client connection
@@ -173,6 +175,7 @@ private:
     void handleListenDeviceError(int errorCode);
     void handleNewConnection(iINCDevice* clientDevice);
     void onClientDisconnected(iINCConnection* conn);
+    void notifyClientDisconnected(iSharedPtr<iObject> connection);
     void handleHandshake(iINCConnection* conn, const iINCMessage& msg);
     void handleMethodCall(iINCConnection* conn, const iINCMessage& msg);
     void handleStreamOpen(iINCConnection* conn, const iINCMessage& msg);

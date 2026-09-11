@@ -301,9 +301,7 @@ private:
 
         // Send to all clients with checksum in pos parameter
         SharedPacket* packet = new SharedPacket(data, checksum);
-        // Producer reference held across the loop: the I/O thread may complete - and would
-        // otherwise free - the packet between two iterations, and setFinishedCallback()
-        // even fires inline when the operation has already finished.
+        // Hold the producer reference across the loop; completion may run during callback registration.
         packet->pending++;
         int successfulSends = 0;
         for (std::list<ClientInfo>::iterator it = m_clients.begin(); it != m_clients.end(); ++it) {
@@ -380,7 +378,11 @@ private:
             }
 
             if (state == iINCOperation::STATE_FAILED) {
-                ilog_warn("[Server] Send operation failed, error code: ", op->errorCode());
+                const xint32 errorCode = op->errorCode();
+                if (errorCode == INC_ERROR_DISCONNECTED && ctx->server && ctx->server->m_closing.value())
+                    ilog_debug("[Server] Send cancelled during shutdown");
+                else
+                    ilog_warn("[Server] Send operation failed, error code: ", errorCode);
             } else if (state == iINCOperation::STATE_TIMEOUT) {
                 ilog_warn("[Server] Send operation timeout");
             }

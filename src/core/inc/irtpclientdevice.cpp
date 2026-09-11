@@ -31,6 +31,8 @@ iRtpClientDevice::iRtpClientDevice(iRtpDevice* server, iObject* parent)
     , m_ssrc(iRtpRandom32())
     , m_txSeq(static_cast<xuint16>(iRtpRandom32()))
     , m_txTimestamp(iRtpRandom32())
+    , m_txPacketIndex(0)
+    , m_txMessageSize(0)
     , m_rxTimestamp(0)
     , m_rxExpectSeq(0)
     , m_rxHave(false)
@@ -48,6 +50,8 @@ iRtpClientDevice::iRtpClientDevice(iRtpDevice* server, const struct sockaddr_sto
     , m_ssrc(iRtpRandom32())
     , m_txSeq(static_cast<xuint16>(iRtpRandom32()))
     , m_txTimestamp(iRtpRandom32())
+    , m_txPacketIndex(0)
+    , m_txMessageSize(0)
     , m_rxTimestamp(0)
     , m_rxExpectSeq(0)
     , m_rxHave(false)
@@ -106,14 +110,27 @@ xint64 iRtpClientDevice::writeData(const iByteArray& data)
 
 xint64 iRtpClientDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 {
-    if (offset > 0) return 0;
-
-    std::vector<iByteArray> pkts;
-    iRtpDevice::buildPackets(msg, m_ssrc, m_txSeq, m_txTimestamp++, m_server->maxPayloadSize(), pkts);
-    for (size_t i = 0; i < pkts.size(); ++i) {
-        if (m_server->sendToClient(&m_clientAddr, pkts[i]) < 0) return -1;
+    if (offset != 0) return -1;
+    if (m_txPackets.empty()) {
+        iRtpDevice::buildPackets(msg, m_ssrc, m_txSeq, m_txTimestamp++, m_server->maxPayloadSize(), m_txPackets);
+        m_txPacketIndex = 0;
+        m_txMessageSize = static_cast<xint64>(sizeof(iINCMessageHeader)) + msg.payload().data().size();
     }
-    return static_cast<xint64>(sizeof(iINCMessageHeader)) + msg.payload().data().size();
+    while (m_txPacketIndex < m_txPackets.size()) {
+        const iByteArray& packet = m_txPackets[m_txPacketIndex];
+        const xint64 sent = m_server->sendToClient(&m_clientAddr, packet);
+        if (sent == 0)
+            return 0;
+        if (sent != packet.size()) {
+            m_txPackets.clear();
+            m_txPacketIndex = 0;
+            return -1;
+        }
+        ++m_txPacketIndex;
+    }
+    m_txPackets.clear();
+    m_txPacketIndex = 0;
+    return m_txMessageSize;
 }
 
 void iRtpClientDevice::emitMessageFromAccum()
@@ -171,6 +188,9 @@ void iRtpClientDevice::close()
         m_server->removeClient(this);
     }
     m_monitorEvents = 0;
+    m_txPackets.clear();
+    m_txPacketIndex = 0;
+    m_txMessageSize = 0;
     iIODevice::close();
     IEMIT disconnected();
 }

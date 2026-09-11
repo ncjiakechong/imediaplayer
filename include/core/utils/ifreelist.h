@@ -201,26 +201,28 @@ public:
         Please note that this routine might fail!
     */
     inline bool push(typename ParentType::ConstReferenceType value) {
-        int id = this->next4list(this->_empty, true);
+        const int id = this->next4list(this->_empty, true);
         if (id < ConstantsType::InitialNextValue)
             return false;
 
-        const int block = this->blockfor(id);
+        int at = id;
+        const int block = this->blockfor(at);
 
         IX_ASSERT(block >= 0);
-        (this->_v[block].load())[id].setT(value);
+        (this->_v[block].load())[at].setT(value);
         this->release4list(this->_stored, id);
         return true;
     }
 
     inline T pop(typename ParentType::ConstReferenceType defaultValue = T()) {
-        int id = this->next4list(this->_stored, false);
+        const int id = this->next4list(this->_stored, false);
         if (id < ConstantsType::InitialNextValue)
             return defaultValue;
 
-        const int block = this->blockfor(id);
+        int at = id;
+        const int block = this->blockfor(at);
         IX_ASSERT(block >= 0);
-        T ret = (this->_v[block].load())[id].t();
+        T ret = (this->_v[block].load())[at].t();
 
         this->release4list(this->_empty, id);
         return ret;

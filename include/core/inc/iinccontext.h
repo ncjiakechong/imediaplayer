@@ -159,6 +159,7 @@ private:
     void ackDataReceived(xuint32 channel, xuint32 seqNum, xint32 size);
 
     static void onHandshakeTimeout(iINCOperation* operation, void* userData);
+    void handshakeOperationFinished(iSharedDataPointer<iINCOperation> operation);
 
     iINCContextConfig m_config;     ///< Context configuration
     iINCEngine*     m_engine;       ///< Owned engine

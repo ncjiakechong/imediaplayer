@@ -98,7 +98,8 @@ iGstreamerPlayerSession::iGstreamerPlayerSession(iObject *parent)
      m_displayPrerolledFrame(true),
      m_sourceType(UnknownSrc),
      m_everPlayed(false),
-     m_isLiveSource(false)
+    m_isLiveSource(false),
+    pad_probe_id(0)
 {
     initPlaybin();
 }
@@ -222,6 +223,14 @@ static inline void resetGstObject(T *&obj, T *v = IX_NULLPTR)
 
 void iGstreamerPlayerSession::resetElements()
 {
+#if GST_CHECK_VERSION(1,0,0)
+    if (m_videoIdentity && pad_probe_id) {
+        GstPad* pad = gst_element_get_static_pad(m_videoIdentity, "src");
+        gst_pad_remove_probe(pad, pad_probe_id);
+        gst_object_unref(pad);
+        pad_probe_id = 0;
+    }
+#endif
     setBus(IX_NULLPTR);
     resetGstObject(m_playbin);
     resetGstObject(m_pipeline);
@@ -410,6 +419,8 @@ void iGstreamerPlayerSession::setBus(GstBus *bus)
 
     m_busHelper = new iGstreamerBusHelper(m_bus, this);
     m_busHelper->installMessageFilter(this);
+    if (m_renderer)
+        m_busHelper->installMessageFilter(m_renderer);
 }
 
 xint64 iGstreamerPlayerSession::duration() const
@@ -571,7 +582,7 @@ bool iGstreamerPlayerSession::isAudioAvailable() const
 }
 
 #if GST_CHECK_VERSION(1,0,0)
-static GstPadProbeReturn block_pad_cb(GstPad *pad, GstPadProbeInfo *info, gpointer user_data)
+GstPadProbeReturn iGstreamerPlayerSession::blockPadCallback(GstPad *pad, GstPadProbeInfo *info, gpointer user_data)
 #else
 static void block_pad_cb(GstPad *pad, gboolean blocked, gpointer user_data)
 #endif
@@ -579,7 +590,8 @@ static void block_pad_cb(GstPad *pad, gboolean blocked, gpointer user_data)
     #if GST_CHECK_VERSION(1,0,0)
     IX_UNUSED(pad);
     IX_UNUSED(info);
-    IX_UNUSED(user_data);
+    iGstreamerPlayerSession* session = static_cast<iGstreamerPlayerSession*>(user_data);
+    iObject::invokeMethod(session, &iGstreamerPlayerSession::finishVideoOutputChange, QueuedConnection);
     return GST_PAD_PROBE_OK;
     #else
     ilog_debug("blocked:", blocked);
@@ -722,7 +734,7 @@ void iGstreamerPlayerSession::setVideoRenderer(iGstreamerVideoRendererInterface 
         //block pads, async to avoid locking in paused state
         GstPad *srcPad = gst_element_get_static_pad(m_videoIdentity, "src");
         #if GST_CHECK_VERSION(1,0,0)
-        this->pad_probe_id = gst_pad_add_probe(srcPad, (GstPadProbeType)(GST_PAD_PROBE_TYPE_BUFFER | GST_PAD_PROBE_TYPE_BLOCKING), block_pad_cb, this, IX_NULLPTR);
+        this->pad_probe_id = gst_pad_add_probe(srcPad, GST_PAD_PROBE_TYPE_IDLE, &iGstreamerPlayerSession::blockPadCallback, this, IX_NULLPTR);
         #else
         gst_pad_set_blocked_async(srcPad, true, &block_pad_cb, this);
         #endif
@@ -762,12 +774,14 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
         ilog_debug("Abort, no change");
         //video output was change back to the current one,
         //no need to torment the pipeline, just unblock the pad
-        if (gst_pad_is_blocked(srcPad))
+        if (gst_pad_is_blocked(srcPad)) {
             #if GST_CHECK_VERSION(1,0,0)
             gst_pad_remove_probe(srcPad, this->pad_probe_id);
+            this->pad_probe_id = 0;
             #else
             gst_pad_set_blocked_async(srcPad, false, &block_pad_cb, 0);
             #endif
+        }
 
         m_pendingVideoSink = 0;
         gst_object_unref(GST_OBJECT(srcPad));
@@ -860,12 +874,14 @@ void iGstreamerPlayerSession::finishVideoOutputChange()
         resumeVideoProbes();
 
     //don't have to wait here, it will unblock eventually
-    if (gst_pad_is_blocked(srcPad))
-            #if GST_CHECK_VERSION(1,0,0)
-            gst_pad_remove_probe(srcPad, this->pad_probe_id);
-            #else
-            gst_pad_set_blocked_async(srcPad, false, &block_pad_cb, 0);
-            #endif
+    if (gst_pad_is_blocked(srcPad)) {
+        #if GST_CHECK_VERSION(1,0,0)
+        gst_pad_remove_probe(srcPad, this->pad_probe_id);
+        this->pad_probe_id = 0;
+        #else
+        gst_pad_set_blocked_async(srcPad, false, &block_pad_cb, 0);
+        #endif
+    }
 
     gst_object_unref(GST_OBJECT(srcPad));
 }

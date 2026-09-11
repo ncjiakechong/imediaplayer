@@ -114,8 +114,6 @@ void iINCOperation::doFree()
         return;
     }
 
-    // The timeout timer is still armed on another running thread. Hand the delete
-    // to that thread by re-arming the same timer in Deleter mode there;
     iObject::invokeMethod(&m_timer, &iINCOperationTimer::toggleDeleter, reinterpret_cast<xintptr>(this));
 }
 
@@ -153,8 +151,6 @@ void iINCOperation::setState(State st)
 {
     if (st == STATE_RUNNING) return;
 
-    // Use iAtomicCounter::testAndSet which wraps compare_exchange_weak (or mutex)
-    // We loop to handle spurious failures of weak CAS
     while (m_state.value() == STATE_RUNNING) {
         if (!m_state.testAndSet(STATE_RUNNING, st)) continue;
 
@@ -178,8 +174,6 @@ void iINCOperation::setResult(xint32 errorCode, const iByteArray& data)
     m_errorCode = errorCode;
     m_resultData = data;
 
-    // If errorCode is 0 (INC_OK), operation succeeded
-    // Otherwise, operation failed
     setState(errorCode == 0 ? STATE_DONE : STATE_FAILED);
 }
 

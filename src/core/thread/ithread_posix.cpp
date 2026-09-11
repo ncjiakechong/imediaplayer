@@ -232,17 +232,15 @@ void iThreadImpl::internalThreadFunc()
     {
         thread->m_mutex.lock();
         thread->m_isInFinish = true;
+        thread->m_mutex.unlock();
 
         iCoreApplication::dispatchPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
 
         iThreadStorageData::finish((void**)&data->tls);
 
-        iEventDispatcher *eventDispatcher = data->dispatcher.load();
-        if (eventDispatcher) {
-            thread->m_mutex.unlock();
-            eventDispatcher->closingDown();
-            thread->m_mutex.lock();
-        }
+        data->destroyDispatcher();
+        iCoreApplication::dispatchPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
+        thread->m_mutex.lock();
 
         thread->m_running = false;
         thread->m_finished = true;

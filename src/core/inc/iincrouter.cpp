@@ -98,16 +98,11 @@ iINCRouter::iINCRouter(const iStringView& name, iObject *parent)
     : iINCServer(name, parent)
     , m_maxHopCount(8)
 {
-    // Clean up bridge when downstream client disconnects
-    // Must use DirectConnection: in IO thread mode, onClientDisconnected
-    // uses invokeMethod to emit clientDisconnected (which would post to
-    // Router's ownerThread), but m_bridges is accessed from IO thread.
-    // DirectConnection ensures removeBridge runs in the same thread.
-    iObject::connect(this, &iINCServer::clientDisconnected, this, &iINCRouter::slotClientDisconnected, iShell::DirectConnection);
 }
 
 iINCRouter::~iINCRouter()
 {
+    close();
     for (BridgeMap::iterator it = m_bridges.begin(); it != m_bridges.end(); ++it) {
         ClientBridge* bridge = it->second;
         cancelPendingForwards(bridge);
@@ -181,12 +176,14 @@ void iINCRouter::removeBridge(xuint32 connId)
         iObject::disconnect(bridge->upstreamDevice, IX_NULLPTR, bridge, IX_NULLPTR);
     if (bridge->downstream && bridge->downstream->m_protocol)
         iObject::disconnect(bridge->downstream->m_protocol, IX_NULLPTR, bridge, IX_NULLPTR);
-    if (bridge->upstreamProto)
+    if (bridge->upstreamProto) {
+        bridge->upstreamProto->moveToThread(iThread::currentThread());
         bridge->upstreamProto->deleteLater();
+    }
     delete bridge;
 }
 
-void iINCRouter::slotClientDisconnected(iINCConnection* conn)
+void iINCRouter::onConnectionClosed(iINCConnection* conn)
 {
     removeBridge(conn->connectionId());
 }
@@ -614,7 +611,7 @@ void iINCRouter::handleRouterHandshake(iINCConnection* conn, const iINCMessage& 
     if (ioThr) {
         upDevice->moveToThread(ioThr);
         upProto->moveToThread(ioThr);
-        invokeMethod(upDevice, &iINCDevice::startEventMonitoring, IX_NULLPTR);
+        invokeMethod(upDevice, &iINCDevice::startEventMonitoring, static_cast<iEventDispatcher*>(IX_NULLPTR));
         return;
     }
 

@@ -55,6 +55,7 @@ public:
 
     /// Drain the socket: decode RTP packets, reassemble, emit messageReceived().
     void processRx();
+    void processTx();
 
     // --- Common ---
     iString peerAddress(bool withScheme = false) const IX_OVERRIDE;
@@ -84,7 +85,7 @@ public:
 
     // --- Server multi-client support ---
     /// Send a pre-encoded RTP packet to a specific client address (sockaddr_storage*).
-    xint64 sendToClient(const void* clientSockaddr, const iByteArray& data);
+    virtual xint64 sendToClient(const void* clientSockaddr, const iByteArray& data);
     /// Remove a client device from the routing table (called when it closes).
     void removeClient(iRtpClientDevice* client);
 
@@ -96,13 +97,13 @@ public:
 protected:
     iByteArray readData(xint64 maxlen, xint64* readErr) IX_OVERRIDE;
     xint64 writeData(const iByteArray& data) IX_OVERRIDE;
+    virtual xint64 sendDatagram(const iByteArray& data);
 
 private:
     bool createSocket(int family);
     bool setSocketOptions();
     void updateLocalInfo();
     void updatePeerFromRaw(const void* srcAddr);   ///< sockaddr_storage*
-    xint64 sendDatagram(const iByteArray& data);
     void emitMessageFromAccum();
 
     int            m_sockfd;
@@ -120,6 +121,10 @@ private:
     xuint16        m_txSeq;
     xuint32        m_txTimestamp;
     xsizetype      m_maxPayload;
+
+    size_t         m_txPacketIndex;
+    xint64         m_txMessageSize;
+    std::vector<iByteArray> m_txPackets;
 
     // RTP receive reassembly state
     iByteArray     m_rxAccum;

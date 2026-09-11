@@ -129,6 +129,9 @@ private:
     /// Static callback for channel release confirmation
     static void onChannelReleased(iINCOperation* op, void* userData);
 
+    void channelAllocationFinished(iSharedDataPointer<iINCOperation> operation);
+    void channelReleaseFinished(iSharedDataPointer<iINCOperation> operation);
+
     /// Handle context state changes
     void onContextStateChanged(iINCContext::State previous, iINCContext::State current);
 

@@ -105,8 +105,7 @@ void iEventLoop::exit(int returnCode)
     m_exit = 1;
 
     iThreadData *threadData = iThread::get2(thread());
-    if (iEventDispatcher* dispatcher = threadData->dispatcher.load())
-        dispatcher->interrupt();
+    threadData->interruptDispatcher();
 }
 
 bool iEventLoop::event(iEvent *e)

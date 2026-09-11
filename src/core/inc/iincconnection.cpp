@@ -105,6 +105,7 @@ void iINCConnection::sendEvent(const iStringView& eventName, xuint16 version, co
 {
     IX_ASSERT(m_protocol);
     iINCMessage msg(INC_MSG_EVENT, m_connId, m_protocol->nextSequence());
+    msg.setFlags(INC_MSG_FLAG_NOACK);
     msg.payload().putUint16(version);
     msg.payload().putString(eventName.toString());
     msg.payload().putBytes(data);
@@ -256,8 +257,10 @@ void iINCConnection::clearChannels()
 void iINCConnection::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
 {
     ChannelMap::iterator it = m_channels.find(channelId);
-    if (it == m_channels.end() && !broadcast) {
+    if (it == m_channels.end()) {
         ilog_warn("[", m_peerName, "][", channelId, "] invalid channel for binary data received");
+        if (broadcast) return;
+
         iINCMessage reply(INC_MSG_BINARY_DATA_ACK, channelId, seqNum);
         reply.payload().putInt32(-1);
         m_protocol->sendMessage(reply);

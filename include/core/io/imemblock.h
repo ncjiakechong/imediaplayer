@@ -169,7 +169,10 @@ private:
         /* If type == MEMBLOCK_USER this points to a function for freeing this memory block */
         iFreeCb freeCb;
         /* If type == MEMBLOCK_USER this is passed as freeCb argument */
-        void* freeCbData;
+        union {
+            void* freeCbData;
+            iMemBlock* nextRetired;
+        };
     } m_user;
 
     struct {
@@ -278,17 +281,36 @@ public:
     iMemImport(iMemPool* pool, iMemImportReleaseCb cb, void* userdata);
     virtual ~iMemImport();
 
+    // Returns one owned reference, including on a cache hit.
     iMemBlock* get(MemType type, uint blockId, uint shmId, int memfd_fd, size_t offset, size_t size, bool writable);
     int processRevoke(uint blockId);
 
     int attachMemfd(uint shmId, int memfd_fd, bool writable);
 
 private:
+    class Access {
+    public:
+        explicit Access(iMemImport* import);
+        ~Access();
+        void unlock();
+        void relock();
+    private:
+        iMemImport* m_import;
+        bool m_locked;
+        IX_DISABLE_COPY(Access)
+    };
+
+    void retire(iMemBlock* block);
+    void collectRetired();
     iMemImportSegment* segmentAttach(MemType type, uint shmId, int memfd_fd, bool writable);
     static void segmentDetach(iMemImportSegment* seg);
-    void drainPendingReleases();
+    static void segmentFree(iMemImportSegment* seg);
 
     iMutex m_mutex;
+    int m_lockDepth;
+    iAtomicPointer<iMemBlock> m_retired;
+    iAtomicCounter<int> m_liveBlocks;
+    iAtomicCounter<int> m_releaseUsers;
 
     iSharedDataPointer<iMemPool> m_pool;
     #if __cplusplus >= 201103L
@@ -309,10 +331,6 @@ private:
 
     iMemImport* _next;
     iMemImport* _prev;
-
-    /// Lock-free pending release queue: block IDs pushed here from release()
-    /// without acquiring m_mutex, drained under lock by get()/destructor.
-    iFreeList<uint> m_pendingReleases;
 
     friend class iMemBlock;
     IX_DISABLE_COPY(iMemImport)

@@ -30,6 +30,7 @@ option(IX_ENABLE_WARNINGS          "Enable a strong set of compiler warnings" ON
 option(IX_WARNINGS_AS_ERRORS       "Treat compiler warnings as errors"        OFF)
 option(IX_ENABLE_HIDDEN_VISIBILITY "Hide symbols not explicitly exported"     OFF)
 option(IX_BUILD_TESTS              "Build the unit tests"                     ON)
+option(IX_BUILD_STRESS_TESTS       "Build concurrency stress tests"           OFF)
 
 # ---- Symbol visibility ----------------------------------------------------
 # When enabled, only symbols annotated with IX_*_EXPORT are exported from the

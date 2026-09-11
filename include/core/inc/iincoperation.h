@@ -22,10 +22,7 @@
 
 namespace iShell {
 
-/// @brief Internal single-shot timer bound to one iINCOperation.
-/// @details Invokes the owning operation's timeout handler directly from its
-///          event() override, so an operation no longer needs to allocate a
-///          signal/slot connection. 
+/// @brief Single-shot timer and deferred deleter for one operation.
 class IX_CORE_EXPORT iINCOperationTimer : public iObject
 {
     IX_OBJECT(iINCOperationTimer)
@@ -67,7 +64,7 @@ public:
     };
 
     /// Cancel the operation
-    /// @note Server may still process request, but callback won't be called
+    /// @note Server may still process the request; completion reports STATE_CANCELLED.
     void cancel();
 
     /// Get current state
@@ -89,6 +86,8 @@ public:
     /// Set callback for operation completion
     /// @param callback Function pointer to call when finished (IX_NULLPTR to clear)
     /// @param userData User data passed to callback
+    /// Callbacks run inline on completion or on registration if already complete.
+    /// Registration and clearing must be serialized with completion; clearing does not wait.
     typedef void (*FinishedCallback)(iINCOperation* op, void* userData);
     void setFinishedCallback(FinishedCallback callback, void* userData = IX_NULLPTR);
 
@@ -104,9 +103,7 @@ private:
 
     void doFree() IX_OVERRIDE;
 
-    /// Delete this operation (or hand it to the owner's deleter). Runs on
-    /// m_timer's thread, either synchronously from doFree() or from the
-    /// Deleter-mode timer's event().
+    /// Delete this operation or return its storage to the owner's pool.
     void doDeleter();
 
     xuint32         m_seqNum;

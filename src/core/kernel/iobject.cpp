@@ -127,7 +127,8 @@ iMetaCallEvent::~iMetaCallEvent()
         semaphore->release();
 }
 
-void* iMetaCallEvent::arg(_iConnection* conn, void* arg, _iConnection::ArgumentWrapper wrapper, _iConnection::ArgumentDeleter deleter, bool userWrapper) {
+void* iMetaCallEvent::arg(_iConnection* conn, void* arg, _iConnection::ArgumentWrapper wrapper, _iConnection::ArgumentDeleter deleter, bool userWrapper)
+{
     IX_ASSERT(!connection);
     connection = conn;
 
@@ -855,13 +856,32 @@ void iObject::removeConnectionFromLists(_iObjectConnectionList* connectionLists,
 
 void iObject::releaseConnectionData(_iObjectConnectionList* connectionLists)
 {
-    const xint32 references = --connectionLists->ref;
-    if ((0 == references) || ((1 == references) && (0 != connectionLists->currentConnectionId.value()))) {
-        drainOrphaned(connectionLists);
-    }
+    // Freeze the retired batch before checking readers, keeping our reference throughout.
+    _iConnection* orphaned = takeOrphaned(connectionLists);
+	do {
+    	if (!orphaned) break;
 
-    if (0 == references)
+        const xint32 references = connectionLists->ref.value();
+        if ((1 == references) || ((2 == references) && (0 != connectionLists->currentConnectionId.value()))) {
+            deleteOrphaned(orphaned);
+			break;
+        }
+
+        _iConnection* tail = orphaned;
+        while (tail->_nextInOrphanList)
+            tail = tail->_nextInOrphanList;
+
+        _iConnection* head = IX_NULLPTR;
+        do {
+            head = connectionLists->orphaned.load();
+            tail->_nextInOrphanList = head;
+        } while (!connectionLists->orphaned.testAndSet(head, orphaned));
+    } while (false);
+
+    if (0 == --connectionLists->ref) {
+        drainOrphaned(connectionLists);
         delete connectionLists;
+    }
 }
 
 iObject* iObject::sender() const

@@ -68,6 +68,7 @@ public:
 protected:
     /// Override to intercept messages and forward them
     void onConnectionMessageReceived(iINCConnection* conn, const iINCMessage& msg) IX_OVERRIDE;
+    void onConnectionClosed(iINCConnection* conn) IX_OVERRIDE;
 
     /// Pure virtual stubs — Router forwards all messages, these are never called
     void handleMethod(iINCConnection*, xuint32, const iString&, xuint16, const iByteArray&) IX_OVERRIDE {}
@@ -130,7 +131,6 @@ private:
     void handleUpstreamRawMessage(ClientBridge* bridge, const iINCMessage& msg);
 
     /// Slot: downstream client disconnected → remove bridge
-    void slotClientDisconnected(iINCConnection* conn);
 
     // Bridge map: downstream connId -> ClientBridge
     #if __cplusplus >= 201103L

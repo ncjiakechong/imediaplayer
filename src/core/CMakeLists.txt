@@ -127,6 +127,11 @@ add_library(${PROJECT_NAME} SHARED ${ComSource} ${OsSource})
 # IBUILD_CORE_LIB switches the IX_CORE_EXPORT macro to "export" mode. It is
 # PRIVATE so that consumers of this library see the "import" definition.
 target_compile_definitions(${PROJECT_NAME} PRIVATE IBUILD_CORE_LIB)
+if(MSVC)
+        target_compile_options(${PROJECT_NAME} INTERFACE /GR-)
+else()
+        target_compile_options(${PROJECT_NAME} INTERFACE -fno-rtti)
+endif()
 
 if (DEFINED PCRE2_PKG_INCLUDE_DIRS AND DEFINED PCRE2_PKG_LDFLAGS)
         target_compile_definitions(${PROJECT_NAME} PRIVATE IBUILD_HAVE_PCRE2)

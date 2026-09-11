@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(external_consumer LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(IX_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory("${IMEDIAPLAYER_SOURCE_DIR}" framework)
+add_executable(external_consumer main.cpp)
+target_link_libraries(external_consumer PRIVATE icore)

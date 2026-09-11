@@ -109,6 +109,10 @@ public:
     inline bool ref() { return m_ref.ref(true); }
     bool deref();
 
+    void wakeUpDispatcher();
+    void interruptDispatcher();
+    void destroyDispatcher();
+
 public:
     bool                            quitNow;
     bool                            isAdopted;
@@ -133,6 +137,7 @@ public:
     TLSMap                          tls;
 private:
     iRefCount                       m_ref;
+    iAtomicCounter<int>             m_dispatcherUsers;
 };
 
 class iScopedScopeLevelCounter

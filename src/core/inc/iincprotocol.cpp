@@ -9,6 +9,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 
+#include <limits>
 #include <cstring>
 #include <unistd.h>
 
@@ -133,7 +134,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessageWithBlock(const iINCM
     // Create operation for tracking this request
     iSharedDataPointer<iINCOperation> op;
     do {
-        if ((msg.type() & 0x1) || (msg.flags() & INC_MSG_FLAG_NOACK)) break;
+        if ((msg.type() & 0x1) || (msg.flags() & INC_MSG_FLAG_NOACK) || msg.type() == INC_MSG_EVENT) break;
 
         iINCOperation* tmpOp = m_opPool->m_list.pop(IX_NULLPTR);
         m_opPool->ref();
@@ -495,6 +496,10 @@ bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel,
         return true;
     }
 
+    if (offset64 > (std::numeric_limits<size_t>::max)()
+        || size64 > static_cast<xuint64>((std::numeric_limits<xsizetype>::max)()))
+        return true;
+
     // Import the memory block
     iMemBlock* importedBlock = m_memImport->get(static_cast<MemType>(memTypeU32), blockId, shmId, m_cachedPeerMemFd,
                                                 static_cast<size_t>(offset64), static_cast<size_t>(size64), false);
@@ -512,6 +517,7 @@ bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel,
     iByteArray::DataPointer dp(static_cast<iTypedArrayData<char>*>(importedBlock),
                                 static_cast<char*>(importedBlock->data().value()),
                                 static_cast<xsizetype>(size64));
+    importedBlock->deref();
     IEMIT binaryDataReceived(channel, seqNum, broadcast, pos, iByteArray(dp));
     m_metrics.onBinaryFrameRecv(size64);
     return true;
