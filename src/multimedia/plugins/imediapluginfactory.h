@@ -22,6 +22,10 @@
 //
 
 #include <multimedia/controls/imediaplayercontrol.h>
+#include <multimedia/controls/imediarecordercontrol.h>
+#include <multimedia/controls/ivideodecodercontrol.h>
+#include <multimedia/controls/ivideoencodercontrol.h>
+#include <multimedia/controls/ivideosinkcontrol.h>
 
 namespace iShell {
 
@@ -34,6 +38,11 @@ public:
 
     iMediaPlayerControl* createControl(iObject* parent = IX_NULLPTR);
     iObject* createVideoOutput(iObject* parent = IX_NULLPTR);
+
+    iVideoDecoderControl* createVideoDecoderControl(iObject* parent = IX_NULLPTR);
+    iVideoEncoderControl* createVideoEncoderControl(iObject* parent = IX_NULLPTR);
+    iVideoSinkControl* createVideoSinkControl(iObject* parent = IX_NULLPTR);
+    iMediaRecorderControl* createMediaRecorderControl(iObject* parent = IX_NULLPTR);
 
 private:
     iMediaPluginFactory();

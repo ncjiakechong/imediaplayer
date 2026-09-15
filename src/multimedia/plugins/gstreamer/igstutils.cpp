@@ -546,6 +546,7 @@ void iGstUtils::initializeGst()
 
 void iGstUtils::deinitGst()
 {
+    gst_debug_remove_log_function(_printf_extension_log_func);
     gst_deinit();
     _initializedGst = false;
 }

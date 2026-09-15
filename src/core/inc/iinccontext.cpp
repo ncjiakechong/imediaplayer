@@ -139,7 +139,7 @@ int iINCContext::doConnect(const iStringView& url)
     // Start IO thread if enabled in config
     if (m_config.enableIOThread()) {
         m_ioThread = new iThread();
-        m_ioThread->setObjectName("iINCContext.IOThread-" + objectName());
+        m_ioThread->setObjectName(objectName());
 
         m_ioThread->start();
         m_connection->moveToThread(m_ioThread);

@@ -51,6 +51,8 @@ public:
     virtual xint64 writeMessage(const iINCMessage& msg, xint64 offset) IX_OVERRIDE;
 
     // --- Server mode ---
+    /// Accepts a local IP, wildcard or interface name. Explicit interface binding
+    /// fails if the platform or permissions cannot enforce the restriction.
     int bindOn(const iString& address, xuint16 port);
 
     /// Drain the socket: decode RTP packets, reassemble, emit messageReceived().
@@ -103,6 +105,7 @@ private:
     bool createSocket(int family);
     bool setSocketOptions();
     void updateLocalInfo();
+    bool bindToInterface(const char* ifname);
     void updatePeerFromRaw(const void* srcAddr);   ///< sockaddr_storage*
     void emitMessageFromAccum();
 

@@ -31,8 +31,8 @@ public:
             if (atomic.testAndSet(count, count + 1, count))
                 return true;
         } while (true);
-		
-		return false;
+
+        return false;
     }
 
     inline bool deref() {

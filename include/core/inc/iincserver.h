@@ -39,7 +39,7 @@ class IX_CORE_EXPORT _iINCPStream : public iINCChannel
     IX_OBJECT(_iINCPStream)
 
 public:
-    _iINCPStream(iINCServer* server, xuint32 channelId, const iString& name, Mode mode, iObject* parent = IX_NULLPTR);
+    _iINCPStream(iINCServer* server, xuint32 channelId, iString name, Mode mode, iObject* parent = IX_NULLPTR);
 
     xuint32 channelId() const IX_OVERRIDE { return m_channelId; }
     Mode mode() const IX_OVERRIDE { return m_mode; }

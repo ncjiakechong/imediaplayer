@@ -100,7 +100,7 @@ iPostEventList::~iPostEventList()
         if (receiver) --receiver->m_postedEvents;
         delete event;
     }
-    
+
     for (iterator it = m_queued.begin(); it != m_queued.end(); ++it) {
         iEvent* event = *it;
         *it = IX_NULLPTR;

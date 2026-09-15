@@ -15,6 +15,8 @@
 #include <errno.h>
 #include <cstring>
 #include <netdb.h>
+#include <net/if.h>
+#include <ifaddrs.h>
 
 #include <core/inc/iincerror.h>
 #include <core/inc/iincmessage.h>
@@ -33,6 +35,45 @@ namespace iShell {
 
 const char* iRtpDevice::SCHEME = "rtp";
 static const xsizetype kMaxReassemblyBytes = 16 * 1024 * 1024;
+
+static bool sameHostAddress(const struct sockaddr* a, const struct sockaddr* b)
+{
+    if (!a || !b || a->sa_family != b->sa_family) return false;
+    if (a->sa_family == AF_INET) {
+        return reinterpret_cast<const struct sockaddr_in*>(a)->sin_addr.s_addr
+            == reinterpret_cast<const struct sockaddr_in*>(b)->sin_addr.s_addr;
+    }
+    if (a->sa_family == AF_INET6) {
+        return 0 == std::memcmp(&reinterpret_cast<const struct sockaddr_in6*>(a)->sin6_addr,
+                                &reinterpret_cast<const struct sockaddr_in6*>(b)->sin6_addr,
+                                sizeof(struct in6_addr));
+    }
+    return false;
+}
+
+/// @brief Name the interface that owns @a addr, if any.
+static bool interfaceForAddress(const struct sockaddr* addr, char* out, xsizetype outLen)
+{
+    if (!addr || !out || outLen < 2) return false;
+    struct ifaddrs* list = IX_NULLPTR;
+    if (::getifaddrs(&list) != 0) return false;
+
+    bool found = false;
+    for (struct ifaddrs* it = list; it; it = it->ifa_next) {
+        if (!it->ifa_addr || !it->ifa_name) continue;
+        if (!sameHostAddress(it->ifa_addr, addr)) continue;
+        if (addr->sa_family == AF_INET6) {
+            const unsigned int scope = reinterpret_cast<const struct sockaddr_in6*>(addr)->sin6_scope_id;
+            if (scope && scope != ::if_nametoindex(it->ifa_name)) continue;
+        }
+        std::strncpy(out, it->ifa_name, outLen - 1);
+        out[outLen - 1] = '\0';
+        found = true;
+        break;
+    }
+    ::freeifaddrs(list);
+    return found;
+}
 
 /// @brief Internal EventSource for RTP transport monitoring (mirrors iUDPEventSource).
 class iRtpEventSource : public iEventSource
@@ -223,11 +264,23 @@ int iRtpDevice::bindOn(const iString& address, xuint16 port)
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_flags = AI_PASSIVE;
+    if (address == "0.0.0.0") hints.ai_family = AF_INET;
+    if (address == "::") hints.ai_family = AF_INET6;
 
     iByteArray addressUtf8 = address.toUtf8();
     const char* bindAddr = IX_NULLPTR;
     if (!address.isEmpty() && address != "0.0.0.0" && address != "::") {
         bindAddr = addressUtf8.constData();
+    }
+
+    // `address` may name an interface ("eth0") instead of a local IP. That
+    // serves every address on that interface while still pinning the socket to
+    // it, which is what a host with one network per routing table needs.
+    char ifname[IF_NAMESIZE] = {0};
+    const bool explicitInterface = bindAddr && ::if_nametoindex(bindAddr) != 0;
+    if (explicitInterface) {
+        std::strncpy(ifname, bindAddr, sizeof(ifname) - 1);
+        bindAddr = IX_NULLPTR;
     }
 
     iString portStr = iString::number(port);
@@ -238,6 +291,11 @@ int iRtpDevice::bindOn(const iString& address, xuint16 port)
         return INC_ERROR_CONNECTION_FAILED;
     }
 
+    // A concrete local address implies its interface, so derive the pin from it.
+    if (!ifname[0] && bindAddr) {
+        interfaceForAddress(addrResult->ai_addr, ifname, sizeof(ifname));
+    }
+
     m_addrFamily = addrResult->ai_family;
     if (!createSocket(m_addrFamily)) {
         ::freeaddrinfo(addrResult);
@@ -246,6 +304,12 @@ int iRtpDevice::bindOn(const iString& address, xuint16 port)
     if (m_addrFamily == AF_INET6) {
         int no = 0;
         ::setsockopt(m_sockfd, IPPROTO_IPV6, IPV6_V6ONLY, &no, sizeof(no));
+    }
+
+    if (!bindToInterface(ifname) && explicitInterface) {
+        ::freeaddrinfo(addrResult);
+        close();
+        return INC_ERROR_CONNECTION_FAILED;
     }
 
     if (::bind(m_sockfd, addrResult->ai_addr, addrResult->ai_addrlen) < 0) {
@@ -593,6 +657,31 @@ void iRtpDevice::close()
     }
     iIODevice::close();
     IEMIT disconnected();
+}
+
+// Android gives every network its own routing table and sends unmarked sockets
+// to `unreachable`, so replying to a peer outside the default network fails
+// with ENETUNREACH. Pinning the socket to an interface makes that interface's
+// table apply.
+bool iRtpDevice::bindToInterface(const char* ifname)
+{
+    if (!ifname || !*ifname) return true;
+    int result = -1;
+#ifdef SO_BINDTODEVICE
+    result = ::setsockopt(m_sockfd, SOL_SOCKET, SO_BINDTODEVICE, ifname,
+                         static_cast<socklen_t>(std::strlen(ifname) + 1));
+#elif defined(IP_BOUND_IF) && defined(IPV6_BOUND_IF)
+    const unsigned int interfaceIndex = ::if_nametoindex(ifname);
+    if (!interfaceIndex) return false;
+    const int level = m_addrFamily == AF_INET6 ? IPPROTO_IPV6 : IPPROTO_IP;
+    const int option = m_addrFamily == AF_INET6 ? IPV6_BOUND_IF : IP_BOUND_IF;
+    result = ::setsockopt(m_sockfd, level, option, &interfaceIndex, sizeof(interfaceIndex));
+#else
+    errno = ENOTSUP;
+#endif
+    if (result == 0) return true;
+    ilog_warn("[] RTP interface binding failed for ", ifname, ":", errno);
+    return false;
 }
 
 bool iRtpDevice::startEventMonitoring(iEventDispatcher* dispatcher)

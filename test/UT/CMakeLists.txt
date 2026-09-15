@@ -176,12 +176,27 @@ pkg_check_modules(GST_PKG gstreamer-1.0)
 if (DEFINED GST_PKG_INCLUDE_DIRS AND DEFINED GST_PKG_LDFLAGS)
     pkg_check_modules(GST_TEST REQUIRED IMPORTED_TARGET gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0 gstreamer-audio-1.0)
     target_link_libraries(${UT_TARGET} imultimedia PkgConfig::GST_TEST)
+    target_compile_definitions(${UT_TARGET} PRIVATE IX_TEST_MULTIMEDIA)
 endif()
 
 # Enable testing
 enable_testing()
 add_test(NAME ${UT_TARGET} COMMAND ${UT_TARGET})
 add_test(NAME regression_tests COMMAND ${UT_TARGET} --gtest_filter=*Regression.*)
+if(TARGET imultimedia)
+    add_test(NAME multimedia_codec_tests COMMAND ${UT_TARGET}
+        --gtest_filter=GStreamerVideoRegression.*:GStreamerRegression.*)
+    set_tests_properties(multimedia_codec_tests PROPERTIES
+        TIMEOUT 60
+        ENVIRONMENT "IX_REQUIRE_VIDEO_CODECS=1"
+        FAIL_REGULAR_EXPRESSION "\\[  SKIPPED \\]")
+    add_test(NAME multimedia_missing_codecs_rejected COMMAND ${CMAKE_COMMAND} -E env
+        "GST_PLUGIN_SYSTEM_PATH_1_0=" "GST_PLUGIN_PATH_1_0="
+        "GST_REGISTRY_1_0=${CMAKE_CURRENT_BINARY_DIR}/missing-codecs-registry.bin"
+        "IX_REQUIRE_VIDEO_CODECS=1" $<TARGET_FILE:${UT_TARGET}>
+        --gtest_filter=GStreamerVideoRegression.InterFrameEncodersDrainEveryAcceptedFrame)
+    set_tests_properties(multimedia_missing_codecs_rejected PROPERTIES TIMEOUT 30 WILL_FAIL TRUE)
+endif()
 add_test(NAME memimport_regression_tests COMMAND ${UT_TARGET} --gtest_filter=MemImportRegression.*)
 set_tests_properties(memimport_regression_tests PROPERTIES TIMEOUT 30)
 set_tests_properties(regression_tests PROPERTIES TIMEOUT 60)

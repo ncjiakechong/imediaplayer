@@ -14,6 +14,10 @@
 #include "plugins/gstreamer/igstreamerplayersession_p.h"
 #include "plugins/gstreamer/igstreamerplayercontrol_p.h"
 #include "plugins/gstreamer/igstreamerautorenderer.h"
+#include "plugins/gstreamer/igstreamerrecordercontrol_p.h"
+#include "plugins/gstreamer/igstreamervideodecodercontrol_p.h"
+#include "plugins/gstreamer/igstreamervideoencodercontrol_p.h"
+#include "plugins/gstreamer/igstreamervideosinkcontrol_p.h"
 #include "plugins/imediapluginfactory.h"
 
 #define ILOG_TAG "ix_media"
@@ -38,7 +42,7 @@ iMediaPluginFactory* iMediaPluginFactory::instance()
         ~Cleanup() {
             delete s_instance;
             s_instance = IX_NULLPTR;
-            ilog_info("cleanup iMediaPluginFactory");
+            iLogger::asprintf(ILOG_TAG, ILOG_INFO, __FILE__, __FUNCTION__, __LINE__, "cleanup iMediaPluginFactory");
         }
     } cleanup;
 
@@ -58,6 +62,26 @@ iMediaPlayerControl* iMediaPluginFactory::createControl(iObject* parent)
 iObject* iMediaPluginFactory::createVideoOutput(iObject* parent)
 {
     return new iGstreamerAutoRenderer(parent);
+}
+
+iVideoDecoderControl* iMediaPluginFactory::createVideoDecoderControl(iObject* parent)
+{
+    return new iGstreamerVideoDecoderControl(parent);
+}
+
+iVideoEncoderControl* iMediaPluginFactory::createVideoEncoderControl(iObject* parent)
+{
+    return new iGstreamerVideoEncoderControl(parent);
+}
+
+iVideoSinkControl* iMediaPluginFactory::createVideoSinkControl(iObject* parent)
+{
+    return new iGstreamerVideoSinkControl(parent);
+}
+
+iMediaRecorderControl* iMediaPluginFactory::createMediaRecorderControl(iObject* parent)
+{
+    return new iGstreamerRecorderControl(parent);
 }
 
 } // namespace iShell

@@ -10,6 +10,9 @@
 #include <core/io/ilog.h>
 #include <core/kernel/icoreapplication.h>
 #include <core/thread/ieventdispatcher_generic.h>
+#ifdef IX_TEST_MULTIMEDIA
+#include <gst/gst.h>
+#endif
 #ifdef IBUILD_HAVE_GLIB
 #include <core/thread/ieventdispatcher_glib.h>
 #endif
@@ -70,6 +73,18 @@ void parseCustomArgs(int argc, char** argv) {
 class ModuleEnvironment : public ::testing::Environment {
 public:
     void SetUp() override {
+        #ifdef IX_TEST_MULTIMEDIA
+        if (g_strcmp0(g_getenv("IX_REQUIRE_VIDEO_CODECS"), "1") == 0) {
+            ASSERT_TRUE(gst_init_check(nullptr, nullptr, nullptr));
+            const char* required[] = {"appsrc", "appsink", "videoconvert", "x264enc", "x265enc",
+                                      "h264parse", "h265parse", "avdec_h264", "avdec_h265", "mp4mux"};
+            for (size_t index = 0; index < sizeof(required) / sizeof(required[0]); ++index) {
+                GstElementFactory* factory = gst_element_factory_find(required[index]);
+                ASSERT_NE(nullptr, factory) << "Required GStreamer plugin unavailable: " << required[index];
+                gst_object_unref(factory);
+            }
+        }
+        #endif
         ilog_info("==================================================");
         ilog_info("  imediaplayer Unit Test Suite");
         ilog_info("==================================================");

@@ -28,6 +28,7 @@
 namespace iShell {
 
 class iGstreamerPlayerSession;
+class iGstreamerVideoRendererInterface;
 class iGstreamerPlayerControl : public iMediaPlayerControl
 {
     IX_OBJECT(iGstreamerPlayerControl)
@@ -92,6 +93,7 @@ private:
     void popAndNotifyState();
 
     iGstreamerPlayerSession *m_session;
+    iGstreamerVideoRendererInterface* m_sinkAdapter;
     iMediaPlayer::State m_userRequestedState;
     iMediaPlayer::State m_currentState;
     iMediaPlayer::MediaStatus m_mediaStatus;

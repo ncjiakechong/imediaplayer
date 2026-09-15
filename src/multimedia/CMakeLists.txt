@@ -4,9 +4,13 @@ set (Source
     audio/iaudiobuffer.cpp
     audio/iaudioformat.cpp
     control/imediaplayercontrol.cpp
+    control/ivideocodeccontrols.cpp
+    codec/ivideodecoder.cpp
+    codec/ivideoencoder.cpp
     imediaobject.cpp
     imediatimerange.cpp
     playback/imediaplayer.cpp
+    recording/imediarecorder.cpp
     plugins/imediapluginfactory.cpp
     plugins/gstreamer/igstappsrc.cpp
     plugins/gstreamer/igstcodecsinfo.cpp
@@ -17,18 +21,24 @@ set (Source
     plugins/gstreamer/igstreamermessage.cpp
     plugins/gstreamer/igstreamerplayercontrol.cpp
     plugins/gstreamer/igstreamerplayersession.cpp
+    plugins/gstreamer/igstreamerrecordercontrol.cpp
+    plugins/gstreamer/igstreamervideodecodercontrol.cpp
+    plugins/gstreamer/igstreamervideoencodercontrol.cpp
     plugins/gstreamer/igstreamervideoprobecontrol.cpp
     plugins/gstreamer/igstreamervideorendererinterface.cpp
+    plugins/gstreamer/igstreamervideosinkcontrol.cpp
     plugins/gstreamer/igstutils.cpp
     plugins/gstreamer/igstvideobuffer.cpp
+    plugins/gstreamer/igstvideopush.cpp
     video/iabstractvideobuffer.cpp
     video/imemoryvideobuffer.cpp
     video/ivideoframe.cpp
+    video/ivideosink.cpp
     video/ivideosurfaceformat.cpp)
 
 find_package(PkgConfig)
 pkg_check_modules(GLIB_PKG REQUIRED IMPORTED_TARGET glib-2.0)
-pkg_check_modules(GST_PKG REQUIRED IMPORTED_TARGET gstreamer-1.0)
+pkg_check_modules(GST_PKG REQUIRED IMPORTED_TARGET gstreamer-1.0>=1.20)
 pkg_check_modules(GST_PKG_APP REQUIRED IMPORTED_TARGET gstreamer-app-1.0)
 pkg_check_modules(GST_PKG_BASE REQUIRED IMPORTED_TARGET gstreamer-base-1.0)
 pkg_check_modules(GST_PKG_PLUGIN_BASE REQUIRED IMPORTED_TARGET gstreamer-plugins-base-1.0)

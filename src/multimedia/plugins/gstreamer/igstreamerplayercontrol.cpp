@@ -18,6 +18,9 @@
 #include "igstreamerplayercontrol_p.h"
 #include "igstreamerplayersession_p.h"
 #include "igstreamervideorendererinterface_p.h"
+#include "igstreamervideosinkcontrol_p.h"
+#include "multimedia/video/ivideosink.h"
+#include "multimedia/imultimedia.h"
 
 #define ILOG_TAG "ix_media"
 
@@ -26,6 +29,7 @@ namespace iShell {
 iGstreamerPlayerControl::iGstreamerPlayerControl(iGstreamerPlayerSession *session, iObject *parent)
     : iMediaPlayerControl(parent)
     , m_session(session)
+    , m_sinkAdapter(IX_NULLPTR)
     , m_userRequestedState(iMediaPlayer::StoppedState)
     , m_currentState(iMediaPlayer::StoppedState)
     , m_mediaStatus(iMediaPlayer::NoMedia)
@@ -64,6 +68,10 @@ iGstreamerPlayerControl::iGstreamerPlayerControl(iGstreamerPlayerSession *sessio
 
 iGstreamerPlayerControl::~iGstreamerPlayerControl()
 {
+    if (m_sinkAdapter) {
+        m_session->setVideoRenderer(IX_NULLPTR);
+        delete m_sinkAdapter;
+    }
 }
 
 xint64 iGstreamerPlayerControl::position() const
@@ -342,13 +350,30 @@ void iGstreamerPlayerControl::setMedia(const iUrl &content, iIODevice *stream)
 
 void iGstreamerPlayerControl::setVideoOutput(iObject *output)
 {
+    iGstreamerVideoRendererInterface* adapter = IX_NULLPTR;
+    iVideoSink* sink = iobject_cast<iVideoSink*>(output);
     iGstreamerVideoRendererInterface* renderer = iobject_cast<iGstreamerVideoRendererInterface*>(output);
-    if (output && !renderer) {
+    if (sink) {
+        if (sink->thread() != thread()) {
+            ilog_warn("player and video sink must share an affinity thread");
+            return;
+        }
+        adapter = gstCreateVideoSinkRenderer(sink, this);
+        if (!adapter) {
+            IEMIT error(iMediaPlayer::ResourceError, iString::fromUtf8("could not create video sink adapter", -1));
+            return;
+        }
+        renderer = adapter;
+    } else if (output && !renderer) {
         ilog_warn("invalid argument", output);
         return;
     }
 
+    iGstreamerVideoRendererInterface* previous = m_sinkAdapter;
+    if (previous) previous->setParent(IX_NULLPTR);
+    m_sinkAdapter = adapter;
     m_session->setVideoRenderer(renderer);
+    delete previous;
 }
 
 bool iGstreamerPlayerControl::isAudioAvailable() const

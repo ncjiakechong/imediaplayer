@@ -859,7 +859,7 @@ void iObject::releaseConnectionData(_iObjectConnectionList* connectionLists)
     // Freeze the retired batch before checking readers, keeping our reference throughout.
     _iConnection* orphaned = takeOrphaned(connectionLists);
 	do {
-    	if (!orphaned) break;
+        if (!orphaned) break;
 
         const xint32 references = connectionLists->ref.value();
         if ((1 == references) || ((2 == references) && (0 != connectionLists->currentConnectionId.value()))) {

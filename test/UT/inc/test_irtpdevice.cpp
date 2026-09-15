@@ -5,8 +5,49 @@
 #include <core/inc/irtp.h>
 #include <core/kernel/ieventdispatcher.h>
 #include <poll.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 using namespace iShell;
+
+TEST(RtpInterfaceRegression, ExplicitInterfaceIsEnforcedOrRejected)
+{
+    const char* loopback = ::if_nametoindex("lo0") ? "lo0" : "lo";
+    const unsigned int expected = ::if_nametoindex(loopback);
+    if (!expected) GTEST_SKIP() << "No loopback interface available";
+    iRtpDevice device(iINCDevice::ROLE_SERVER);
+    const int result = device.bindOn(iString(loopback), 0);
+    if (result != 0) {
+        EXPECT_FALSE(device.isOpen());
+        EXPECT_EQ(-1, device.socketDescriptor());
+        return;
+    }
+#ifdef SO_BINDTODEVICE
+    char bound[IF_NAMESIZE] = {0};
+    socklen_t length = sizeof(bound);
+    ASSERT_EQ(0, ::getsockopt(device.socketDescriptor(), SOL_SOCKET, SO_BINDTODEVICE, bound, &length));
+    EXPECT_STREQ(loopback, bound);
+#elif defined(IP_BOUND_IF) && defined(IPV6_BOUND_IF)
+    sockaddr_storage address;
+    socklen_t length = sizeof(address);
+    ASSERT_EQ(0, ::getsockname(device.socketDescriptor(), reinterpret_cast<sockaddr*>(&address), &length));
+    unsigned int actual = 0;
+    length = sizeof(actual);
+    ASSERT_EQ(0, ::getsockopt(device.socketDescriptor(), address.ss_family == AF_INET6 ? IPPROTO_IPV6 : IPPROTO_IP,
+        address.ss_family == AF_INET6 ? IPV6_BOUND_IF : IP_BOUND_IF, &actual, &length));
+    EXPECT_EQ(expected, actual);
+#else
+    FAIL() << "Unsupported interface pinning must not succeed";
+#endif
+}
+
+TEST(RtpInterfaceRegression, WildcardPreservesRequestedAddressFamily)
+{
+    iRtpDevice device(iINCDevice::ROLE_SERVER);
+    ASSERT_EQ(0, device.bindOn(iString("0.0.0.0"), 0));
+    EXPECT_EQ(iString("0.0.0.0"), device.localAddress());
+}
 
 class ScriptedRtpDevice : public iRtpDevice {
 public:

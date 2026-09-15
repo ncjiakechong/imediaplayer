@@ -84,7 +84,7 @@ int iINCServer::listenOn(const iStringView& url)
     if (m_config.enableIOThread()) {
         m_ioThread = new iThread();
         m_ioThread->setObjectName("iINCServer.IOThread-" + objectName());
-        m_ioThread->start();
+        m_ioThread->start(m_config.highPriority() ? iThread::HighestPriority : iThread::InheritPriority);
     }
 
     // Create listening devices for each URL, connect signals, and start monitoring
@@ -338,7 +338,7 @@ void iINCServer::onConnectionErrorOccurred(iINCConnection* conn, xint32 errorCod
     conn->close();
 }
 
-_iINCPStream::_iINCPStream(iINCServer* server, xuint32 channelId, const iString& name, Mode mode, iObject* parent)
+_iINCPStream::_iINCPStream(iINCServer* server, xuint32 channelId, iString name, Mode mode, iObject* parent)
     : iINCChannel(name, parent)
     , m_mode(mode)
     , m_channelId(channelId)

@@ -108,6 +108,9 @@ public:
 protected:
     bool event(iEvent* e) IX_OVERRIDE;
 
+    /// Access the dedicated I/O thread after connectTo() creates it.
+    iThread* ioThread() const { return m_ioThread; }
+
     /// Call remote method asynchronously (protected - for subclass use)
     /// @param method Method name
     /// @param version Method version for compatibility control

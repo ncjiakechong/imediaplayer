@@ -15,6 +15,24 @@ namespace iShell {
 
 namespace iMultimedia
 {
+    /// Result of one input submission. Only WouldBlock waits for readyToSubmit().
+    enum class SubmitResult
+    {
+        Accepted,
+        WouldBlock,
+        InvalidInput,
+        Closed,
+        BackendFailure
+    };
+
+    enum Error
+    {
+        NoError,
+        InvalidArgumentError,
+        BackendError,
+        FinalizationError
+    };
+
     enum SupportEstimate
     {
         NotSupported,
