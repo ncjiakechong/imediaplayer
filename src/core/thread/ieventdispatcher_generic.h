@@ -64,8 +64,6 @@ private:
     iWakeup m_wakeup;
     iPollFD m_wakeUpRec;
 
-    xuint32 m_nextSeq;
-
     iPostEventSource* m_postSource;
     iTimerEventSource* m_timerSource;
     iPoller m_poller;

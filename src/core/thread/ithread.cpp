@@ -9,6 +9,7 @@
 /////////////////////////////////////////////////////////////////
 
 #include "core/thread/ithread.h"
+#include "core/kernel/ideadlinetimer.h"
 #include "core/kernel/ieventloop.h"
 #include "core/kernel/ievent.h"
 #include "core/kernel/iobject.h"
@@ -250,6 +251,7 @@ iEventDispatcher* iThread::eventDispatcher() const
 
 bool iThread::wait(long time)
 {
+    const iDeadlineTimer deadline(time < 0 ? -1 : time);
     iMutex::ScopedLock lock(m_mutex);
 
     if (iThreadData::current(false) == m_data) {
@@ -261,7 +263,10 @@ bool iThread::wait(long time)
         return true;
 
     while (m_running) {
-        if (0 != m_doneCond.wait(m_mutex, time))
+        const xint64 remaining = deadline.remainingTime();
+        if (remaining == 0)
+            return false;
+        if (m_doneCond.wait(m_mutex, static_cast<long>(remaining)) != 0 && m_running)
             return false;
     }
     return true;
@@ -320,8 +325,9 @@ iThread::~iThread()
         m_mutex.lock();
     }
 
-    if (m_running && !m_finished && !m_data->isAdopted)
-        ilog_error("Destroyed while thread is still running");
+    // The native thread still dereferences this object after run() returns.
+    IX_ASSERT_X(!m_running || m_finished || m_data->isAdopted,
+                "iThread destroyed while thread is still running");
 
     m_data->thread = IX_NULLPTR;
     if (m_impl) {

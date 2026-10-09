@@ -167,7 +167,7 @@ public:
     /// silence memchunk for this memblockq if you use this call.
     int peekFixedSize(size_t block_size, iByteArray& chunk);
 
-    /// Much like peek, interator each block data in the queue
+    /// Iterate real blocks; position and distance include any gaps in the queue.
     int peekIterator(IteratorFunc func, void* userdata);
 
     /// Drop the specified bytes from the queue.

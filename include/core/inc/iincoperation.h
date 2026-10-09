@@ -19,6 +19,7 @@
 #include <core/utils/ishareddata.h>
 #include <core/inc/iinctagstruct.h>
 #include <core/thread/iatomiccounter.h>
+#include <core/thread/iatomicpointer.h>
 
 namespace iShell {
 
@@ -65,6 +66,7 @@ public:
 
     /// Cancel the operation
     /// @note Server may still process the request; completion reports STATE_CANCELLED.
+    /// Shared-memory leases remain held until acknowledgement or connection cleanup.
     void cancel();
 
     /// Get current state
@@ -87,7 +89,8 @@ public:
     /// @param callback Function pointer to call when finished (IX_NULLPTR to clear)
     /// @param userData User data passed to callback
     /// Callbacks run inline on completion or on registration if already complete.
-    /// Registration and clearing must be serialized with completion; clearing does not wait.
+    /// Registration and clearing may race with completion, but not with each other.
+    /// Clearing does not wait for an already claimed callback; its userData must remain alive.
     typedef void (*FinishedCallback)(iINCOperation* op, void* userData);
     void setFinishedCallback(FinishedCallback callback, void* userData = IX_NULLPTR);
 
@@ -98,6 +101,7 @@ private:
 
     void setState(State st);
     void setResult(xint32 errorCode, const iByteArray& data);
+    void invokeFinishedCallback();
 
     void onTimeout();
 
@@ -116,9 +120,16 @@ private:
 
     iINCOperationTimer m_timer;
 
-    // Callbacks
-    FinishedCallback m_finishedCallback;
-    void*           m_finishedUserData;
+    enum {
+        CallbackPublishing = 1,
+        CallbackInvoked = 2,
+        CallbackFlags = 3,
+        CallbackRevisionStep = 4
+    };
+    typedef void CallbackFunction(iINCOperation*, void*);
+    iAtomicPointer<CallbackFunction> m_finishedCallback;
+    iAtomicPointer<void> m_finishedUserData;
+    iAtomicCounter<xuint64> m_callbackRevision;
 
     // Custom deleter support
     Notify  m_ownerNotify;

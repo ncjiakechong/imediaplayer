@@ -31,7 +31,12 @@ TEST_F(IBitArrayTest, DefaultConstruction) {
     iBitArray bits;
     EXPECT_TRUE(bits.isEmpty());
     EXPECT_TRUE(bits.isNull());
-    // Note: size() and count() dereference internal buffer, only call on non-empty arrays
+    EXPECT_EQ(0, bits.size());
+    EXPECT_EQ(0, bits.count());
+    bits.resize(8);
+    bits.clear();
+    EXPECT_EQ(0, bits.size());
+    EXPECT_EQ(0, bits.count());
 }
 
 TEST_F(IBitArrayTest, ConstructWithSize) {

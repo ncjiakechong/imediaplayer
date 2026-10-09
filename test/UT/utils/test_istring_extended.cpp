@@ -684,6 +684,54 @@ TEST_F(StringExtendedTest, MiscStringOps) {
     EXPECT_EQ(iString("Raw"), r);
 }
 
+TEST(StringRawDataRegression, Latin1AssignmentPreservesRawStorage) {
+    const char* replacements[] = { "", "x", "WXYZ" };
+    for (const char* replacement : replacements) {
+        const xuint16 sentinel = 0x7bad;
+        iChar raw[] = { iChar('A'), iChar('B'), iChar('C'), iChar('D'), iChar(sentinel) };
+        iString value = iString::fromRawData(raw, 4);
+        ASSERT_EQ(raw, value.constData());
+
+        value = iLatin1StringView(replacement);
+
+        EXPECT_EQ(iString(iLatin1StringView(replacement)), value);
+        EXPECT_NE(raw, value.constData());
+        EXPECT_EQ(iString("ABCD"), iString(raw, 4));
+        EXPECT_EQ(sentinel, raw[4].unicode());
+    }
+}
+
+TEST(StringRawDataRegression, ViewAssignmentPreservesRawStorage) {
+    const xuint16 sentinel = 0x7bad;
+    iChar raw[] = { iChar('A'), iChar('B'), iChar('C'), iChar('D'), iChar(sentinel) };
+    iString value = iString::fromRawData(raw, 4);
+    const iString replacement("xy");
+
+    value.assign(iStringView(replacement));
+
+    EXPECT_EQ(replacement, value);
+    EXPECT_NE(raw, value.constData());
+    EXPECT_EQ(iString("ABCD"), iString(raw, 4));
+    EXPECT_EQ(sentinel, raw[4].unicode());
+}
+
+TEST(StringRawDataRegression, ViewsAreNullTerminatedOnRequest) {
+    const iString text("abcdef");
+    const iString view = text.mid(1, 2);
+    const iString terminated = view.nullTerminated();
+    EXPECT_EQ(iString("bc"), terminated);
+    EXPECT_EQ(0, terminated.constData()[2].unicode());
+    EXPECT_EQ(0, view.utf16()[2]);
+    EXPECT_EQ(iString("abcdef"), text);
+
+    const xuint16 sentinel = 0x7bad;
+    iChar raw[] = { iChar('x'), iChar('y'), iChar(sentinel) };
+    const iString rawView = iString::fromRawData(raw, 2);
+    EXPECT_EQ(0, rawView.utf16()[2]);
+    EXPECT_EQ(sentinel, raw[2].unicode());
+    EXPECT_EQ(text.constData(), text.nullTerminated().constData());
+}
+
 TEST_F(StringExtendedTest, AsprintfFormats) {
     EXPECT_EQ(iString("int=42"), iString::asprintf("int=%d", 42));
     EXPECT_EQ(iString("hex=ff"), iString::asprintf("hex=%x", 255));

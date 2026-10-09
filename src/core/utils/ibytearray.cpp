@@ -185,7 +185,7 @@ int istrcmp(const char *str1, const char *str2)
 
 int istrncmp(const char *str1, xsizetype len1, const char *str2, xsizetype len2)
 {
-    IX_ASSERT(str1);
+    IX_ASSERT(str1 || len1 == 0);
     IX_ASSERT(len1 >= 0);
     IX_ASSERT(len2 >= -1);
     const uchar *s1 = reinterpret_cast<const uchar *>(str1);
@@ -1419,11 +1419,9 @@ void iByteArray::expand(xsizetype i)
 */
 iByteArray iByteArray::nulTerminated() const
 {
-    // Check if data is from fromRawData() which may not be null-terminated
-    if (d.isMutable())
-        return *this;  // Mutable data is always null-terminated, safe to return as-is
+    if (ix_isNulTerminated(d))
+        return *this;
 
-    // Data is immutable (fromRawData), create a detached copy to ensure null termination
     iByteArray copy(*this);
     copy.detach();
     return copy;

@@ -55,7 +55,7 @@ public:
 
     static iTypedArrayData* fromRawData(T *rawData, xsizetype capacity, iFreeCb freeCb, void* freeCbData) {
         IX_COMPILER_VERIFY(sizeof(iTypedArrayData) == sizeof(iMemBlock));
-        iMemBlock* data = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, freeCb, freeCbData, false);
+        iMemBlock* data = new4User(IX_NULLPTR, rawData, sizeof (T) * capacity, freeCb, freeCbData, true);
         iTypedArrayData* ret = static_cast<iTypedArrayData *>(data);
         ret->reinterpreted<char>();
         return ret;

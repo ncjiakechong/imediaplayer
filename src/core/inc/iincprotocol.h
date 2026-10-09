@@ -23,6 +23,7 @@
 
 #include <core/io/imemblock.h>
 #include <core/kernel/iobject.h>
+#include <core/thread/iatomicpointer.h>
 #include <core/inc/iincmessage.h>
 #include <core/inc/iincoperation.h>
 #include "inc/iincmetrics.h"
@@ -106,7 +107,7 @@ private:
     void onReadyWrite();
     void onDeviceConnected();  // Handle device connected signal
     iSharedDataPointer<iINCOperation> sendMessageWithBlock(const iINCMessage& msg, xuint32 blockId);
-    void sendMessageImpl(iINCMessage msg, iINCOperation* op);
+    void sendMessageImpl(iINCMessage msg, iSharedDataPointer<iINCOperation> op);
 
     /// Process received binary data message
     void processBinaryDataMessage(const iINCMessage& msg);
@@ -115,6 +116,7 @@ private:
     bool processSHMBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, bool broadcast, xint64& pos);
 
     static void operationNotifier(iINCOperation* op, bool deleter, void* userData);
+    void releaseLease(iINCOperation* op);
 
     iINCDevice*             m_device;
     iAtomicCounter<xuint32> m_seqCounter;
@@ -131,8 +133,7 @@ private:
     // Shared memory support for zero-copy binary transfer
     iByteArray              m_pollName;
     iSharedDataPointer<iMemPool> m_memPool;
-    iMemExport*             m_memExport;
-    iMemImport*             m_memImport;
+    iAtomicPointer<iMemImport> m_memImport;
 
     // Operation tracking (centralized in protocol layer) with custom allocator
     #if __cplusplus >= 201103L

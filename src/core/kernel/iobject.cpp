@@ -330,11 +330,14 @@ iObject::~iObject()
                         continue;
                     }
 
+                    ++rcv->m_inFlight;
                     iMutex *m = &rcv->m_signalSlotLock;
                     bool needToUnlock = iOrderedMutexLocker::relock(signalSlotMutex, m);
-                    removeConnectionFromLists(connectionLists, connectionList, c);
+                    if (c->_receiver.load() == rcv)
+                        removeConnectionFromLists(connectionLists, connectionList, c);
                     if (needToUnlock)
                         m->unlock();
+                    --rcv->m_inFlight;
                     c->deref();
                 }
             }
@@ -996,14 +999,18 @@ bool iObject::disconnectHelper(_iConnectionList* connectionList, const _iConnect
         const iObject* rcv = c->_receiver.load();
         if ((IX_NULLPTR != rcv)
             && c->compare(&conn)) {
-            iMutex *receiverMutex = &const_cast<iObject*>(rcv)->m_signalSlotLock;
+            iObject* receiver = const_cast<iObject*>(rcv);
+            ++receiver->m_inFlight;
+            iMutex *receiverMutex = &receiver->m_signalSlotLock;
             // need to relock this receiver and sender in the correct order
             bool needToUnlock = iOrderedMutexLocker::relock(&m_signalSlotLock, receiverMutex);
-            removeConnectionFromLists(connectionLists, connectionList, c);
+            if (c->_receiver.load() == receiver) {
+                removeConnectionFromLists(connectionLists, connectionList, c);
+                success = true;
+            }
             if (needToUnlock)
                 receiverMutex->unlock();
-
-            success = true;
+            --receiver->m_inFlight;
         }
 
         c->deref();
@@ -1118,15 +1125,24 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
         if (conn->_id > highestId)
             break;
 
-        iObject* const receiver = const_cast<iObject*>(conn->_receiver.load());
-        if (IX_NULLPTR == receiver)
-            continue;
+        const uint _type = conn->_type & Connection_PrimaryMask;
+        iObject* receiver = IX_NULLPTR;
+        bool receiverInSameThread = false;
+        if (DirectConnection == _type) {
+            receiver = const_cast<iObject*>(conn->_receiver.load());
+            if (IX_NULLPTR == receiver) continue;
+            receiverInSameThread = (currentThreadData == receiver->m_threadData.load());
+        } else {
+            // ~iObject() clears _receiver under this lock before its final m_inFlight wait,
+            // so a receiver seen here stays alive until the pin below is dropped.
+            iScopedLock<iMutex> locker(m_signalSlotLock);
+            receiver = const_cast<iObject*>(conn->_receiver.load());
+            if (IX_NULLPTR == receiver) continue;
+            receiverInSameThread = (currentThreadData == receiver->m_threadData.load());
+            if (!(AutoConnection == _type && receiverInSameThread))
+                ++receiver->m_inFlight;
+        }
 
-        const bool receiverInSameThread = (currentThreadData == receiver->m_threadData.load());
-
-        // determine if this connection should be sent immediately or
-        // put into the event queue
-        uint _type = conn->_type & Connection_PrimaryMask;
         if ((AutoConnection == _type && receiverInSameThread)
             || (DirectConnection == _type)) {
             // No per-connection pin needed: orphan reclaim is gated on the connection data
@@ -1143,6 +1159,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
             iMetaCallEvent* event = new iMetaCallEvent;
             event->arg(conn, args, conn->_argWrapper, conn->_argDeleter);
             iCoreApplication::postEvent(receiver, event);
+            --receiver->m_inFlight;
         } else {
             if (receiverInSameThread) {
                 ilog_warn("obj[", this, " ", objectName(), "@", metaObject()->className(), "::", name, "] Dead lock detected while activating a BlockingQueuedConnection: "
@@ -1154,6 +1171,7 @@ void iObject::emitImpl(const char* name, _iMemberFunction signal, void *args, vo
             iMetaCallEvent* event = new iMetaCallEvent(&semaphore);
             event->arg(conn, args, conn->_argWrapper, conn->_argDeleter);
             iCoreApplication::postEvent(receiver, event);
+            --receiver->m_inFlight;
             semaphore.acquire();
         }
     } while ((conn = conn->_nextConnectionList.load()) != IX_NULLPTR);

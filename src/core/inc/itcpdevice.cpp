@@ -65,9 +65,7 @@ public:
     iTcpEventSource(iTcpDevice* device, int priority = IX_PRIORITY_IO)
         : iEventSource(iLatin1StringView("iTcpEventSource"), priority)
         , m_device(device)
-        , m_readBytes(0)
-        , m_writeBytes(0)
-        , m_monitorEvents(0)
+        , m_readPaused(false)
     {
         m_pollFd.fd = -1;
         m_pollFd.events = 0;  // No events initially
@@ -86,20 +84,32 @@ public:
     }
 
     iTcpDevice* tcpDevice() const {
-        return iobject_cast<iTcpDevice*>(m_device);
+        return m_device;
     }
 
-    void configEventAbility(bool read, bool write) {
-        // Build new events mask
-        xint32 newEvents = 0;
-        if (read) {
-            newEvents |= IX_IO_IN;
-        }
-        if (write) {
-            newEvents |= IX_IO_OUT;
-        }
+    void invalidateDevice() { m_device = IX_NULLPTR; }
+    bool deviceIsValid(bool wasAttached = true) const
+    { return m_device && (!wasAttached || isAttached()); }
 
-        m_monitorEvents = newEvents;
+    void configEventAbility(bool read, bool write) {
+        m_readPaused = false;
+        setEvents((read ? IX_IO_IN : 0) | (write ? IX_IO_OUT : 0));
+    }
+
+    // A nested loop must not keep reporting readable data that the outer read owns.
+    void suspendRead() {
+        if (m_readPaused || !(m_pollFd.events & IX_IO_IN)) return;
+        setEvents(m_pollFd.events & ~IX_IO_IN);
+        m_readPaused = true;
+    }
+
+    void resumeRead() {
+        if (!m_readPaused) return;
+        m_readPaused = false;
+        setEvents(m_pollFd.events | IX_IO_IN);
+    }
+
+    void setEvents(xint32 newEvents) {
         if (!newEvents && m_pollFd.events) {
             removePoll(&m_pollFd);
             m_pollFd.events = 0;
@@ -122,23 +132,6 @@ public:
         updatePoll(&m_pollFd);
     }
 
-    bool detectHang(xuint32 /*combo*/) IX_OVERRIDE {
-        if ((m_monitorEvents & IX_IO_IN) && m_readBytes == 0) {
-            m_monitorEvents = m_pollFd.events;
-            return true;
-        }
-
-        if ((m_monitorEvents & IX_IO_OUT) && m_writeBytes == 0) {
-            m_monitorEvents = m_pollFd.events;
-            return true;
-        }
-
-        m_readBytes = 0;
-        m_writeBytes = 0;
-        m_monitorEvents = m_pollFd.events;
-        return false;
-    }
-
     bool prepare(xint64 */*timeout*/) IX_OVERRIDE {
         return false;
     }
@@ -152,7 +145,10 @@ public:
         if (!isAttached()) return true;
 
         iTcpDevice* tcp = tcpDevice();
-        IX_ASSERT(tcp);
+        if (!tcp) {
+            detach();
+            return true;
+        }
 
         bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
@@ -161,6 +157,7 @@ public:
 
         if (tcp->role() == iINCDevice::ROLE_CLIENT && writeReady && !tcp->isOpen()) {
             tcp->handleConnectionComplete();
+            if (!deviceIsValid()) return true;
         }
 
         if (tcp->role() == iINCDevice::ROLE_SERVER && readReady) {
@@ -170,10 +167,12 @@ public:
 
         if (readReady) {
             tcp->processRx();
+            if (!deviceIsValid()) return true;
         }
 
         if (writeReady) {
             IEMIT tcp->bytesWritten(0);
+            if (!deviceIsValid()) return true;
         }
 
         if (hasError) {
@@ -188,9 +187,7 @@ public:
     iTcpDevice*     m_device;
     iPollFD         m_pollFd;
 
-    int             m_readBytes;
-    int             m_writeBytes;
-    int             m_monitorEvents;
+    bool            m_readPaused;
 };
 
 iTcpDevice::iTcpDevice(Role role, iObject *parent)
@@ -456,8 +453,6 @@ void iTcpDevice::acceptConnection()
     // Accepted connections are already established, monitor read events only
     clientDevice->configEventAbility(true, false);
 
-    static_cast<iTcpEventSource*>(m_eventSource)->m_readBytes += 1;
-
     ilog_info("[] Accepted connection from ", clientDevice->m_peerAddr, ":", clientDevice->m_peerPort);
     IEMIT newConnection(clientDevice);
 }
@@ -490,9 +485,6 @@ ssize_t iTcpDevice::readImpl(char* data, xint64 maxlen)
 {
     ssize_t bytesRead = ::recv(m_sockfd, data, maxlen, 0);
     if (bytesRead > 0) {
-        if (m_eventSource) {
-            static_cast<iTcpEventSource*>(m_eventSource)->m_readBytes += static_cast<int>(bytesRead);
-        }
         return bytesRead;
     }
 
@@ -516,7 +508,9 @@ ssize_t iTcpDevice::readImpl(char* data, xint64 maxlen)
 
 void iTcpDevice::close()
 {
+    m_recvBuffer.clear();
     if (m_eventSource) {
+        static_cast<iTcpEventSource*>(m_eventSource)->invalidateDevice();
         m_eventSource->detach();
         m_eventSource->deref();
         m_eventSource = IX_NULLPTR;
@@ -747,6 +741,15 @@ void iTcpDevice::handleConnectionComplete()
         return;  // Already connected
     }
 
+    // A refused non-blocking connect also reports writable; SO_ERROR tells them apart.
+    const int error = getSocketError();
+    if (error != 0) {
+        if (m_eventSource) m_eventSource->detach();
+        ilog_error("[] Connect to ", m_peerAddr, ":", m_peerPort, " failed: ", error);
+        IEMIT errorOccurred(INC_ERROR_CONNECTION_FAILED);
+        return;
+    }
+
     // Open the device using base class (sets m_openMode for isOpen())
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
 
@@ -800,9 +803,6 @@ xint64 iTcpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
     ssize_t bytesWritten = ::sendmsg(m_sockfd, &msgh, MSG_NOSIGNAL);
 
     if (bytesWritten >= 0) {
-        if (m_eventSource) {
-            static_cast<iTcpEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesWritten);
-        }
         return static_cast<xint64>(bytesWritten);
     }
 
@@ -821,6 +821,23 @@ xint64 iTcpDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 
 void iTcpDevice::processRx()
 {
+    if (!isOpen() || !m_eventSource) return;
+    iTcpEventSource* source = static_cast<iTcpEventSource*>(m_eventSource);
+    if (source->flags() & IX_EVENT_SOURCE_BLOCKED) {
+        source->suspendRead();
+        return;
+    }
+    const bool wasAttached = source->isAttached();
+    struct ReadGuard {
+        iTcpEventSource* source;
+        explicit ReadGuard(iTcpEventSource* source) : source(source)
+        { source->ref(); source->setFlags(source->flags() | IX_EVENT_SOURCE_BLOCKED); }
+        ~ReadGuard() {
+            source->setFlags(source->flags() & ~IX_EVENT_SOURCE_BLOCKED);
+            if (source->tcpDevice()) source->resumeRead();
+            source->deref();
+        }
+    } guard(source);
     // Bulk read: read as much as available in one recv call (up to 8KB).
     // Then parse all complete messages in a loop, keeping leftover bytes
     // for the next call. This mirrors iUnixDevice::processRx() for
@@ -830,6 +847,7 @@ void iTcpDevice::processRx()
     m_recvBuffer.resize(oldSize + BULK_READ_SIZE);
 
     ssize_t n = readImpl(m_recvBuffer.data() + oldSize, BULK_READ_SIZE);
+    if (!source->deviceIsValid(wasAttached) || !isOpen()) return;
 
     if (n <= 0) {
         m_recvBuffer.resize(oldSize);
@@ -858,16 +876,16 @@ void iTcpDevice::processRx()
             iByteArrayView(bufData + consumed, sizeof(iINCMessageHeader)));
 
         if (payloadLength < 0) {
+            m_recvBuffer.clear();
             ilog_error("[", peerAddress(), "] Invalid message header");
             IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
-            m_recvBuffer.clear();
             return;
         }
 
         if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
+            m_recvBuffer.clear();
             ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
             IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
-            m_recvBuffer.clear();
             return;
         }
 
@@ -882,6 +900,8 @@ void iTcpDevice::processRx()
 
         consumed += totalSize;
         IEMIT messageReceived(msg);
+        if (!source->tcpDevice() || !isOpen()) return;
+        if (!source->deviceIsValid(wasAttached)) break;
     }
 
     // Remove consumed data, keep leftover for next call

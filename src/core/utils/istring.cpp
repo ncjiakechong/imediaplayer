@@ -1325,7 +1325,7 @@ iString &iString::operator=(const iString &other)
 iString &iString::operator=(iLatin1StringView other)
 {
     const xsizetype capacityAtEnd = capacity() - d.freeSpaceAtBegin();
-    if (isDetached() && other.size() <= capacityAtEnd) { // assumes d->alloc == 0 -> !isDetached() (sharedNull)
+    if (!d.needsDetach() && other.size() <= capacityAtEnd) {
         d.size = other.size();
         d.data()[other.size()] = 0;
         ix_from_latin1(d.data(), other.latin1(), other.size());
@@ -1578,7 +1578,7 @@ iString &iString::append(iChar ch)
 
 iString &iString::assign(iStringView s)
 {
-    if (s.size() <= capacity() && isDetached()) {
+    if (s.size() <= capacity() && !d.needsDetach()) {
         const xsizetype offset = d.freeSpaceAtBegin();
         if (offset)
             d.setBegin(d.begin() - offset);
@@ -1599,7 +1599,7 @@ iString &iString::assign_helper(const xuint32 *data, xsizetype len)
 {
     // worst case: each xuint32 requires a surrogate pair, so
     const xsizetype requiredCapacity = len * 2;
-    if (requiredCapacity <= capacity() && isDetached()) {
+    if (requiredCapacity <= capacity() && !d.needsDetach()) {
         const xsizetype offset = d.freeSpaceAtBegin();
         if (offset)
             d.setBegin(d.begin() - offset);
@@ -4009,8 +4009,8 @@ int iString::localeAwareCompare_helper(const iChar *data1, xsizetype length1,
 
 const xuint16 *iString::utf16() const
 {
-    if (!d.isMutable()) {
-        // ensure '\0'-termination for ::fromRawData strings
+    if (!ix_isNulTerminated(d)) {
+        // ensure '\0'-termination for ::fromRawData strings and shared views
         const_cast<iString*>(this)->reallocData(d.size, d.detachOptions());
     }
     return reinterpret_cast<const xuint16 *>(d.data());
@@ -4027,8 +4027,7 @@ const xuint16 *iString::utf16() const
 */
 iString iString::nullTerminated() const
 {
-    // ensure '\0'-termination for ::fromRawData strings
-    if (!d.isMutable())
+    if (!ix_isNulTerminated(d))
         return iString(constData(), size());
     return *this;
 }

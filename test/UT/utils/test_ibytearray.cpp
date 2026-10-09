@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <core/utils/ibytearray.h>
+#include <core/thread/iaupdate.h>
 
 extern bool g_testUtils;
 
@@ -9,6 +10,59 @@ protected:
         if (!g_testUtils) GTEST_SKIP() << "Utils module tests disabled";
     }
 };
+
+TEST(ByteArrayRegression, EmptyComparisonsAcceptNullStorage)
+{
+    const iShell::iByteArray empty;
+    const iShell::iByteArray allocatedEmpty("");
+    const iShell::iByteArray value("x");
+    EXPECT_TRUE(empty == "");
+    EXPECT_TRUE("" == empty);
+    EXPECT_FALSE(empty == "x");
+    EXPECT_FALSE("x" == empty);
+    EXPECT_TRUE(empty == allocatedEmpty);
+    EXPECT_TRUE(empty < value);
+    EXPECT_TRUE(value > empty);
+    EXPECT_FALSE(empty < allocatedEmpty);
+    EXPECT_FALSE(empty > allocatedEmpty);
+    EXPECT_EQ(0, iShell::istrncmp(nullptr, 0, nullptr, 0));
+    EXPECT_NE(0, iShell::istrncmp("\0", 1, nullptr, 0));
+}
+
+TEST(ByteArrayRegression, RawDataIsCopiedBeforeWrite)
+{
+    char raw[4] = {'a', 'b', 'c', 'X'};
+    iShell::iByteArray array = iShell::iByteArray::fromRawData(raw, 3);
+    array.resize(3);
+    array[0] = 'z';
+    EXPECT_EQ('a', raw[0]);
+    EXPECT_EQ('X', raw[3]);
+    EXPECT_EQ(iShell::iByteArray("zbc"), array);
+}
+
+TEST(ByteArrayRegression, NumericConversionStopsAtLogicalEnd)
+{
+    const iShell::iByteArray digits("12345");
+    EXPECT_EQ(12, digits.left(2).toInt());
+    EXPECT_EQ(34, digits.mid(2, 2).toInt());
+    char raw[3] = {'4', '2', '7'};
+    EXPECT_EQ(42, iShell::iByteArray::fromRawData(raw, 2).toInt());
+    EXPECT_EQ('7', raw[2]);
+    EXPECT_EQ(12345, digits.toInt());
+}
+
+TEST(AUpdateRegression, ReaderExitDoesNotAbort)
+{
+    iShell::iAUpdate update;
+    for (int round = 0; round < 2; ++round) {
+        const unsigned outer = update.readBegin();
+        EXPECT_EQ(outer, update.readBegin());
+        update.readEnd();
+        update.readEnd();
+    }
+    update.writeBegin();
+    update.writeEnd();
+}
 
 TEST_F(ByteArrayTest, BasicConstruction) {
     iShell::iByteArray arr("test", 4);

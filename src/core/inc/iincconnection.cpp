@@ -50,7 +50,6 @@ iINCConnection::iINCConnection(iINCDevice* device, xuint32 connId)
     iObject::connect(device, &iINCDevice::errorOccurred, this, &iINCConnection::onErrorOccurred);
     iObject::connect(m_protocol, &iINCProtocol::errorOccurred, this, &iINCConnection::onErrorOccurred);
     iObject::connect(m_protocol, &iINCProtocol::messageReceived, this, &iINCConnection::onMessageReceived);
-    iObject::connect(m_protocol, &iINCProtocol::binaryDataReceived, this, &iINCConnection::onBinaryDataReceived);
 }
 
 iINCConnection::~iINCConnection()

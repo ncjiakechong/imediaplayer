@@ -8,6 +8,7 @@
 /// @author  ncjiakechong@gmail.com
 /////////////////////////////////////////////////////////////////
 #include <limits>
+#include <cstring>
 
 #include "core/io/iiodevice.h"
 #include "utils/itools_p.h"
@@ -351,7 +352,7 @@ void iIODevice::iMBQueueRef::clear()
 { if (m_buf) m_buf->flushWrite(false); }
 
 xint64 iIODevice::iMBQueueRef::indexOf(char c) const
-{ return indexOf(c, m_buf->length()); }
+{ return indexOf(c, size()); }
 
 struct _IndexOfData {
     char c;
@@ -360,17 +361,18 @@ struct _IndexOfData {
     xint64 maxLength;
 };
 
-static bool _IndexofFunc(const iByteArray& chunk, xint64 pos, xint64 distance, void* userdata)
+static bool _IndexofFunc(const iByteArray& chunk, xint64, xint64 distance, void* userdata)
 {
     _IndexOfData* data = static_cast<_IndexOfData*>(userdata);
     if (distance + chunk.length() <= data->offset)
         return true;
-    if (distance >= data->maxLength + data->offset)
-        return false;
-
-    pos = chunk.indexOf(data->c, (distance < data->offset ? 0 : distance - data->offset));
-    if (pos >= 0) {
-        data->pos = pos + distance + (distance < data->offset ? data->offset : 0);
+    const xint64 begin = std::max(IX_INT64_C(0), data->offset - distance);
+    const xint64 skipped = distance + begin - data->offset;
+    if (skipped >= data->maxLength) return false;
+    const xint64 length = std::min(xint64(chunk.length()) - begin, data->maxLength - skipped);
+    const char* found = static_cast<const char*>(std::memchr(chunk.constData() + begin, data->c, size_t(length)));
+    if (found) {
+        data->pos = distance + (found - chunk.constData());
         return false;
     }
 
@@ -379,6 +381,7 @@ static bool _IndexofFunc(const iByteArray& chunk, xint64 pos, xint64 distance, v
 
 xint64 iIODevice::iMBQueueRef::indexOf(char c, xint64 maxLength, xint64 offset) const
 {
+    if (!m_buf || maxLength <= 0 || offset < 0) return -1;
     _IndexOfData userdata = {c, -1, offset, maxLength};
     m_buf->peekIterator(_IndexofFunc, &userdata);
     return userdata.pos;
@@ -387,11 +390,11 @@ xint64 iIODevice::iMBQueueRef::indexOf(char c, xint64 maxLength, xint64 offset) 
 iByteArray iIODevice::iMBQueueRef::read(xint64 maxLength)
 {
     iByteArray tchunk;
-    if (!m_buf)
+    if (!m_buf || maxLength <= 0)
         return tchunk;
 
     m_buf->peek(tchunk);
-    if (maxLength > 0 && maxLength < tchunk.length()) {
+    if (maxLength < tchunk.length()) {
         tchunk.data_ptr().size = maxLength;
     }
 
@@ -402,7 +405,6 @@ iByteArray iIODevice::iMBQueueRef::read(xint64 maxLength)
 struct _PeekMaxData {
     xint64 offset;
     xint64 maxLength;
-    xint64 lastDistance;
     iByteArray chunk;
 };
 
@@ -415,31 +417,22 @@ static bool _PeekMaxFunc(const iByteArray& chunk, xint64, xint64 distance, void*
         return true;
 
     if (distance + chunk.length() <= data->offset) {
-        data->lastDistance = distance + chunk.length();
         return true;
     }
-    if ((data->maxLength > 0) && (distance >= data->maxLength + data->offset))
-        return false;
 
-    int curMax = data->maxLength > 0 ? data->maxLength : chunk.length();
-    IX_ASSERT(data->lastDistance == distance);
-    if (distance >= data->offset) {
-        data->chunk = chunk;
-        xint64 beginOffset = (distance < data->offset) ? data->offset - distance: 0;
-        data->chunk.data_ptr().setBegin(data->chunk.data_ptr().begin() + beginOffset);
-        data->chunk.data_ptr().size = (beginOffset + curMax > chunk.length()) ? chunk.length() - beginOffset : curMax;
-    }
-
-    data->lastDistance = distance + chunk.length();
+    data->chunk = chunk;
+    const xint64 beginOffset = std::max(IX_INT64_C(0), data->offset - distance);
+    data->chunk.data_ptr().setBegin(data->chunk.data_ptr().begin() + beginOffset);
+    data->chunk.data_ptr().size = std::min(data->maxLength, xint64(chunk.length()) - beginOffset);
     return false;
 }
 
 iByteArray iIODevice::iMBQueueRef::peek(xint64 maxLength, xint64 offset) const
 {
-    if (!m_buf)
+    if (!m_buf || maxLength <= 0 || offset < 0)
         return iByteArray();
 
-    _PeekMaxData userdata = {offset, maxLength, 0, iByteArray()};
+    _PeekMaxData userdata = {offset, maxLength, iByteArray()};
     m_buf->peekIterator(_PeekMaxFunc, &userdata);
 
     return userdata.chunk;  // Return the chunk from userdata, not the local variable
@@ -460,9 +453,10 @@ iByteArray iIODevice::iMBQueueRef::readLine(xint64 maxLength)
 
     --maxLength;
     iByteArray result;
-    xint64 idx = indexOf('\n', maxLength);
-    while (true) {
-        iByteArray chunk = read(idx >= 0 ? (idx + 1) : maxLength);
+    const xint64 idx = indexOf('\n', maxLength);
+    const xint64 length = idx >= 0 ? idx + 1 : maxLength;
+    while (result.length() < length) {
+        iByteArray chunk = read(length - result.length());
         if (chunk.isEmpty()) break;
 
         // to avoid invalid memory copy
@@ -475,13 +469,7 @@ iByteArray iIODevice::iMBQueueRef::readLine(xint64 maxLength)
             result.append(chunk);
         }
 
-        if (result.length() >= maxLength || result.length() >= idx)
-            break;
     }
-
-    // Terminate it.
-    if (result.length() >= idx)
-        result[idx] = '\0';
     return result;
 }
 
@@ -1205,6 +1193,7 @@ iByteArray iIODevice::readLine(xint64 maxSize, xint64* readErr)
             if (m_openMode & Text) {
                 // readLine() isn't Text aware.
                 if (chunk.length() > 1 && chunk[chunk.length() - 2] == '\r') {
+                    chunk.resize(chunk.length() - 1);
                     chunk[chunk.length() - 1] = '\n';
                 }
             }

@@ -9,6 +9,37 @@
 
 using namespace iShell;
 
+struct CountedValue {
+    static int live;
+    int value;
+    CountedValue() : value(0) { ++live; }
+    explicit CountedValue(int v) : value(v) { ++live; }
+    CountedValue(const CountedValue& other) : value(other.value) { ++live; }
+    CountedValue& operator=(const CountedValue& other) { value = other.value; return *this; }
+    ~CountedValue() { --live; }
+};
+int CountedValue::live = 0;
+
+namespace iShell {
+IX_DECLARE_TYPEINFO(CountedValue, IX_MOVABLE_TYPE);
+}
+
+TEST(VarLengthArrayRegression, RelocatableInsertBalancesLifetimes) {
+    ASSERT_TRUE(iTypeInfo<CountedValue>::isComplex);
+    ASSERT_TRUE(iTypeInfoQuery<CountedValue>::isRelocatable);
+    CountedValue::live = 0;
+    {
+        iVarLengthArray<CountedValue, 2> arr;
+        for (int index = 0; index < 3; ++index) arr.append(CountedValue(index));
+        arr.insert(arr.begin() + 1, 2, CountedValue(9));
+        ASSERT_EQ(5, arr.size());
+        const int expected[] = {0, 9, 9, 1, 2};
+        for (int index = 0; index < 5; ++index) EXPECT_EQ(expected[index], arr[index].value);
+        EXPECT_EQ(5, CountedValue::live);
+    }
+    EXPECT_EQ(0, CountedValue::live);
+}
+
 class IVarLengthArrayTest : public ::testing::Test {
 protected:
     void SetUp() override {}
@@ -56,6 +87,23 @@ TEST_F(IVarLengthArrayTest, Assignment) {
 }
 
 // Append operations
+TEST_F(IVarLengthArrayTest, SelfAppendAfterHeapGrowth) {
+    iVarLengthArray<int, 1> arr(4);
+    for (int index = 0; index < 4; ++index) arr[index] = index + 1;
+    arr.append(arr.constData(), arr.size());
+    ASSERT_EQ(8, arr.size());
+    for (int index = 0; index < 8; ++index) EXPECT_EQ(index % 4 + 1, arr[index]);
+}
+
+TEST_F(IVarLengthArrayTest, SelfInsertAfterHeapGrowth) {
+    iVarLengthArray<int, 1> arr(4);
+    for (int index = 0; index < 4; ++index) arr[index] = index + 1;
+    arr.insert(0, arr[0]);
+    ASSERT_EQ(5, arr.size());
+    EXPECT_EQ(1, arr[0]);
+    for (int index = 1; index < 5; ++index) EXPECT_EQ(index, arr[index]);
+}
+
 TEST_F(IVarLengthArrayTest, Append) {
     iVarLengthArray<int> arr;
     arr.append(1);

@@ -98,7 +98,8 @@ public:
         }
     }
 
-    iRtpDevice* rtpDevice() const { return iobject_cast<iRtpDevice*>(m_device); }
+    iRtpDevice* rtpDevice() const { return m_device; }
+    void invalidateDevice() { m_device = IX_NULLPTR; }
 
     void configEventAbility(bool read, bool write) {
         xint32 newEvents = 0;
@@ -123,7 +124,6 @@ public:
         updatePoll(&m_pollFd);
     }
 
-    bool detectHang(xuint32 combo) IX_OVERRIDE { IX_UNUSED(combo); return false; }
     bool prepare(xint64* timeout) IX_OVERRIDE { IX_UNUSED(timeout); return false; }
 
     bool check() IX_OVERRIDE {
@@ -135,7 +135,10 @@ public:
         if (!isAttached()) return true;
 
         iRtpDevice* rtp = rtpDevice();
-        IX_ASSERT(rtp);
+        if (!rtp) {
+            detach();
+            return true;
+        }
 
         bool readReady  = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
@@ -153,9 +156,11 @@ public:
 
         if (readReady) {
             rtp->processRx();
+            if (!m_device) return true;
         }
         if (writeReady) {
             rtp->processTx();
+            if (!m_device) return true;
         }
         if (hasError) {
             ilog_warn("[", rtp->peerAddress(), "] RTP socket error fd:", m_pollFd.fd);
@@ -505,11 +510,16 @@ void iRtpDevice::processTx()
         if (it->second->eventAbility() & IX_IO_OUT)
             ready.push_back(it->first);
     }
+    iRtpEventSource* source = static_cast<iRtpEventSource*>(m_eventSource);
+    if (source) source->ref();
     for (size_t index = 0; index < ready.size(); ++index) {
         ClientMap::iterator it = m_addrToChannel.find(ready[index]);
-        if (it != m_addrToChannel.end() && (it->second->eventAbility() & IX_IO_OUT))
+        if (it != m_addrToChannel.end() && (it->second->eventAbility() & IX_IO_OUT)) {
             IEMIT it->second->bytesWritten(0);
+            if (source && !source->rtpDevice()) break;
+        }
     }
+    if (source) source->deref();
 }
 
 void iRtpDevice::updatePeerFromRaw(const void* srcAddr)
@@ -549,6 +559,10 @@ void iRtpDevice::emitMessageFromAccum()
 
 void iRtpDevice::processRx()
 {
+    if (!m_eventSource) return;
+    iRtpEventSource* source = static_cast<iRtpEventSource*>(m_eventSource);
+    source->ref();
+
     static const int MAX_BATCH = 256;
     iByteArray buf;
     // Size for the largest possible UDP datagram so a large fragment is never
@@ -596,6 +610,7 @@ void iRtpDevice::processRx()
             m_rxAccum.append(pkt.payload());
             if (rh.marker) {
                 emitMessageFromAccum();
+                if (!source->rtpDevice()) break;
                 m_rxAccum = iByteArray();
                 m_rxHave = false;
             }
@@ -617,17 +632,21 @@ void iRtpDevice::processRx()
             iRtpClientDevice* nc = new iRtpClientDevice(this, src);
             m_addrToChannel[key] = nc;
             IEMIT newConnection(nc);
+            if (!source->rtpDevice()) break;
             client = nc;
         }
         if (client) {
             client->receivedPacket(pkt);
+            if (!source->rtpDevice()) break;
         }
     }
+    source->deref();
 }
 
 void iRtpDevice::close()
 {
     if (m_eventSource) {
+        static_cast<iRtpEventSource*>(m_eventSource)->invalidateDevice();
         m_eventSource->detach();
         m_eventSource->deref();
         m_eventSource = IX_NULLPTR;

@@ -93,7 +93,7 @@ inline void iAtomicPointer<X>::store(Type newValue)
 
 template <typename X>
 inline bool iAtomicPointer<X>::testAndSet(Type expectedValue, Type newValue)
-{ return m_pointer.compare_exchange_weak(expectedValue, newValue); }
+{ return m_pointer.compare_exchange_strong(expectedValue, newValue); }
 
 #elif defined(IX_ATOMIC_BUILTIN)
 //
@@ -124,7 +124,7 @@ inline bool iAtomicPointer<X>::testAndSet(Type expectedValue, Type newValue)
 {
 #if defined(IX_HAVE_ATOMIC_BUILTIN)
     return __atomic_compare_exchange_n(&m_pointer.value, &expectedValue, newValue,
-                                       true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+                                       false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 #else
     return __sync_bool_compare_and_swap(&m_pointer.value, expectedValue, newValue);
 #endif

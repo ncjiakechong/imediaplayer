@@ -13,6 +13,7 @@
 #ifdef IX_HAVE_CXX11
 #include <chrono>
 #include <mutex>
+#include <thread>
 #else
 #include <pthread.h>
 #include <sys/time.h>
@@ -31,13 +32,13 @@ class iMutexImpl
 {
 public:
     iMutexImpl(bool fast) : m_fast(fast) {
-        if (m_fast) new (getFast()) std::timed_mutex();
-        else new (getRecur()) std::recursive_timed_mutex();
+        if (m_fast) new (getFast()) std::mutex();
+        else new (getRecur()) std::recursive_mutex();
     }
 
     ~iMutexImpl() {
-        if (m_fast) getFast()->~timed_mutex();
-        else getRecur()->~recursive_timed_mutex();
+        if (m_fast) getFast()->~mutex();
+        else getRecur()->~recursive_mutex();
     }
 
     inline int lockImpl() {
@@ -45,14 +46,18 @@ public:
         else { getRecur()->lock(); return 0; }
     }
 
+    // libc++ timed mutexes pair a mutex with a condition variable on every lock;
+    // timed tryLock is rare, so poll instead of paying that on the hot path.
     inline int tryLockImpl(long milliseconds) {
-        if (m_fast) {
-            if (milliseconds == 0) return getFast()->try_lock() ? 0 : -1;
-            else return getFast()->try_lock_for(std::chrono::milliseconds(milliseconds)) ? 0 : -1;
-        } else {
-            if (milliseconds == 0) return getRecur()->try_lock() ? 0 : -1;
-            else return getRecur()->try_lock_for(std::chrono::milliseconds(milliseconds)) ? 0 : -1;
-        }
+        if (tryOnce()) return 0;
+        if (milliseconds <= 0) return -1;
+        const std::chrono::steady_clock::time_point deadline =
+            std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
+        do {
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            if (tryOnce()) return 0;
+        } while (std::chrono::steady_clock::now() < deadline);
+        return -1;
     }
 
     inline int unlockImpl() {
@@ -61,12 +66,14 @@ public:
     }
 
 private:
+    bool tryOnce() { return m_fast ? getFast()->try_lock() : getRecur()->try_lock(); }
+
     bool m_fast;
-    typedef std::aligned_union<0, std::timed_mutex, std::recursive_timed_mutex>::type MutexStorage;
+    typedef std::aligned_union<0, std::mutex, std::recursive_mutex>::type MutexStorage;
     MutexStorage m_storage;
 
-    std::timed_mutex* getFast() { return reinterpret_cast<std::timed_mutex*>(&m_storage); }
-    std::recursive_timed_mutex* getRecur() { return reinterpret_cast<std::recursive_timed_mutex*>(&m_storage); }
+    std::mutex* getFast() { return reinterpret_cast<std::mutex*>(&m_storage); }
+    std::recursive_mutex* getRecur() { return reinterpret_cast<std::recursive_mutex*>(&m_storage); }
 };
 
 #else

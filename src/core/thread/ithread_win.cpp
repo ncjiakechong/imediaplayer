@@ -16,7 +16,6 @@
 #include "thread/ithread_p.h"
 #include "thread/ieventdispatcher_generic.h"
 
-#include <thread>
 #include <windows.h>
 #include <process.h>
 
@@ -232,11 +231,7 @@ void iThreadData::clearCurrentThreadData()
 
 iThreadImpl::~iThreadImpl()
 {
-    std::thread* thread = static_cast<std::thread*>(m_platform);
-    if (thread) {
-        thread->detach();
-        delete thread;
-    }
+    if (m_platform) CloseHandle(m_platform);
 }
 
 // Caller must lock the mutex

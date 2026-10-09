@@ -691,7 +691,7 @@ iMemPool* iMemPool::create(const char* name, const char* prefix, MemType type, s
             n_blocks = 2;
     }
 
-    iShareMem* memory = iShareMem::create(prefix, type, n_blocks * block_size, 0700);
+    iShareMem* memory = iShareMem::create(prefix, type, n_blocks * block_size, 0600);
     if (IX_NULLPTR == memory)
         return IX_NULLPTR;
 

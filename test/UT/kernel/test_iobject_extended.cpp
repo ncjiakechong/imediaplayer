@@ -11,6 +11,7 @@
 #include <core/kernel/icoreapplication.h>
 #include <core/thread/ithread.h>
 #include <core/utils/istring.h>
+#include <core/utils/isharedptr.h>
 #include <atomic>
 #include <thread>
 #include <chrono>
@@ -177,6 +178,95 @@ TEST(ObjectReclamationRegression, ConcurrentEmitAndRetirement)
     first.join();
     second.join();
     EXPECT_GE(receiver.calls.load(), 1500);
+}
+
+TEST(ObjectReclamationRegression, ConcurrentFirstWeakReference)
+{
+    for (int round = 0; round < 2000; ++round) {
+        iObject* object = new iObject;
+        std::atomic<int> ready(0);
+        iWeakPtr<iObject> first;
+        iWeakPtr<iObject> second;
+        std::thread other([&]() {
+            ++ready;
+            while (ready.load() < 2) {}
+            second = iWeakPtr<iObject>(object);
+        });
+        ++ready;
+        while (ready.load() < 2) {}
+        first = iWeakPtr<iObject>(object);
+        other.join();
+        EXPECT_FALSE(first.isNull());
+        EXPECT_FALSE(second.isNull());
+        delete object;
+        EXPECT_TRUE(first.isNull());
+        EXPECT_TRUE(second.isNull());
+    }
+}
+
+TEST(ObjectReclamationRegression, ConcurrentDisconnectAllAndReceiverDeletion)
+{
+    TestEmitter emitter;
+    emitter.metaObject();
+    std::atomic<bool> stop(false);
+    std::thread disconnector([&]() {
+        while (!stop.load())
+            iObject::disconnect(&emitter, IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
+    });
+    for (int iteration = 0; iteration < 5000; ++iteration) {
+        TestReceiver* receiver = new TestReceiver;
+        EXPECT_TRUE(iObject::connect(&emitter, &TestEmitter::valueChanged,
+                                     receiver, &TestReceiver::onValueChanged));
+        std::this_thread::yield();
+        delete receiver;
+    }
+    stop.store(true);
+    disconnector.join();
+}
+
+class ReceiverLifetimeEmitterThread : public iThread
+{
+public:
+    ReceiverLifetimeEmitterThread() : emitter(nullptr), stop(false) {}
+    ~ReceiverLifetimeEmitterThread() override { stop.store(true); wait(); }
+    std::atomic<TestEmitter*> emitter;
+    std::atomic<bool> stop;
+
+protected:
+    void run() override {
+        TestEmitter sender;
+        emitter.store(&sender);
+        while (!stop.load()) sender.emitValue(1);
+        emitter.store(nullptr);
+    }
+};
+
+TEST(ObjectReclamationRegression, QueuedEmitSurvivesConcurrentReceiverDeletion)
+{
+    const ConnectionType types[] = {AutoConnection, QueuedConnection};
+    for (size_t typeIndex = 0; typeIndex < 2; ++typeIndex) {
+        SCOPED_TRACE(typeIndex);
+        ReceiverLifetimeEmitterThread worker;
+        worker.start();
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (!worker.emitter.load() && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::yield();
+        TestEmitter* sender = worker.emitter.load();
+        ASSERT_NE(nullptr, sender);
+        int delivered = 0;
+        for (int iteration = 0; iteration < 3000; ++iteration) {
+            iObject* receiver = new iObject;
+            EXPECT_TRUE(iObject::connect(sender, &TestEmitter::valueChanged, receiver,
+                [&delivered](int) { ++delivered; }, types[typeIndex]));
+            std::this_thread::yield();
+            delete receiver;
+            if (iteration % 64 == 0) iCoreApplication::dispatchPostedEvents(nullptr, 0);
+        }
+        worker.stop.store(true);
+        EXPECT_TRUE(worker.wait(2000));
+        iCoreApplication::dispatchPostedEvents(nullptr, 0);
+        EXPECT_EQ(0, delivered);
+    }
 }
 
 class DestructionTrackedEvent : public iEvent

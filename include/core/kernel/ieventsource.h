@@ -83,11 +83,10 @@ public:
     /**
      * Called to dispatch the event source, after it has returned
      * %TRUE in either its @prepare or its @check function.
-     * The @dispatch function receives a callback function and
-     * user data. The return value of the @dispatch function
+     * The return value of the @dispatch function
      * should be removed(%FALSE) or continue to keep it(%TRUE).
      */
-    bool detectableDispatch(xuint32 sequence);
+    bool detectableDispatch();
 
 protected:
     iEventSource(iLatin1StringView name, int priority);
@@ -98,18 +97,11 @@ protected:
     virtual bool check();
     virtual bool dispatch();
 
-    /// to deal combo count warning, children source can change it in this callback
-    /// return true means may be HANG or false which source work normally
-    virtual bool detectHang(xuint32 combo);
-
 private:
     iLatin1StringView m_name;
     iAtomicCounter<int> m_refCount;
     int m_priority;
     int m_flags;
-
-    xuint32 m_nextSeq;
-    xuint32 m_comboCount;
 
     iEventDispatcher*   m_dispatcher;
     std::list<iPollFD*> m_pollFds;

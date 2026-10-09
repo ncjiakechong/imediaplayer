@@ -73,7 +73,7 @@ bool iSemaphore::tryAcquire(int n, int timeout)
     iMutex::ScopedLock locker(m_mutex);
     xint64 remainingTime = timer.remainingTime();
     while ((n > m_avail) && remainingTime != 0) {
-        if (!m_cond.wait(*locker.mutex(), (long)remainingTime))
+        if (m_cond.wait(*locker.mutex(), (long)remainingTime) != 0 && n > m_avail)
             return false;
 
         remainingTime = timer.remainingTime();

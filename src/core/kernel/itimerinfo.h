@@ -32,7 +32,6 @@ public:
         TimerInfo **activateRef; // - ref from activateTimers
 
         TimerInfo() : id(0), userdata(0), timerType(PreciseTimer), interval(0), timeout(0), obj(IX_NULLPTR), activateRef(IX_NULLPTR) {}
-        ~TimerInfo() { id = 0; obj = IX_NULLPTR; if (activateRef) *activateRef = IX_NULLPTR; }
     };
 
     iTimerInfoList();

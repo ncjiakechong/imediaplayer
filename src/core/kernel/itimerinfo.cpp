@@ -46,6 +46,10 @@ iTimerInfoList::iTimerInfoList()
 
 iTimerInfoList::~iTimerInfoList()
 {
+    for (TimerContainer::iterator it = m_timers.begin(); it != m_timers.end(); ++it) {
+        if (it->activateRef)
+            *(it->activateRef) = IX_NULLPTR;
+    }
     m_timers.clear();
 }
 
@@ -419,6 +423,8 @@ int iTimerInfoList::activateTimers()
         // reinsert timer
         TimerContainer::iterator cur_it = timerInsert(currentTimerInfo);
         IX_ASSERT(cur_it != m_timers.end());
+        if (cur_it->activateRef)
+            *(cur_it->activateRef) = &(*cur_it); // outer activation must follow the reinserted node
         if (cur_it->interval > 0)
             n_act++;
 

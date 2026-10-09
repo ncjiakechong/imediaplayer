@@ -167,7 +167,7 @@ iShareMem* iShareMem::createSharedMem(const char* prefix, MemType type, size_t s
              shm->m_doUnlink = false;
         }
         #elif defined(IX_HAVE_MEMFD)
-        shm->m_memfd = memfd_create(shm->m_prefix, MFD_ALLOW_SEALING);
+        shm->m_memfd = memfd_create(shm->m_prefix, MFD_ALLOW_SEALING | MFD_CLOEXEC);
         #else
         ilog_warn("MEMTYPE_SHARED_MEMFD not supported on this platform.");
         delete shm;
@@ -200,6 +200,12 @@ iShareMem* iShareMem::createSharedMem(const char* prefix, MemType type, size_t s
         delete shm;
         return IX_NULLPTR;
     }
+
+    #if !defined(__ANDROID__) && defined(F_ADD_SEALS)
+    // Peers receive this fd; a fixed size prevents them from truncating it under our mappings.
+    if (type == MEMTYPE_SHARED_MEMFD)
+        ::fcntl(shm->m_memfd, F_ADD_SEALS, F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_SEAL);
+    #endif
 
     #ifndef MAP_NORESERVE
     #define MAP_NORESERVE 0

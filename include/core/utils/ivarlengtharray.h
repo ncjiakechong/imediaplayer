@@ -16,6 +16,7 @@
 #include <cstring>
 #include <algorithm>
 #include <iterator>
+#include <functional>
 
 #include <core/global/iglobal.h>
 #include <core/global/itypeinfo.h>
@@ -271,8 +272,13 @@ void iVarLengthArray<T, Prealloc>::append(const T *abuf, int increment)
 
     const int asize = s + increment;
 
-    if (asize >= a)
+    if (asize >= a) {
+        std::less<const T *> less;
+        const bool aliases = !less(abuf, ptr) && less(abuf, ptr + s);
+        const int offset = aliases ? int(abuf - ptr) : 0;
         realloc(s, std::max(s*2, asize));
+        if (aliases) abuf = ptr + offset;
+    }
 
     if (iTypeInfo<T>::isComplex) {
         // call constructor for new objects (which can throw)
@@ -387,9 +393,9 @@ typename iVarLengthArray<T, Prealloc>::iterator iVarLengthArray<T, Prealloc>::in
 
     int offset = int(before - ptr);
     if (n != 0) {
-        resize(s + n);
         const T copy(t);
         if (!iTypeInfoQuery<T>::isRelocatable) {
+            resize(s + n);
             T *b = ptr + offset;
             T *j = ptr + s;
             T *i = j - n;
@@ -399,9 +405,13 @@ typename iVarLengthArray<T, Prealloc>::iterator iVarLengthArray<T, Prealloc>::in
             while (i != b)
                 *--i = copy;
         } else {
+            // Grow without default-constructing the tail that memmove overwrites.
+            if (s + n > a)
+                realloc(s, s + n);
             T *b = ptr + offset;
             T *i = b + n;
-            memmove(static_cast<void *>(i), static_cast<const void *>(b), (s - offset - n) * sizeof(T));
+            memmove(static_cast<void *>(i), static_cast<const void *>(b), (s - offset) * sizeof(T));
+            s += n;
             while (i != b)
                 new (--i) T(copy);
         }

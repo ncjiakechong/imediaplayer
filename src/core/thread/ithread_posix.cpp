@@ -113,6 +113,7 @@ iThreadData* iThreadData::current(bool createIfNecessary)
         data->isAdopted = true;
         data->thread = new iAdoptedThread(data);
         data->threadHd = iThread::currentThreadHd();
+        data->deref();
     }
 
     return data;

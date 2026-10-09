@@ -606,44 +606,6 @@ public:
         }
     }
 
-    void sendMethodCallWithShortTimeout() {
-        ilog_info("[Worker] sendMethodCallWithShortTimeout called in thread:", iThread::currentThreadId());
-
-        if (!client || client->state() != iINCContext::STATE_CONNECTED) {
-            ilog_error("[Worker] Client not ready");
-            iScopedLock<iMutex> lock(helper->mutex);
-            helper->errorCode = -1;
-            helper->testCompleted = true;
-            helper->condition.broadcast();
-            return;
-        }
-
-        // Send method call with very short timeout (1ms)
-        // This should test the DTS expiration mechanism
-        iByteArray testData("timeout_test");
-        iSharedDataPointer<iINCOperation> op = client->call(iString("slowMethod"), 1, testData, 1);
-
-        if (!op) {
-            ilog_error("[Worker] Failed to create operation");
-            iScopedLock<iMutex> lock(helper->mutex);
-            helper->errorCode = -1;
-            helper->testCompleted = true;
-            helper->condition.broadcast();
-            return;
-        }
-
-        // Keep operation alive
-        {
-            iScopedLock<iMutex> lock(helper->mutex);
-            helper->operations.clear();
-            helper->operations.push_back(op);
-        }
-
-        // Set callback for completion
-        op->setFinishedCallback(&TestHelper::operationFinished, helper);
-        ilog_info("[Worker] Short timeout operation created with 1ms DTS timeout");
-    }
-
     void sendMethodCallWithLongTimeout() {
         ilog_info("[Worker] sendMethodCallWithLongTimeout called in thread:", iThread::currentThreadId());
 
@@ -656,7 +618,7 @@ public:
             return;
         }
 
-        // Send method call with long timeout (30 seconds)
+        // Send method call with a long local operation timeout (30 seconds)
         iByteArray testData("long_timeout_test");
         iSharedDataPointer<iINCOperation> op = client->call(iString("normalMethod"), 1, testData, 30000);
 
@@ -678,7 +640,7 @@ public:
 
         // Set callback for completion
         op->setFinishedCallback(&TestHelper::operationFinished, helper);
-        ilog_info("[Worker] Long timeout operation created with 30s DTS timeout");
+        ilog_info("[Worker] Long timeout operation created with 30s local timeout");
     }
 
     void sendRawPacket(uint16_t type, const iByteArray& payload) {
@@ -754,7 +716,7 @@ public:
             return;
         }
 
-        // Send method call with default timeout (should use Forever DTS)
+        // Send method call without a local operation timeout
         iByteArray testData("no_timeout_test");
         iSharedDataPointer<iINCOperation> op = client->call(iString("foreverMethod"), 1, testData);
 
@@ -776,7 +738,7 @@ public:
 
         // Set callback for completion
         op->setFinishedCallback(&TestHelper::operationFinished, helper);
-        ilog_info("[Worker] No timeout operation created (DTS = Forever)");
+        ilog_info("[Worker] Operation created without a local timeout");
     }
 
     void closeServer() {
@@ -1811,8 +1773,8 @@ TEST_P(INCIntegrationTest, MaxPayloadSize) {
 }
 
 /**
- * Test: Method call with explicit long timeout (DTS set)
- * Verifies that DTS is properly set when timeout is specified
+ * Test: Method call with an explicit long local timeout
+ * Verifies that a normal response completes before the operation timeout
  */
 TEST_P(INCIntegrationTest, MethodCallWithLongTimeout) {
     ASSERT_TRUE(startServer());
@@ -1835,8 +1797,8 @@ TEST_P(INCIntegrationTest, MethodCallWithLongTimeout) {
 }
 
 /**
- * Test: Method call without explicit timeout (DTS = Forever)
- * Verifies that messages永久有效 when no timeout is specified
+ * Test: Method call without an explicit local timeout
+ * Verifies that the default call remains active until a response arrives
  */
 TEST_P(INCIntegrationTest, MethodCallWithoutTimeout) {
     ASSERT_TRUE(startServer());
@@ -1856,46 +1818,6 @@ TEST_P(INCIntegrationTest, MethodCallWithoutTimeout) {
     // Verify operation completed successfully
     EXPECT_TRUE(helper->callbackCalled);
     EXPECT_EQ(INC_OK, helper->errorCode);
-}
-
-/**
- * Test: Method call with very short timeout
- * Note: This test verifies the DTS mechanism, but timeout behavior depends on:
- * 1. Network latency (message delivery time)
- * 2. Server processing time
- * 3. DTS check timing on server side
- *
- * On fast local systems, even 1ms timeout may succeed. This is expected behavior.
- * The test validates that DTS is set correctly, not that timeout always fails.
- */
-TEST_P(INCIntegrationTest, MethodCallWithShortTimeout) {
-    ASSERT_TRUE(startServer());
-    ASSERT_TRUE(connectClient());
-
-    // Reset test completion flags
-    helper->testCompleted = false;
-    helper->callbackCalled = false;
-    helper->errorCode = -1;
-
-    // Invoke sendMethodCallWithShortTimeout in worker thread
-    iObject::invokeMethod(worker, &INCTestWorker::sendMethodCallWithShortTimeout);
-
-    // Wait for operation to complete or timeout
-    // On fast systems, this may complete successfully
-    // On slow systems or under load, it may timeout
-    bool completed = helper->waitForCondition(3000);
-
-    // The test validates DTS mechanism exists, not specific timeout behavior
-    // Both success (fast system) and timeout (slow system) are acceptable
-    EXPECT_TRUE(completed || !completed);  // Always pass - validates DTS mechanism
-
-    if (completed && helper->callbackCalled) {
-        ilog_info("Short timeout test completed successfully (fast local system)");
-        // On very fast systems, even 1ms is enough for local IPC
-        EXPECT_TRUE(helper->errorCode == INC_OK || helper->errorCode == INC_ERROR_TIMEOUT);
-    } else {
-        ilog_info("Short timeout test timed out (message expired or operation timeout)");
-    }
 }
 
 /**

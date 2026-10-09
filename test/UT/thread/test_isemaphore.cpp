@@ -72,6 +72,24 @@ TEST_F(SemaphoreTest, TryAcquireFailure) {
 /**
  * Test: TryAcquire with timeout - success
  */
+TEST(SemaphoreRegression, TimedAcquireWaitsForAllReleasedResources)
+{
+    const int timeouts[] = {1000, -1};
+    for (size_t index = 0; index < 2; ++index) {
+        iSemaphore semaphore(0);
+        std::thread producer([&]() {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            semaphore.release();
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            semaphore.release();
+        });
+        const bool acquired = semaphore.tryAcquire(2, timeouts[index]);
+        producer.join();
+        EXPECT_TRUE(acquired);
+        EXPECT_EQ(0, semaphore.available());
+    }
+}
+
 TEST_F(SemaphoreTest, TryAcquireTimeoutSuccess) {
     iSemaphore sem(1);
 

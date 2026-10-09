@@ -135,6 +135,7 @@ int iINCContext::doConnect(const iStringView& url)
     // Connect protocol/device signals FIRST
     iObject::connect(m_connection, &iINCConnection::errorOccurred, this, &iINCContext::onErrorOccurred);
     iObject::connect(m_connection, &iINCConnection::messageReceived, this, &iINCContext::onMessageReceived, iShell::DirectConnection);
+    iObject::connect(m_connection->m_protocol, &iINCProtocol::binaryDataReceived, this, &iINCContext::onBinaryDataReceived);
 
     // Start IO thread if enabled in config
     if (m_config.enableIOThread()) {
@@ -236,12 +237,6 @@ iSharedDataPointer<iINCOperation> iINCContext::callMethod(iStringView method, xu
     msg.payload().putUint16(version);
     msg.payload().putString(method);
     msg.payload().putBytes(args);
-    if (timeout > 0) {
-        // Create deadline timer with relative timeout (msecs from now)
-        iDeadlineTimer dts(timeout);
-        msg.setDTS(dts.deadlineNSecs());
-    }
-
     // Protocol creates and tracks the operation
     iSharedDataPointer<iINCOperation> op = m_connection->sendMessage(msg);
     if (!op) return op;
@@ -294,13 +289,6 @@ iSharedDataPointer<iINCOperation> iINCContext::pingpong()
 void iINCContext::onMessageReceived(iINCConnection* conn, const iINCMessage& msg)
 {
     if ((msg.type() & 0x1) && (msg.type() != INC_MSG_HANDSHAKE_ACK)) return;
-
-    iDeadlineTimer msgTS = msg.dts();
-    if (!msgTS.isForever() && (msgTS.deadlineNSecs() < iDeadlineTimer::current().deadlineNSecs())) {
-        ilog_warn("[", objectName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                    "] Dropping expired message, dts:", msgTS.deadlineNSecs());
-        return;
-    }
 
     switch (msg.type()) {
     case INC_MSG_HANDSHAKE_ACK:
@@ -566,8 +554,26 @@ xuint32 iINCContext::registerChannel(iINCChannel* channel, MemType type, const i
 
 iINCChannel* iINCContext::unregisterChannel(xuint32 channelId)
 {
-    IX_ASSERT(STATE_CONNECTED == m_state && m_connection);
+    if (!m_connection) return IX_NULLPTR;
     return m_connection->unregisterChannel(channelId);
+}
+
+void iINCContext::onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data)
+{
+    // Queued data from a closed connection must not be routed or acked on its successor.
+    if (!m_connection || sender() != m_connection->m_protocol) return;
+    m_connection->onBinaryDataReceived(channelId, seqNum, broadcast, pos, data);
+}
+
+void iINCContext::onStreamOperationFinished(iINCOperation* operation, void* userData)
+{
+    iINCContext* self = static_cast<iINCContext*>(userData);
+    iObject::invokeMethod(self, &iINCContext::streamOperationFinished, iSharedDataPointer<iINCOperation>(operation));
+}
+
+void iINCContext::streamOperationFinished(iSharedDataPointer<iINCOperation> operation)
+{
+    IEMIT streamOperationDone(operation);
 }
 
 iSharedDataPointer<iINCOperation> iINCContext::sendBinaryData(xuint32 channel, xint64 pos, const iByteArray& data)
@@ -591,5 +597,7 @@ void iINCContext::disconnected() ISIGNAL(disconnected)
 void iINCContext::eventReceived(iString eventName, xuint16 version, iByteArray data) ISIGNAL(eventReceived, eventName, version, data)
 
 void iINCContext::reconnecting(xint32 attemptCount) ISIGNAL(reconnecting, attemptCount)
+
+void iINCContext::streamOperationDone(iSharedDataPointer<iINCOperation> operation) ISIGNAL(streamOperationDone, operation)
 
 } // namespace iShell

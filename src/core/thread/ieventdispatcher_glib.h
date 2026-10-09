@@ -48,8 +48,6 @@ public:
     virtual void interrupt() IX_OVERRIDE;
 
     void runTimersOnceWithNormalPriority();
-    bool inProcess() const { return m_inProcess; }
-    xuint32 sequence() const { return m_nextSeq; }
 
 protected:
     virtual int addEventSource(iEventSource* source) IX_OVERRIDE;
@@ -59,9 +57,6 @@ protected:
     virtual int updatePoll(iPollFD* fd, iEventSource* source) IX_OVERRIDE;
 
 protected:
-    bool    m_inProcess;
-    xuint32 m_nextSeq;
-
     GMainContext* m_mainContext;
     GPostEventSource* m_postEventSource;
     GTimerSource* m_timerSource;

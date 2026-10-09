@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -41,9 +42,7 @@ public:
     iUnixEventSource(iUnixDevice* device, int priority = IX_PRIORITY_IO)
         : iEventSource(iLatin1StringView("iUnixEventSource"), priority)
         , m_device(device)
-        , m_readBytes(0)
-        , m_writeBytes(0)
-        , m_monitorEvents(0)
+        , m_readPaused(false)
     {
         m_pollFd.fd = -1;
         m_pollFd.events = 0;  // No events initially
@@ -62,20 +61,32 @@ public:
     }
 
     iUnixDevice* unixDevice() const {
-        return iobject_cast<iUnixDevice*>(m_device);
+        return m_device;
     }
 
-    void configEventAbility(bool read, bool write) {
-        // Build new events mask
-        xint32 newEvents = 0;
-        if (read) {
-            newEvents |= IX_IO_IN;
-        }
-        if (write) {
-            newEvents |= IX_IO_OUT;
-        }
+    void invalidateDevice() { m_device = IX_NULLPTR; }
+    bool deviceIsValid(bool wasAttached = true) const
+    { return m_device && (!wasAttached || isAttached()); }
 
-        m_monitorEvents = newEvents;
+    void configEventAbility(bool read, bool write) {
+        m_readPaused = false;
+        setEvents((read ? IX_IO_IN : 0) | (write ? IX_IO_OUT : 0));
+    }
+
+    // A nested loop must not keep reporting readable data that the outer read owns.
+    void suspendRead() {
+        if (m_readPaused || !(m_pollFd.events & IX_IO_IN)) return;
+        setEvents(m_pollFd.events & ~IX_IO_IN);
+        m_readPaused = true;
+    }
+
+    void resumeRead() {
+        if (!m_readPaused) return;
+        m_readPaused = false;
+        setEvents(m_pollFd.events | IX_IO_IN);
+    }
+
+    void setEvents(xint32 newEvents) {
         if (!newEvents && m_pollFd.events) {
             removePoll(&m_pollFd);
             m_pollFd.events = 0;
@@ -98,23 +109,6 @@ public:
         updatePoll(&m_pollFd);
     }
 
-    bool detectHang(xuint32 /*combo*/) IX_OVERRIDE {
-        if ((m_monitorEvents & IX_IO_IN) && m_readBytes == 0) {
-            m_monitorEvents = m_pollFd.events;
-            return true;
-        }
-
-        if ((m_monitorEvents & IX_IO_OUT) && m_writeBytes == 0) {
-            m_monitorEvents = m_pollFd.events;
-            return true;
-        }
-
-        m_readBytes = 0;
-        m_writeBytes = 0;
-        m_monitorEvents = m_pollFd.events;
-        return false;
-    }
-
     bool prepare(xint64 */*timeout*/) IX_OVERRIDE {
         return false;
     }
@@ -128,7 +122,10 @@ public:
         if (!isAttached()) return true;
 
         iUnixDevice* unixDev = unixDevice();
-        IX_ASSERT(unixDev);
+        if (!unixDev) {
+            detach();
+            return true;
+        }
 
         bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
@@ -137,6 +134,7 @@ public:
 
         if (unixDev->role() == iINCDevice::ROLE_CLIENT && writeReady && !unixDev->isOpen()) {
             unixDev->handleConnectionComplete();
+            if (!deviceIsValid()) return true;
         }
 
         if (unixDev->role() == iINCDevice::ROLE_SERVER && readReady) {
@@ -146,10 +144,12 @@ public:
 
         if (readReady) {
             unixDev->processRx();
+            if (!deviceIsValid()) return true;
         }
 
         if (writeReady) {
             IEMIT unixDev->bytesWritten(0);
+            if (!deviceIsValid()) return true;
         }
 
         if (hasError) {
@@ -164,13 +164,33 @@ public:
     iUnixDevice*    m_device;
     iPollFD         m_pollFd;
 
-    int             m_readBytes;
-    int             m_writeBytes;
-    int             m_monitorEvents;
+    bool            m_readPaused;
 };
 
 const char* iUnixDevice::SCHEME = "unix";
 const char* iUnixDevice::SCHEME_PIPE = "pipe";
+
+static bool isUnixSocketStale(const iByteArray& path)
+{
+    struct sockaddr_un address;
+    std::memset(&address, 0, sizeof(address));
+    address.sun_family = AF_UNIX;
+    if (path.size() >= static_cast<xsizetype>(sizeof(address.sun_path))) return false;
+    std::memcpy(address.sun_path, path.constData(), path.size());
+
+    int probe = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    if (probe < 0) return false;
+    const int flags = ::fcntl(probe, F_GETFL, 0);
+    if (flags < 0 || ::fcntl(probe, F_SETFL, flags | O_NONBLOCK) < 0) {
+        ::close(probe);
+        return false;
+    }
+
+    const int result = ::connect(probe, reinterpret_cast<struct sockaddr*>(&address), sizeof(address));
+    const bool stale = result < 0 && errno == ECONNREFUSED;
+    ::close(probe);
+    return stale;
+}
 
 iUnixDevice::iUnixDevice(Role role, iObject *parent)
     : iINCDevice(role, parent)
@@ -266,8 +286,16 @@ int iUnixDevice::listenOn(const iString& path)
         return INC_ERROR_INVALID_STATE;
     }
 
-    // Remove existing socket file if exists
-    ::unlink(path.toUtf8().constData());
+    // Remove a stale socket file, but never another live server's socket or a non-socket file
+    const iByteArray pathUtf8 = path.toUtf8();
+    struct stat pathStat;
+    if (::lstat(pathUtf8.constData(), &pathStat) == 0) {
+        if (!S_ISSOCK(pathStat.st_mode) || !isUnixSocketStale(pathUtf8)) {
+            ilog_error("[] Socket path is in use:", path);
+            return INC_ERROR_CONNECTION_FAILED;
+        }
+        ::unlink(pathUtf8.constData());
+    }
 
     // Create socket
     if (!createSocket()) {
@@ -346,8 +374,8 @@ void iUnixDevice::acceptConnection()
 #if defined(IX_OS_MAC) || defined(IX_OS_BSD4)
     int nosigpipe = 1;
     ::setsockopt(clientFd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe));
-    ::fcntl(clientFd, F_SETFD, FD_CLOEXEC);
 #endif
+    ::fcntl(clientFd, F_SETFD, FD_CLOEXEC);
 
     // Create new device for accepted connection
     iUnixDevice* clientDevice = new iUnixDevice(ROLE_CLIENT);
@@ -369,7 +397,6 @@ void iUnixDevice::acceptConnection()
     // Accepted connections are already established, monitor read events only
     clientDevice->configEventAbility(true, false);
 
-    static_cast<iUnixEventSource*>(m_eventSource)->m_readBytes += 1;
     ilog_info("[", peerAddress(), "] Accepted connection on ", m_socketPath);
 
     // Emit newConnection signal with the client device
@@ -422,20 +449,53 @@ ssize_t iUnixDevice::readImpl(char* data, xint64 maxlen, int* fd) {
     msg.msg_control = u.buf;
     msg.msg_controllen = sizeof(u.buf);
     
-    ssize_t bytesRead = ::recvmsg(m_sockfd, &msg, 0);
+    int flags = 0;
+    #ifdef MSG_CMSG_CLOEXEC
+    flags = MSG_CMSG_CLOEXEC;
+    #endif
+    ssize_t bytesRead;
+    do {
+        bytesRead = ::recvmsg(m_sockfd, &msg, flags);
+    } while (bytesRead < 0 && errno == EINTR);
 
     if (bytesRead > 0) {
-        if (m_eventSource) {
-             static_cast<iUnixEventSource*>(m_eventSource)->m_readBytes += 1;
-        }
-
-        if (fd) {
-            struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
-            if (cmsg && cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_RIGHTS) {
-                std::memcpy(fd, CMSG_DATA(cmsg), sizeof(int));
-                ilog_info("[", peerAddress(), "] Received FD=", *fd, " via SCM_RIGHTS");
+        bool invalidControl = (msg.msg_flags & MSG_CTRUNC) != 0;
+        int receivedFd = -1;
+        for (struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+            if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS) continue;
+            if (cmsg->cmsg_len < CMSG_LEN(sizeof(int))) {
+                invalidControl = true;
+                continue;
+            }
+            const size_t count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+            for (size_t index = 0; index < count; ++index) {
+                int descriptor;
+                std::memcpy(&descriptor, CMSG_DATA(cmsg) + index * sizeof(int), sizeof(descriptor));
+                if (!fd || invalidControl || receivedFd >= 0) {
+                    ::close(descriptor);
+                    continue;
+                }
+                #ifdef MSG_CMSG_CLOEXEC
+                receivedFd = descriptor;
+                #else
+                int result;
+                do { result = ::fcntl(descriptor, F_SETFD, FD_CLOEXEC); } while (result < 0 && errno == EINTR);
+                if (result < 0) {
+                    ::close(descriptor);
+                    invalidControl = true;
+                } else {
+                    receivedFd = descriptor;
+                }
+                #endif
             }
         }
+        if (invalidControl) {
+            if (receivedFd >= 0) ::close(receivedFd);
+            if (m_eventSource) m_eventSource->detach();
+            IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
+            return -1;
+        }
+        if (fd) *fd = receivedFd;
         return bytesRead;
     }
     
@@ -458,10 +518,14 @@ ssize_t iUnixDevice::readImpl(char* data, xint64 maxlen, int* fd) {
 
 void iUnixDevice::close()
 {
+    m_recvBuffer.clear();
+    if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+    m_lastSentFd = -1;
     // Destroy EventSource first
     // detach() will call dispatcher->removeEventSource() which calls deref() (refCount 2->1)
     // then deref() will destroy it (refCount 1->0, delete this)
     if (m_eventSource) {
+        static_cast<iUnixEventSource*>(m_eventSource)->invalidateDevice();
         m_eventSource->detach();
         m_eventSource->deref();
         m_eventSource = IX_NULLPTR;
@@ -553,6 +617,15 @@ void iUnixDevice::handleConnectionComplete()
         return;  // Already connected
     }
 
+    // A refused non-blocking connect also reports writable; SO_ERROR tells them apart.
+    const int error = getSocketError();
+    if (error != 0) {
+        if (m_eventSource) m_eventSource->detach();
+        ilog_error("[] Connect to ", m_socketPath, " failed: ", error);
+        IEMIT errorOccurred(INC_ERROR_CONNECTION_FAILED);
+        return;
+    }
+
     iIODevice::open(iIODevice::ReadWrite | iIODevice::Unbuffered);
     configEventAbility(true, false);
 
@@ -627,10 +700,6 @@ xint64 iUnixDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 
     ssize_t bytesWritten = ::sendmsg(m_sockfd, &msgh, MSG_NOSIGNAL);
     if (bytesWritten >= 0) {
-        if (m_eventSource) {
-            static_cast<iUnixEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesWritten);
-        }
-
         if (fdToSend >= 0) {
             m_lastSentFd = fdToSend;
             ilog_info("[", peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
@@ -655,6 +724,23 @@ xint64 iUnixDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 
 void iUnixDevice::processRx()
 {
+    if (!isOpen() || !m_eventSource) return;
+    iUnixEventSource* source = static_cast<iUnixEventSource*>(m_eventSource);
+    if (source->flags() & IX_EVENT_SOURCE_BLOCKED) {
+        source->suspendRead();
+        return;
+    }
+    const bool wasAttached = source->isAttached();
+    struct ReadGuard {
+        iUnixEventSource* source;
+        explicit ReadGuard(iUnixEventSource* source) : source(source)
+        { source->ref(); source->setFlags(source->flags() | IX_EVENT_SOURCE_BLOCKED); }
+        ~ReadGuard() {
+            source->setFlags(source->flags() & ~IX_EVENT_SOURCE_BLOCKED);
+            if (source->unixDevice()) source->resumeRead();
+            source->deref();
+        }
+    } guard(source);
     // Bulk read: read as much as available in one recvmsg (up to 8KB).
     // This collapses 2-recvmsg-per-message down to 1-recvmsg-per-many-messages
     // for small SHM reference messages (~68 bytes each).
@@ -664,6 +750,10 @@ void iUnixDevice::processRx()
 
     int receivedFd = -1;
     ssize_t n = readImpl(m_recvBuffer.data() + oldSize, BULK_READ_SIZE, &receivedFd);
+    if (!source->deviceIsValid(wasAttached) || !isOpen()) {
+        if (receivedFd >= 0) ::close(receivedFd);
+        return;
+    }
 
     if (n <= 0) {
         m_recvBuffer.resize(oldSize);
@@ -702,17 +792,17 @@ void iUnixDevice::processRx()
 
         if (payloadLength < 0) {
             ilog_error("[", peerAddress(), "] Invalid message header");
-            IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
             m_recvBuffer.clear();
             if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+            IEMIT errorOccurred(INC_ERROR_PROTOCOL_ERROR);
             return;
         }
 
         if (payloadLength > iINCMessageHeader::MAX_MESSAGE_SIZE) {
             ilog_error("[", peerAddress(), "] Message too large: ", payloadLength);
-            IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
             m_recvBuffer.clear();
             if (m_pendingFd >= 0) { ::close(m_pendingFd); m_pendingFd = -1; }
+            IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
             return;
         }
 
@@ -734,6 +824,8 @@ void iUnixDevice::processRx()
 
         consumed += totalSize;
         IEMIT messageReceived(msg);
+        if (!source->unixDevice() || !isOpen()) return;
+        if (!source->deviceIsValid(wasAttached)) break;
     }
 
     // Remove consumed data, keep leftover for next call
@@ -748,7 +840,11 @@ void iUnixDevice::processRx()
 
 bool iUnixDevice::createSocket()
 {
+#ifdef SOCK_CLOEXEC
+    m_sockfd = ::socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+#else
     m_sockfd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+#endif
     if (m_sockfd < 0) {
         ilog_error("Failed to create socket:", errno);
         return false;

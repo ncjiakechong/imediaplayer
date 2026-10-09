@@ -49,6 +49,7 @@ iINCStream::iINCStream(const iStringView& name, iINCContext* context, iObject* p
 
     // Monitor context state changes
     iObject::connect(context, &iINCContext::stateChanged, this, &iINCStream::onContextStateChanged);
+    iObject::connect(context, &iINCContext::streamOperationDone, this, &iINCStream::onChannelOperationFinished);
 }
 
 iINCStream::~iINCStream()
@@ -59,6 +60,7 @@ iINCStream::~iINCStream()
     }
 
     // CRITICAL: First detach to trigger graceful channel release
+    if (m_channelId) m_context->unregisterChannel(m_channelId);
     detach();
     cleanupPendingOps();
 }
@@ -120,7 +122,7 @@ bool iINCStream::attach(Mode mode)
     // Manually manage refcount - add ref when tracking
     op->ref();
     m_pendingOps.push_back(op.data());
-    op->setFinishedCallback(&iINCStream::onChannelAllocated, this);
+    op->setFinishedCallback(&iINCContext::onStreamOperationFinished, m_context);
 
     ilog_info("[", objectName(), "][", m_channelId, "] Stream entering ATTACHING state, waiting for server allocation");
     return true;  // Return immediately, don't wait
@@ -164,6 +166,7 @@ void iINCStream::detach()
     if (!op) {
         // Failed to send release request, force detach
         ilog_error("[", objectName(), "][", m_channelId, "] Failed to send release request, force detach");
+        m_context->unregisterChannel(m_channelId);
         m_channelId = 0;
         setState(STATE_DETACHED);
         return;
@@ -173,7 +176,7 @@ void iINCStream::detach()
     // Manually manage refcount - add ref when tracking
     op->ref();
     m_pendingOps.push_back(op.data());
-    op->setFinishedCallback(&iINCStream::onChannelReleased, this);
+    op->setFinishedCallback(&iINCContext::onStreamOperationFinished, m_context);
     ilog_info("[", objectName(), "][", m_channelId, "] Stream entering DETACHING state");
 }
 
@@ -206,10 +209,15 @@ void iINCStream::ackDataReceived(xuint32 seqNum, bool broadcast, xint32 size)
     m_context->ackDataReceived(m_channelId, seqNum, size);
 }
 
-void iINCStream::onChannelAllocated(iINCOperation* op, void* userData)
+void iINCStream::onChannelOperationFinished(iSharedDataPointer<iINCOperation> operation)
 {
-    iINCStream* stream = static_cast<iINCStream*>(userData);
-    iObject::invokeMethod(stream, &iINCStream::channelAllocationFinished, iSharedDataPointer<iINCOperation>(op));
+    if (std::find(m_pendingOps.begin(), m_pendingOps.end(), operation.data()) == m_pendingOps.end())
+        return;
+
+    if (STATE_ATTACHING == m_state)
+        channelAllocationFinished(operation);
+    else if (STATE_DETACHING == m_state)
+        channelReleaseFinished(operation);
 }
 
 void iINCStream::channelAllocationFinished(iSharedDataPointer<iINCOperation> operation)
@@ -284,12 +292,6 @@ void iINCStream::channelAllocationFinished(iSharedDataPointer<iINCOperation> ope
                 "] Stream attached, mode=", stream->m_mode, " and with SHM ", negotiontedShmType);
     stream->m_context->registerChannel(stream, static_cast<MemType>(negotiontedShmType), shmName, shmSize);
     iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
-}
-
-void iINCStream::onChannelReleased(iINCOperation* op, void* userData)
-{
-    iINCStream* stream = static_cast<iINCStream*>(userData);
-    iObject::invokeMethod(stream, &iINCStream::channelReleaseFinished, iSharedDataPointer<iINCOperation>(op));
 }
 
 void iINCStream::channelReleaseFinished(iSharedDataPointer<iINCOperation> operation)

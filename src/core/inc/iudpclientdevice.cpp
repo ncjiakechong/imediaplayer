@@ -90,7 +90,8 @@ void iUDPClientDevice::receivedData(const iByteArray& data)
 
     iINCMessage msg(INC_MSG_INVALID, 0, 0);
     xint32 payloadLen = msg.parseHeader(iByteArrayView(data.constData(), sizeof(iINCMessageHeader)));
-    if (payloadLen < 0 && static_cast<xint64>(data.size()) < (static_cast<xint64>(sizeof(iINCMessageHeader)) + payloadLen)) return;
+    if (payloadLen < 0 || payloadLen > iINCMessageHeader::MAX_MESSAGE_SIZE
+        || static_cast<xint64>(data.size()) < (static_cast<xint64>(sizeof(iINCMessageHeader)) + payloadLen)) return;
     msg.payload().setData(data.mid(sizeof(iINCMessageHeader), payloadLen));
     IEMIT messageReceived(msg);
 }

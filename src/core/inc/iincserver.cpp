@@ -125,7 +125,7 @@ int iINCServer::listenOn(const iStringView& url)
 
 void iINCServer::close()
 {
-    if (!m_listening) {
+    if (!m_listening && !m_ioThread) {
         return;
     }
 
@@ -240,6 +240,7 @@ void iINCServer::handleNewConnection(iINCDevice* incDevice)
     iObject::connect(conn, &iINCConnection::disconnected, this, &iINCServer::onClientDisconnected, iShell::DirectConnection);
     iObject::connect(conn, &iINCConnection::errorOccurred, this, &iINCServer::onConnectionErrorOccurred, iShell::DirectConnection);
     iObject::connect(conn, &iINCConnection::messageReceived, this, &iINCServer::onConnectionMessageReceived, iShell::DirectConnection);
+    iObject::connect(conn->m_protocol, &iINCProtocol::binaryDataReceived, conn, &iINCConnection::onBinaryDataReceived, iShell::DirectConnection);
 
     // AFTER EventSource is attached, configure event monitoring
     // Accepted connections are already established, monitor read events only
@@ -354,10 +355,11 @@ void iINCServer::onConnectionMessageReceived(iINCConnection* conn, const iINCMes
 {
     if (msg.type() & 0x1) return;
 
-    iDeadlineTimer msgTS = msg.dts();
-    if (!msgTS.isForever() && (msgTS.deadlineNSecs() < iDeadlineTimer::current().deadlineNSecs())) {
-        ilog_warn("[", conn->peerName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                    "] Dropping expired message, dts:", msgTS.deadlineNSecs());
+    if (msg.type() != INC_MSG_HANDSHAKE && msg.type() != INC_MSG_PING
+        && !(conn->m_handshake && conn->m_handshake->state() == iINCHandshake::STATE_COMPLETED)) {
+        ilog_warn("[", conn->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
+                  "] Message type ", msg.type(), " before handshake, closing");
+        conn->close();
         return;
     }
 
@@ -440,7 +442,8 @@ void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
         // 2. Connection is local (same machine)
         // 3. Client and server have compatible memory types
         negotiontedShmType = clientSupportedTypes & m_config.sharedMemoryType();
-        if (m_globalPool && (negotiontedShmType & m_globalPool->type())) {
+        if (!m_config.disableSharedMemory() && conn->isLocal()
+            && m_globalPool && (negotiontedShmType & m_globalPool->type())) {
             negotiontedShmType = m_globalPool->type();
             conn->enableMempool(m_globalPool);
         } else if (!m_config.disableSharedMemory() && conn->isLocal() && negotiontedShmType)  {

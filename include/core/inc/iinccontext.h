@@ -164,6 +164,14 @@ private:
     static void onHandshakeTimeout(iINCOperation* operation, void* userData);
     void handshakeOperationFinished(iSharedDataPointer<iINCOperation> operation);
 
+    /// Stream channel operations complete on any thread; this hops back to the context thread.
+    static void onStreamOperationFinished(iINCOperation* operation, void* userData);
+    void streamOperationFinished(iSharedDataPointer<iINCOperation> operation);
+    void streamOperationDone(iSharedDataPointer<iINCOperation> operation);
+
+    /// Channel lookup and stream delivery run on the context thread, never the IO thread.
+    void onBinaryDataReceived(xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data);
+
     iINCContextConfig m_config;     ///< Context configuration
     iINCEngine*     m_engine;       ///< Owned engine
     iINCConnection* m_connection;   ///< connection handler

@@ -44,18 +44,6 @@ public:
     iGstreamerMessage m_message;
 };
 
-// invoke from gstreamer work thread
-class iGstSyncMsgEvent : public iEvent
-{
-public:
-    explicit iGstSyncMsgEvent(GstMessage* message);
-    ~iGstSyncMsgEvent();
-
-    static int eventType();
-
-    iGstreamerMessage m_message;
-};
-
 class iGstreamerBusHelper : public iObject
 {
     IX_OBJECT(iGstreamerBusHelper)
@@ -79,14 +67,11 @@ private:
     void doProcessMessage(iGstreamerMessage msg);
 
     static gboolean busCallback(GstBus *, GstMessage *message, gpointer data);
-    static GstBusSyncReply syncGstBusFilter(GstBus* , GstMessage* message, iGstreamerBusHelper *d);
 
     guint m_tag;
     GstBus* m_bus;
     iTimer* m_intervalTimer;
 
-    iMutex m_filterMutex;
-    std::list<iObject*> m_syncFilters;
     std::list<iObject*> m_busFilters;
 };
 

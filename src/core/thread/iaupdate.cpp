@@ -42,7 +42,7 @@ uint iAUpdate::readBegin()
 void iAUpdate::readEnd()
 {
     /* Decrease the lock counter */
-    int n = --m_readLock;
+    int n = m_readLock--;
 
     /* Make sure the counter was valid */
     IX_ASSERT(COUNTER(n) > 0);

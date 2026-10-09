@@ -32,39 +32,6 @@ int iGstBusMsgEvent::eventType()
     return s_eventType;
 }
 
-iGstSyncMsgEvent::iGstSyncMsgEvent(GstMessage *message)
-    : iEvent(eventType())
-    , m_message(message)
-{
-}
-
-iGstSyncMsgEvent::~iGstSyncMsgEvent()
-{
-}
-
-int iGstSyncMsgEvent::eventType()
-{
-    static int s_eventType = registerEventType();
-    return s_eventType;
-}
-
-GstBusSyncReply iGstreamerBusHelper::syncGstBusFilter(GstBus* , GstMessage* message, iGstreamerBusHelper *d)
-{
-    iScopedLock<iMutex> lock(d->m_filterMutex);
-    for (std::list<iObject*>::iterator it = d->m_syncFilters.begin();
-         it != d->m_syncFilters.end(); ++it) {
-        iObject *filter = *it;
-        iGstSyncMsgEvent evt(message);
-        // hack code to invoke event
-        if (static_cast<iGstreamerBusHelper*>(filter)->event(&evt)) {
-            gst_message_unref(message);
-            return GST_BUS_DROP;
-        }
-    }
-
-    return GST_BUS_PASS;
-}
-
 gboolean iGstreamerBusHelper::busCallback(GstBus *, GstMessage *message, gpointer data)
 {
     static_cast<iGstreamerBusHelper*>(data)->queueMessage(message);
@@ -80,18 +47,12 @@ iGstreamerBusHelper::iGstreamerBusHelper(GstBus* bus, iObject* parent)
     , m_tag(0)
     , m_bus(bus)
     , m_intervalTimer(IX_NULLPTR)
-    , m_filterMutex(iMutex::Recursive)
 {
     m_intervalTimer = new iTimer(this);
     m_intervalTimer->setInterval(250);
     connect(m_intervalTimer, &iTimer::timeout, this, &iGstreamerBusHelper::interval);
     m_intervalTimer->start();
 
-    #if GST_CHECK_VERSION(1,0,0)
-    gst_bus_set_sync_handler(bus, (GstBusSyncHandler)syncGstBusFilter, this, IX_NULLPTR);
-    #else
-    gst_bus_set_sync_handler(bus, (GstBusSyncHandler)syncGstBusFilter, this);
-    #endif
     gst_object_ref(GST_OBJECT(bus));
 }
 
@@ -107,35 +68,17 @@ iGstreamerBusHelper::~iGstreamerBusHelper()
         #endif
     }
 
-    #if GST_CHECK_VERSION(1,0,0)
-    gst_bus_set_sync_handler(bus(), IX_NULLPTR, IX_NULLPTR, IX_NULLPTR);
-    #else
-    gst_bus_set_sync_handler(bus(),IX_NULLPTR,IX_NULLPTR);
-    #endif
     gst_object_unref(GST_OBJECT(bus()));
 }
 
 void iGstreamerBusHelper::installMessageFilter(iObject *filter)
 {
-    if (filter) {
-        iScopedLock<iMutex> lock(m_filterMutex);
-        if (std::find(m_syncFilters.begin(), m_syncFilters.end(), filter) == m_syncFilters.end())
-            m_syncFilters.push_front(filter);
-    }
-
     if (filter && std::find(m_busFilters.begin(), m_busFilters.end(), filter) == m_busFilters.end())
         m_busFilters.push_front(filter);
 }
 
 void iGstreamerBusHelper::removeMessageFilter(iObject *filter)
 {
-    if (filter) {
-        iScopedLock<iMutex> lock(m_filterMutex);
-        std::list<iObject*>::iterator it = std::find(m_syncFilters.begin(), m_syncFilters.end(), filter);
-        if (it != m_syncFilters.end())
-            m_syncFilters.erase(it);
-    }
-
     if (filter) {
         std::list<iObject*>::iterator it = std::find(m_busFilters.begin(), m_busFilters.end(), filter);
         if (it != m_busFilters.end())

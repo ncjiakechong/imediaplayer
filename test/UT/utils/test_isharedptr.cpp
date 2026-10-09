@@ -60,6 +60,25 @@ TEST_F(ISharedPtrTest, DefaultConstruction) {
     EXPECT_EQ(ptr.data(), nullptr);
 }
 
+TEST_F(ISharedPtrTest, CustomDeleterReleasedBeforeWeakControlBlock) {
+    int calls = 0;
+    std::shared_ptr<int> marker(new int(42));
+    std::weak_ptr<int> observer(marker);
+    iSharedPtr<TestObject> strong(new TestObject, [marker, &calls](TestObject* object) {
+        EXPECT_EQ(42, *marker);
+        ++calls;
+        delete object;
+    });
+    iWeakPtr<TestObject> weak(strong);
+    marker.reset();
+    EXPECT_FALSE(observer.expired());
+    strong.reset();
+    EXPECT_EQ(1, calls);
+    EXPECT_TRUE(observer.expired());
+    weak = iWeakPtr<TestObject>();
+    EXPECT_EQ(1, calls);
+}
+
 TEST_F(ISharedPtrTest, ConstructFromPointer) {
     iSharedPtr<TestObject> ptr(new TestObject(42));
     EXPECT_FALSE(ptr.isNull());

@@ -210,13 +210,16 @@ namespace isharedpointer {
             ExternalRefCountData* tmp = new WeakRefCountWithCustomDeleter;
             that =ExternalRefCountData::getAndTest(obj, tmp);
             if (tmp != that) {
-                dataDeleter(tmp);
+                // Lost the race: drop tmp's object and caller references, then share the winner.
+                tmp->weakDeref();
+                tmp->weakDeref();
+                that->weakRef();
             }
 
             return that;
         }
 
-        static inline void dataDeleter(ExternalRefCountData *self) { delete self; }
+        static inline void dataDeleter(ExternalRefCountData *self) { delete static_cast<Self *>(self); }
     private:
         WeakRefCountWithCustomDeleter()
             : ExternalRefCountData(2, -1, IX_NULLPTR, dataDeleter) {}

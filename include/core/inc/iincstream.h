@@ -123,11 +123,8 @@ private:
     /// Handle binary data received from protocol layer
     void onBinaryDataReceived(iINCConnection* conn, xuint32 channelId, xuint32 seqNum, bool broadcast, xint64 pos, iByteArray data) IX_OVERRIDE;
 
-    /// Static callback for channel allocation completion
-    static void onChannelAllocated(iINCOperation* op, void* userData);
-
-    /// Static callback for channel release confirmation
-    static void onChannelReleased(iINCOperation* op, void* userData);
+    /// Channel operation completed on the context thread; ignored unless this stream owns it
+    void onChannelOperationFinished(iSharedDataPointer<iINCOperation> operation);
 
     void channelAllocationFinished(iSharedDataPointer<iINCOperation> operation);
     void channelReleaseFinished(iSharedDataPointer<iINCOperation> operation);

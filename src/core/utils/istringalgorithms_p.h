@@ -28,6 +28,14 @@
 
 namespace iShell {
 
+// Only owned blocks reserve a slot after capacity; views and raw data need not be terminated.
+template <typename DataPointer>
+inline bool ix_isNulTerminated(const DataPointer &d)
+{
+    const size_t unit = sizeof(*d.data());
+    return d.isMutable() && d.d_ptr()->length() >= (d.allocatedCapacity() + 1) * unit && !d.data()[d.size];
+}
+
 template <typename StringType>
 struct iStringAlgorithms
 {

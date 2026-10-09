@@ -341,9 +341,18 @@ bool iGstreamerPlayerSession::parsePipeline()
         ilog_warn("Error:", desc, ":", errstr);
         IEMIT error(iMediaPlayer::FormatError, errstr);
         g_clear_error(&err);
+        // a recoverable parse error still returns a partial, unusable pipeline
+        if (pipeline) gst_object_unref(pipeline);
+        return false;
     }
 
-    return setPipeline(pipeline);
+    if (setPipeline(pipeline))
+        return true;
+
+    if (pipeline)
+        gst_object_unref(pipeline);
+
+    return false;
 }
 
 bool iGstreamerPlayerSession::setPipeline(GstElement *pipeline)

@@ -39,9 +39,6 @@ public:
     iUDPEventSource(iUDPDevice* device, int priority = IX_PRIORITY_IO)
         : iEventSource(iLatin1StringView("iUDPEventSource"), priority)
         , m_device(device)
-        , m_readBytes(0)
-        , m_writeBytes(0)
-        , m_monitorEvents(0)
     {
         m_pollFd.fd = -1;
         m_pollFd.events = 0;  // No events initially
@@ -59,9 +56,8 @@ public:
         }
     }
 
-    iUDPDevice* udpDevice() const {
-        return iobject_cast<iUDPDevice*>(m_device);
-    }
+    iUDPDevice* udpDevice() const { return m_device; }
+    void invalidateDevice() { m_device = IX_NULLPTR; }
 
     void configEventAbility(bool read, bool write) {
         // Build new events mask
@@ -73,7 +69,6 @@ public:
             newEvents |= IX_IO_OUT;
         }
 
-        m_monitorEvents = newEvents;
         if (!newEvents && m_pollFd.events) {
             removePoll(&m_pollFd);
             m_pollFd.events = 0;
@@ -96,23 +91,6 @@ public:
         updatePoll(&m_pollFd);
     }
 
-    bool detectHang(xuint32 /*combo*/) IX_OVERRIDE {
-        if ((m_monitorEvents & IX_IO_IN) && m_readBytes == 0) {
-            m_monitorEvents = m_pollFd.events;
-            return true;
-        }
-
-        if ((m_monitorEvents & IX_IO_OUT) && m_writeBytes == 0) {
-            m_monitorEvents = m_pollFd.events;
-            return true;
-        }
-
-        m_readBytes = 0;
-        m_writeBytes = 0;
-        m_monitorEvents = m_pollFd.events;
-        return false;
-    }
-
     bool prepare(xint64 */*timeout*/) IX_OVERRIDE {
         return false;
     }
@@ -126,7 +104,10 @@ public:
         if (!isAttached()) return true;
 
         iUDPDevice* udp = udpDevice();
-        IX_ASSERT(udp);
+        if (!udp) {
+            detach();
+            return true;
+        }
 
         bool readReady = (m_pollFd.revents & IX_IO_IN) != 0;
         bool writeReady = (m_pollFd.revents & IX_IO_OUT) != 0;
@@ -142,12 +123,13 @@ public:
 
         if (readReady) {
             udp->processRx();
+            if (!m_device) return true;
         }
 
         if (writeReady) {
             IEMIT udp->bytesWritten(0);
+            if (!m_device) return true;
         }
-
         if (hasError) {
             ilog_warn("[", udp->peerAddress(), "] Socket error occurred fd:", m_pollFd.fd, " events:", m_pollFd.revents, " error: ", hasError);
             IEMIT udp->errorOccurred(INC_ERROR_CHANNEL);
@@ -159,10 +141,6 @@ public:
 
     iUDPDevice*    m_device;
     iPollFD        m_pollFd;
-
-    int            m_readBytes;
-    int            m_writeBytes;
-    int            m_monitorEvents;
 };
 
 const char* iUDPDevice::SCHEME = "udp";
@@ -385,7 +363,6 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
     do {
         if (bytesRead <= 0) break;
 
-        static_cast<iUDPEventSource*>(m_eventSource)->m_readBytes += bytesRead;
         result.resize(static_cast<int>(bytesRead));
         if (readErr) *readErr = bytesRead;
 
@@ -488,7 +465,6 @@ xint64 iUDPDevice::sendTo(iUDPClientDevice* client, const iINCMessage& msg)
     ssize_t bytesSent = ::sendmsg(m_sockfd, &msgh, 0);
 
     if (bytesSent >= 0) {
-        static_cast<iUDPEventSource*>(m_eventSource)->m_writeBytes += static_cast<int>(bytesSent);
         return static_cast<xint64>(bytesSent);
     }
 
@@ -510,11 +486,17 @@ xint64 iUDPDevice::writeMessage(const iINCMessage& msg, xint64 offset)
 
 void iUDPDevice::processRx()
 {
+    if (!m_eventSource) return;
+    // Callbacks may close or delete this device; the referenced source reports that.
+    iUDPEventSource* source = static_cast<iUDPEventSource*>(m_eventSource);
+    source->ref();
+
     // Drain loop: process all available datagrams in kernel buffer
     // Limit iterations to avoid starving other event sources
     static const int MAX_BATCH = 64;
     for (int i = 0; i < MAX_BATCH; ++i) {
         iByteArray data = receiveFrom(m_pendingClient, IX_NULLPTR);
+        if (!source->udpDevice()) break;
         if (data.isEmpty() || data.size() < static_cast<int>(sizeof(iINCMessageHeader))) break;
 
         iINCMessage msg(INC_MSG_INVALID, 0, 0);
@@ -523,13 +505,16 @@ void iUDPDevice::processRx()
 
         msg.payload().setData(data.mid(sizeof(iINCMessageHeader), payloadLen));
         IEMIT messageReceived(msg);
+        if (!source->udpDevice()) break;
     }
+    source->deref();
 }
 
 void iUDPDevice::close()
 {
     // Destroy EventSource first
     if (m_eventSource) {
+        static_cast<iUDPEventSource*>(m_eventSource)->invalidateDevice();
         m_eventSource->detach();
         m_eventSource->deref();
         m_eventSource = IX_NULLPTR;

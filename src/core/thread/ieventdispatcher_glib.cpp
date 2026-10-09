@@ -192,7 +192,10 @@ static gboolean eventSourceWrapperPrepare(GSource *s, gint *timeout)
 
     xint64 timeout_wrapper = -1;
     iEventSourceWrapper *source = reinterpret_cast<iEventSourceWrapper *>(s);
-    bool ret = source->imp->detectablePrepare(&timeout_wrapper);
+    iEventSource* imp = source->imp;
+    imp->ref();
+    bool ret = imp->detectablePrepare(&timeout_wrapper);
+    imp->deref();
     *timeout = (timeout_wrapper >= 0) ? (gint)((timeout_wrapper + 999999LL) / (1000LL * 1000LL)) : -1;
     return ret;
 }
@@ -200,7 +203,11 @@ static gboolean eventSourceWrapperPrepare(GSource *s, gint *timeout)
 static gboolean eventSourceWrapperCheck(GSource *s)
 {
     iEventSourceWrapper *source = reinterpret_cast<iEventSourceWrapper *>(s);
-    return source->imp->detectableCheck();
+    iEventSource* imp = source->imp;
+    imp->ref();
+    bool ret = imp->detectableCheck();
+    imp->deref();
+    return ret;
 }
 
 static gboolean eventSourceWrapperDispatch(GSource *s, GSourceFunc, gpointer)
@@ -214,7 +221,7 @@ static gboolean eventSourceWrapperDispatch(GSource *s, GSourceFunc, gpointer)
     source->imp->ref();
 
     // Return TRUE if dispatch wants to continue, FALSE if it wants to detach
-    bool continue_dispatch = source->imp->detectableDispatch(source->dispatcher->inProcess() ? source->dispatcher->sequence() : 0);
+    bool continue_dispatch = source->imp->detectableDispatch();
     source->imp->deref();
 
     return continue_dispatch ? TRUE : FALSE;
@@ -231,8 +238,6 @@ static GSourceFuncs eventSourceWrapperFuncs = {
 
 iEventDispatcher_Glib::iEventDispatcher_Glib(iObject *parent)
     : iEventDispatcher(parent)
-    , m_inProcess(false)
-    , m_nextSeq(0)
     , m_mainContext(IX_NULLPTR)
     , m_postEventSource(IX_NULLPTR)
     , m_timerSource(IX_NULLPTR)
@@ -310,7 +315,6 @@ iEventDispatcher_Glib::~iEventDispatcher_Glib()
 
 bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags, int maxPriority)
 {
-    m_inProcess = true;
     bool result = false;
     const bool canWait = (flags & iEventLoop::WaitForMoreEvents);
 
@@ -320,8 +324,6 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags, 
     }
 
     do {
-        ++m_nextSeq;
-
         if (!g_main_context_acquire(m_mainContext)) {
             if (!canWait) break;
 
@@ -366,7 +368,6 @@ bool iEventDispatcher_Glib::processEvents(iEventLoop::ProcessEventsFlags flags, 
         g_main_context_release(m_mainContext);
     } while (!result && canWait);
 
-    m_inProcess = false;
     return result;
 }
 

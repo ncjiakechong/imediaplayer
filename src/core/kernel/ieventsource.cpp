@@ -23,8 +23,6 @@ iEventSource::iEventSource(iLatin1StringView name, int priority)
     , m_refCount(1)
     , m_priority(priority)
     , m_flags(0)
-    , m_nextSeq(0)
-    , m_comboCount(0)
     , m_dispatcher(IX_NULLPTR)
 {}
 
@@ -94,11 +92,14 @@ int iEventSource::detach()
     }
 
     // deref();
-    if (m_dispatcher->removeEventSource(this) < 0) {
+    // removeEventSource() may drop the last reference, so finish with this first.
+    iEventDispatcher* dispatcher = m_dispatcher;
+    m_dispatcher = IX_NULLPTR;
+    if (dispatcher->removeEventSource(this) < 0) {
+        m_dispatcher = dispatcher;
         return -1;
     }
 
-    m_dispatcher = IX_NULLPTR;
     return 0;
 }
 
@@ -151,9 +152,6 @@ bool iEventSource::check()
 bool iEventSource::dispatch()
 { return true; }
 
-bool iEventSource::detectHang(xuint32 /*combo*/)
-{ return true; }
-
 bool iEventSource::detectablePrepare(xint64 *timeout_)
 {
     return prepare(timeout_);
@@ -164,34 +162,8 @@ bool iEventSource::detectableCheck()
     return check();
 }
 
-bool iEventSource::detectableDispatch(xuint32 sequence)
+bool iEventSource::detectableDispatch()
 {
-    if (!sequence) {
-        // always to ignore sequence 0 to avoid external dispatch which like glib
-    } else if ((sequence == m_nextSeq) || (sequence == (m_nextSeq + 1))) {
-        ++m_comboCount;
-    } else {
-        m_comboCount = 0;
-    }
-
-    do {
-        if (!m_comboCount || (m_comboCount & 0x1FF))
-            break;
-
-        if (!detectHang(m_comboCount)) {
-            m_comboCount = 0;
-            break;
-        }
-
-        ilog_info("source ", name(), " combo count ", m_comboCount, " many times at ", sequence, " and maybe detach later to avoid CPU HANG");
-    } while (false);
-
-    if (m_comboCount > 10000) {
-        ilog_warn("source ", name(), " combo count ", m_comboCount, " exceeded limit at ", sequence, ", detaching to avoid CPU HANG");
-        return false;
-    }
-
-    m_nextSeq = sequence;
     return dispatch();
 }
 

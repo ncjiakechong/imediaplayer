@@ -163,13 +163,13 @@ iAtomicCounter<T>& iAtomicCounter<T>::operator = (iAtomicCounter::ValueType valu
 
 template <typename T>
 bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue)
-{ return m_counter.compare_exchange_weak(expectedValue, newValue); }
+{ return m_counter.compare_exchange_strong(expectedValue, newValue); }
 
 template <typename T>
 bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue, ValueType &currentValue)
 {
     currentValue = expectedValue;
-    return m_counter.compare_exchange_weak(currentValue, newValue);
+    return m_counter.compare_exchange_strong(currentValue, newValue);
 }
 
 template <typename T>
@@ -254,7 +254,7 @@ bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue)
 {
 #if defined(IX_HAVE_ATOMIC_BUILTIN)
     return __atomic_compare_exchange_n(&m_counter.value, &expectedValue, newValue,
-                                       true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+                                       false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 #else
     return __sync_bool_compare_and_swap(&m_counter.value, expectedValue, newValue);
 #endif
@@ -266,7 +266,7 @@ bool iAtomicCounter<T>::testAndSet(ValueType expectedValue, ValueType newValue, 
 #if defined(IX_HAVE_ATOMIC_BUILTIN)
     currentValue = expectedValue;
     return __atomic_compare_exchange_n(&m_counter.value, &currentValue, newValue,
-                                       true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+                                       false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 #else
     ValueType previous = __sync_val_compare_and_swap(&m_counter.value, expectedValue, newValue);
     currentValue = previous;

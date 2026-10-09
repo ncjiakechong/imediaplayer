@@ -95,7 +95,6 @@ iEventDispatcher_generic::iEventDispatcher_generic(iObject *parent)
     : iEventDispatcher(parent)
     , m_inCheckOrPrepare(0)
     , m_sourceCount(0)
-    , m_nextSeq(0)
     , m_postSource(IX_NULLPTR)
     , m_timerSource(IX_NULLPTR)
 {
@@ -125,6 +124,10 @@ iEventDispatcher_generic::~iEventDispatcher_generic()
 
         while (!list.empty()) {
             iEventSource* source = list.front();
+            if (IX_NULLPTR == source) {
+                list.pop_front();
+                continue;
+            }
             int result = source->detach();
             IX_ASSERT(result == 0);
             (void) result;
@@ -151,7 +154,6 @@ bool iEventDispatcher_generic::processEvents(iEventLoop::ProcessEventsFlags flag
     const bool canWait = (flags & iEventLoop::WaitForMoreEvents);
 
     do {
-        ++m_nextSeq;
         result = eventIterate(canWait, true, maxPriority);
     } while (!result && canWait);
 
@@ -247,7 +249,10 @@ int iEventDispatcher_generic::removeEventSource(iEventSource* source)
     for (listIt = item.begin(); listIt != item.end(); ++listIt) {
         if ((*listIt) == source) {
             --m_sourceCount;
-            item.erase(listIt);
+            if (m_inCheckOrPrepare)
+                *listIt = IX_NULLPTR;
+            else
+                item.erase(listIt);
             source->deref();
             break;
         }
@@ -296,19 +301,25 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
     int n_ready = 0;
     int current_priority = std::numeric_limits<int>::max();
 
-    std::map<int, std::list<iEventSource*> >::const_iterator mapIt;
+    std::map<int, std::list<iEventSource*> >::iterator mapIt;
     for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
         const int bucket_priority = mapIt->first;
 
         if ((n_ready > 0) && (bucket_priority > current_priority))
             break;
 
-        const std::list<iEventSource*>& list = mapIt->second;
+        std::list<iEventSource*>& list = mapIt->second;
         xint64 sourceTimeout = -1;
 
-        std::list<iEventSource*>::const_iterator listIt;
-        for (listIt = list.begin(); listIt != list.end(); ++listIt) {
+        std::list<iEventSource*>::iterator listIt;
+        for (listIt = list.begin(); listIt != list.end();) {
             iEventSource* source = *listIt;
+            if (IX_NULLPTR == source) {
+                listIt = list.erase(listIt);
+                continue;
+            }
+            ++listIt;
+            source->ref();
             bool result = false;
 
             if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
@@ -317,6 +328,10 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
                 --m_inCheckOrPrepare;
             }
 
+            if (source->dispatcher() != this) {
+                source->deref();
+                continue;
+            }
             if (result)
                 source->setFlags(source->flags() | IX_EVENT_SOURCE_READY);
 
@@ -325,6 +340,7 @@ bool iEventDispatcher_generic::eventPrepare(int* priority, xint64* timeout)
                 current_timeout = 0;
                 current_priority = bucket_priority;
             }
+            source->deref();
 
             if (sourceTimeout < 0)
                 continue;
@@ -360,17 +376,23 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, std::vector<iEventSo
     }
 
     int n_ready = 0;
-    std::map<int, std::list<iEventSource*> >::const_iterator mapIt;
+    std::map<int, std::list<iEventSource*> >::iterator mapIt;
     for (mapIt = m_sources.begin(); mapIt != m_sources.end(); ++mapIt) {
         const int bucket_priority = mapIt->first;
 
         if ((n_ready > 0) && (bucket_priority > max_priority))
             break;
 
-        const std::list<iEventSource*>& list = mapIt->second;
-        std::list<iEventSource*>::const_iterator listIt;
-        for (listIt = list.begin(); listIt != list.end(); ++listIt) {
+        std::list<iEventSource*>& list = mapIt->second;
+        std::list<iEventSource*>::iterator listIt;
+        for (listIt = list.begin(); listIt != list.end();) {
             iEventSource* source = *listIt;
+            if (IX_NULLPTR == source) {
+                listIt = list.erase(listIt);
+                continue;
+            }
+            ++listIt;
+            source->ref();
             bool result = false;
 
             if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
@@ -379,11 +401,17 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, std::vector<iEventSo
                 --m_inCheckOrPrepare;
             }
 
+            if (source->dispatcher() != this) {
+                source->deref();
+                continue;
+            }
             if (result)
                 source->setFlags(source->flags() | IX_EVENT_SOURCE_READY);
 
-            if (!(source->flags() & IX_EVENT_SOURCE_READY))
+            if (!(source->flags() & IX_EVENT_SOURCE_READY)) {
+                source->deref();
                 continue;
+            }
 
             ++n_ready;
             max_priority = bucket_priority;
@@ -391,6 +419,7 @@ bool iEventDispatcher_generic::eventCheck(int max_priority, std::vector<iEventSo
                 pendingDispatches->push_back(source);
                 source->ref();
             }
+            source->deref();
         }
     }
 
@@ -406,13 +435,14 @@ void iEventDispatcher_generic::eventDispatch(std::vector<iEventSource *>* pendin
         bool need_deattch = false;
         iEventSource* source = *it;
 
-        if (!source->isAttached()) {
+        // A source re-attached during check() can be queued twice; READY is cleared on first dispatch.
+        if (source->dispatcher() != this || !(source->flags() & IX_EVENT_SOURCE_READY)) {
             source->deref();
             continue;
         }
 
         source->setFlags(source->flags() & ~IX_EVENT_SOURCE_READY);
-        need_deattch = !source->detectableDispatch(((source == m_postSource) || (source == m_timerSource)) ? 0 : m_nextSeq);
+        need_deattch = !source->detectableDispatch();
 
         /* Note: this depends on the fact that we can't switch
          * sources from one main context to another */
@@ -443,8 +473,9 @@ void iEventDispatcher_generic::forEachPollAbove(int priority, void (*fn)(iPollFD
     for (; it != rend && it->first > priority; ++it) {
         std::list<iEventSource*>::iterator src = it->second.begin();
         std::list<iEventSource*>::iterator srcEnd = it->second.end();
-        for (; src != srcEnd; ++src)
-            (*src)->pollIterate(fn, userdata);
+        for (; src != srcEnd; ++src) {
+            if (*src) (*src)->pollIterate(fn, userdata);
+        }
     }
 }
 

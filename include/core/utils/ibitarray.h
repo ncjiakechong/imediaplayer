@@ -30,8 +30,8 @@ public:
 
     inline void swap(iBitArray &other) { std::swap(d, other.d); }
 
-    inline int size() const { return (d.size() << 3) - *d.constData(); }
-    inline int count() const { return (d.size() << 3) - *d.constData(); }
+    inline int size() const { return d.isEmpty() ? 0 : (d.size() << 3) - *d.constData(); }
+    inline int count() const { return size(); }
     int count(bool on) const;
 
     inline bool isEmpty() const { return d.isEmpty(); }

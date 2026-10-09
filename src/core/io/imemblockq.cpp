@@ -502,6 +502,7 @@ int iMemBlockQueue::peekIterator(IteratorFunc func, void* userdata)
 
     while (item) {
         /* We can append real data! */
+        ri = std::max(ri, item->index);
         iByteArray tchunk = item->chunk;
 
         xint64 d = ri - item->index;

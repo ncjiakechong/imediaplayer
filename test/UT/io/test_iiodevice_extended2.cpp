@@ -76,6 +76,83 @@ private:
     iByteArray m_buffer;
 };
 
+class BufferedSequentialInput : public iIODevice {
+public:
+    explicit BufferedSequentialInput(const iByteArray& input, OpenMode mode = ReadOnly)
+        : m_input(input), m_offset(0) { iIODevice::open(mode); }
+    bool isSequential() const override { return true; }
+    void appendBuffered(const iByteArray& chunk) { m_buffer.append(chunk); }
+
+protected:
+    iByteArray readData(xint64 maxSize, xint64* error) override {
+        if (error) *error = 0;
+        if (maxSize <= 0) return iByteArray();
+        const iByteArray chunk = m_input.mid(m_offset, maxSize);
+        m_offset += chunk.size();
+        return chunk;
+    }
+    xint64 writeData(const iByteArray&) override { return -1; }
+
+private:
+    iByteArray m_input;
+    xsizetype m_offset;
+};
+
+TEST(IODeviceRegression, ZeroLengthReadPreservesBufferedInput)
+{
+    BufferedSequentialInput input(iByteArray("abcdef"));
+    ASSERT_EQ(iByteArray("a"), input.peek(1));
+    char output = '#';
+    EXPECT_EQ(0, input.read(&output, 0));
+    EXPECT_EQ('#', output);
+    EXPECT_TRUE(input.read(0).isEmpty());
+    EXPECT_TRUE(input.peek(0).isEmpty());
+    EXPECT_EQ(6, input.bytesAvailable());
+    EXPECT_EQ(iByteArray("abcdef"), input.read(6));
+}
+
+TEST(IODeviceRegression, SequentialTransactionUsesInBlockOffset)
+{
+    BufferedSequentialInput input(iByteArray("abcdef"));
+    input.startTransaction();
+    EXPECT_EQ(iByteArray("ab"), input.read(2));
+    EXPECT_EQ(iByteArray("cd"), input.read(2));
+    EXPECT_EQ(iByteArray("e"), input.peek(1));
+    EXPECT_EQ(2, input.bytesAvailable());
+    input.rollbackTransaction();
+    EXPECT_EQ(iByteArray("abcd"), input.read(4));
+    input.startTransaction();
+    EXPECT_EQ(iByteArray("ef"), input.read(2));
+    input.commitTransaction();
+    EXPECT_EQ(0, input.bytesAvailable());
+}
+
+TEST(IODeviceRegression, BufferedLinesRespectBoundsAcrossChunks)
+{
+    BufferedSequentialInput input{ iByteArray() };
+    input.appendBuffered(iByteArray("ab"));
+    input.appendBuffered(iByteArray("cd\n"));
+    input.appendBuffered(iByteArray("ef"));
+    input.startTransaction();
+    EXPECT_EQ(iByteArray("ab"), input.read(2));
+    EXPECT_TRUE(input.canReadLine());
+    EXPECT_EQ(iByteArray("cd\n"), input.readLine(5));
+    EXPECT_FALSE(input.canReadLine());
+    input.rollbackTransaction();
+    EXPECT_EQ(iByteArray("abc"), input.readLine(4));
+    EXPECT_EQ(iByteArray("d\n"), input.readLine(64));
+    EXPECT_EQ(iByteArray("ef"), input.readLine(64));
+    EXPECT_TRUE(input.readLine(64).isEmpty());
+}
+
+TEST(IODeviceRegression, BufferedTextLinesPreserveNewline)
+{
+    BufferedSequentialInput input(iByteArray("a\r\nb\r\n"), iIODevice::ReadOnly | iIODevice::Text);
+    EXPECT_EQ(iByteArray("a"), input.peek(1));
+    EXPECT_EQ(iByteArray("a\n"), input.readLine(64));
+    EXPECT_EQ(iByteArray("b\n"), input.readLine(64));
+}
+
 class IODeviceExtended2Test : public ::testing::Test {
 protected:
     void SetUp() override {

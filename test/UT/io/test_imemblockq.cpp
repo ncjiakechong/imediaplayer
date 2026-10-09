@@ -46,6 +46,27 @@ private:
 };
 
 // Test 1: Basic construction
+TEST_F(MemBlockQueueTest, IteratorSkipsHolesWithoutExtendingData) {
+    iMemBlockQueue queue(iLatin1StringView("iterator-holes"), 0, 1024, 1024,
+                         1, 0, 1, 0, nullptr);
+    queue.seek(4, iMemBlockQueue::SEEK_ABSOLUTE, false);
+    ASSERT_GT(queue.push(iByteArray("abcd")), 0);
+    queue.seek(4, iMemBlockQueue::SEEK_RELATIVE, false);
+    ASSERT_GT(queue.push(iByteArray("efgh")), 0);
+    int calls = 0;
+    EXPECT_EQ(0, queue.peekIterator([](const iByteArray& chunk, xint64 position,
+                                      xint64 distance, void* userdata) {
+        int& calls = *static_cast<int*>(userdata);
+        EXPECT_EQ(calls == 0 ? 4 : 12, position);
+        EXPECT_EQ(position, distance);
+        EXPECT_EQ(4, chunk.size());
+        EXPECT_EQ(iByteArray(calls == 0 ? "abcd" : "efgh"), chunk);
+        ++calls;
+        return true;
+    }, &calls));
+    EXPECT_EQ(2, calls);
+}
+
 TEST_F(MemBlockQueueTest, BasicConstruction) {
     iMemBlockQueue* queue = createQueue();
     EXPECT_EQ(queue->length(), 0);

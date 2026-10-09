@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <core/kernel/itimer.h>
 #include <core/kernel/ieventloop.h>
+#include <core/kernel/ieventdispatcher.h>
 #include <core/kernel/ievent.h>
 #include <core/thread/imutex.h>
 #include <core/thread/icondition.h>
@@ -8,6 +9,28 @@
 #include <chrono>
 
 using namespace iShell;
+
+static void pumpEventsFor(int milliseconds)
+{
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
+    while (std::chrono::steady_clock::now() < deadline)
+        iEventDispatcher::instance()->processEvents(iEventLoop::AllEvents);
+}
+
+TEST(TimerRegression, TimerKeepsFiringAfterNestedLoopInsideHandler)
+{
+    iTimer timer;
+    timer.setTimerType(PreciseTimer);
+    timer.setInterval(5);
+    int fired = 0;
+    iObject::connect(&timer, &iTimer::timeout, &timer, [&fired]() {
+        if (++fired == 1) pumpEventsFor(40);
+    });
+    timer.start();
+    pumpEventsFor(200);
+    timer.stop();
+    EXPECT_GE(fired, 3);
+}
 
 class ITimerTest : public ::testing::Test {
 protected:

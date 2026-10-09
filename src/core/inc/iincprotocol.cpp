@@ -29,12 +29,16 @@ const xint32 INC_MAX_SEND_QUEUE = 100;
 
 namespace iShell {
 
+// Owns the exporter: operations keep the pool alive, so their lease release
+// never races the protocol's destruction.
 class iINCOperationPool : public iSharedData {
 public:
-    iINCProtocol* m_protocol;
+    iSharedDataPointer<iMemPool> m_memPool;
+    iAtomicPointer<iMemExport> m_memExport;
     iFreeList<iINCOperation*> m_list;
-    iINCOperationPool(xuint32 size, iINCProtocol* protocol) : m_protocol(protocol), m_list(size) {}
+    explicit iINCOperationPool(xuint32 size) : m_list(size) {}
     virtual ~iINCOperationPool() {
+        delete m_memExport.load();
         iINCOperation* cachedOp = IX_NULLPTR;
         while( (cachedOp = m_list.pop(IX_NULLPTR)) != IX_NULLPTR ) {
             ::operator delete(cachedOp);
@@ -50,9 +54,7 @@ iINCProtocol::iINCProtocol(iINCDevice* device, bool passthrough, iObject* parent
     , m_isPassthrough(passthrough)
     , m_cachedPeerMemFd(-1)
     , m_partialSendOffset(0)
-    , m_memExport(IX_NULLPTR)
-    , m_memImport(IX_NULLPTR)
-    , m_opPool(new iINCOperationPool(128, this))
+    , m_opPool(new iINCOperationPool(128))
 {
     IX_ASSERT(device != IX_NULLPTR);
 
@@ -74,6 +76,7 @@ iINCProtocol::~iINCProtocol()
         iINCOperation* op = it->second;
         m_operations.erase(it);
 
+        releaseLease(op);
         if (op && op->getState() == iINCOperation::STATE_RUNNING) {
             op->cancel();
         }
@@ -82,15 +85,8 @@ iINCProtocol::~iINCProtocol()
     }
 
     // Clean up shared memory resources
-    m_opPool->m_protocol = IX_NULLPTR;
-    if (m_memExport) {
-        delete m_memExport;
-        m_memExport = IX_NULLPTR;
-    }
-    if (m_memImport) {
-        delete m_memImport;
-        m_memImport = IX_NULLPTR;
-    }
+    delete m_memImport.load();
+    m_memImport = IX_NULLPTR;
     if (m_cachedPeerMemFd >= 0) {
         ::close(m_cachedPeerMemFd);
         m_cachedPeerMemFd = -1;
@@ -101,20 +97,21 @@ iINCProtocol::~iINCProtocol()
 
 xuint32 iINCProtocol::nextSequence()
 {
-    return m_seqCounter++;
+    // 0 marks "no reply expected" in onMessageReceived(), so skip it on wrap-around.
+    xuint32 seq = m_seqCounter++;
+    return seq ? seq : m_seqCounter++;
 }
 
 void iINCProtocol::operationNotifier(iINCOperation* op, bool deleter, void* userData)
 {
+    if (!deleter) return;
     iINCOperationPool* pool = static_cast<iINCOperationPool*>(userData);
 
-    // Free the SHM lease when the op first reaches a terminal state or is deleted.
-    if (op->m_blockID != 0 && pool->m_protocol && pool->m_protocol->m_memExport) {
-        pool->m_protocol->m_memExport->processRelease(op->m_blockID);
+    iMemExport* memExport = pool->m_memExport;
+    if (op->m_blockID != 0 && memExport) {
+        memExport->processRelease(op->m_blockID);
         op->m_blockID = 0;
     }
-
-    if (!deleter) return; // timeout or cancel, but not deletion
 
     op->~iINCOperation();
 
@@ -122,6 +119,14 @@ void iINCProtocol::operationNotifier(iINCOperation* op, bool deleter, void* user
         ::operator delete(op);
 
     pool->deref();
+}
+
+void iINCProtocol::releaseLease(iINCOperation* op)
+{
+    if (!op || !op->m_blockID) return;
+    iMemExport* memExport = m_opPool->m_memExport;
+    if (memExport) memExport->processRelease(op->m_blockID);
+    op->m_blockID = 0;
 }
 
 iSharedDataPointer<iINCOperation> iINCProtocol::sendMessage(const iINCMessage& msg)
@@ -149,25 +154,33 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessageWithBlock(const iINCM
 
     if (op) {
         op->m_blockID = blockId;
-    } else if (blockId != 0 && m_memExport) {
-        m_memExport->processRelease(blockId);
+    } else if (blockId != 0) {
+        iMemExport* memExport = m_opPool->m_memExport;
+        if (memExport) memExport->processRelease(blockId);
     }
 
     if (!msg.isValid()) {
+        // Rejecting one oversized request must not tear down the whole connection.
         ilog_warn("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                     "] Message payload too large: ", msg.payload().size());
-        if (op) op->setResult(INC_ERROR_MESSAGE_TOO_LARGE, iByteArray());
-        IEMIT errorOccurred(INC_ERROR_MESSAGE_TOO_LARGE);
+        if (op) {
+            releaseLease(op.data());
+            op->setResult(INC_ERROR_MESSAGE_TOO_LARGE, iByteArray());
+        }
         return op;
     }
 
-    if (op) op->ref(true);
-    invokeMethod(this, &iINCProtocol::sendMessageImpl, msg, op.data());
+    invokeMethod(this, &iINCProtocol::sendMessageImpl, msg, op);
     return op;
 }
 
-void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
+void iINCProtocol::sendMessageImpl(iINCMessage msg, iSharedDataPointer<iINCOperation> op)
 {
+    if (op && op->m_blockID && op->getState() != iINCOperation::STATE_RUNNING) {
+        releaseLease(op.data());
+        return;
+    }
+
     // Check queue size limit
     do {
         if (m_sendQueue.size() < INC_MAX_SEND_QUEUE) break;
@@ -177,16 +190,16 @@ void iINCProtocol::sendMessageImpl(iINCMessage msg, iINCOperation* op)
         m_metrics.onSendQueueDrop();
 
         if (op) {
+            releaseLease(op.data());
             op->setResult(INC_ERROR_QUEUE_FULL, iByteArray());
-            op->deref();
         }
 
-        IEMIT errorOccurred(INC_ERROR_QUEUE_FULL);
         return;
     } while (false);
 
     if (op) {
-        m_operations[msg.sequenceNumber()] = op;
+        op->ref(true);
+        m_operations[msg.sequenceNumber()] = op.data();
         m_metrics.onOperationCreated();
     }
 
@@ -208,8 +221,9 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         // .d_ptr() returns iTypedArrayData<char>* which inherits from iMemBlock
         const iTypedArrayData<char>* typedData = data.data_ptr().d_ptr();
         iMemBlock* block = typedData ? const_cast<iMemBlock*>(static_cast<const iMemBlock*>(typedData)) : IX_NULLPTR;
+        iMemExport* memExport = m_opPool->m_memExport;
 
-        if (!m_memExport || !block || !block->isOurs()) {
+        if (!memExport || !block || !block->isOurs()) {
             ilog_debug("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Current data can not send via SHM");
             break;
         }
@@ -219,7 +233,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         uint blockId, shmId;
         int memfd_fd;
         size_t offset, size;
-        int exportResult = m_memExport->put(block, &memType, &blockId, &shmId, &memfd_fd, &offset, &size);
+        int exportResult = memExport->put(block, &memType, &blockId, &shmId, &memfd_fd, &offset, &size);
         if (exportResult != 0) {
             ilog_info("[", m_device->peerAddress(), "][", channel, "][", seqNum, "] Failed to put binary via SHM, error=", exportResult);
             break;
@@ -245,7 +259,7 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
         msg.setFlags(INC_MSG_FLAG_SHM_DATA);
         m_metrics.onShmHit();
         m_metrics.onBinaryFrameSent(data.size());
-        // Lease freed when the op reaches a terminal state; SHM sends must not be given a timeout.
+        // A local cancellation cannot revoke a reference already handed to the peer.
         return sendMessageWithBlock(msg, blockId);
     } while (false);
 
@@ -269,13 +283,11 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendBinaryData(xuint32 channel, 
 
 void iINCProtocol::releaseOperation(iINCOperation* op)
 {
-    if (!op) return;
+    if (!op || op->m_blockID) return;
 
     OperationsMap::iterator it = m_operations.find(op->sequenceNumber());
     if (it == m_operations.end() || it->second != op) return;
 
-    // Terminal operations have already released their SHM lease from
-    // operationNotifier(), so only the protocol's tracking reference remains.
     m_operations.erase(it);
     op->deref();
 }
@@ -309,14 +321,21 @@ static void memImportRevokeCallback(iMemImport* imp, uint blockId, void* userdat
 
 void iINCProtocol::enableMempool(iSharedDataPointer<iMemPool> pool)
 {
+    if (!pool) {
+        ilog_warn("[", m_device->peerAddress(), "] No memory pool, shared memory stays disabled");
+        return;
+    }
+
     if (m_memPool) {
         ilog_warn("[", m_device->peerAddress(), "] Existing memory pool, ignoring");
         return;
     }
 
     m_memPool = pool;
-    m_memExport = new iMemExport(m_memPool.data(), memExportRevokeCallback, this);
-    m_memImport = new iMemImport(m_memPool.data(), memImportRevokeCallback, this);
+    m_opPool->m_memPool = pool;
+    // Stored last: the atomic stores publish fully built objects to the IO thread.
+    m_opPool->m_memExport = new iMemExport(pool.data(), memExportRevokeCallback, IX_NULLPTR);
+    m_memImport = new iMemImport(pool.data(), memImportRevokeCallback, this);
 }
 
 void iINCProtocol::onMessageReceived(const iINCMessage& msg)
@@ -344,6 +363,7 @@ void iINCProtocol::onMessageReceived(const iINCMessage& msg)
             m_operations.erase(it);
 
             // Complete the operation
+            releaseLease(op);
             op->setResult(INC_OK, msg.payload().data());
             m_metrics.onOperationCompleted();
             op->deref();
@@ -374,6 +394,9 @@ void iINCProtocol::processBinaryDataMessage(const iINCMessage& msg)
 
 void iINCProtocol::cancelAllOperations(int errorCode)
 {
+    while (!m_sendQueue.empty()) m_sendQueue.pop();
+    m_partialSendOffset = 0;
+
     // Cancel all pending operations so callers are not left waiting forever.
     // Called from iINCConnection::close() when the connection is shutting down.
     while (!m_operations.empty()) {
@@ -381,6 +404,7 @@ void iINCProtocol::cancelAllOperations(int errorCode)
         iINCOperation* op = it->second;
         m_operations.erase(it);
 
+        releaseLease(op);
         op->setResult(errorCode, iByteArray());
         op->deref();
     }
@@ -410,20 +434,27 @@ void iINCProtocol::onReadyWrite()
 
         // Get message from queue
         const iINCMessage& msg = m_sendQueue.front();
+        const xuint32 channel = msg.channelID();
+        const xuint32 sequence = msg.sequenceNumber();
+        const bool request = !(msg.type() & 0x1);
+        const xint64 totalSize = sizeof(iINCMessageHeader) + msg.payload().size();
         xint64 written = m_device->writeMessage(msg, m_partialSendOffset);
         if (written < 0) {
-            ilog_error("[", m_device->peerAddress(), "][", msg.channelID(), "][", msg.sequenceNumber(),
-                        "] Failed to write message");
-            IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
-            // Drop message and reset offset to avoid infinite loop on error
-            m_sendQueue.pop();
+            ilog_error("[", m_device->peerAddress(), "][", channel, "][", sequence, "] Failed to write message");
+            if (!m_sendQueue.empty()) m_sendQueue.pop();
             m_partialSendOffset = 0;
+            OperationsMap::iterator operation = request ? m_operations.find(sequence) : m_operations.end();
+            if (operation != m_operations.end()) {
+                iINCOperation* failed = operation->second;
+                m_operations.erase(operation);
+                releaseLease(failed);
+                failed->setResult(INC_ERROR_WRITE_FAILED, iByteArray());
+                failed->deref();
+            }
+            IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
             return;
         }
 
-        // Calculate total size of the message (header + payload)
-        // Note: writeMessage re-serializes, but we can assume total size matches
-        xint64 totalSize = sizeof(iINCMessageHeader) + msg.payload().size();
         m_partialSendOffset += written;
         if (m_partialSendOffset < totalSize) {
             // Partial write - wait for next writes

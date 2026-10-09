@@ -84,6 +84,7 @@ iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier, v
     , m_timer(parent)
     , m_finishedCallback(IX_NULLPTR)
     , m_finishedUserData(IX_NULLPTR)
+    , m_callbackRevision(0)
     , m_ownerNotify(notifier)
     , m_ownerData(ownerData)
 {
@@ -140,11 +141,24 @@ void iINCOperation::onTimeout()
 
 void iINCOperation::setFinishedCallback(FinishedCallback callback, void* userData)
 {
-    m_finishedCallback = callback;
+    const xuint64 revision = (m_callbackRevision.value() & ~xuint64(CallbackFlags)) + CallbackRevisionStep;
+    m_callbackRevision = revision | CallbackPublishing;
     m_finishedUserData = userData;
-    if (m_state != STATE_RUNNING && m_finishedCallback) {
-        m_finishedCallback(this, m_finishedUserData);
-    }
+    m_finishedCallback = callback;
+    m_callbackRevision = revision;
+    if (m_state != STATE_RUNNING)
+        invokeFinishedCallback();
+}
+
+void iINCOperation::invokeFinishedCallback()
+{
+    const xuint64 revision = m_callbackRevision.value();
+    if (revision & CallbackFlags) return;
+    FinishedCallback callback = m_finishedCallback.load();
+    if (!callback) return;
+    void* userData = m_finishedUserData.load();
+    if (m_callbackRevision.testAndSet(revision, revision | CallbackInvoked))
+        callback(this, userData);
 }
 
 void iINCOperation::setState(State st)
@@ -158,9 +172,7 @@ void iINCOperation::setState(State st)
         if (m_ownerNotify) {
             m_ownerNotify(this, false, m_ownerData);
         }
-        if (m_finishedCallback) {
-            m_finishedCallback(this, m_finishedUserData);
-        }
+        invokeFinishedCallback();
         return;
     }
 }
