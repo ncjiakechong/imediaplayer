@@ -633,6 +633,8 @@ void iRtpDevice::processRx()
             m_addrToChannel[key] = nc;
             IEMIT newConnection(nc);
             if (!source->rtpDevice()) break;
+            it = m_addrToChannel.find(key);
+            if (it == m_addrToChannel.end() || it->second != nc) continue;
             client = nc;
         }
         if (client) {

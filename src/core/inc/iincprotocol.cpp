@@ -102,9 +102,8 @@ xuint32 iINCProtocol::nextSequence()
     return seq ? seq : m_seqCounter++;
 }
 
-void iINCProtocol::operationNotifier(iINCOperation* op, bool deleter, void* userData)
+void iINCProtocol::operationDeleter(iINCOperation* op, void* userData)
 {
-    if (!deleter) return;
     iINCOperationPool* pool = static_cast<iINCOperationPool*>(userData);
 
     iMemExport* memExport = pool->m_memExport;
@@ -145,11 +144,11 @@ iSharedDataPointer<iINCOperation> iINCProtocol::sendMessageWithBlock(const iINCM
         m_opPool->ref();
 
         if (IX_NULLPTR == tmpOp) {
-            op = new iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, m_opPool.data());
+            op = new iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationDeleter, m_opPool.data());
             break;
         }
 
-        op = new (tmpOp) iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationNotifier, m_opPool.data());
+        op = new (tmpOp) iINCOperation(msg.sequenceNumber(), IX_NULLPTR, operationDeleter, m_opPool.data());
     } while(false);
 
     if (op) {

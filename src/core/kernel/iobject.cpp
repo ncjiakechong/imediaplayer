@@ -526,9 +526,6 @@ bool iObject::moveToThread(iThread *targetThread)
     if (IX_NULLPTR == targetData)
         targetData = new iThreadData(0);
 
-    // make sure nobody adds/removes connections to this object while we're moving it
-    iScopedLock<iMutex> l(m_signalSlotLock);
-
     // keep currentData alive across the handover
     currentData->ref();
 
@@ -543,6 +540,7 @@ bool iObject::moveToThread(iThread *targetThread)
 
 void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *targetData)
 {
+    iScopedLock<iMutex> locker(m_signalSlotLock);
     if (IX_NULLPTR != m_currentSender) {
         m_currentSender->receiverDeleted();
         m_currentSender = IX_NULLPTR;
@@ -552,6 +550,7 @@ void iObject::setThreadData_helper(iThreadData *currentData, iThreadData *target
     targetData->ref();
     m_threadData->deref();
     m_threadData = targetData;
+    locker.unlock();
 
     while (m_inFlight.value() > 0) { iThread::yieldCurrentThread(); }
 

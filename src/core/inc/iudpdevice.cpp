@@ -22,6 +22,7 @@
 #include <core/inc/iincmessage.h>
 #include <core/kernel/ieventsource.h>
 #include <core/kernel/ieventdispatcher.h>
+#include <core/utils/isharedptr.h>
 #include <core/io/ilog.h>
 
 #include "inc/iudpdevice.h"
@@ -400,6 +401,9 @@ iByteArray iUDPDevice::receiveFrom(iUDPClientDevice* client, xint64* readErr)
         m_addrToChannel[addrSrcKey] = newClient;
         IX_ASSERT(IX_NULLPTR == m_pendingClient);
         IEMIT newConnection(newClient);
+        it = m_addrToChannel.find(addrSrcKey);
+        if (it == m_addrToChannel.end() || it->second != newClient)
+            return iByteArray();
         newClient->receivedData(result);  // Cache first packet
         return iByteArray();  // Return empty - data cached in new client's buffer
     } while (false);

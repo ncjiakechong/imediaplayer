@@ -65,7 +65,7 @@ bool iINCOperationTimer::event(iEvent* e)
     if (te->timerId() == m_deleterId) {
         m_deleterId = 0;
         killTimer(te->timerId());
-        reinterpret_cast<iINCOperation*>(te->userData())->doDeleter();
+        reinterpret_cast<iINCOperation*>(te->userData())->destroyOrRecycle();
     } else if (te->timerId() == m_alarmId ) {
         m_alarmId = 0;
         killTimer(te->timerId());
@@ -75,7 +75,7 @@ bool iINCOperationTimer::event(iEvent* e)
     return true;
 }
 
-iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier, void* ownerData)
+iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, OwnerDeleter deleter, void* ownerData)
     : iSharedData()
     , m_seqNum(seqNum)
     , m_state(STATE_RUNNING)
@@ -84,8 +84,7 @@ iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier, v
     , m_timer(parent)
     , m_finishedCallback(IX_NULLPTR)
     , m_finishedUserData(IX_NULLPTR)
-    , m_callbackRevision(0)
-    , m_ownerNotify(notifier)
+    , m_ownerDeleter(deleter)
     , m_ownerData(ownerData)
 {
 }
@@ -94,10 +93,10 @@ iINCOperation::~iINCOperation()
 {
 }
 
-void iINCOperation::doDeleter()
+void iINCOperation::destroyOrRecycle()
 {
-    if (m_ownerNotify) {
-        m_ownerNotify(this, true, m_ownerData);
+    if (m_ownerDeleter) {
+        m_ownerDeleter(this, m_ownerData);
         return;
     }
 
@@ -111,7 +110,7 @@ void iINCOperation::doFree()
     if (!_workThread || !_workThread->isRunning() || (_workThread == _curThread)) {
         m_timer.moveToThread(_curThread);
         m_timer.stop();
-        doDeleter();
+        destroyOrRecycle();
         return;
     }
 
@@ -141,24 +140,26 @@ void iINCOperation::onTimeout()
 
 void iINCOperation::setFinishedCallback(FinishedCallback callback, void* userData)
 {
-    const xuint64 revision = (m_callbackRevision.value() & ~xuint64(CallbackFlags)) + CallbackRevisionStep;
-    m_callbackRevision = revision | CallbackPublishing;
+    if (!callback) {
+        m_finishedCallback = IX_NULLPTR;
+        m_finishedUserData = IX_NULLPTR;
+        return;
+    }
+
     m_finishedUserData = userData;
     m_finishedCallback = callback;
-    m_callbackRevision = revision;
     if (m_state != STATE_RUNNING)
         invokeFinishedCallback();
 }
 
 void iINCOperation::invokeFinishedCallback()
 {
-    const xuint64 revision = m_callbackRevision.value();
-    if (revision & CallbackFlags) return;
     FinishedCallback callback = m_finishedCallback.load();
     if (!callback) return;
-    void* userData = m_finishedUserData.load();
-    if (m_callbackRevision.testAndSet(revision, revision | CallbackInvoked))
-        callback(this, userData);
+    if (m_finishedCallback.testAndSet(callback, IX_NULLPTR)) {
+        iSharedDataPointer<iINCOperation> guard(this);
+        callback(this, m_finishedUserData);
+    }
 }
 
 void iINCOperation::setState(State st)
@@ -169,9 +170,6 @@ void iINCOperation::setState(State st)
         if (!m_state.testAndSet(STATE_RUNNING, st)) continue;
 
         iObject::invokeMethod(&m_timer, &iINCOperationTimer::stop);
-        if (m_ownerNotify) {
-            m_ownerNotify(this, false, m_ownerData);
-        }
         invokeFinishedCallback();
         return;
     }

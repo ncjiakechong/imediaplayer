@@ -89,26 +89,24 @@ public:
     /// @param callback Function pointer to call when finished (IX_NULLPTR to clear)
     /// @param userData User data passed to callback
     /// Callbacks run inline on completion or on registration if already complete.
-    /// Registration and clearing may race with completion, but not with each other.
+    /// At most one non-null registration is allowed during this operation's lifetime.
+    /// Registration and clearing must be serialized, but may race with completion.
     /// Clearing does not wait for an already claimed callback; its userData must remain alive.
     typedef void (*FinishedCallback)(iINCOperation* op, void* userData);
     void setFinishedCallback(FinishedCallback callback, void* userData = IX_NULLPTR);
 
 private:
-    typedef void (*Notify)(iINCOperation* op, bool deleter, void* userData);
-    iINCOperation(xuint32 seqNum, iObject* parent, Notify notifier = IX_NULLPTR, void* ownerData = IX_NULLPTR);
+    typedef void (*OwnerDeleter)(iINCOperation* op, void* userData);
+    iINCOperation(xuint32 seqNum, iObject* parent, OwnerDeleter deleter = IX_NULLPTR, void* ownerData = IX_NULLPTR);
     virtual ~iINCOperation();
 
     void setState(State st);
     void setResult(xint32 errorCode, const iByteArray& data);
     void invokeFinishedCallback();
 
-    void onTimeout();
-
     void doFree() IX_OVERRIDE;
-
-    /// Delete this operation or return its storage to the owner's pool.
-    void doDeleter();
+    void destroyOrRecycle();
+    void onTimeout();
 
     xuint32         m_seqNum;
     iAtomicCounter<State> m_state;
@@ -120,19 +118,12 @@ private:
 
     iINCOperationTimer m_timer;
 
-    enum {
-        CallbackPublishing = 1,
-        CallbackInvoked = 2,
-        CallbackFlags = 3,
-        CallbackRevisionStep = 4
-    };
     typedef void CallbackFunction(iINCOperation*, void*);
     iAtomicPointer<CallbackFunction> m_finishedCallback;
-    iAtomicPointer<void> m_finishedUserData;
-    iAtomicCounter<xuint64> m_callbackRevision;
+    void*   m_finishedUserData;
 
     // Custom deleter support
-    Notify  m_ownerNotify;
+    OwnerDeleter m_ownerDeleter;
     void*   m_ownerData;
 
     friend class iINCProtocol;

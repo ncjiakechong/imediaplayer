@@ -115,7 +115,7 @@ private:
     bool processDirectBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, bool broadcast, xint64& pos);
     bool processSHMBinaryData(const iINCMessage& msg, xuint32 channel, xuint32 seqNum, bool broadcast, xint64& pos);
 
-    static void operationNotifier(iINCOperation* op, bool deleter, void* userData);
+    static void operationDeleter(iINCOperation* op, void* userData);
     void releaseLease(iINCOperation* op);
 
     iINCDevice*             m_device;
