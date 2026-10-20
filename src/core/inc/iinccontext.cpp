@@ -288,11 +288,15 @@ iSharedDataPointer<iINCOperation> iINCContext::pingpong()
 
 void iINCContext::onMessageReceived(iINCConnection* conn, const iINCMessage& msg)
 {
-    if ((msg.type() & 0x1) && (msg.type() != INC_MSG_HANDSHAKE_ACK)) return;
+    if ((msg.type() & 0x1) && (msg.type() != INC_MSG_HANDSHAKE_ACK) && (msg.type() != INC_MSG_STREAM_OPEN_ACK)) return;
 
     switch (msg.type()) {
     case INC_MSG_HANDSHAKE_ACK:
         handleHandshakeAck(conn, msg);
+        break;
+
+    case INC_MSG_STREAM_OPEN_ACK:
+        handleStreamOpenAck(conn, msg);
         break;
 
     case INC_MSG_EVENT:
@@ -407,6 +411,28 @@ void iINCContext::handleHandshakeAck(iINCConnection* conn, const iINCMessage& ms
     invokeMethod(this, &iINCContext::setState, STATE_CONNECTED);
     ilog_info("[", objectName(), "][", msg.channelID(), "][", msg.sequenceNumber(),
                 "] Handshake completed with", conn->peerName(), "protocol version", conn->peerProtocolVersion());
+}
+
+void iINCContext::handleStreamOpenAck(iINCConnection* conn, const iINCMessage& msg)
+{
+    // Runs on the connection's thread before it reads the next frame, which may already be SHM data.
+    iINCTagStruct result;
+    result.setData(msg.payload().data());
+    xuint32 channelId = 0;
+    bool negotiation = false;
+    xuint16 type = 0;
+    iByteArray shmName;
+    xint32 shmSize = 0;
+    if (conn->mempool() || !result.getUint32(channelId) || !result.getBool(negotiation) || !negotiation
+        || !result.getUint16(type) || (0 == type) || !result.getBytes(shmName) || !result.getInt32(shmSize))
+        return;
+
+    const iByteArray useName = shmName.isEmpty() ? m_config.sharedMemoryName() : shmName;
+    const xint32 useSize = (shmSize <= 0) ? m_config.sharedMemorySize() : shmSize;
+    ilog_info("[", objectName(), "][", channelId, "][", msg.sequenceNumber(),
+                "] Create mempool with type:", type, " name:", useName, " size:", useSize);
+    iMemPool* memPool = iMemPool::create(objectName().toUtf8().constData(), useName.constData(), static_cast<MemType>(type), useSize, true, m_config.sharedMemoryBlockSize());
+    conn->enableMempool(iSharedDataPointer<iMemPool>(memPool));
 }
 
 void iINCContext::handleEvent(iINCConnection*, const iINCMessage& msg)
@@ -537,18 +563,9 @@ iSharedDataPointer<iINCOperation> iINCContext::releaseChannel(xuint32 channelId)
     return op;
 }
 
-xuint32 iINCContext::registerChannel(iINCChannel* channel, MemType type, const iByteArray& shmName, xint32 shmSize)
+xuint32 iINCContext::registerChannel(iINCChannel* channel)
 {
     IX_ASSERT(STATE_CONNECTED == m_state && m_connection);
-    if ((0 != type) && !m_connection->mempool()) {
-        iByteArray useName = shmName.isEmpty() ? m_config.sharedMemoryName() : shmName;
-        xint32 useSize = (shmSize <= 0)  ? m_config.sharedMemorySize() : shmSize;
-
-        ilog_info("[", objectName(), "] Create mempool with name:", useName, " size:", useSize);
-        iMemPool* memPool = iMemPool::create((const char*)objectName().toUtf8().constData(), useName.constData(), type, useSize, true, m_config.sharedMemoryBlockSize());
-        m_connection->enableMempool(iSharedDataPointer<iMemPool>(memPool));
-    }
-
     return m_connection->registerChannel(channel);
 }
 

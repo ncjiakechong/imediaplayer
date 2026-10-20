@@ -2157,19 +2157,12 @@ public:
 
 template<typename Flag1, typename Func1, typename Flag2, typename Func2, typename Flag3, typename Func3>
 _iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2, Flag3 flag3, Func3 func3) {
-    _iPropertyHelper<> propInfo;
-    return propInfo.parseProperty(flag1, func1)
-                   .parseProperty(flag2, func2)
-                   .parseProperty(flag3, func3)
-                   .clone();
+    return _iPropertyHelper<>().parseProperty(flag1, func1).parseProperty(flag2, func2).parseProperty(flag3, func3).clone();
 }
 
 template<typename Flag1, typename Func1, typename Flag2, typename Func2>
 _iProperty* newProperty(Flag1 flag1, Func1 func1, Flag2 flag2, Func2 func2) {
-    _iPropertyHelper<> propInfo;
-    return propInfo.parseProperty(flag1, func1)
-                   .parseProperty(flag2, func2)
-                   .clone();
+    return _iPropertyHelper<>().parseProperty(flag1, func1).parseProperty(flag2, func2).clone();
 }
 
 #if __cplusplus >= 201103L

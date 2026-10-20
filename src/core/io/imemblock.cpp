@@ -29,8 +29,6 @@
 #define IX_MEMPOOL_SLOTS_MAX 1024
 #define IX_MEMPOOL_SLOT_SIZE (64*1024)
 
-#define IX_MEMEXPORT_SLOTS_MAX 128
-
 #define IX_MEMIMPORT_SLOTS_MAX 160
 #define IX_MEMIMPORT_SEGMENTS_MAX 16
 
@@ -75,11 +73,13 @@ struct iMemImportSegment {
     iShareMem memory;
     iMemTrap* trap;
     iAtomicCounter<int> n_blocks;
+    /* one for the importer, plus one per block left over by replaceImport() */
+    iAtomicCounter<int> refs;
     bool writable;
     iMemImportSegment* nextRetired;
 
     iMemImportSegment(const char* prefix)
-        : import(IX_NULLPTR), memory(prefix), trap(IX_NULLPTR), n_blocks(0), writable(false), nextRetired(IX_NULLPTR)
+        : import(IX_NULLPTR), memory(prefix), trap(IX_NULLPTR), n_blocks(0), refs(1), writable(false), nextRetired(IX_NULLPTR)
     {}
 
     bool isPermanent() const { return memory.type() == MEMTYPE_SHARED_MEMFD || memory.type() == MEMTYPE_SHARED_POSIX; }
@@ -219,7 +219,6 @@ iMemBlock::iMemBlock(iMemPool* pool, Type type, ArrayOptions options, void* data
     , m_pool(pool)
     , m_data(data)
     , m_nAcquired(0)
-    , m_pleaseSignal(0)
 {
     IX_ASSERT(pool && (m_capacity <= m_length));
     m_user.freeCb = IX_NULLPTR;
@@ -346,6 +345,9 @@ iMemBlock* iMemBlock::newOne(iMemPool* pool, size_t elementCount, size_t element
     }
 
     void* slot = ::malloc(allocSize);
+    if (IX_NULLPTR == slot)
+        return IX_NULLPTR;
+
     void* ptr = reinterpret_cast<void*>((xuintptr(slot) + sizeof(iMemBlock) + alignment -1) & ~(alignment - 1));
     block = new (slot) iMemBlock(pool, MEMBLOCK_APPENDED, options, ptr, allocSize - headerSize, capacity);
 
@@ -463,6 +465,11 @@ iMemBlock* iMemBlock::reallocate(iMemBlock* block, size_t elementCount, size_t e
     IX_ASSERT(offset < allocSize);
 
     iMemBlock* newBlock = static_cast<iMemBlock *>(::realloc(static_cast<void *>(block), allocSize));
+    if (IX_NULLPTR == newBlock) {
+        block->statAdd();
+        return IX_NULLPTR;
+    }
+
     newBlock->m_data = reinterpret_cast<char *>(newBlock) + offset;
     newBlock->m_options = options;
     newBlock->m_length = allocSize - headerSize;
@@ -534,84 +541,25 @@ void* iMemBlock::acquire(size_t offset)
     return (xuint8 *)(m_data.load()) + offset;
 }
 
-/* No lock necessary, in corner cases locks by its own */
+/* No lock necessary */
 void iMemBlock::release()
 {
     IX_ASSERT(count() >= 0);
 
     int r = m_nAcquired--;
     IX_ASSERT(r >= 1);
-
-    /* Signal a waiting thread that this memblock is no longer used */
-    if (r == 1 && m_pleaseSignal.value())
-        m_pool->m_semaphore.release();
 }
 
-/* Self locked */
-void iMemBlock::wait()
+static void releaseImportSegment(void* /*pointer*/, void* userData)
 {
-    if (m_nAcquired.value() > 0) {
-        /* We need to wait until all threads gave up access to the
-         * memory block before we can go on. Unfortunately this means
-         * that we have to lock and wait here. Sniff! */
-        ++m_pleaseSignal;
+    iMemImportSegment* seg = static_cast<iMemImportSegment*>(userData);
+    if (--seg->refs != 0)
+        return;
 
-        while (m_nAcquired.value() > 0)
-            m_pool->m_semaphore.acquire();
-
-        --m_pleaseSignal;
-    }
-}
-
-static void* ix_xmemdup(const void* p, size_t l) {
-    if (!p)
-        return NULL;
-
-    char* r = (char*)::malloc(l);
-    ::memcpy(r, p, l);
-    return r;
-}
-static void freeWrapper(void* pointer, void* /*userData*/)
-{
-    free(pointer);
-}
-
-/* No lock necessary. This function is not multiple caller safe! */
-void iMemBlock::makeLocal()
-{
-    m_pool->m_stat.nAllocatedByType[m_type]--;
-
-    if (m_length <= m_pool->m_blockSize) {
-        iMemPool::Slot* slot = m_pool->allocateSlot();
-
-        if (slot) {
-            void* new_data = m_pool->slotData(slot);
-            /* We can move it into a local pool, perfect! */
-
-            memcpy(new_data, m_data.load(), m_length);
-            m_data = new_data;
-
-            m_type = MEMBLOCK_POOL_EXTERNAL;
-            m_readOnly = false;
-
-            m_pool->m_stat.nAllocatedByType[m_type]++;
-            m_pool->m_stat.nAccumulatedByType[m_type]++;
-            wait();
-            return;
-        }
-    }
-
-    /* Humm, not enough space in the pool, so lets allocate the memory with malloc() */
-    m_data = ix_xmemdup(m_data.load(), m_length);
-    m_user.freeCb = freeWrapper;
-    m_user.freeCbData = m_data.load();
-
-    m_type = MEMBLOCK_USER;
-    m_readOnly = false;
-
-    m_pool->m_stat.nAllocatedByType[m_type]++;
-    m_pool->m_stat.nAccumulatedByType[m_type]++;
-    wait();
+    // Unregister first: once unmapped, the range may be reused by an unrelated mapping.
+    delete seg->trap;
+    seg->memory.detach();
+    delete seg;
 }
 
 /* Self-locked. This function is not multiple-caller safe */
@@ -636,7 +584,15 @@ void iMemBlock::replaceImport()
     iMemImport::Access _importLock(import);
     import->m_blocks.erase(m_imported.id);
 
-    makeLocal();
+    /* Leave the data in place: zero-copy views (e.g. iByteArray) hold raw
+     * pointers into the segment, so this block keeps the whole segment mapped until freed. */
+    ++segment->refs;
+    m_pool->m_stat.nAllocatedByType[m_type]--;
+    m_type = MEMBLOCK_USER;
+    m_user.freeCb = releaseImportSegment;
+    m_user.freeCbData = segment;
+    m_pool->m_stat.nAllocatedByType[m_type]++;
+    m_pool->m_stat.nAccumulatedByType[m_type]++;
 
     if (segment->n_blocks.value() < 1) {
         ilog_error("replaceImport: segment n_blocks underflow:", segment->n_blocks.value());
@@ -721,7 +677,6 @@ iMemPool::iMemPool(const char* name, iShareMem* memory, size_t block_size, xuint
     , m_freeSlots(n_blocks)
     , m_cacheHeads(128)
     , m_nInit(0)
-    , m_semaphore(0)
     , m_mutex(iMutex::Recursive)
 {
     IX_ASSERT(m_memory && (m_memory->size() >= (block_size * n_blocks)));
@@ -1034,12 +989,7 @@ void iMemImport::segmentDetach(iMemImportSegment* seg)
 
 void iMemImport::segmentFree(iMemImportSegment* seg)
 {
-    seg->memory.detach();
-
-    if (seg->trap)
-        delete seg->trap;
-
-    delete seg;
+    releaseImportSegment(IX_NULLPTR, seg);
 }
 
 /* Self-locked. Not multiple-caller safe */
@@ -1199,8 +1149,7 @@ int iMemImport::processRevoke(uint blockId)
 
 /* For sending blocks to other nodes */
 iMemExport::iMemExport(iMemPool* pool, iMemExportRevokeCb cb, void* userdata)
-    : m_baseIdx(0)
-    , m_nInit(0)
+    : m_nInit(0)
     , m_freeSlots(IX_NULLPTR)
     , m_usedSlots(IX_NULLPTR)
     , m_mutex(iMutex::Recursive)
@@ -1211,10 +1160,9 @@ iMemExport::iMemExport(iMemPool* pool, iMemExportRevokeCb cb, void* userdata)
     , _prev(IX_NULLPTR)
 {
     IX_ASSERT(m_pool && cb && m_pool->isShared());
-    // Start at 1 so an exported blockId (slot + base) is never 0
-    static iAtomicCounter<uint> export_baseidx(1);
 
     for (int idx = 0; idx < IMEMEXPORT_SLOTS_MAX; ++idx) {
+        m_slots[idx].id = 0;
         m_slots[idx]._next = IX_NULLPTR;
         m_slots[idx]._prev = IX_NULLPTR;
         m_slots[idx].block = IX_NULLPTR;
@@ -1222,14 +1170,13 @@ iMemExport::iMemExport(iMemPool* pool, iMemExportRevokeCb cb, void* userdata)
 
     iScopedLock<iMutex> _poolLock(m_pool->m_mutex);
     IX_LLIST_PREPEND(iMemExport, m_pool->m_exports, this);
-    m_baseIdx = export_baseidx++;
 }
 
 iMemExport::~iMemExport()
 {
     iScopedLock<iMutex> _lock(m_mutex);
     while (m_usedSlots)
-        processRelease((uint) (m_usedSlots - m_slots + m_baseIdx));
+        processRelease(m_usedSlots->id);
     _lock.unlock();
 
     iScopedLock<iMutex> _poolLock(m_pool->m_mutex);
@@ -1240,21 +1187,18 @@ iMemExport::~iMemExport()
 int iMemExport::processRelease(uint id)
 {
     iScopedLock<iMutex> _lock(m_mutex);
-    if (id < m_baseIdx)
+    Slot* slot = m_usedSlots;
+    while (slot && slot->id != id)
+        slot = slot->_next;
+    if (!slot)
         return -1;
 
-    id -= m_baseIdx;
-    if (id >= m_nInit)
-        return -1;
+    iMemBlock* b = slot->block;
+    IX_ASSERT(b);
+    slot->block = IX_NULLPTR;
 
-    if (!m_slots[id].block)
-        return -1;
-
-    iMemBlock* b = m_slots[id].block;
-    m_slots[id].block = IX_NULLPTR;
-
-    IX_LLIST_REMOVE(Slot, m_usedSlots, &m_slots[id]);
-    IX_LLIST_PREPEND(Slot, m_freeSlots, &m_slots[id]);
+    IX_LLIST_REMOVE(Slot, m_usedSlots, slot);
+    IX_LLIST_PREPEND(Slot, m_freeSlots, slot);
 
     _lock.unlock();
 
@@ -1278,7 +1222,7 @@ void iMemExport::revokeBlocks(iMemImport* imp)
             slot->block->m_imported.segment->import != imp)
             continue;
 
-        uint idx = (uint) (slot - m_slots + m_baseIdx);
+        uint idx = slot->id;
         m_revokeCb(this, idx, m_userdata);
         processRelease(idx);
     }
@@ -1320,7 +1264,7 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
     if (m_freeSlots) {
         slot = m_freeSlots;
         IX_LLIST_REMOVE(Slot, m_freeSlots, slot);
-    } else if (m_nInit < IX_MEMEXPORT_SLOTS_MAX) {
+    } else if (m_nInit < IMEMEXPORT_SLOTS_MAX) {
         slot = &m_slots[m_nInit++];
     } else {
         _lock.unlock();
@@ -1330,7 +1274,12 @@ int iMemExport::put(iMemBlock* block, MemType* type, uint* blockId, uint* shmId,
 
     IX_LLIST_PREPEND(Slot, m_usedSlots, slot);
     slot->block = block;
-    *blockId = (uint) (slot - m_slots + m_baseIdx);
+    // Process-wide so ids differ across exporters and repeat only after 2^32 leases; 0 means no lease.
+    static iAtomicCounter<uint> s_leaseIds(1);
+    do {
+        slot->id = s_leaseIds++;
+    } while (slot->id == 0);
+    *blockId = slot->id;
 
     _lock.unlock();
     ilog_verbose("Got block id ", *blockId);

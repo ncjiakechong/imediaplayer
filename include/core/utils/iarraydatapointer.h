@@ -81,18 +81,6 @@ public:
         swap(tmp);
     }
 
-    bool detach() {
-        if (needsDetach()) {
-            std::pair<Data *, T *> copy = clone(detachOptions());
-            iArrayDataPointer old(d, ptr, size);
-            d = copy.first;
-            ptr = copy.second;
-            return true;
-        }
-
-        return false;
-    }
-
     // forwards from iTypedArrayData
     size_t allocatedCapacity() const { return d ? d->allocatedCapacity() : 0; }
     void ref() { if (d) d->ref(); }
@@ -166,7 +154,7 @@ public:
     {
         if (iTypeInfo<T>::isRelocatable /* && alignof(T) <= alignof(std::max_align_t) */) {
             if ((where & Data::GrowsForward) && !old && !needsDetach() && n > 0) {
-                this->reallocate(allocatedCapacity() - freeSpaceAtEnd() + n, Data::GrowsForward); // fast path
+                this->reallocate(allocatedCapacity() - freeSpaceAtEnd() + n, Data::GrowsForward | detachOptions()); // fast path
                 return;
             }
         }
@@ -267,74 +255,59 @@ public:
         this->ptr = res;
     }
 
-    static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype newSize, typename Data::ArrayOptions options)
+    static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype n, typename Data::ArrayOptions options)
     {
         // calculate new capacity. We keep the free capacity at the side that does not have to grow
         // to avoid quadratic behavior with mixed append/prepend cases
+        // Only a sole owner keeps it: around a shared range it may hold other slices (left/mid/right).
+        xsizetype keep = 0;
+        if (!from.needsDetach())
+            keep = (options & Data::GrowsBackwards) ? from.freeSpaceAtEnd() : from.freeSpaceAtBegin();
+        Data* d = Data::allocate(xsizetype(from.detachCapacity(from.size + n + keep)), options | from.detachOptions());
+        T* dataPtr = d ? static_cast<T*>(d->data().value()) : IX_NULLPTR;
+        if (!dataPtr)
+            return iArrayDataPointer(d, dataPtr);
 
-        // use max below, because allocatedCapacity() can be 0 when using fromRawData()
-        xsizetype minimalCapacity = std::max<xsizetype>(from.size, from.allocatedCapacity()) + newSize;
-        // subtract the free space at the side we want to allocate. This ensures that the total size requested is
-        // the existing allocation at the other side + size + n.
-        // Note: for GrowsBackwards, we should subtract freeSpaceAtEnd (the side we're NOT growing),
-        // for GrowsForward, subtract freeSpaceAtBegin
-        minimalCapacity -= (options & Data::GrowsBackwards) ? from.freeSpaceAtEnd() : from.freeSpaceAtBegin();
-        xsizetype capacity = from.detachCapacity(minimalCapacity);
-        return allocateGrow(from, capacity, newSize, options);
-    }
-
-    static iArrayDataPointer allocateGrow(const iArrayDataPointer &from, xsizetype capacity, xsizetype newSize, typename Data::ArrayOptions options) {
-        Data* d = Data::allocate(capacity, options);
-        const bool valid = d != IX_NULLPTR && d->data().value() != IX_NULLPTR;
-        const bool grows = (options & (Data::GrowsForward | Data::GrowsBackwards));
-        if (!valid || !grows)
-            return iArrayDataPointer(d, static_cast<T*>(d->data().value()));
-
-        // when growing, special rules apply to memory layout
-        T* dataPtr = static_cast<T*>(d->data().value());
-
-        // Check if we actually reallocated (capacity grew significantly due to memory pool)
-        bool actuallyReallocated = (d->allocatedCapacity() > capacity * 1.5);
-        if (from.needsDetach() || actuallyReallocated) {
-            // When detaching or over-allocating: position data strategically
-            // For GrowsBackwards with over-allocation, don't call updatePtr to preserve dataStart
-            if (options & Data::GrowsBackwards && actuallyReallocated) {
-                // Calculate offset to leave space for prepend
-                // desiredFreeSpace should be >= newSize to allow the prepend operation
-                dataPtr += newSize + (d->allocatedCapacity() - newSize - from.size) / 2;
-                // Don't call updatePtr - return with offset pointer directly
-                // This keeps dataStart unchanged so freeSpaceAtBegin() calculates correctly
-                return iArrayDataPointer(d, dataPtr);
-            } else if (options & Data::GrowsBackwards) {
-                // Normal detach: put data in middle
-                dataPtr += (d->allocatedCapacity() - newSize) / 2;
-            }
-        } else {
-            // When not detaching: ::realloc() policy - preserve existing free space at beginning
-            dataPtr += from.freeSpaceAtBegin();
-        }
-
-        d->updatePtr(dataPtr);
+        if (options & Data::GrowsBackwards)
+            dataPtr += n + std::max<xsizetype>(0, (xsizetype(d->allocatedCapacity()) - from.size - n) / 2);
+        else
+            dataPtr += keep;
         return iArrayDataPointer(d, dataPtr);
     }
 
     void reallocate(xsizetype alloc, typename Data::ArrayOptions options) {
+        IX_ASSERT(!this->needsDetach());
         // when reallocating, take care of the situation when no growth is
         // happening - need to move the data in this case, unfortunately
         const bool grows = options & (Data::GrowsForward | Data::GrowsBackwards);
 
+        // realloc() suits malloc'd blocks only; pool, user and fixed memory is copied out instead
+        if (!this->d->isReallocatable()) {
+            Data* d = Data::allocate(alloc, options);
+            IX_CHECK_PTR(d);
+            const xsizetype capacity = xsizetype(d->allocatedCapacity());
+            const xsizetype offset = grows ? std::min(this->freeSpaceAtBegin(), capacity) : 0;
+            iArrayDataPointer dp(d, static_cast<T*>(Data::dataStart(d, IX_ALIGNOF(typename Data::AlignmentDummy))) + offset);
+            dp.copyAppend(this->constBegin(), this->constBegin() + std::min(this->size, capacity - offset));
+            swap(dp);
+            return;
+        }
+
         // ### optimize me: there may be cases when moving is not obligatory
         const xsizetype gap = this->freeSpaceAtBegin();
-        if (this->d && !grows && gap) {
+        if (!grows && gap) {
             iterator oldBegin = this->begin();
             this->ptr -= gap;
             ::memmove(static_cast<void *>(this->begin()), static_cast<void *>(oldBegin),
                       this->size * sizeof(T));
         }
 
+        const xsizetype offset = this->freeSpaceAtBegin();
         Data* d = Data::reallocateUnaligned(this->d, alloc, options);
+        IX_CHECK_PTR(d);
         this->d = d;
-        this->ptr = static_cast<T*>(d->data().value());
+        this->ptr = static_cast<T*>(Data::dataStart(d, IX_ALIGNOF(typename Data::AlignmentDummy))) + offset;
+        this->size = std::min(this->size, xsizetype(d->allocatedCapacity()) - offset);
     }
 
     void appendInitialize(size_t newSize) {
@@ -371,23 +344,34 @@ public:
         IX_ASSERT(where >= this->begin() && where <= this->end());
         IX_ASSERT(b <= e);
         IX_ASSERT(e <= where || b > this->end() || where == this->end()); // No overlap or append
-        IX_ASSERT((e - b) <= this->freeSpaceAtEnd());
 
-        ::memmove(static_cast<void *>(where + (e - b)), static_cast<void *>(where),
-                  (static_cast<const T*>(this->end()) - where) * sizeof(T));
-        ::memcpy(static_cast<void *>(where), static_cast<const void *>(b), (e - b) * sizeof(T));
-        this->size += (e - b);
+        const xsizetype n = e - b;
+        if (where == this->begin() && this->size && n <= this->freeSpaceAtBegin()) {
+            this->ptr -= n;
+            where -= n;
+        } else {
+            IX_ASSERT(n <= this->freeSpaceAtEnd());
+            ::memmove(static_cast<void *>(where + n), static_cast<void *>(where),
+                      (static_cast<const T*>(this->end()) - where) * sizeof(T));
+        }
+        ::memcpy(static_cast<void *>(where), static_cast<const void *>(b), n * sizeof(T));
+        this->size += n;
         return where;
     }
 
     iterator insert(T *where, size_t n, T t) {
         IX_ASSERT(!this->isShared() || (n == 0 && where == this->end()));
         IX_ASSERT(where >= this->begin() && where <= this->end());
-        IX_ASSERT(size_t(this->freeSpaceAtEnd()) >= n);
 
         const size_t count = n;
-        ::memmove(static_cast<void *>(where + n), static_cast<void *>(where),
-                  (static_cast<const T*>(this->end()) - where) * sizeof(T));
+        if (where == this->begin() && this->size && xsizetype(n) <= this->freeSpaceAtBegin()) {
+            this->ptr -= n;
+            where -= n;
+        } else {
+            IX_ASSERT(size_t(this->freeSpaceAtEnd()) >= n);
+            ::memmove(static_cast<void *>(where + n), static_cast<void *>(where),
+                      (static_cast<const T*>(this->end()) - where) * sizeof(T));
+        }
         this->size += xsizetype(n); // PODs can't throw on copy
         while (n--)
             *where++ = t;
@@ -429,7 +413,7 @@ public:
         IX_ASSERT(this->isMutable() || b == e);
         IX_ASSERT(!this->isShared() || b == e);
         IX_ASSERT(b <= e);
-        IX_ASSERT(size_t(e - b) <= this->allocatedCapacity() - this->size);
+        IX_ASSERT(e - b <= this->freeSpaceAtEnd());
 
         insert(this->end(), b, e);
     }
@@ -439,7 +423,7 @@ public:
         IX_ASSERT(this->isMutable() || b == e);
         IX_ASSERT(!this->isShared() || b == e);
         const xsizetype distance = std::distance(b, e);
-        IX_ASSERT(distance >= 0 && size_t(distance) <= this->allocatedCapacity() - this->size);
+        IX_ASSERT(distance >= 0 && distance <= this->freeSpaceAtEnd());
 
         T *iter = this->end();
         for (; b != e; ++iter, ++b) {
@@ -450,7 +434,7 @@ public:
 
     void copyAppend(size_t n, T t) {
         IX_ASSERT(!this->isShared() || n == 0);
-        IX_ASSERT(this->allocatedCapacity() - size_t(this->size) >= n);
+        IX_ASSERT(xsizetype(n) <= this->freeSpaceAtEnd());
 
         // Preserve the value, because it might be a reference to some part of the moved chunk
         T tmp(t);
@@ -474,19 +458,6 @@ public:
         IX_ASSERT(this->freeSpaceAtEnd() >= n);
         // b might be updated so use [b, n)
         this->copyAppend(b, b + n);
-    }
-
-private:
-    Data* clone(typename Data::ArrayOptions options) const {
-        Data* d = Data::allocate(detachCapacity(size), options);
-        iArrayDataPointer copy(d, static_cast<T*>(d->data().value()), 0);
-        if (size)
-            copy.copyAppend(begin(), end());
-
-        d = copy.d;
-        copy.d = IX_NULLPTR;
-        copy.ptr = IX_NULLPTR;
-        return d;
     }
 
 protected:

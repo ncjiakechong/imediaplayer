@@ -264,33 +264,10 @@ void iINCStream::channelAllocationFinished(iSharedDataPointer<iINCOperation> ope
 
     IX_ASSERT(STATE_ATTACHING == stream->m_state);
     stream->m_channelId = channelId;
-    if (!peerWantsShmNegotiation) {
-        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
-                    "] Stream attached, mode=", stream->m_mode);
-        stream->m_context->registerChannel(stream, static_cast<MemType>(0), iByteArray(), 0);
-        iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
-        return;
-    }
-
-    // Server replied with SHM negotiation result
-    xuint16 negotiontedShmType = 0;
-    iByteArray shmName;
-    xint32 shmSize = 0;
-    if (!result.getUint16(negotiontedShmType)
-        || (0 == negotiontedShmType)
-        || !result.getBytes(shmName)
-        || !result.getInt32(shmSize)
-        || !result.eof()) {
-        ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
-                    "] Stream attached, mode=", stream->m_mode, " and no negotiated SHM");
-        stream->m_context->registerChannel(stream, static_cast<MemType>(0), iByteArray(), 0);
-        iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
-        return;
-    }
-
+    // A negotiated SHM pool was already enabled on the IO thread when this ACK was read.
     ilog_info("[", stream->objectName(), "][", stream->m_channelId, "][", op->sequenceNumber(),
-                "] Stream attached, mode=", stream->m_mode, " and with SHM ", negotiontedShmType);
-    stream->m_context->registerChannel(stream, static_cast<MemType>(negotiontedShmType), shmName, shmSize);
+                "] Stream attached, mode=", stream->m_mode, " SHM negotiation=", peerWantsShmNegotiation);
+    stream->m_context->registerChannel(stream);
     iObject::invokeMethod(stream, &iINCStream::setState, STATE_ATTACHED);
 }
 

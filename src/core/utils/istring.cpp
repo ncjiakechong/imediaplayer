@@ -1284,22 +1284,7 @@ void iString::reallocData(xsizetype alloc, Data::ArrayOptions option)
         d = dd;
     } else {
         d.reallocate(alloc, option);
-    }
-}
-
-void iString::reallocGrowData(xsizetype n)
-{
-    if (!n)  // expected to always allocate
-        n = 1;
-
-    if (d.needsDetach()) {
-        DataPointer dd(DataPointer::allocateGrow(d, n, Data::GrowsForward));
-        IX_CHECK_PTR(dd.data());
-        dd.copyAppend(d.data(), d.data() + d.size);
-        dd.data()[dd.size] = 0;
-        d = dd;
-    } else {
-        d.reallocate(d.allocatedCapacity() + n, Data::GrowsForward);
+        d.data()[d.size] = 0;
     }
 }
 
@@ -1386,6 +1371,12 @@ iString &iString::operator=(iChar ch)
     this string.
 */
 
+static inline void ix_insert_copy(iChar *dst, iStringView src)
+{ std::copy(src.begin(), src.end(), dst); }
+
+static inline void ix_insert_copy(iChar *dst, iLatin1StringView src)
+{ ix_from_latin1(reinterpret_cast<xuint16 *>(dst), src.data(), size_t(src.size())); }
+
 /*! \internal
     T is a view or a container on/of iChar, xuint16, or char
 */
@@ -1399,7 +1390,15 @@ static void insert_helper(iString &str, xsizetype i, const T &toInsert)
     const xsizetype oldSize = str_d.size;
     const xsizetype insert_size = toInsert.size();
     const xsizetype newSize = str_d.size + difference + insert_size;
-    const iMemBlock::ArrayOptions side = i == 0 ? iMemBlock::GrowsForward : iMemBlock::GrowsForward;
+
+    if (i == 0 && oldSize && !str_d.needsDetach()) {
+        // Prepend into front room like iByteArray, so repeated prepends stay amortized O(1).
+        str_d.detachAndGrow(iMemBlock::GrowsBackwards, insert_size, IX_NULLPTR, IX_NULLPTR);
+        IX_CHECK_PTR(str_d.data());
+        ix_insert_copy(reinterpret_cast<iChar *>(str_d.insert(str_d.begin(), size_t(insert_size), xuint16(0))), toInsert);
+        str_d.data()[str_d.size] = 0;
+        return;
+    }
 
     if (str_d.needsDetach() || needsReallocate(str, newSize)) {
         const iChar *cbegin = str.constBegin();
@@ -1407,7 +1406,7 @@ static void insert_helper(iString &str, xsizetype i, const T &toInsert)
         const iChar *insert_start = difference == 0 ? (cbegin + i) : cend;
         iString other;
 
-        other.data_ptr().detachAndGrow(side, newSize, IX_NULLPTR, IX_NULLPTR);
+        other.data_ptr().detachAndGrow(iMemBlock::GrowsForward, newSize, IX_NULLPTR, IX_NULLPTR);
         other.append(iStringView(cbegin, insert_start - cbegin));
         other.resize(i, ((xuint16)' '));
         other.append(toInsert);
@@ -1416,7 +1415,7 @@ static void insert_helper(iString &str, xsizetype i, const T &toInsert)
         return;
     }
 
-    str_d.detachAndGrow(side, difference + insert_size, IX_NULLPTR, IX_NULLPTR);
+    str_d.detachAndGrow(iMemBlock::GrowsForward, difference + insert_size, IX_NULLPTR, IX_NULLPTR);
     IX_CHECK_PTR(str_d.data());
     str.resize(newSize);
 
@@ -1427,7 +1426,7 @@ static void insert_helper(iString &str, xsizetype i, const T &toInsert)
     if (difference == 0)
         std::copy_backward(insert_start, old_end, reinterpret_cast<iChar *>(str_d.end()));
 
-    std::copy(toInsert.begin(), toInsert.end(), insert_start);
+    ix_insert_copy(insert_start, toInsert);
 }
 
 /*!
@@ -5180,6 +5179,11 @@ iString iString::repeated(xsizetype times) const
             return *this;
         return iString();
     }
+
+    const xsizetype maxResultSize = ((std::numeric_limits<xsizetype>::max)()
+        - sizeof(iMemBlock) - sizeof(iChar)) / sizeof(iChar);
+    if (times > maxResultSize / d.size)
+        return iString();
 
     const xsizetype resultSize = times * d.size;
 

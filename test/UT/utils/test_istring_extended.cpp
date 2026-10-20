@@ -2,6 +2,11 @@
 // Tests cover: Unicode operations, advanced string manipulation, performance
 
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <limits>
+#include <random>
+#include <string>
+#include <vector>
 #include "core/utils/istring.h"
 #include "core/utils/istringconverter.h"
 #include "core/utils/ibytearray.h"
@@ -22,6 +27,26 @@ protected:
         // Cleanup code if needed
     }
 };
+
+TEST_F(StringExtendedTest, RepeatedPreservesValueAndCountBoundaries) {
+    const iString source("ab");
+    EXPECT_TRUE(source.repeated(-1).isEmpty());
+    EXPECT_TRUE(source.repeated(0).isEmpty());
+    EXPECT_EQ(source, source.repeated(1));
+    EXPECT_EQ(iString("ababab"), source.repeated(3));
+    EXPECT_EQ(iString("ab"), source);
+}
+
+TEST_F(StringExtendedTest, RepeatedRejectsOversizedResult) {
+    const xsizetype maximum = (std::numeric_limits<xsizetype>::max)();
+    const iString source("abcd");
+    EXPECT_TRUE(source.repeated(maximum / source.size() + 1).isEmpty());
+    EXPECT_TRUE(source.repeated(maximum).isEmpty());
+    EXPECT_TRUE(iString("ab").repeated(maximum / 2).isEmpty());
+    EXPECT_TRUE(iString("x").repeated(maximum / sizeof(iChar)).isEmpty());
+    EXPECT_TRUE(iString().repeated(maximum).isEmpty());
+    EXPECT_EQ(iString("abcd"), source);
+}
 
 // Test 1: Unicode string construction
 TEST_F(StringExtendedTest, UnicodeConstruction) {
@@ -787,4 +812,136 @@ TEST_F(StringExtendedTest, JustifyRepeatFillChopSection) {
     EXPECT_EQ(iString("abc"), ins);
 
     EXPECT_EQ(iString("b"), iString("a,b,c").section(iChar(','), 1, 1));
+}
+
+TEST_F(StringExtendedTest, GrowthAfterFrontRemovalKeepsContent) {
+    iString s("abcd");
+    s = s.mid(1);
+    s += iString("xyz");
+    EXPECT_EQ(iString("bcdxyz"), s);
+
+    iString t("abcd");
+    t.remove(0, 1);
+    t.append(iChar('e'));
+    EXPECT_EQ(iString("bcde"), t);
+
+    for (int size = 1; size <= 300; size += 7) {
+        for (int cut = 1; cut < size; cut += 13) {
+            std::string model;
+            for (int i = 0; i < size; ++i)
+                model += char('a' + i % 26);
+            iString value(iLatin1StringView(model.data(), size));
+
+            value.remove(0, cut);
+            model.erase(0, cut);
+            value.append(iString(cut + 3, iChar('Z')));
+            model.append(cut + 3, 'Z');
+            value.prepend(iChar('P'));
+            model.insert(model.begin(), 'P');
+            value.append(value);
+            model += model;
+            const iByteArray latin1 = value.toLatin1();
+            ASSERT_EQ(model, std::string(latin1.constData(), latin1.size())) << size << "/" << cut;
+        }
+    }
+}
+
+TEST_F(StringExtendedTest, ReallocatedSliceIsNulTerminated) {
+    iString viewed = iString("hello world").left(5);
+    EXPECT_EQ(0, viewed.utf16()[5]);
+    EXPECT_EQ(iString("hello"), viewed);
+
+    iString reserved = iString("hello world").left(5);
+    reserved.reserve(64);
+    EXPECT_EQ(iString("hello"), reserved);
+    EXPECT_EQ(0, reserved.constData()[5].unicode());
+}
+
+TEST_F(StringExtendedTest, RepeatedPrependReusesFrontRoom) {
+    iString s(iLatin1StringView("tail"));
+    s.prepend(iChar('x'));
+    const xsizetype room = s.data_ptr().freeSpaceAtBegin();
+    ASSERT_GT(room, 0);
+
+    const void* block = s.data_ptr().d_ptr();
+    for (xsizetype k = 0; k < room; ++k)
+        s.prepend(iLatin1StringView("p"));
+    EXPECT_EQ(block, static_cast<const void*>(s.data_ptr().d_ptr()));
+    EXPECT_EQ(0, s.data_ptr().freeSpaceAtBegin());
+
+    const iByteArray latin1 = s.toLatin1();
+    EXPECT_EQ(std::string(size_t(room), 'p') + "xtail", std::string(latin1.constData(), size_t(latin1.size())));
+    EXPECT_EQ(0, s.constData()[s.size()].unicode());
+}
+
+TEST_F(StringExtendedTest, Latin1InsertKeepsHighBytes) {
+    const char e9[] = "\xE9";
+    iString middle(iLatin1StringView("ab"));
+    middle.reserve(16);
+    middle.insert(1, iLatin1StringView(e9, 1));
+    EXPECT_EQ(0xE9, middle.at(1).unicode());
+
+    iString front(iLatin1StringView("ab"));
+    front.reserve(16);
+    front.prepend(iLatin1StringView(e9, 1));
+    EXPECT_EQ(0xE9, front.at(0).unicode());
+}
+
+TEST_F(StringExtendedTest, RandomEditsMatchStdStringModel) {
+    for (unsigned seed = 1; seed <= 6; ++seed) {
+        std::mt19937 rng(seed);
+        std::string model("seed");
+        iString value(iLatin1StringView("seed"));
+        std::vector<iString> sharers; // copies and slices force the detach paths
+        for (int step = 0; step < 400; ++step) {
+            const xsizetype size = value.size();
+            const xsizetype pos = xsizetype(rng() % (size + 1));
+            const xsizetype len = xsizetype(rng() % 40);
+            const char ch = (rng() % 2) ? char('a' + rng() % 26) : char(0xC0 + rng() % 32);
+            const std::string text(size_t(len), ch);
+            const int op = int(rng() % 8);
+            switch (op) {
+            case 0:
+                value.prepend(iLatin1StringView(text.data(), len));
+                model.insert(0, text);
+                break;
+            case 1:
+                value.insert(pos, iLatin1StringView(text.data(), len));
+                model.insert(size_t(pos), text);
+                break;
+            case 2:
+                value.prepend(value.mid(pos, len));
+                model.insert(0, model.substr(size_t(pos), size_t(len)));
+                break;
+            case 3: {
+                const xsizetype n = std::min(len, size - pos);
+                value.insert(pos, iStringView(value.constData() + pos, n));
+                model.insert(size_t(pos), model.substr(size_t(pos), size_t(n)));
+                break;
+            }
+            case 4:
+                value.remove(pos, len);
+                if (pos < size)
+                    model.erase(size_t(pos), size_t(len));
+                break;
+            case 5:
+                sharers.push_back((rng() % 2) ? value : value.mid(pos, len));
+                if (sharers.size() > 3)
+                    sharers.erase(sharers.begin());
+                break;
+            case 6:
+                value.append(iLatin1StringView(text.data(), len));
+                model += text;
+                break;
+            default:
+                value.chop(len);
+                model.resize(size_t(std::max<xsizetype>(0, size - len)));
+                break;
+            }
+            const iByteArray latin1 = value.toLatin1();
+            ASSERT_EQ(model, std::string(latin1.constData(), size_t(latin1.size())))
+                << "seed " << seed << " step " << step << " op " << op;
+            ASSERT_EQ(0, value.constData()[value.size()].unicode()) << "seed " << seed << " step " << step << " op " << op;
+        }
+    }
 }

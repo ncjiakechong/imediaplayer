@@ -79,7 +79,7 @@ public:
 
     /// Enable shared memory with existing pool
     void enableMempool(iSharedDataPointer<iMemPool> pool);
-    iSharedDataPointer<iMemPool> mempool() const { return m_memPool; }
+    iSharedDataPointer<iMemPool> mempool() const { return iSharedDataPointer<iMemPool>(m_memPool.load()); }
 
     /// Get runtime metrics for this protocol instance
     const iINCMetrics& metrics() const { return m_metrics; }
@@ -118,6 +118,15 @@ private:
     static void operationDeleter(iINCOperation* op, void* userData);
     void releaseLease(iINCOperation* op);
 
+    /// Lives on the stack around user callbacks, which may delete the protocol; the destructor flags every live one.
+    struct DeleteGuard {
+        explicit DeleteGuard(iINCProtocol* protocol) : owner(protocol), outer(protocol->m_deleteGuard), deleted(false) { protocol->m_deleteGuard = this; }
+        ~DeleteGuard() { if (!deleted) owner->m_deleteGuard = outer; }
+        iINCProtocol* owner;
+        DeleteGuard* outer;
+        bool deleted;
+    };
+
     iINCDevice*             m_device;
     iAtomicCounter<xuint32> m_seqCounter;
 
@@ -132,23 +141,22 @@ private:
 
     // Shared memory support for zero-copy binary transfer
     iByteArray              m_pollName;
-    iSharedDataPointer<iMemPool> m_memPool;
+    iAtomicPointer<iMemPool> m_memPool;
     iAtomicPointer<iMemImport> m_memImport;
 
     // Operation tracking (centralized in protocol layer) with custom allocator
     #if __cplusplus >= 201103L
     typedef std::unordered_map<xuint32, iINCOperation*, 
-                     std::hash<xuint32>,
-                     std::equal_to<xuint32>,
+                     std::hash<xuint32>, std::equal_to<xuint32>,
                      iCacheAllocator<std::pair<const xuint32, iINCOperation*> > > OperationsMap;
     #else
-    typedef std::map<xuint32, iINCOperation*, 
-                     std::less<xuint32> > OperationsMap;
+    typedef std::map<xuint32, iINCOperation*, std::less<xuint32> > OperationsMap;
     #endif
     OperationsMap               m_operations;  ///< Maps seqNum -> operation (uses lock-free pool)
     iSharedDataPointer<iINCOperationPool> m_opPool;
 
     iINCMetrics                 m_metrics;     ///< Per-connection metrics (lock-free)
+    DeleteGuard*                m_deleteGuard;
 
     IX_DISABLE_COPY(iINCProtocol)
 };

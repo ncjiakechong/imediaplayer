@@ -270,3 +270,46 @@ TEST_F(ICoreApplicationTest, DISABLED_ExitMethod) {
     // Application should still be valid
     EXPECT_NE(iCoreApplication::instance(), nullptr);
 }
+
+class NestedDispatchReceiver : public iObject {
+public:
+    iObject* later = IX_NULLPTR;
+    iEventLoop* loop = IX_NULLPTR;
+    int nestedRuns = 0;
+
+    bool event(iEvent* e) override {
+        if (e->type() == iEvent::User) {
+            // the nested loop delivers the entries behind the outer iterator
+            iEventLoop nested;
+            loop = &nested;
+            iCoreApplication::postEvent(this, new iEvent(iEvent::User + 1));
+            nested.exec();
+            loop = IX_NULLPTR;
+            iCoreApplication::postEvent(later, new iEvent(iEvent::User + 2));
+            iCoreApplication::dispatchPostedEvents(IX_NULLPTR, iEvent::DeferredDelete);
+            ++nestedRuns;
+            return true;
+        }
+        if (e->type() == iEvent::User + 1) {
+            loop->exit(0);
+            return true;
+        }
+        return iObject::event(e);
+    }
+};
+
+TEST_F(ICoreApplicationTest, NestedDispatchKeepsOuterLoopValid) {
+    NestedDispatchReceiver nester;
+    EventReceiver tail;
+    EventReceiver later;
+    nester.later = &later;
+
+    iCoreApplication::postEvent(&nester, new iEvent(iEvent::User));
+    iCoreApplication::postEvent(&tail, new iEvent(iEvent::User + 3));
+    iCoreApplication::dispatchPostedEvents(IX_NULLPTR, 0);
+    iCoreApplication::dispatchPostedEvents(IX_NULLPTR, 0);
+
+    EXPECT_EQ(1, nester.nestedRuns);
+    EXPECT_EQ(1, tail.customEventCount);
+    EXPECT_EQ(1, later.customEventCount);
+}

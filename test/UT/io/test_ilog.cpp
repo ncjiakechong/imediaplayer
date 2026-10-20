@@ -264,6 +264,30 @@ TEST_F(LoggerTest, AsprintfMethod) {
     SUCCEED();
 }
 
+TEST_F(LoggerTest, AsprintfReportsStoredLength) {
+    iLogTarget target = {nullptr, customSetThreshold, customFilter, nullptr, customDataCallback};
+    target.metaCallback = [](void*, const char*, iLogLevel, const char*, const char*, int,
+                             const char* message, int length) {
+        ASSERT_GE(length, 0);
+        ASSERT_LE(length, 127);
+        captured_messages.push_back(std::string(message, static_cast<size_t>(length)));
+    };
+    const iLogTarget previousTarget = iLogger::setDefaultTarget(target);
+    const size_t messageSizes[] = {0, 1, 126, 127, 128, 300};
+    std::vector<std::string> expected;
+    for (size_t messageSize : messageSizes) {
+        const std::string message(messageSize, 'x');
+        expected.push_back(message.substr(0, 127));
+        iLogger::asprintf("FORMAT", ILOG_INFO, __FILE__, __FUNCTION__, __LINE__,
+                          "%s", message.c_str());
+    }
+    iLogger::setDefaultTarget(previousTarget);
+
+    ASSERT_EQ(expected.size(), captured_messages.size());
+    for (size_t index = 0; index < expected.size(); ++index)
+        EXPECT_EQ(expected[index], captured_messages[index]);
+}
+
 // Test 16: Multiple appends in sequence
 TEST_F(LoggerTest, MultipleAppends) {
     iLogger logger;

@@ -159,7 +159,7 @@ public:
     /// fail: 1. prebuffering is active, 2. queue is empty and no silence
     /// memblock was passed at initialization. If the queue is not empty,
     /// but we're currently at a hole in the queue and no silence memblock
-    /// was passed we return the length of the hole in chunk->length.
+    /// was passed, chunk is null (isNull()) and only its size() is valid: the hole length.
     int peek(iByteArray& chunk);
 
     /// Much like peek, but guarantees that the returned chunk

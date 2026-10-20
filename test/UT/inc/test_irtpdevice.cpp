@@ -181,12 +181,12 @@ TEST(RtpBackpressureRegression, WritableCallbackCanCloseOrDeleteServer)
                         else server->close();
                     }));
             }));
-        iRtpDevice clients[] = {
-            iRtpDevice(iINCDevice::ROLE_CLIENT), iRtpDevice(iINCDevice::ROLE_CLIENT)
-        };
+        iRtpDevice firstClient(iINCDevice::ROLE_CLIENT);
+        iRtpDevice secondClient(iINCDevice::ROLE_CLIENT);
+        iRtpDevice* clients[] = {&firstClient, &secondClient};
         for (size_t index = 0; index < 2; ++index) {
-            ASSERT_EQ(0, clients[index].connectToHost(iString("127.0.0.1"), server->localPort()));
-            ASSERT_GT(clients[index].writeMessage(iINCMessage(INC_MSG_EVENT, 1, 1), 0), 0);
+            ASSERT_EQ(0, clients[index]->connectToHost(iString("127.0.0.1"), server->localPort()));
+            ASSERT_GT(clients[index]->writeMessage(iINCMessage(INC_MSG_EVENT, 1, 1), 0), 0);
             pollfd readable = {server->socketDescriptor(), POLLIN, 0};
             ASSERT_EQ(1, ::poll(&readable, 1, 1000));
             server->processRx();
@@ -218,6 +218,70 @@ public:
         delete owned;
     }
 };
+
+TEST(DatagramCallbackRegression, NewPeerCallbackCanCloseOrDeletePeer)
+{
+    for (int rtp = 0; rtp < 2; ++rtp) {
+        for (int destroy = 0; destroy < 2; ++destroy) {
+            SCOPED_TRACE(rtp);
+            SCOPED_TRACE(destroy);
+            iObject observer;
+            std::unique_ptr<iINCDevice> server(rtp
+                ? static_cast<iINCDevice*>(new iRtpDevice(iINCDevice::ROLE_SERVER))
+                : static_cast<iINCDevice*>(new iUDPDevice(iINCDevice::ROLE_SERVER)));
+            std::vector<std::unique_ptr<iINCDevice> > peers;
+            int accepted = 0;
+            int rejectedMessages = 0;
+            int descriptor = -1;
+            xuint16 port = 0;
+            if (rtp) {
+                iRtpDevice* device = static_cast<iRtpDevice*>(server.get());
+                ASSERT_EQ(0, device->bindOn(iString("127.0.0.1"), 0));
+                descriptor = device->socketDescriptor();
+                port = device->localPort();
+            } else {
+                iUDPDevice* device = static_cast<iUDPDevice*>(server.get());
+                ASSERT_EQ(0, device->bindOn(iString("127.0.0.1"), 0));
+                descriptor = device->socketDescriptor();
+                port = device->localPort();
+            }
+            ASSERT_TRUE(server->startEventMonitoring(iEventDispatcher::instance()));
+            ASSERT_TRUE(iObject::connect(server.get(), &iINCDevice::newConnection, &observer,
+                [&](iINCDevice* peer) {
+                    ++accepted;
+                    if (accepted == 1) {
+                        peers.emplace_back(peer);
+                        return;
+                    }
+                    EXPECT_TRUE(iObject::connect(peer, &iINCDevice::messageReceived, &observer,
+                        [&](iINCMessage) { ++rejectedMessages; }));
+                    peer->close();
+                    if (destroy) delete peer;
+                    else peers.emplace_back(peer);
+                }));
+            std::unique_ptr<iINCDevice> clients[2];
+            for (size_t index = 0; index < 2; ++index) {
+                if (rtp) {
+                    iRtpDevice* client = new iRtpDevice(iINCDevice::ROLE_CLIENT);
+                    clients[index].reset(client);
+                    ASSERT_EQ(0, client->connectToHost(iString("127.0.0.1"), port));
+                } else {
+                    iUDPDevice* client = new iUDPDevice(iINCDevice::ROLE_CLIENT);
+                    clients[index].reset(client);
+                    ASSERT_EQ(0, client->connectToHost(iString("127.0.0.1"), port));
+                }
+                ASSERT_GT(clients[index]->writeMessage(iINCMessage(INC_MSG_PING, 0, 1), 0), 0);
+                pollfd readable = {descriptor, POLLIN, 0};
+                ASSERT_EQ(1, ::poll(&readable, 1, 1000));
+                if (rtp) static_cast<iRtpDevice*>(server.get())->processRx();
+                else static_cast<iUDPDevice*>(server.get())->processRx();
+            }
+            EXPECT_EQ(2, accepted);
+            EXPECT_EQ(0, rejectedMessages);
+            EXPECT_TRUE(server->isOpen());
+        }
+    }
+}
 
 TEST(DatagramCallbackRegression, MessageCallbackCanDeleteDevice)
 {

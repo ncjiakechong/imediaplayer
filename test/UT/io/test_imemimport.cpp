@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
 #include <core/io/imemblock.h>
 #include <core/thread/isemaphore.h>
+#include <core/utils/ibytearray.h>
 #include <atomic>
 #include <chrono>
 #include <future>
 #include <limits>
+#include <set>
 #include <thread>
 #include <vector>
 #include <cstring>
@@ -48,6 +50,17 @@ protected:
     void TearDown() override {
         delete importer;
         delete exporter;
+    }
+
+    // Wraps an import the way iINCProtocol hands SHM payloads to applications.
+    iByteArray importView(uint id, size_t at, size_t bytes) {
+        iMemBlock* block = importer->get(type, id, shmId, descriptor, at, bytes, false);
+        if (!block)
+            return iByteArray();
+        iByteArray::DataPointer dp(static_cast<iTypedArrayData<char>*>(block),
+                                   static_cast<char*>(block->data().value()), static_cast<xsizetype>(bytes));
+        block->deref();
+        return iByteArray(dp);
     }
 };
 
@@ -97,6 +110,62 @@ TEST_F(MemImportRegression, ShutdownPreservesOutstandingData)
     block->deref();
 }
 
+TEST_F(MemImportRegression, ByteArrayViewSurvivesImporterTeardown)
+{
+    iByteArray view = importView(blockId, offset, length);
+    ASSERT_FALSE(view.isNull());
+    delete importer;
+    importer = nullptr;
+    EXPECT_EQ(iByteArray(64, '\x5a'), iByteArray(view.constData(), 64));
+}
+
+TEST_F(MemImportRegression, RevokedBlockKeepsViewAndCanBeImportedAgain)
+{
+    iByteArray view = importView(blockId, offset, length);
+    ASSERT_FALSE(view.isNull());
+    ASSERT_EQ(0, importer->processRevoke(blockId));
+    EXPECT_EQ(iByteArray(64, '\x5a'), iByteArray(view.constData(), 64));
+
+    iByteArray again = importView(blockId, offset, length);
+    ASSERT_FALSE(again.isNull());
+    EXPECT_EQ(iByteArray(64, '\x5a'), iByteArray(again.constData(), 64));
+    EXPECT_EQ(iByteArray(64, '\x5a'), iByteArray(view.constData(), 64));
+}
+
+TEST_F(MemImportRegression, ImporterTeardownKeepsSegmentUntilLastView)
+{
+    iSharedDataPointer<iMemBlock> other(iMemBlock::new4Pool(pool.data(), 64));
+    ASSERT_TRUE(other);
+    std::memset(other->data().value(), 0x6b, 64);
+    uint otherId = 0, otherShmId = 0;
+    size_t otherOffset = 0, otherLength = 0;
+    ASSERT_EQ(0, exporter->put(other.data(), &type, &otherId, &otherShmId, &descriptor, &otherOffset, &otherLength));
+    ASSERT_EQ(shmId, otherShmId);
+
+    iByteArray first = importView(blockId, offset, length);
+    iByteArray second = importView(otherId, otherOffset, otherLength);
+    ASSERT_FALSE(first.isNull());
+    ASSERT_FALSE(second.isNull());
+    delete importer;
+    importer = nullptr;
+    first = iByteArray();
+    EXPECT_EQ(iByteArray(64, '\x6b'), iByteArray(second.constData(), 64));
+}
+
+TEST_F(MemImportRegression, LeaseIdsStayUniqueAcrossSlotReuse)
+{
+    std::set<uint> seen;
+    seen.insert(blockId);
+    uint current = blockId;
+    for (int round = 0; round < 3 * IMEMEXPORT_SLOTS_MAX; ++round) {
+        ASSERT_EQ(0, exporter->processRelease(current));
+        ASSERT_EQ(-1, exporter->processRelease(current));
+        ASSERT_EQ(0, exporter->put(source.data(), &type, &current, &shmId, &descriptor, &offset, &length));
+        EXPECT_TRUE(seen.insert(current).second);
+    }
+    EXPECT_EQ(-1, exporter->processRelease(0));
+}
+
 TEST_F(MemImportRegression, RejectsOverflowAndConflictingCachedRange)
 {
     EXPECT_EQ(nullptr, importer->get(type, blockId, shmId, descriptor,
@@ -105,6 +174,51 @@ TEST_F(MemImportRegression, RejectsOverflowAndConflictingCachedRange)
     ASSERT_NE(nullptr, block);
     EXPECT_EQ(nullptr, importer->get(type, blockId, shmId, descriptor, offset, length + 1, false));
     block->deref();
+}
+
+TEST_F(MemImportRegression, ReusedExportSlotPreservesOutstandingImport)
+{
+    iMemBlock* previous = importer->get(type, blockId, shmId, descriptor, offset, length, false);
+    ASSERT_NE(nullptr, previous);
+    const uint previousId = blockId;
+    EXPECT_EQ(0, exporter->processRelease(previousId));
+
+    iSharedDataPointer<iMemBlock> replacement(iMemBlock::new4Pool(pool.data(), 64));
+    ASSERT_TRUE(replacement);
+    std::memset(replacement->data().value(), 0x6b, 64);
+    ASSERT_EQ(0, exporter->put(replacement.data(), &type, &blockId, &shmId,
+        &descriptor, &offset, &length));
+    EXPECT_NE(previousId, blockId);
+
+    iMemBlock* current = importer->get(type, blockId, shmId, descriptor, offset, length, false);
+    ASSERT_NE(nullptr, current);
+    EXPECT_NE(previous, current);
+    EXPECT_EQ(0x5a, static_cast<const unsigned char*>(previous->data().value())[0]);
+    EXPECT_EQ(0x6b, static_cast<const unsigned char*>(current->data().value())[0]);
+    EXPECT_EQ(-1, exporter->processRelease(previousId));
+    EXPECT_EQ(1, pool->getStat().nExported.value());
+    EXPECT_EQ(0, exporter->processRelease(blockId));
+
+    previous->deref();
+    current->deref();
+    EXPECT_EQ(2, releases.load());
+    EXPECT_EQ(0, pool->getStat().nImported.value());
+}
+
+TEST_F(MemImportRegression, InterleavedExportersKeepLeaseIdsDistinct)
+{
+    iMemExport other(pool.data(), revoke, nullptr);
+    uint otherId = 0;
+    ASSERT_EQ(0, other.put(source.data(), &type, &otherId, &shmId,
+        &descriptor, &offset, &length));
+    ASSERT_EQ(0, exporter->processRelease(blockId));
+    ASSERT_EQ(0, exporter->put(source.data(), &type, &blockId, &shmId,
+        &descriptor, &offset, &length));
+
+    EXPECT_NE(otherId, blockId);
+    EXPECT_EQ(-1, other.processRelease(blockId));
+    EXPECT_EQ(-1, exporter->processRelease(otherId));
+    EXPECT_EQ(0, other.processRelease(otherId));
 }
 
 TEST_F(MemImportRegression, ReleaseCallbackDoesNotHoldImportLock)

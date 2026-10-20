@@ -355,8 +355,8 @@ void iCoreApplication::dispatchPostedEvents(iObject *receiver, int event_type)
             --data->postEventList.recursion;
 
             // clear the global list, i.e. remove everything that was
-            // delivered.
-            if (!event_type && !receiver && data->postEventList.startOffset >= 0) {
+            // delivered. Only the outermost pass may: an outer one still holds an iterator.
+            if (!event_type && !receiver && !data->postEventList.recursion && data->postEventList.startOffset >= 0) {
                 iPostEventList::iterator itBegin = data->postEventList.begin();
                 iPostEventList::iterator itEnd = data->postEventList.begin();
                 std::advance(itEnd, data->postEventList.startOffset);
@@ -384,15 +384,18 @@ void iCoreApplication::dispatchPostedEvents(iObject *receiver, int event_type)
 
     iPostEventList::iterator it = threadData->postEventList.begin();
     std::advance(it, idx);
+    int itPos = idx;
     // No drain inside this loop: insertionOffset already defers anything newly posted
     // to the next pass, and every re-entrant path drains for itself.
-    while ((idx < threadData->postEventList.size()) && (it != threadData->postEventList.end())) {
+    while (idx < threadData->postEventList.size()) {
         // avoid live-lock
         if (idx >= threadData->postEventList.insertionOffset)
             break;
 
+        std::advance(it, idx - itPos);
         iEvent*& slot = *it;
-        ++idx; ++it;
+        itPos = ++idx;
+        ++it;
 
         if (!slot)
             continue;

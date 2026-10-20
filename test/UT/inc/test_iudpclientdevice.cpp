@@ -3,11 +3,15 @@
 #include "inc/iudpdevice.h"
 #include <core/inc/iincmessage.h>
 #include <core/inc/iincerror.h>
+#include <core/kernel/ieventdispatcher.h>
 #include <core/kernel/ipoll.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <chrono>
+#include <memory>
+#include <vector>
 
 using namespace iShell;
 
@@ -228,4 +232,65 @@ TEST_F(iUDPClientDeviceTest, EventMonitoring) {
     
     clientDevice.configEventAbility(true, true);
     EXPECT_EQ(clientDevice.eventAbility(), IX_IO_IN | IX_IO_OUT);
+}
+
+static void sendDatagram(int sock, xuint16 port) {
+    struct sockaddr_in to;
+    memset(&to, 0, sizeof(to));
+    to.sin_family = AF_INET;
+    to.sin_addr.s_addr = inet_addr("127.0.0.1");
+    to.sin_port = htons(port);
+    char datagram[64] = {};
+    sendto(sock, datagram, sizeof(datagram), 0, (struct sockaddr*)&to, sizeof(to));
+}
+
+template <typename Done>
+static void pumpUntil(Done done, int milliseconds) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
+    while (!done() && std::chrono::steady_clock::now() < deadline)
+        iEventDispatcher::instance()->processEvents(iEventLoop::AllEvents);
+}
+
+TEST_F(iUDPClientDeviceTest, RejectedPendingClientIsForgotten) {
+    ASSERT_EQ(m_serverDevice->bindOn("127.0.0.1", 0), INC_OK);
+    ASSERT_TRUE(m_serverDevice->startEventMonitoring(iEventDispatcher::instance()));
+    iObject listener;
+    std::vector<std::unique_ptr<iINCDevice> > rejected;
+    // reject the way iINCServer does when maxConnections is reached
+    iObject::connect(m_serverDevice, &iINCDevice::newConnection, &listener, [&](iINCDevice* device) {
+        device->close();
+        rejected.emplace_back(device);
+    });
+    int clientSock = socket(AF_INET, SOCK_DGRAM, 0);
+    ASSERT_GE(clientSock, 0);
+
+    for (size_t round = 1; round <= 3; ++round) {
+        sendDatagram(clientSock, m_serverDevice->localPort());
+        pumpUntil([&]() { return rejected.size() >= round; }, 1000);
+    }
+    // a datagram left unread would be announced again
+    pumpUntil([]() { return false; }, 50);
+    EXPECT_EQ(3u, rejected.size());
+    close(clientSock);
+}
+
+TEST_F(iUDPClientDeviceTest, ServerCloseLeavesAcceptedPendingClientToOwner) {
+    ASSERT_EQ(m_serverDevice->bindOn("127.0.0.1", 0), INC_OK);
+    ASSERT_TRUE(m_serverDevice->startEventMonitoring(iEventDispatcher::instance()));
+    iObject listener;
+    std::unique_ptr<iINCDevice> accepted;
+    iUDPDevice* server = m_serverDevice;
+    iObject::connect(m_serverDevice, &iINCDevice::newConnection, &listener, [&](iINCDevice* device) {
+        accepted.reset(device);
+        server->close();  // shut down while the accepted client is still pending
+    });
+    int clientSock = socket(AF_INET, SOCK_DGRAM, 0);
+    ASSERT_GE(clientSock, 0);
+
+    sendDatagram(clientSock, m_serverDevice->localPort());
+    pumpUntil([&]() { return accepted.get() != nullptr; }, 1000);
+    ASSERT_TRUE(accepted.get() != nullptr);
+    EXPECT_FALSE(accepted->isOpen());
+    accepted.reset();
+    close(clientSock);
 }

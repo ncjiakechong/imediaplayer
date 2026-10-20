@@ -125,6 +125,7 @@ private:
     void onErrorOccurred(iINCConnection* conn, xint32 errorCode);
 
     void handleHandshakeAck(iINCConnection* conn, const iINCMessage& msg);
+    void handleStreamOpenAck(iINCConnection* conn, const iINCMessage& msg);
     void handleEvent(iINCConnection* conn, const iINCMessage& msg);
     void scheduleReconnect();
 
@@ -150,7 +151,7 @@ private:
     iSharedDataPointer<iINCOperation> releaseChannel(xuint32 channelId);
 
     /// Register channel for stream
-    xuint32 registerChannel(iINCChannel* channel, MemType type, const iByteArray& shmName = iByteArray(), xint32 shmSize = 0);
+    xuint32 registerChannel(iINCChannel* channel);
 
     /// Unregister channel for stream
     iINCChannel* unregisterChannel(xuint32 channelId);

@@ -182,7 +182,7 @@ bool iMetaObject::inherits(const iMetaObject *metaObject) const
 
 iObject* iMetaObject::cast(iObject *obj) const
 {
-    return const_cast<iObject*>(cast(const_cast<const iObject*>(obj)));
+    return (obj && obj->metaObject()->inherits(this)) ? obj : IX_NULLPTR;
 }
 
 const iObject* iMetaObject::cast(const iObject *obj) const
@@ -286,20 +286,6 @@ iObject::~iObject()
         m_currentSender->receiverDeleted();
         m_currentSender = IX_NULLPTR;
     }
-
-    // delete children objects
-    // don't use iDeleteAll as the destructor of the child might
-    // delete siblings
-    m_isDeletingChildren = true;
-    for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
-        m_currentChildBeingDeleted = *it;
-        *it = IX_NULLPTR;
-        delete m_currentChildBeingDeleted;
-    }
-
-    m_children.clear();
-    m_currentChildBeingDeleted = IX_NULLPTR;
-    m_isDeletingChildren = false;
 
     if ((IX_NULLPTR != m_connectionLists.load()) || (IX_NULLPTR != m_senders)) {
         iMutex *signalSlotMutex = &m_signalSlotLock;
@@ -424,6 +410,21 @@ iObject::~iObject()
         if (connectionListsToRelease) { releaseConnectionData(connectionListsToRelease); }
         deleteOrphaned(orphanedToDelete);
     }
+
+    // delete children objects only after all connections are severed, so their
+    // signals cannot reach this partially destroyed object
+    // don't use iDeleteAll as the destructor of the child might
+    // delete siblings
+    m_isDeletingChildren = true;
+    for (iObjectList::iterator it = m_children.begin(); it != m_children.end(); ++it) {
+        m_currentChildBeingDeleted = *it;
+        *it = IX_NULLPTR;
+        delete m_currentChildBeingDeleted;
+    }
+
+    m_children.clear();
+    m_currentChildBeingDeleted = IX_NULLPTR;
+    m_isDeletingChildren = false;
 
     // remove it from parent object
     if (m_parent)
@@ -1377,11 +1378,20 @@ void iObject::reregisterTimers(void* args)
 {
     std::list<iEventDispatcher::TimerInfo>* timerList = static_cast<std::list<iEventDispatcher::TimerInfo>*>(args);
     iEventDispatcher *eventDispatcher = m_threadData->dispatcher.load();
+    // timers stopped or restarted by calls queued ahead of this one must not come back
+    const std::list<iEventDispatcher::TimerInfo> current = eventDispatcher->registeredTimers(this);
 
     for (std::list<iEventDispatcher::TimerInfo>::const_iterator it = timerList->begin();
          it != timerList->end();
          ++it) {
         const iEventDispatcher::TimerInfo& ti = *it;
+        if (m_runningTimers.indexOf(ti.timerId) < 0)
+            continue;
+        bool registered = false;
+        for (std::list<iEventDispatcher::TimerInfo>::const_iterator cit = current.begin(); cit != current.end(); ++cit)
+            registered = registered || (cit->timerId == ti.timerId);
+        if (registered)
+            continue;
         eventDispatcher->reregisterTimer(ti.timerId, ti.interval, ti.timerType, this, ti.userdata);
     }
 

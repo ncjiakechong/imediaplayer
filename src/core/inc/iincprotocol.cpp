@@ -55,6 +55,7 @@ iINCProtocol::iINCProtocol(iINCDevice* device, bool passthrough, iObject* parent
     , m_cachedPeerMemFd(-1)
     , m_partialSendOffset(0)
     , m_opPool(new iINCOperationPool(128))
+    , m_deleteGuard(IX_NULLPTR)
 {
     IX_ASSERT(device != IX_NULLPTR);
 
@@ -68,6 +69,9 @@ iINCProtocol::iINCProtocol(iINCDevice* device, bool passthrough, iObject* parent
 
 iINCProtocol::~iINCProtocol()
 {
+    for (DeleteGuard* guard = m_deleteGuard; guard; guard = guard->outer)
+        guard->deleted = true;
+
     iObject::disconnect(m_device, IX_NULLPTR, this, IX_NULLPTR);
 
     // Cancel all pending operations
@@ -325,16 +329,16 @@ void iINCProtocol::enableMempool(iSharedDataPointer<iMemPool> pool)
         return;
     }
 
-    if (m_memPool) {
+    if (m_memPool.load()) {
         ilog_warn("[", m_device->peerAddress(), "] Existing memory pool, ignoring");
         return;
     }
 
-    m_memPool = pool;
     m_opPool->m_memPool = pool;
     // Stored last: the atomic stores publish fully built objects to the IO thread.
     m_opPool->m_memExport = new iMemExport(pool.data(), memExportRevokeCallback, IX_NULLPTR);
     m_memImport = new iMemImport(pool.data(), memImportRevokeCallback, this);
+    m_memPool = pool.data();
 }
 
 void iINCProtocol::onMessageReceived(const iINCMessage& msg)
@@ -363,9 +367,11 @@ void iINCProtocol::onMessageReceived(const iINCMessage& msg)
 
             // Complete the operation
             releaseLease(op);
-            op->setResult(INC_OK, msg.payload().data());
             m_metrics.onOperationCompleted();
+            DeleteGuard guard(this);
+            op->setResult(INC_OK, msg.payload().data());
             op->deref();
+            if (guard.deleted) return;
         }
     }
 
@@ -398,6 +404,7 @@ void iINCProtocol::cancelAllOperations(int errorCode)
 
     // Cancel all pending operations so callers are not left waiting forever.
     // Called from iINCConnection::close() when the connection is shutting down.
+    DeleteGuard guard(this);
     while (!m_operations.empty()) {
         OperationsMap::iterator it = m_operations.begin();
         iINCOperation* op = it->second;
@@ -406,6 +413,7 @@ void iINCProtocol::cancelAllOperations(int errorCode)
         releaseLease(op);
         op->setResult(errorCode, iByteArray());
         op->deref();
+        if (guard.deleted) return;
     }
 }
 
@@ -447,8 +455,10 @@ void iINCProtocol::onReadyWrite()
                 iINCOperation* failed = operation->second;
                 m_operations.erase(operation);
                 releaseLease(failed);
+                DeleteGuard guard(this);
                 failed->setResult(INC_ERROR_WRITE_FAILED, iByteArray());
                 failed->deref();
+                if (guard.deleted) return;
             }
             IEMIT errorOccurred(INC_ERROR_WRITE_FAILED);
             return;
@@ -492,8 +502,8 @@ bool iINCProtocol::processDirectBinaryData(const iINCMessage& msg, xuint32 chann
 
     ilog_verbose("[", m_device->peerAddress(), "][", channel, "][", seqNum,
                 "] Received binary data via copy: size=", data.size());
-    IEMIT binaryDataReceived(channel, seqNum, broadcast, pos, data);
     m_metrics.onBinaryFrameRecv(data.size());
+    IEMIT binaryDataReceived(channel, seqNum, broadcast, pos, data);
     return true;
 }
 
@@ -548,8 +558,8 @@ bool iINCProtocol::processSHMBinaryData(const iINCMessage& msg, xuint32 channel,
                                 static_cast<char*>(importedBlock->data().value()),
                                 static_cast<xsizetype>(size64));
     importedBlock->deref();
-    IEMIT binaryDataReceived(channel, seqNum, broadcast, pos, iByteArray(dp));
     m_metrics.onBinaryFrameRecv(size64);
+    IEMIT binaryDataReceived(channel, seqNum, broadcast, pos, iByteArray(dp));
     return true;
 }
 

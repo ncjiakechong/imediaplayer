@@ -119,6 +119,11 @@ public:
             && udp->m_addrToChannel.empty() && !udp->m_pendingClient) {
             udp->m_pendingClient = new iUDPClientDevice(udp);
             IEMIT udp->newConnection(udp->m_pendingClient);
+            // Rejected: drop the datagram that announced it, or it is announced again forever
+            if (m_device && !udp->m_pendingClient) {
+                char discard;
+                ::recv(udp->m_sockfd, &discard, sizeof(discard), MSG_DONTWAIT);
+            }
             return true;  // Return here - protocol stack not ready yet, wait for next dispatch
         }
 
@@ -530,7 +535,8 @@ void iUDPDevice::close()
     }
 
     if (m_pendingClient) {
-        delete m_pendingClient;
+        // Owned by the newConnection() receiver; closing it makes removeClient() forget it
+        m_pendingClient->close();
         m_pendingClient = IX_NULLPTR;
     }
 
@@ -744,6 +750,8 @@ bool iUDPDevice::isLoopback(const struct sockaddr_storage& ss)
 
 void iUDPDevice::removeClient(iUDPClientDevice* client)
 {
+    if (m_pendingClient == client)
+        m_pendingClient = IX_NULLPTR;
     ClientMap::iterator it = m_addrToChannel.find(client->addrKey());
     if (it != m_addrToChannel.end()) {
         m_addrToChannel.erase(it);

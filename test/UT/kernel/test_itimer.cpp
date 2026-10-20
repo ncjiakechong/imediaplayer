@@ -5,6 +5,7 @@
 #include <core/kernel/ievent.h>
 #include <core/thread/imutex.h>
 #include <core/thread/icondition.h>
+#include <core/thread/ithread.h>
 #include <vector>
 #include <chrono>
 
@@ -15,6 +16,44 @@ static void pumpEventsFor(int milliseconds)
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(milliseconds);
     while (std::chrono::steady_clock::now() < deadline)
         iEventDispatcher::instance()->processEvents(iEventLoop::AllEvents);
+}
+
+class TimerRegistrationProbe : public iObject {
+public:
+    explicit TimerRegistrationProbe(iObject* target) : target(target), registered(-1) {}
+    void inspect() { registered = int(iThread::currentThread()->eventDispatcher()->registeredTimers(target).size()); }
+    iObject* target;
+    int registered;
+};
+
+TEST(TimerRegression, TimerChangedBeforeMigrationCompletesKeepsOneRegistration)
+{
+    iThread worker;
+    worker.start();
+
+    iTimer* stopped = new iTimer;
+    stopped->start(5);
+    iTimer* restarted = new iTimer;
+    restarted->start(5);
+    // queued here, so the worker runs them ahead of the migrated timer re-registration
+    iObject::invokeMethod(stopped, &iTimer::stop, QueuedConnection);
+    iObject::invokeMethod(restarted, &iTimer::setInterval, 7, QueuedConnection);
+    ASSERT_TRUE(stopped->moveToThread(&worker));
+    ASSERT_TRUE(restarted->moveToThread(&worker));
+
+    TimerRegistrationProbe* probe = new TimerRegistrationProbe(stopped);
+    ASSERT_TRUE(probe->moveToThread(&worker));
+    ASSERT_TRUE(iObject::invokeMethod(probe, &TimerRegistrationProbe::inspect, BlockingQueuedConnection));
+    EXPECT_EQ(0, probe->registered);
+    probe->target = restarted;
+    ASSERT_TRUE(iObject::invokeMethod(probe, &TimerRegistrationProbe::inspect, BlockingQueuedConnection));
+    EXPECT_EQ(1, probe->registered);
+
+    stopped->deleteLater();
+    restarted->deleteLater();
+    probe->deleteLater();
+    worker.exit();
+    worker.wait();
 }
 
 TEST(TimerRegression, TimerKeepsFiringAfterNestedLoopInsideHandler)

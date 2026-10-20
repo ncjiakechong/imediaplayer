@@ -198,6 +198,11 @@ void iLogger::asprintf(const char* tag, iLogLevel level, const char* file, const
     int log_len = vsnprintf(log_buf, sizeof(log_buf), format, ap);
     va_end(ap);
 
+    if (log_len < 0)
+        return;
+    if (log_len >= static_cast<int>(sizeof(log_buf)))
+        log_len = static_cast<int>(sizeof(log_buf)) - 1;
+
     s_target.metaCallback(s_target.user_data, tag, level, file, function, line, log_buf, log_len);
 }
 

@@ -2,9 +2,32 @@
 // Tests cover: advanced operations, edge cases, memory management
 
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <cstring>
+#include <limits>
+#include <random>
+#include <string>
+#include <vector>
+#include <core/io/imemblock.h>
 #include <core/utils/ibytearray.h>
 
 using namespace iShell;
+
+namespace {
+
+// Wraps a pool block the way iINCServer::acquireBuffer() callers do.
+iByteArray poolBackedArray(iMemPool* pool, const char* text)
+{
+    const xsizetype size = xsizetype(strlen(text));
+    iMemBlock* block = iMemBlock::new4Pool(pool, size, 1);
+    if (!block)
+        return iByteArray();
+    char* data = static_cast<char*>(block->data().value());
+    memcpy(data, text, size_t(size) + 1);
+    return iByteArray(iByteArray::DataPointer(static_cast<iTypedArrayData<char>*>(block), data, size));
+}
+
+} // namespace
 
 class ByteArrayExtendedTest : public ::testing::Test {
 protected:
@@ -16,6 +39,25 @@ protected:
         // Cleanup code if needed
     }
 };
+
+TEST_F(ByteArrayExtendedTest, RepeatedPreservesValueAndCountBoundaries) {
+    const iByteArray source("a\0b", 3);
+    EXPECT_TRUE(source.repeated(-1).isEmpty());
+    EXPECT_TRUE(source.repeated(0).isEmpty());
+    EXPECT_EQ(source, source.repeated(1));
+    EXPECT_EQ(iByteArray("a\0ba\0ba\0b", 9), source.repeated(3));
+    EXPECT_EQ(iByteArray("a\0b", 3), source);
+}
+
+TEST_F(ByteArrayExtendedTest, RepeatedRejectsOversizedResult) {
+    const xsizetype maximum = (std::numeric_limits<xsizetype>::max)();
+    const iByteArray source("abcd", 4);
+    EXPECT_TRUE(source.repeated(maximum / source.size() + 1).isEmpty());
+    EXPECT_TRUE(source.repeated(maximum).isEmpty());
+    EXPECT_TRUE(iByteArray("x", 1).repeated(maximum).isEmpty());
+    EXPECT_TRUE(iByteArray().repeated(maximum).isEmpty());
+    EXPECT_EQ(iByteArray("abcd", 4), source);
+}
 
 // Test 1: Large array operations
 TEST_F(ByteArrayExtendedTest, LargeArrayOperations) {
@@ -442,4 +484,187 @@ TEST_F(ByteArrayExtendedTest, IteratorAccess) {
     // rbegin/rend
     auto rit = ba.rbegin();
     EXPECT_EQ('c', *rit);
+}
+
+TEST_F(ByteArrayExtendedTest, GrowthAfterFrontRemovalKeepsContent) {
+    iByteArray a("abcdef");
+    a.remove(0, 1);
+    a.append('X');
+    EXPECT_EQ(iByteArray("bcdefX"), a);
+
+    iByteArray b = iByteArray("hello world").mid(1);
+    b.append('!');
+    EXPECT_EQ(iByteArray("ello world!"), b);
+
+    iByteArray c("hello");
+    c.remove(0, 1);
+    c.prepend('h');
+    EXPECT_EQ(iByteArray("hello"), c);
+
+    iByteArray d(120, 'x');
+    d.prepend('y');
+    EXPECT_EQ(121, d.size());
+    EXPECT_EQ('y', d.at(0));
+
+    for (int size = 1; size <= 300; size += 7) {
+        for (int cut = 1; cut < size; cut += 13) {
+            std::string model;
+            for (int i = 0; i < size; ++i)
+                model += char('a' + i % 26);
+            iByteArray value(model.data(), size);
+
+            value.remove(0, cut);
+            model.erase(0, cut);
+            value.append(iByteArray(cut + 3, 'Z'));
+            model.append(cut + 3, 'Z');
+            value.prepend('P');
+            model.insert(model.begin(), 'P');
+            value.prepend(3, 'Q');
+            model.insert(0, 3, 'Q');
+            value.append(value);
+            model += model;
+            ASSERT_EQ(model, std::string(value.constData(), value.size())) << size << "/" << cut;
+        }
+    }
+}
+
+TEST_F(ByteArrayExtendedTest, PoolBackedArrayGrowsByCopy) {
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("ba-grow", "ix-ba-grow", MEMTYPE_PRIVATE, 1024 * 1024, true));
+    ASSERT_TRUE(pool);
+    const int idle = pool->getStat().nAllocated;
+
+    iByteArray appended = poolBackedArray(pool.data(), "pool");
+    ASSERT_EQ(idle + 1, int(pool->getStat().nAllocated));
+    appended.append(iByteArray(1000, 'a'));
+    EXPECT_EQ(iByteArray("pool").append(iByteArray(1000, 'a')), appended);
+    EXPECT_EQ(idle, int(pool->getStat().nAllocated));
+
+    iByteArray resized = poolBackedArray(pool.data(), "pool");
+    resized.resize(1000);
+    EXPECT_EQ(1000, resized.size());
+    EXPECT_EQ(iByteArray("pool"), resized.left(4));
+
+    iByteArray reserved = poolBackedArray(pool.data(), "pool");
+    reserved.reserve(1000);
+    EXPECT_GE(reserved.capacity(), 1000);
+    EXPECT_EQ(iByteArray("pool"), reserved);
+    EXPECT_EQ('\0', reserved.constData()[reserved.size()]);
+
+    iByteArray prepended = poolBackedArray(pool.data(), "pool");
+    prepended.prepend(iByteArray(1000, 'p'));
+    EXPECT_EQ(iByteArray(1000, 'p').append(iByteArray("pool")), prepended);
+}
+
+TEST_F(ByteArrayExtendedTest, GrowingSharedSliceAllocatesForSliceOnly) {
+    const iByteArray big(1 << 20, 'x');
+    const iByteArray slices[] = { big.left(8), big.mid(1 << 19, 8), big.right(8) };
+    for (const iByteArray& slice : slices) {
+        iByteArray appended = slice;
+        appended.append('a');
+        EXPECT_EQ(iByteArray("xxxxxxxxa"), appended);
+        EXPECT_LT(appended.capacity(), 1024);
+
+        iByteArray prepended = slice;
+        prepended.prepend('p');
+        EXPECT_EQ(iByteArray("pxxxxxxxx"), prepended);
+        EXPECT_LT(prepended.capacity(), 1024);
+    }
+}
+
+TEST_F(ByteArrayExtendedTest, RegrowthKeepsFrontRoomOfSoleOwner) {
+    iByteArray a(64, 'a');
+    a.remove(0, 16);
+    ASSERT_EQ(16, a.data_ptr().freeSpaceAtBegin());
+    ASSERT_LT(a.data_ptr().freeSpaceAtEnd(), a.size());
+
+    a.append(a); // aliasing append cannot realloc() in place
+    EXPECT_EQ(16, a.data_ptr().freeSpaceAtBegin());
+
+    const void* block = a.data_ptr().d_ptr();
+    a.prepend(iByteArray(16, 'p'));
+    EXPECT_EQ(block, static_cast<const void*>(a.data_ptr().d_ptr()));
+    EXPECT_EQ(iByteArray(16, 'p').append(iByteArray(96, 'a')), a);
+}
+
+TEST_F(ByteArrayExtendedTest, ReallocatedSliceIsNulTerminated) {
+    iByteArray slice = iByteArray("hello world").left(5);
+    slice.reserve(64);
+    EXPECT_EQ(iByteArray("hello"), slice);
+    EXPECT_EQ('\0', slice.constData()[slice.size()]);
+}
+
+TEST_F(ByteArrayExtendedTest, RandomEditsMatchStdStringModel) {
+    iSharedDataPointer<iMemPool> pool(iMemPool::create("ba-model", "ix-ba-model", MEMTYPE_PRIVATE, 1024 * 1024, true));
+    ASSERT_TRUE(pool);
+    const int idle = pool->getStat().nAllocated;
+
+    for (unsigned seed = 1; seed <= 8; ++seed) {
+        std::mt19937 rng(seed);
+        std::string model("seed");
+        iByteArray value = (seed % 2) ? poolBackedArray(pool.data(), "seed") : iByteArray("seed");
+        std::vector<iByteArray> sharers; // copies and slices force the detach paths
+        for (int step = 0; step < 400; ++step) {
+            const xsizetype size = value.size();
+            const xsizetype pos = xsizetype(rng() % (size + 1));
+            const xsizetype len = xsizetype(rng() % 48);
+            const std::string text(size_t(len), char('a' + rng() % 26));
+            const int op = int(rng() % 10);
+            switch (op) {
+            case 0:
+                value.append(text.data(), len);
+                model += text;
+                break;
+            case 1:
+                value.prepend(text.data(), len);
+                model.insert(0, text);
+                break;
+            case 2:
+                value.insert(pos, text.data(), len);
+                model.insert(size_t(pos), text);
+                break;
+            case 3:
+                value.remove(pos, len);
+                if (pos < size)
+                    model.erase(size_t(pos), size_t(len));
+                break;
+            case 4: {
+                const xsizetype n = std::min(len, size - pos);
+                value.insert(pos, iByteArrayView(value.constData() + pos, n));
+                model.insert(size_t(pos), model.substr(size_t(pos), size_t(n)));
+                break;
+            }
+            case 5:
+                value.append(value.mid(pos, len));
+                model += model.substr(size_t(pos), size_t(len));
+                break;
+            case 6:
+                sharers.push_back((rng() % 2) ? value : value.mid(pos, len));
+                if (sharers.size() > 3)
+                    sharers.erase(sharers.begin());
+                break;
+            case 7: {
+                const xsizetype n = xsizetype(rng() % 160);
+                value.resize(n);
+                if (n > size)
+                    memset(value.data() + size, 'r', size_t(n - size));
+                model.resize(size_t(n), 'r');
+                break;
+            }
+            case 8:
+                if (rng() % 2)
+                    value.reserve(xsizetype(rng() % 256));
+                else
+                    value.squeeze();
+                break;
+            default:
+                value.chop(len);
+                model.resize(size_t(std::max<xsizetype>(0, size - len)));
+                break;
+            }
+            ASSERT_EQ(model, std::string(value.constData(), size_t(value.size())))
+                << "seed " << seed << " step " << step << " op " << op;
+            ASSERT_EQ('\0', value.constData()[value.size()]) << "seed " << seed << " step " << step << " op " << op;
+        }
+    }
+    EXPECT_EQ(idle, int(pool->getStat().nAllocated));
 }

@@ -1385,22 +1385,7 @@ void iByteArray::reallocData(xsizetype alloc, Data::ArrayOptions options)
         d = dd;
     } else {
         d.reallocate(alloc, options);
-    }
-}
-
-void iByteArray::reallocGrowData(xsizetype alloc, Data::ArrayOptions options)
-{
-    if (!alloc)  // expected to always allocate
-        alloc = 1;
-
-    if (d.needsDetach()) {
-        const xsizetype newSize = std::min(alloc, d.size);
-        DataPointer dd(DataPointer::allocateGrow(d, alloc, newSize, options));
-        dd.copyAppend(d.data(), d.data() + newSize);
-        dd.data()[dd.size] = 0;
-        d = dd;
-    } else {
-        d.reallocate(alloc, options);
+        d.data()[d.size] = 0;
     }
 }
 
@@ -1984,6 +1969,11 @@ iByteArray iByteArray::repeated(xsizetype times) const
             return *this;
         return iByteArray();
     }
+
+    const xsizetype maxResultSize = (std::numeric_limits<xsizetype>::max)()
+        - sizeof(iMemBlock) - sizeof(iChar);
+    if (times > maxResultSize / size())
+        return iByteArray();
 
     const xsizetype resultSize = times * size();
 

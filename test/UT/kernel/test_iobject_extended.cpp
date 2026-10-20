@@ -1130,6 +1130,50 @@ TEST_F(ObjectExtendedTest, MoveToThread) {
     // Just test the API exists
 }
 
+TEST(ObjectMigrationRegression, ConcurrentDisconnectDuringMoveToThread) {
+    for (int scenario = 0; scenario < 5; ++scenario) {
+        SCOPED_TRACE(scenario);
+        TestReceiver objects[3];
+        TestReceiver* root = &objects[scenario % 2];
+        TestReceiver* sender = scenario == 4 ? root : &objects[1 - scenario % 2];
+        TestReceiver* receiver = scenario < 2 ? root : &objects[2];
+        if (receiver != root)
+            receiver->setParent(root);
+
+        iThread target;
+        iThread* origin = iThread::currentThread();
+        const int rounds = 2000;
+        std::atomic<int> started(0);
+        std::atomic<int> completed(0);
+        std::atomic<int> disconnected(0);
+        std::thread disconnector([&]() {
+            for (int round = 1; round <= rounds; ++round) {
+                while (started.load() < round)
+                    std::this_thread::yield();
+                if (iObject::disconnect(sender, &iObject::objectNameChanged,
+                                        receiver, &TestReceiver::onStringChanged))
+                    ++disconnected;
+                completed.store(round);
+            }
+        });
+
+        for (int round = 1; round <= rounds; ++round) {
+            EXPECT_TRUE(iObject::connect(sender, &iObject::objectNameChanged,
+                                         receiver, &TestReceiver::onStringChanged));
+            started.store(round);
+            EXPECT_TRUE(root->moveToThread(&target));
+            EXPECT_EQ(receiver->thread(), &target);
+            EXPECT_TRUE(root->moveToThread(origin));
+            EXPECT_EQ(receiver->thread(), origin);
+            while (completed.load() < round)
+                std::this_thread::yield();
+        }
+
+        disconnector.join();
+        EXPECT_EQ(disconnected.load(), rounds);
+    }
+}
+
 TEST_F(ObjectExtendedTest, AutoConnectionTracksReceiverThreadAfterMove) {
     TestEmitter emitter;
     AtomicReceiver* receiver = new AtomicReceiver;
@@ -2244,15 +2288,36 @@ TEST_F(ObjectExtendedTest, NestedDeletion) {
     iObject* child2 = new iObject(root);
     iObject* grandchild1 = new iObject(child1);
     iObject* grandchild2 = new iObject(child2);
+    iObject observer;
 
     int deletedCount = 0;
-    iObject::connect(grandchild1, &iObject::destroyed, root,
+    iObject::connect(grandchild1, &iObject::destroyed, &observer,
                     [&](iObject*) { deletedCount++; });
-    iObject::connect(grandchild2, &iObject::destroyed, root,
+    iObject::connect(grandchild2, &iObject::destroyed, &observer,
                     [&](iObject*) { deletedCount++; });
 
     delete root;  // Should cascade delete all
     EXPECT_EQ(deletedCount, 2);
+}
+
+class ChildTrackingParent : public iObject {
+public:
+    ChildTrackingParent() : tracked(new std::vector<iObject*>()) {}
+    ~ChildTrackingParent() { delete tracked; tracked = IX_NULLPTR; }
+    void childGone(iObject* child) { tracked->push_back(child); }
+    std::vector<iObject*>* tracked;
+};
+
+TEST_F(ObjectExtendedTest, ChildSignalsDoNotReachParentBeingDestroyed) {
+    ChildTrackingParent* parent = new ChildTrackingParent();
+    iObject* child = new iObject(parent);
+    iObject observer;
+    int observed = 0;
+    iObject::connect(child, &iObject::destroyed, parent, &ChildTrackingParent::childGone);
+    iObject::connect(child, &iObject::destroyed, &observer, [&](iObject*) { ++observed; });
+
+    delete parent;
+    EXPECT_EQ(1, observed);
 }
 
 /**

@@ -67,6 +67,52 @@ TEST_F(MemBlockQueueTest, IteratorSkipsHolesWithoutExtendingData) {
     EXPECT_EQ(2, calls);
 }
 
+TEST_F(MemBlockQueueTest, PeekReusedOutputClearsStorageForHole) {
+    iMemBlockQueue queue(iLatin1StringView("peek-reused-hole"), 0, 1024, 1024,
+                         1, 0, 1, 0, nullptr);
+    const iByteArray headBuffer("head", 4);
+    const iByteArray tailBuffer("tail", 4);
+    const size_t gapLength = 32;
+    ASSERT_EQ(headBuffer.size(), queue.push(headBuffer));
+    queue.seek(gapLength, iMemBlockQueue::SEEK_RELATIVE, false);
+    ASSERT_EQ(tailBuffer.size(), queue.push(tailBuffer));
+
+    iByteArray output;
+    ASSERT_EQ(0, queue.peek(output));
+    ASSERT_EQ(headBuffer, output);
+    const iByteArray savedOutput = output;
+    ASSERT_EQ(headBuffer.size(), queue.drop(headBuffer.size()));
+
+    ASSERT_EQ(0, queue.peek(output));
+    EXPECT_EQ(static_cast<xsizetype>(gapLength), output.size());
+    EXPECT_EQ(nullptr, output.data_ptr().d_ptr());
+    EXPECT_EQ(nullptr, output.constData());
+    EXPECT_EQ(headBuffer, savedOutput);
+    EXPECT_EQ(headBuffer.size(), queue.getReadIndex());
+
+    ASSERT_EQ(0, queue.peek(output));
+    EXPECT_EQ(static_cast<xsizetype>(gapLength), output.size());
+    EXPECT_EQ(nullptr, output.data_ptr().d_ptr());
+    ASSERT_EQ(static_cast<xint64>(gapLength), queue.drop(gapLength));
+    ASSERT_EQ(0, queue.peek(output));
+    EXPECT_EQ(tailBuffer, output);
+}
+
+TEST_F(MemBlockQueueTest, PeekReservedOutputClearsStorageForHole) {
+    iMemBlockQueue queue(iLatin1StringView("peek-reserved-hole"), 0, 1024, 1024,
+                         1, 0, 1, 0, nullptr);
+    queue.seek(32, iMemBlockQueue::SEEK_ABSOLUTE, false);
+    iByteArray output;
+    output.reserve(8);
+    ASSERT_NE(nullptr, output.data_ptr().d_ptr());
+
+    ASSERT_EQ(0, queue.peek(output));
+    EXPECT_EQ(32, output.size());
+    EXPECT_EQ(nullptr, output.data_ptr().d_ptr());
+    EXPECT_EQ(nullptr, output.constData());
+    EXPECT_EQ(0, queue.getReadIndex());
+}
+
 TEST_F(MemBlockQueueTest, BasicConstruction) {
     iMemBlockQueue* queue = createQueue();
     EXPECT_EQ(queue->length(), 0);

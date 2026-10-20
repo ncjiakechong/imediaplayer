@@ -415,6 +415,7 @@ int iMemBlockQueue::peek(iByteArray& chunk)
             if (length <= 0)
                 return -1;
 
+            chunk.clear();
             chunk.data_ptr().size = length;
         }
 

@@ -279,7 +279,6 @@ public:
 
 private:
     void reallocData(xsizetype alloc, Data::ArrayOptions options);
-    void reallocGrowData(xsizetype alloc, Data::ArrayOptions options);
     void expand(xsizetype i);
     iByteArray nulTerminated() const;
 

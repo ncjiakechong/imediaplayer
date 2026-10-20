@@ -566,7 +566,6 @@ private:
     friend inline bool operator> (iChar, iLatin1StringView);
 
     void reallocData(xsizetype alloc, Data::ArrayOptions option);
-    void reallocGrowData(xsizetype n);
 
     iString &assign_helper(const xuint32 *data, xsizetype len);
     iString multiArg(xsizetype numArgs, const iString **args) const;

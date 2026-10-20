@@ -441,17 +441,22 @@ void iINCServer::handleStreamOpen(iINCConnection* conn, const iINCMessage& msg)
         // 1. Server config allows shared memory
         // 2. Connection is local (same machine)
         // 3. Client and server have compatible memory types
-        negotiontedShmType = clientSupportedTypes & m_config.sharedMemoryType();
+        // 4. Private memory cannot be exported to the peer.
+        negotiontedShmType = clientSupportedTypes & m_config.sharedMemoryType() & (MEMTYPE_SHARED_MEMFD | MEMTYPE_SHARED_POSIX);
         if (!m_config.disableSharedMemory() && conn->isLocal()
             && m_globalPool && (negotiontedShmType & m_globalPool->type())) {
             negotiontedShmType = m_globalPool->type();
             conn->enableMempool(m_globalPool);
         } else if (!m_config.disableSharedMemory() && conn->isLocal() && negotiontedShmType)  {
-            // Select the highest priority bit (lowest bit position) using iCountTrailingZeroBits
-            // MEMFD (0x02, bit 1) has higher priority than POSIX (0x04, bit 2)
-            negotiontedShmType = static_cast<xuint16>(1) << iCountTrailingZeroBits(negotiontedShmType);
-            iMemPool* memPool = iMemPool::create(conn->peerName().toUtf8().constData(), clientShmName.constData(), static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize(), true, m_config.sharedMemoryBlockSize());
-            conn->enableMempool(iSharedDataPointer<iMemPool>(memPool));
+            if (!conn->mempool()) {
+                // Select the highest priority bit (lowest bit position) using iCountTrailingZeroBits
+                // MEMFD (0x02, bit 1) has higher priority than POSIX (0x04, bit 2)
+                negotiontedShmType = static_cast<xuint16>(1) << iCountTrailingZeroBits(negotiontedShmType);
+                iMemPool* memPool = iMemPool::create(conn->peerName().toUtf8().constData(), clientShmName.constData(), static_cast<MemType>(negotiontedShmType), m_config.sharedMemorySize(), true, m_config.sharedMemoryBlockSize());
+                conn->enableMempool(iSharedDataPointer<iMemPool>(memPool));
+            }
+            // Never advertise shared memory the connection cannot serve; without a pool the peer copies.
+            negotiontedShmType = conn->mempool() ? conn->mempool()->type() : 0;
         } else {
             negotiontedShmType = 0;
         }

@@ -19,7 +19,6 @@
 #endif
 
 #include <core/thread/imutex.h>
-#include <core/thread/isemaphore.h>
 #include <core/thread/iatomiccounter.h>
 #include <core/utils/ifreelist.h>
 #include <core/utils/ishareddata.h>
@@ -84,6 +83,7 @@ public:
     static iMemBlock* reallocate(iMemBlock* block, size_t elementCount, size_t elementSize = 1, ArrayOptions options = DefaultAllocationFlags);
 
     inline bool isOurs() const { return m_type != MEMBLOCK_IMPORTED; }
+    inline bool isReallocatable() const { return m_type == MEMBLOCK_APPENDED; }
     inline bool isReadOnly() const { return m_readOnly || (count() > 1); }
     inline bool isShared() const { return count() != 1; }
     inline bool isSilence() const { return m_isSilence; }
@@ -141,8 +141,6 @@ private:
     virtual void doFree() IX_OVERRIDE;
     void statAdd();
     void statRemove();
-    void wait();
-    void makeLocal();
     void replaceImport();
 
     /// Note: Always release after use
@@ -163,7 +161,6 @@ private:
     iAtomicPointer<void> m_data;
 
     iAtomicCounter<int> m_nAcquired;
-    iAtomicCounter<int> m_pleaseSignal;
 
     struct {
         /* If type == MEMBLOCK_USER this points to a function for freeing this memory block */
@@ -260,7 +257,6 @@ private:
     iFreeList<void*> m_cacheHeads;
 
     iAtomicCounter<int> m_nInit;
-    iSemaphore m_semaphore;
     iMutex m_mutex;
 
     Stat m_stat;
@@ -353,12 +349,12 @@ private:
     iMemBlock* sharedCopy(iMemPool* p, iMemBlock* b) const;
 
     struct Slot {
+        uint id;
         Slot* _next;
         Slot* _prev;
         iMemBlock* block;
     };
 
-    uint m_baseIdx;
     xuint32 m_nInit;
     Slot* m_freeSlots;
     Slot* m_usedSlots;

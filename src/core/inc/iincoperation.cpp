@@ -10,6 +10,7 @@
 /////////////////////////////////////////////////////////////////
 
 #include <core/inc/iincoperation.h>
+#include <core/kernel/icoreapplication.h>
 #include <core/kernel/iobject.h>
 #include <core/kernel/itimer.h>
 #include <core/kernel/ievent.h>
@@ -20,10 +21,10 @@
 
 namespace iShell {
 
-iINCOperationTimer::iINCOperationTimer(iObject* parent)
+iINCOperationTimer::iINCOperationTimer(iINCOperation* operation, iObject* parent)
     : iObject(parent)
     , m_alarmId(0)
-    , m_deleterId(0)
+    , m_operation(operation)
 {
 }
 
@@ -36,41 +37,33 @@ void iINCOperationTimer::stop()
     m_alarmId = 0;
 }
 
-void iINCOperationTimer::toggleAlarm(xint64 timeout, xintptr userdata)
+void iINCOperationTimer::toggleAlarm(xint64 timeout)
 {
     if (0 != m_alarmId)
         killTimer(m_alarmId);
 
-    m_alarmId = startTimer(timeout, userdata);
-}
-
-void iINCOperationTimer::toggleDeleter(xintptr userdata)
-{
-    stop();
-
-    if (0 != m_deleterId)
-        killTimer(m_deleterId);
-
-    m_deleterId = startTimer(0, userdata);
+    m_alarmId = startTimer(timeout);
 }
 
 bool iINCOperationTimer::event(iEvent* e)
 {
+    // A member cannot delete itself; releasing its operation destroys it.
+    if (e->type() == iEvent::DeferredDelete) {
+        m_operation->destroyOrRecycle();
+        return true;
+    }
+
     if (e->type() != iEvent::Timer)
         return iObject::event(e);
 
     // Deliver the fire straight to the owning operation instead of emitting the
     // timeout signal, which would require a heap-allocated connection.
     iTimerEvent* te = static_cast<iTimerEvent*>(e);
-    if (te->timerId() == m_deleterId) {
-        m_deleterId = 0;
-        killTimer(te->timerId());
-        reinterpret_cast<iINCOperation*>(te->userData())->destroyOrRecycle();
-    } else if (te->timerId() == m_alarmId ) {
+    if (te->timerId() == m_alarmId) {
         m_alarmId = 0;
         killTimer(te->timerId());
-        reinterpret_cast<iINCOperation*>(te->userData())->onTimeout();
-    } else {}
+        m_operation->onTimeout();
+    }
 
     return true;
 }
@@ -81,7 +74,7 @@ iINCOperation::iINCOperation(xuint32 seqNum, iObject* parent, OwnerDeleter delet
     , m_state(STATE_RUNNING)
     , m_errorCode(0)
     , m_blockID(0)
-    , m_timer(parent)
+    , m_timer(this, parent)
     , m_finishedCallback(IX_NULLPTR)
     , m_finishedUserData(IX_NULLPTR)
     , m_ownerDeleter(deleter)
@@ -114,7 +107,8 @@ void iINCOperation::doFree()
         return;
     }
 
-    iObject::invokeMethod(&m_timer, &iINCOperationTimer::toggleDeleter, reinterpret_cast<xintptr>(this));
+    // Unlike a queued call, DeferredDelete is still delivered while the timer's thread finishes.
+    iCoreApplication::postEvent(&m_timer, new iDeferredDeleteEvent());
 }
 
 void iINCOperation::cancel()
@@ -130,7 +124,7 @@ void iINCOperation::setTimeout(xint64 timeout)
 
     if (timeout <= 0) return;
 
-    iObject::invokeMethod(&m_timer, &iINCOperationTimer::toggleAlarm, timeout, reinterpret_cast<xintptr>(this));
+    iObject::invokeMethod(&m_timer, &iINCOperationTimer::toggleAlarm, timeout);
 }
 
 void iINCOperation::onTimeout()

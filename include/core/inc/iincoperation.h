@@ -23,16 +23,17 @@
 
 namespace iShell {
 
+class iINCOperation;
+
 /// @brief Single-shot timer and deferred deleter for one operation.
 class IX_CORE_EXPORT iINCOperationTimer : public iObject
 {
     IX_OBJECT(iINCOperationTimer)
 public:
-    explicit iINCOperationTimer(iObject* parent = IX_NULLPTR);
+    explicit iINCOperationTimer(iINCOperation* operation, iObject* parent = IX_NULLPTR);
 
     void stop();
-    void toggleDeleter(xintptr userdata);
-    void toggleAlarm(xint64 timeout, xintptr userdata);
+    void toggleAlarm(xint64 timeout);
     bool isActive() const { return m_alarmId > 0; }
 
 protected:
@@ -40,7 +41,7 @@ protected:
 
 private:
     int            m_alarmId;
-    int            m_deleterId;
+    iINCOperation* m_operation;
 };
 
 /// @brief Tracks asynchronous operation state and result
